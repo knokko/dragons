@@ -1,0 +1,44 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.5.20'
+    id 'com.github.johnrengelman.shadow' version '7.0.0'
+}
+
+allprojects {
+    apply plugin: 'java'
+    apply plugin: 'org.jetbrains.kotlin.jvm'
+    apply plugin: 'com.github.johnrengelman.shadow'
+
+    repositories {
+        mavenCentral()
+    }
+
+    compileKotlin {
+        kotlinOptions.jvmTarget = "16"
+    }
+
+    compileTestKotlin {
+        kotlinOptions.jvmTarget = "16"
+    }
+
+    sourceCompatibility = "16"
+
+    project.ext.jomlVersion = "1.10.1"
+    project.ext.lwjglVersion = "3.2.3"
+}
+
+dependencies {
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
+    testImplementation platform('org.junit:junit-bom:5.7.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+project(':standard-plugin') {
+    dependencies {
+        implementation project(':')
+    }
+}
