@@ -1,3 +1,5 @@
+import org.gradle.internal.os.OperatingSystem
+
 plugins {
     id 'java'
     id 'org.jetbrains.kotlin.jvm' version '1.5.20'
@@ -25,12 +27,38 @@ allprojects {
 
     project.ext.jomlVersion = "1.10.1"
     project.ext.lwjglVersion = "3.2.3"
+    switch (OperatingSystem.current()) {
+        case OperatingSystem.LINUX:
+            def osArch = System.getProperty("os.arch")
+            project.ext.lwjglNatives = osArch.startsWith("arm") || osArch.startsWith("aarch64")
+                    ? "natives-linux-${osArch.contains("64") || osArch.startsWith("armv8") ? "arm64" : "arm32"}"
+                    : "natives-linux"
+            break
+        case OperatingSystem.MAC_OS:
+            project.ext.lwjglNatives = natives-macos
+            break
+        case OperatingSystem.WINDOWS:
+            def osArch = System.getProperty("os.arch")
+            project.ext.lwjglNatives = osArch.contains("64")
+                    ? "natives-windows${osArch.startsWith("aarch64") ? "-arm64" : ""}"
+                    : "natives-windows-x86"
+            break
+    }
 }
 
 dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
     testImplementation platform('org.junit:junit-bom:5.7.2')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
+
+    implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+
+    implementation "org.lwjgl:lwjgl"
+    implementation "org.lwjgl:lwjgl-openvr"
+    implementation "org.lwjgl:lwjgl-vulkan"
+    runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-openvr::$lwjglNatives"
+    if (lwjglNatives == "natives-macos") runtimeOnly "org.lwjgl:lwjgl-vulkan::$lwjglNatives"
 }
 
 test {

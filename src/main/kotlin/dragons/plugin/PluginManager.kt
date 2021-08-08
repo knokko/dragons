@@ -12,7 +12,7 @@ class PluginManager(val magicInstances: Collection<PluginInterface>) {
      */
     @Synchronized
     fun <T: PluginInterface> getImplementations(magicInterface: Class<T>): Collection<T> {
-        return magicInterfaceMap.getOrPut(magicInterface, {
+        return magicInterfaceMap.getOrPut(magicInterface) {
             if (!implementsOrExtendsInterface(magicInterface, PluginInterface::class.java)) {
                 throw IllegalArgumentException("$magicInterface doesn't extend PluginInterface")
             }
@@ -25,7 +25,7 @@ class PluginManager(val magicInstances: Collection<PluginInterface>) {
                 result.add(element as T)
             }
             result
-        }) as Collection<T>
+        } as Collection<T>
     }
 }
 

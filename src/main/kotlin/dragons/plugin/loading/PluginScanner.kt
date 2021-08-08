@@ -1,16 +1,39 @@
 package dragons.plugin.loading
 
+import dragons.init.trouble.SimpleStartupException
+import dragons.init.trouble.StartupException
 import kotlinx.coroutines.*
 import java.io.File
 import java.nio.file.Files
 import java.util.jar.JarInputStream
 
-fun scanDevelopmentClasses() {
+@Throws(StartupException::class)
+suspend fun scanDefaultPluginLocations(): JarContent {
+    val pluginsFolder = File("plug-ins/")
+    if (!pluginsFolder.mkdirs()) {
+        throw SimpleStartupException("Can't create plug-ins directory", listOf(
+            "The plug-ins directory for this game ($pluginsFolder) doesn't seem to exist yet, so this game tried to create it.",
+            "But... this failed for some reason..."
+        ))
+    }
 
-}
+    if (pluginsFolder.list()!!.isEmpty()) {
+        // TODO Copy the standard plug-in jar to the plug-ins folder
+    }
 
-fun scanReleaseJars() {
+    val thirdPartyContent = scanDirectoryOfJars(pluginsFolder)
 
+    // TODO New plug-ins should be added to this list manually
+    val developmentProjects = listOf("standard-plugin")
+    val developmentSourceFolders = developmentProjects.flatMap { project -> listOf(
+        File("$project/src/main/kotlin"),
+        File("$project/src/main/java"),
+        File("$project/src/main/resources")
+    ) }
+
+    val developmentContent = scanDirectoriesOfClasses(developmentSourceFolders)
+
+    return JarContent.merge(thirdPartyContent, developmentContent)
 }
 
 fun scanJar(jarStream: JarInputStream): JarContent {
@@ -122,4 +145,18 @@ private fun scanJarOrDirectory(
 /**
  * Represents the content (class and resources) of 1 or more JAR files
  */
-class JarContent(val classByteMap: Map<String, ByteArray>, val resourceByteMap: Map<String, ByteArray>)
+class JarContent(val classByteMap: Map<String, ByteArray>, val resourceByteMap: Map<String, ByteArray>) {
+    companion object {
+        fun merge(vararg contentList: JarContent): JarContent {
+            val classByteMap = mutableMapOf<String, ByteArray>()
+            val resourceByteMap = mutableMapOf<String, ByteArray>()
+
+            for (content in contentList) {
+                classByteMap.putAll(content.classByteMap)
+                resourceByteMap.putAll(content.resourceByteMap)
+            }
+
+            return JarContent(classByteMap, resourceByteMap)
+        }
+    }
+}

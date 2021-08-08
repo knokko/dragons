@@ -15,7 +15,7 @@ class PluginClassLoader(
     private val classMap = mutableMapOf<String, Class<*>>()
     private val urlHandler = PluginURLHandler(resourceMap)
 
-    val magicClasses: Collection<PluginInterface>
+    val magicInstances: Collection<PluginInterface>
 
     private fun getOrCreateClass(name: String, knownBytes: ByteArray?): Class<*> {
 
@@ -66,7 +66,7 @@ class PluginClassLoader(
             }
         }
 
-        magicClasses = List(collectMagicClasses.size) { index -> collectMagicClasses[index] }
+        magicInstances = List(collectMagicClasses.size) { index -> collectMagicClasses[index] }
     }
 
     private fun isMagic(candidate: Class<*>): Boolean {

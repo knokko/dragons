@@ -29,7 +29,7 @@ class TestPluginLoader {
 
     private fun testSimplePluginLoader(content: JarContent) {
         val classLoader = PluginClassLoader(content)
-        val pluginManager = PluginManager(classLoader.magicClasses)
+        val pluginManager = PluginManager(classLoader.magicInstances)
 
         val loadListeners = pluginManager.getImplementations(PluginsLoadedListener::class.java)
         assertEquals(1, loadListeners.size)
@@ -47,12 +47,7 @@ class TestPluginLoader {
         val twinContentA = scanJar(JarInputStream(ClassLoader.getSystemResourceAsStream("dragons/plugins/test/twinA.jar")))
         val twinContentB = scanJar(JarInputStream(ClassLoader.getSystemResourceAsStream("dragons/plugins/test/twinB.jar")))
 
-        val twinClassByteMap = HashMap(twinContentA.classByteMap)
-        twinClassByteMap.putAll(twinContentB.classByteMap)
-        val twinResourceMap = HashMap(twinContentA.resourceByteMap)
-        twinResourceMap.putAll(twinContentB.resourceByteMap)
-
-        val twinContent = JarContent(twinClassByteMap, twinResourceMap)
+        val twinContent = JarContent.merge(twinContentA, twinContentB)
         testTwinPluginLoader(twinContent)
     }
 
@@ -71,7 +66,7 @@ class TestPluginLoader {
 
     private fun testTwinPluginLoader(twinContent: JarContent) {
         val classLoader = PluginClassLoader(twinContent)
-        val pluginManager = PluginManager(classLoader.magicClasses)
+        val pluginManager = PluginManager(classLoader.magicInstances)
 
         val loadListeners = pluginManager.getImplementations(PluginsLoadedListener::class.java)
         assertEquals(1, loadListeners.size)
