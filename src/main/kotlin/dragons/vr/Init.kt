@@ -3,7 +3,9 @@ package dragons.vr
 import dragons.init.MainParameters
 import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
+import dragons.util.getIntConstantName
 import org.lwjgl.openvr.OpenVR
+import org.lwjgl.openvr.VR
 import org.lwjgl.openvr.VR.*
 import org.lwjgl.system.MemoryStack.stackPush
 import org.slf4j.LoggerFactory.getLogger
@@ -52,11 +54,11 @@ fun initVr(mainParameters: MainParameters): VrManager {
         val vrError = pVrError[0]
         if (vrError != 0) {
             logger.warn("VR_InitInternal returned $vrError")
-            // TODO Convert error code to a meaningful string
+            val vrErrorName = VR_GetVRInitErrorAsSymbol(vrError)
             if (mainParameters.requiresHmd) {
                 throw SimpleStartupException(
                     "Failed to initialize OpenVR", listOf(
-                        "VR_InitInternal returned error code $vrError.",
+                        "VR_InitInternal returned error code $vrError ($vrErrorName).",
                         "You should restart the game after fixing this.",
                         "You can close this window."
                     )
