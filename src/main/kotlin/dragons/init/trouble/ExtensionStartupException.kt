@@ -1,5 +1,6 @@
 package dragons.init.trouble
 
+import java.awt.Color
 import javax.swing.*
 
 class ExtensionStartupException(
@@ -14,7 +15,14 @@ class ExtensionStartupException(
         descriptionArea.wrapStyleWord = true
         descriptionArea.isEditable = false
 
-        val availableExtensionLabels = availableExtensions.map { extension -> JLabel(extension) }
+        val availableExtensionLabels = listOf(JLabel("Available extensions:")) + availableExtensions.map { extension -> JLabel(extension) }
+        val requiredExtensionLabels = listOf(JLabel("Required extensions:")) + requiredExtensions.map { extension ->
+            val label = JLabel(extension)
+            if (!availableExtensions.contains(extension)) {
+                label.foreground = Color.RED
+            }
+            label
+        }
 
         val layout = GroupLayout(target.contentPane)
         target.contentPane.layout = layout
@@ -22,23 +30,46 @@ class ExtensionStartupException(
         layout.autoCreateContainerGaps = true
 
         val horizontalGroup = layout.createParallelGroup().addComponent(descriptionArea)
-        val horizontalAvailableExtensions = layout.createParallelGroup()
-        for (label in availableExtensionLabels) {
-            horizontalAvailableExtensions.addComponent(label)
+        run {
+            val availableExtensionGroup = layout.createParallelGroup()
+            for (label in availableExtensionLabels) {
+                availableExtensionGroup.addComponent(label)
+            }
+
+            val requiredExtensionGroup = layout.createParallelGroup()
+            for (label in requiredExtensionLabels) {
+                requiredExtensionGroup.addComponent(label)
+            }
+
+            val extensionGroups = layout.createSequentialGroup()
+            extensionGroups.addGroup(availableExtensionGroup)
+            extensionGroups.addGroup(requiredExtensionGroup)
+
+            horizontalGroup.addGroup(extensionGroups)
         }
-        horizontalGroup.addGroup(horizontalAvailableExtensions)
         layout.setHorizontalGroup(horizontalGroup)
 
         val verticalGroup = layout.createSequentialGroup().addComponent(descriptionArea)
-        val verticalAvailableExtensions = layout.createSequentialGroup()
-        for (label in availableExtensionLabels) {
-            verticalAvailableExtensions.addComponent(label)
+        run {
+            val availableExtensionGroup = layout.createSequentialGroup()
+            for (label in availableExtensionLabels) {
+                availableExtensionGroup.addComponent(label)
+            }
+
+            val requiredExtensionGroup = layout.createSequentialGroup()
+            for (label in requiredExtensionLabels) {
+                requiredExtensionGroup.addComponent(label)
+            }
+
+            val extensionGroups = layout.createParallelGroup()
+            extensionGroups.addGroup(availableExtensionGroup)
+            extensionGroups.addGroup(requiredExtensionGroup)
+
+            verticalGroup.addGroup(extensionGroups)
         }
-        verticalGroup.addGroup(verticalAvailableExtensions)
+
         layout.setVerticalGroup(verticalGroup)
 
         target.pack()
-
-
     }
 }

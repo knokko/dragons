@@ -14,7 +14,7 @@ class TestPluginLoader {
     fun testSimpleJarPluginLoader() {
         val simpleTestPluginContent =
             scanJar(JarInputStream(ClassLoader.getSystemResourceAsStream("dragons/plugins/test/simple.jar")))
-        testSimplePluginLoader(simpleTestPluginContent)
+        testSimplePluginLoader(listOf(Pair(simpleTestPluginContent, PluginInfo(name = "simple"))))
     }
 
     // NOTE: This test will fail before running ./gradlew shadowJar
@@ -24,17 +24,17 @@ class TestPluginLoader {
             File("test-plugins/simple/build/classes/java/main"),
             File("test-plugins/simple/build/classes/kotlin/main")
         )) }
-        testSimplePluginLoader(simpleTestPluginContent)
+        testSimplePluginLoader(listOf(Pair(simpleTestPluginContent, PluginInfo(name = "simple"))))
     }
 
-    private fun testSimplePluginLoader(content: JarContent) {
+    private fun testSimplePluginLoader(content: Collection<Pair<JarContent, PluginInfo>>) {
         val classLoader = PluginClassLoader(content)
         val pluginManager = PluginManager(classLoader.magicInstances)
 
         val loadListeners = pluginManager.getImplementations(PluginsLoadedListener::class.java)
         assertEquals(1, loadListeners.size)
-        loadListeners.first().afterPluginsLoaded()
-        pluginManager.getImplementations(PluginsLoadedListener::class.java).first().afterPluginsLoaded()
+        loadListeners.first().first.afterPluginsLoaded()
+        pluginManager.getImplementations(PluginsLoadedListener::class.java).first().first.afterPluginsLoaded()
 
         assertEquals(2,
             Class.forName("dragons.plugins.test.simple.SimplePluginStore", true, classLoader)
@@ -46,32 +46,36 @@ class TestPluginLoader {
     fun testTwinJarPluginLoader() {
         val twinContentA = scanJar(JarInputStream(ClassLoader.getSystemResourceAsStream("dragons/plugins/test/twinA.jar")))
         val twinContentB = scanJar(JarInputStream(ClassLoader.getSystemResourceAsStream("dragons/plugins/test/twinB.jar")))
-
-        val twinContent = JarContent.merge(twinContentA, twinContentB)
-        testTwinPluginLoader(twinContent)
+        testTwinPluginLoader(twinContentA, twinContentB)
     }
 
     // NOTE: This test will fail before running ./gradlew shadowJar
     @Test
     fun testTwinClassesPluginLoader() {
-        val twinPluginContent = runBlocking { scanDirectoriesOfClasses(listOf(
+        val twinPluginContentA = runBlocking { scanDirectoriesOfClasses(listOf(
             File("test-plugins/twin-a/build/classes/kotlin/main"),
             File("test-plugins/twin-a/build/resources/main"),
+        )) }
+        val twinPluginContentB = runBlocking { scanDirectoriesOfClasses(listOf(
             File("test-plugins/twin-b/build/classes/kotlin/main"),
             File("test-plugins/twin-b/build/classes/java/main"),
             File("test-plugins/twin-b/build/resources/main")
         )) }
-        testTwinPluginLoader(twinPluginContent)
+        testTwinPluginLoader(twinPluginContentA, twinPluginContentB)
     }
 
-    private fun testTwinPluginLoader(twinContent: JarContent) {
+    private fun testTwinPluginLoader(twinContentA: JarContent, twinContentB: JarContent) {
+        val twinContent = listOf(
+            Pair(twinContentA, PluginInfo(name = "twinA")),
+            Pair(twinContentB, PluginInfo(name = "twinB"))
+        )
         val classLoader = PluginClassLoader(twinContent)
         val pluginManager = PluginManager(classLoader.magicInstances)
 
         val loadListeners = pluginManager.getImplementations(PluginsLoadedListener::class.java)
         assertEquals(1, loadListeners.size)
-        loadListeners.first().afterPluginsLoaded()
-        pluginManager.getImplementations(PluginsLoadedListener::class.java).first().afterPluginsLoaded()
+        loadListeners.first().first.afterPluginsLoaded()
+        pluginManager.getImplementations(PluginsLoadedListener::class.java).first().first.afterPluginsLoaded()
 
         assertEquals("abcdef",
             Class.forName("dragons.plugins.test.twin.TwinStore", true, classLoader)

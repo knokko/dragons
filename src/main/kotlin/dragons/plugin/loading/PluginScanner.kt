@@ -2,13 +2,14 @@ package dragons.plugin.loading
 
 import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
+import dragons.plugin.PluginInfo
 import kotlinx.coroutines.*
 import java.io.File
 import java.nio.file.Files
 import java.util.jar.JarInputStream
 
 @Throws(StartupException::class)
-suspend fun scanDefaultPluginLocations(): JarContent {
+suspend fun scanDefaultPluginLocations(): Collection<Pair<JarContent, PluginInfo>> {
     val pluginsFolder = File("plug-ins/")
     if (!pluginsFolder.isDirectory && !pluginsFolder.mkdirs()) {
         throw SimpleStartupException("Can't create plug-ins directory", listOf(
@@ -24,17 +25,20 @@ suspend fun scanDefaultPluginLocations(): JarContent {
 
     val thirdPartyContent = scanDirectoryOfJars(pluginsFolder)
 
-    // TODO New plug-ins should be added to this list manually
+    // TODO New development plug-ins should be added to this list manually
     val developmentProjects = listOf("standard-plugin")
-    val developmentBuildFolders = developmentProjects.flatMap { project -> listOf(
-        File("$project/build/classes/kotlin/main"),
-        File("$project/build/classes/java/main"),
-        File("$project/build/resources/main")
-    ) }
 
-    val developmentContent = scanDirectoriesOfClasses(developmentBuildFolders)
+    val developmentContent = developmentProjects.map { name ->
+        val buildDirectories = listOf(
+            File("$name/build/classes/kotlin/main"),
+            File("$name/build/classes/java/main"),
+            File("$name/build/resources/main")
+        )
+        val projectContent = scanDirectoriesOfClasses(buildDirectories)
+        Pair(projectContent, PluginInfo(name = name.replace("-plugin", "")))
+    }
 
-    return JarContent.merge(thirdPartyContent, developmentContent)
+    return thirdPartyContent + developmentContent
 }
 
 fun scanJar(jarStream: JarInputStream): JarContent {
@@ -67,11 +71,10 @@ fun classPathToName(classPath: String): String {
     return classPath.substring(0 until classPath.length - 6).replace('/', '.')
 }
 
-suspend fun scanDirectoryOfJars(rootDirectory: File): JarContent = withContext(Dispatchers.IO) {
-    val classByteMap = mutableMapOf<String, ByteArray>()
-    val resourceByteMap = mutableMapOf<String, ByteArray>()
-    scanJarOrDirectory(this, rootDirectory, classByteMap, resourceByteMap)
-    return@withContext JarContent(classByteMap, resourceByteMap)
+suspend fun scanDirectoryOfJars(rootDirectory: File): Collection<Pair<JarContent, PluginInfo>> = withContext(Dispatchers.IO) {
+    val jarList = mutableListOf<Pair<JarContent, PluginInfo>>()
+    scanJarOrDirectory(this, rootDirectory, jarList)
+    return@withContext jarList
 }
 
 suspend fun scanDirectoriesOfClasses(rootDirectories: Collection<File>): JarContent = withContext(Dispatchers.IO) {
@@ -121,17 +124,16 @@ private fun scanClassOrResourceOrDirectory(
 }
 
 private fun scanJarOrDirectory(
-    scope: CoroutineScope, file: File, classByteMap: MutableMap<String, ByteArray>, resourceByteMap: MutableMap<String, ByteArray>
+    scope: CoroutineScope, file: File, jarList: MutableCollection<Pair<JarContent, PluginInfo>>
 ) {
     if (file.isFile) {
         if (file.name.endsWith(".jar")) {
             scope.launch {
                 val jarContent = scanJar(JarInputStream(Files.newInputStream(file.toPath())))
-                synchronized(classByteMap) {
-                    classByteMap.putAll(jarContent.classByteMap)
-                }
-                synchronized(resourceByteMap) {
-                    resourceByteMap.putAll(jarContent.resourceByteMap)
+                // TODO Give plug-ins the opportunity to choose a different name than their file name
+                val pluginInfo = PluginInfo(name = file.name.substring(0 until file.name.length - 4))
+                synchronized(jarList) {
+                    jarList.add(Pair(jarContent, pluginInfo))
                 }
             }
         }
@@ -139,27 +141,13 @@ private fun scanJarOrDirectory(
         val children = file.listFiles()!!
         for (child in children) {
             scope.launch {
-                scanJarOrDirectory(scope, child, classByteMap, resourceByteMap)
+                scanJarOrDirectory(scope, child, jarList)
             }
         }
     }
 }
 
 /**
- * Represents the content (class and resources) of 1 or more JAR files
+ * Represents the content (class and resources) of 1 JAR file
  */
-class JarContent(val classByteMap: Map<String, ByteArray>, val resourceByteMap: Map<String, ByteArray>) {
-    companion object {
-        fun merge(vararg contentList: JarContent): JarContent {
-            val classByteMap = mutableMapOf<String, ByteArray>()
-            val resourceByteMap = mutableMapOf<String, ByteArray>()
-
-            for (content in contentList) {
-                classByteMap.putAll(content.classByteMap)
-                resourceByteMap.putAll(content.resourceByteMap)
-            }
-
-            return JarContent(classByteMap, resourceByteMap)
-        }
-    }
-}
+class JarContent(val classByteMap: Map<String, ByteArray>, val resourceByteMap: Map<String, ByteArray>)

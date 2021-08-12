@@ -3,7 +3,7 @@ package dragons.plugin
 import dragons.plugin.interfaces.PluginInterface
 import kotlin.reflect.KClass
 
-class PluginManager(val magicInstances: Collection<PluginInterface>) {
+class PluginManager(val magicInstances: Collection<Pair<PluginInterface, PluginInfo>>) {
 
     private val magicInterfaceMap = mutableMapOf<Class<*>, Collection<*>>()
 
@@ -12,24 +12,24 @@ class PluginManager(val magicInstances: Collection<PluginInterface>) {
      * PluginInterface!
      */
     @Synchronized
-    fun <T: PluginInterface> getImplementations(magicInterface: Class<T>): Collection<T> {
+    fun <T: PluginInterface> getImplementations(magicInterface: Class<T>): Collection<Pair<T, PluginInfo>> {
         return magicInterfaceMap.getOrPut(magicInterface) {
             if (!implementsOrExtendsInterface(magicInterface, PluginInterface::class.java)) {
                 throw IllegalArgumentException("$magicInterface doesn't extend PluginInterface")
             }
 
             val untypedResult = magicInstances.filter { candidateInstance ->
-                implementsOrExtendsInterface(candidateInstance::class.java, magicInterface)
+                implementsOrExtendsInterface(candidateInstance.first::class.java, magicInterface)
             }
-            val result = ArrayList<T>(untypedResult.size)
+            val result = ArrayList<Pair<T, PluginInfo>>(untypedResult.size)
             for (element in untypedResult) {
-                result.add(element as T)
+                result.add(element as Pair<T, PluginInfo>)
             }
             result
-        } as Collection<T>
+        } as Collection<Pair<T, PluginInfo>>
     }
 
-    fun <T: PluginInterface> getImplementations(magicInterface: KClass<T>): Collection<T> {
+    fun <T: PluginInterface> getImplementations(magicInterface: KClass<T>): Collection<Pair<T, PluginInfo>> {
         return getImplementations(magicInterface.java)
     }
 }

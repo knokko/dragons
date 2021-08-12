@@ -1,36 +1,60 @@
 package dragons.plugin.loading
 
+import dragons.plugin.PluginInfo
 import dragons.plugin.PluginURLHandler
 import dragons.plugin.interfaces.PluginInterface
 import java.lang.reflect.Modifier
 import java.net.URL
 
+private fun extractClasses(jars: Collection<Pair<JarContent, PluginInfo>>): Map<String, Pair<ByteArray, PluginInfo>> {
+    val mapList = jars.map { jarPair ->
+        jarPair.first.classByteMap.mapValues {
+                entry -> Pair(entry.value, jarPair.second)
+        }
+    }
+
+    val combinedMap = mutableMapOf<String, Pair<ByteArray, PluginInfo>>()
+    for (map in mapList) {
+        combinedMap.putAll(map)
+    }
+    return combinedMap
+}
+
+private fun extractResources(jars: Collection<Pair<JarContent, PluginInfo>>): Map<String, ByteArray> {
+    val mapList = jars.map { pair -> pair.first.resourceByteMap }
+    val combinedMap = mutableMapOf<String, ByteArray>()
+    for (map in mapList) {
+        combinedMap.putAll(map)
+    }
+    return combinedMap
+}
+
 class PluginClassLoader(
-    private var classByteMap: Map<String, ByteArray>?,
+    private var classByteMap: Map<String, Pair<ByteArray, PluginInfo>>?,
     private val resourceMap: Map<String, ByteArray>
 ): ClassLoader() {
 
-    constructor(content: JarContent) : this(content.classByteMap, content.resourceByteMap)
+    constructor(jars: Collection<Pair<JarContent, PluginInfo>>) : this(extractClasses(jars), extractResources(jars))
 
-    private val classMap = mutableMapOf<String, Class<*>>()
+    private val classMap = mutableMapOf<String, Pair<Class<*>, PluginInfo>>()
     private val urlHandler = PluginURLHandler(resourceMap)
 
-    val magicInstances: Collection<PluginInterface>
+    val magicInstances: Collection<Pair<PluginInterface, PluginInfo>>
 
-    private fun getOrCreateClass(name: String, knownBytes: ByteArray?): Class<*> {
+    private fun getOrCreateClass(name: String, knownEntry: Pair<ByteArray, PluginInfo>?): Class<*> {
 
         val existing = classMap[name]
-        if (existing != null) return existing
+        if (existing != null) return existing.first
 
-        val classByteCode = if (knownBytes == null && classByteMap != null) {
+        val newEntry = if (knownEntry == null && classByteMap != null) {
             classByteMap!![name]
         } else {
-            knownBytes
+            knownEntry
         }
 
-        if (classByteCode != null) {
-            val newClass = defineClass(name, classByteCode, 0, classByteCode.size)
-            classMap[name] = newClass
+        if (newEntry != null) {
+            val newClass = defineClass(name, newEntry.first, 0, newEntry.first.size)
+            classMap[name] = Pair(newClass, newEntry.second)
             return newClass
         }
 
@@ -42,15 +66,16 @@ class PluginClassLoader(
             throw IllegalArgumentException("classByteMap must not be null")
         }
 
-        for ((name, bytes) in classByteMap!!) {
-            getOrCreateClass(name, bytes)
+        for ((name, classPair) in classByteMap!!) {
+            getOrCreateClass(name, classPair)
         }
 
         // We don't need them anymore after class loading has finished, so allow the garbage collector to free them
         classByteMap = null
 
-        val collectMagicClasses = mutableListOf<PluginInterface>()
-        for (definedClass in ArrayList(classMap.values)) {
+        val collectMagicClasses = mutableListOf<Pair<PluginInterface, PluginInfo>>()
+        for (classPair in ArrayList(classMap.values)) {
+            val definedClass = classPair.first
             resolveClass(definedClass)
 
             if (!definedClass.isInterface && isMagic(definedClass)) {
@@ -59,7 +84,7 @@ class PluginClassLoader(
                 }
 
                 try {
-                    collectMagicClasses.add(definedClass.getConstructor().newInstance() as PluginInterface)
+                    collectMagicClasses.add(Pair(definedClass.getConstructor().newInstance() as PluginInterface, classPair.second))
                 } catch (noSuitableConstructor: NoSuchMethodException) {
                     throw InvalidPluginException("All classes that implement PluginInterface must have a public constructor without parameters, but ${definedClass.name} doesn't")
                 }

@@ -80,8 +80,8 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
 
             val layersToEnable = mutableSetOf<String>()
 
-            val pluginActors = pluginManager.getImplementations(VulkanInstanceActor::class)
-            for (pluginActor in pluginActors) {
+            val pluginPairs = pluginManager.getImplementations(VulkanInstanceActor::class)
+            for (pluginPair in pluginPairs) {
                 val pluginAgent = VulkanInstanceActor.Agent(
                     availableExtensions = availableExtensions,
                     desiredExtensions = mutableSetOf(),
@@ -91,37 +91,38 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
                     desiredLayers = mutableSetOf(),
                     requiredLayers = mutableSetOf()
                 )
-                pluginActor.manipulateVulkanInstance(pluginAgent)
+                pluginPair.first.manipulateVulkanInstance(pluginAgent)
+                val pluginName = pluginPair.second.name
 
                 if (!availableExtensions.containsAll(pluginAgent.requiredExtensions)) {
-                    logger.error("Plug-in XXX requires the following instance extensions, but not all are available: ${pluginAgent.requiredExtensions}")
+                    logger.error("Plug-in $pluginName requires the following instance extensions, but not all are available: ${pluginAgent.requiredExtensions}")
                     throw ExtensionStartupException(
                         "Missing required Vulkan instance extensions",
-                        "The XXX plug-in requires the following Vulkan instance extensions to work, but not all of them are available",
+                        "The $pluginName plug-in requires the following Vulkan instance extensions to work, but not all of them are available.",
                         availableExtensions, pluginAgent.requiredExtensions
                     )
                 }
                 extensionsToEnable.addAll(pluginAgent.requiredExtensions)
-                logger.info("Plug-in XXX requires the following instance extensions: ${pluginAgent.requiredExtensions}")
+                logger.info("Plug-in $pluginName requires the following instance extensions: ${pluginAgent.requiredExtensions}")
                 for (extension in pluginAgent.desiredExtensions) {
                     if (availableExtensions.contains(extension)) {
                         extensionsToEnable.add(extension)
                     }
                 }
-                logger.info("Plug-in XXX requested the following instance extensions: ${pluginAgent.desiredExtensions}")
+                logger.info("Plug-in $pluginName requested the following instance extensions: ${pluginAgent.desiredExtensions}")
 
                 if (!availableLayers.containsAll(pluginAgent.requiredLayers)) {
-                    logger.error("Plug-in XXX requires the following layers, but not all are available: ${pluginAgent.requiredLayers}")
+                    logger.error("Plug-in $pluginName requires the following layers, but not all are available: ${pluginAgent.requiredLayers}")
                     // TODO Throw LayerStartupException
                 }
                 layersToEnable.addAll(pluginAgent.requiredLayers)
-                logger.info("Plug-in XXX requires the following layers: ${pluginAgent.requiredLayers}")
+                logger.info("Plug-in $pluginName requires the following layers: ${pluginAgent.requiredLayers}")
                 for (layer in pluginAgent.desiredLayers) {
                     if (availableLayers.contains(layer)) {
                         layersToEnable.add(layer)
                     }
                 }
-                logger.info("Plug-in XXX requested the following layers: ${pluginAgent.desiredLayers}")
+                logger.info("Plug-in $pluginName requested the following layers: ${pluginAgent.desiredLayers}")
             }
 
             Pair(layersToEnable, extensionsToEnable)

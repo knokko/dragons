@@ -33,7 +33,9 @@ fun main(args: Array<String>) {
         logger.info("Start with shutting down the game")
         vkDestroyInstance(prepareMainMenuResult.vkInstance, null)
         prepareMainMenuResult.vrManager.destroy()
-        prepareMainMenuResult.pluginManager.getImplementations(ExitListener::class).forEach(ExitListener::onExit)
+        prepareMainMenuResult.pluginManager.getImplementations(ExitListener::class).forEach {
+                listenerPair -> listenerPair.first.onExit()
+        }
         logger.info("Finished shutting down the game")
     } catch (startupProblem: StartupException) {
         getLogger(ROOT_LOGGER_NAME).error("Failed to start", startupProblem)
@@ -55,11 +57,16 @@ fun prepareMainMenu(mainParameters: MainParameters): PrepareMainMenuResult {
             val logger = getLogger(ROOT_LOGGER_NAME)
             logger.info("Scan plug-in locations...")
             val combinedPluginContent = scanDefaultPluginLocations()
-            logger.info("Found ${combinedPluginContent.classByteMap.size} plug-in classes and ${combinedPluginContent.resourceByteMap.size} resources")
+            logger.info("Found ${combinedPluginContent.size} plug-ins:")
+            for (pluginPair in combinedPluginContent) {
+                logger.info(pluginPair.second.name)
+            }
             val pluginClassLoader = PluginClassLoader(combinedPluginContent)
             logger.info("Found ${pluginClassLoader.magicInstances.size} magic plug-in classes")
             val pluginManager = PluginManager(pluginClassLoader.magicInstances)
-            pluginManager.getImplementations(PluginsLoadedListener::class.java).forEach(PluginsLoadedListener::afterPluginsLoaded)
+            pluginManager.getImplementations(PluginsLoadedListener::class.java).forEach {
+                    listenerPair -> listenerPair.first.afterPluginsLoaded()
+            }
             pluginManager
         }
 
