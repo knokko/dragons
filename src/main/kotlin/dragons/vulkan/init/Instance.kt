@@ -71,7 +71,11 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
             for (extension in vrExtensions) {
                 if (!availableExtensions.contains(extension)) {
                     logger.error("The OpenVR runtime requires the $extension instance extension, which is not available")
-                    // TODO Throw ExtensionStartupException
+                    throw ExtensionStartupException(
+                        "Missing required Vulkan instance extensions",
+                        "The OpenVR runtime requires the following Vulkan instance extensions to work, but not all of them are available.",
+                        availableExtensions, vrExtensions
+                    )
                 }
             }
 
@@ -113,7 +117,11 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
 
                 if (!availableLayers.containsAll(pluginAgent.requiredLayers)) {
                     logger.error("Plug-in $pluginName requires the following layers, but not all are available: ${pluginAgent.requiredLayers}")
-                    // TODO Throw LayerStartupException
+                    throw ExtensionStartupException(
+                        "Missing required Vulkan layers",
+                        "The $pluginName plug-in requires the following Vulkan layers to work, but not all of them are available.",
+                        availableLayers, pluginAgent.requiredLayers, "layers"
+                    )
                 }
                 layersToEnable.addAll(pluginAgent.requiredLayers)
                 logger.info("Plug-in $pluginName requires the following layers: ${pluginAgent.requiredLayers}")

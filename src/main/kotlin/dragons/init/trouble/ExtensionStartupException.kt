@@ -7,7 +7,8 @@ class ExtensionStartupException(
     title: String,
     private val description: String,
     private val availableExtensions: Set<String>,
-    private val requiredExtensions: Set<String>
+    private val requiredExtensions: Set<String>,
+    private val extensionsWord: String = "extensions"
 ): StartupException(title, 800, 600) {
     override fun initFrame(target: JFrame) {
         val descriptionArea = JTextArea(description)
@@ -15,8 +16,8 @@ class ExtensionStartupException(
         descriptionArea.wrapStyleWord = true
         descriptionArea.isEditable = false
 
-        val availableExtensionLabels = listOf(JLabel("Available extensions:")) + availableExtensions.map { extension -> JLabel(extension) }
-        val requiredExtensionLabels = listOf(JLabel("Required extensions:")) + requiredExtensions.map { extension ->
+        val availableExtensionLabels = listOf(JLabel("Available $extensionsWord:")) + availableExtensions.map { extension -> JLabel(extension) }
+        val requiredExtensionLabels = listOf(JLabel("Required $extensionsWord:")) + requiredExtensions.map { extension ->
             val label = JLabel(extension)
             if (!availableExtensions.contains(extension)) {
                 label.foreground = Color.RED
