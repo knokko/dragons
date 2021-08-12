@@ -13,6 +13,7 @@ allprojects {
 
     repositories {
         mavenCentral()
+        maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
     }
 
     compileKotlin {
@@ -26,7 +27,7 @@ allprojects {
     sourceCompatibility = "16"
 
     project.ext.jomlVersion = "1.10.1"
-    project.ext.lwjglVersion = "3.2.3"
+    project.ext.lwjglVersion = "3.3.0-SNAPSHOT"
     switch (OperatingSystem.current()) {
         case OperatingSystem.LINUX:
             def osArch = System.getProperty("os.arch")
@@ -48,17 +49,20 @@ allprojects {
 
 dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
-    testImplementation platform('org.junit:junit-bom:5.7.2')
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
+    implementation 'org.slf4j:slf4j-api:1.7.32'
+    runtimeOnly 'ch.qos.logback:logback-classic:1.2.3'
+    runtimeOnly 'ch.qos.logback:logback-core:1.2.3'
 
     implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
-
     implementation "org.lwjgl:lwjgl"
     implementation "org.lwjgl:lwjgl-openvr"
     implementation "org.lwjgl:lwjgl-vulkan"
     runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
     runtimeOnly "org.lwjgl:lwjgl-openvr::$lwjglNatives"
     if (lwjglNatives == "natives-macos") runtimeOnly "org.lwjgl:lwjgl-vulkan::$lwjglNatives"
+
+    testImplementation platform('org.junit:junit-bom:5.7.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
 }
 
 test {
@@ -68,5 +72,11 @@ test {
 project(':standard-plugin') {
     dependencies {
         implementation project(':')
+    }
+}
+
+shadowJar {
+    manifest {
+        attributes ('Main-Class': 'dragons.init.InitKt')
     }
 }

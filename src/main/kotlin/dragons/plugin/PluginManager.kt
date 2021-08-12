@@ -1,6 +1,7 @@
 package dragons.plugin
 
 import dragons.plugin.interfaces.PluginInterface
+import kotlin.reflect.KClass
 
 class PluginManager(val magicInstances: Collection<PluginInterface>) {
 
@@ -26,6 +27,10 @@ class PluginManager(val magicInstances: Collection<PluginInterface>) {
             }
             result
         } as Collection<T>
+    }
+
+    fun <T: PluginInterface> getImplementations(magicInterface: KClass<T>): Collection<T> {
+        return getImplementations(magicInterface.java)
     }
 }
 

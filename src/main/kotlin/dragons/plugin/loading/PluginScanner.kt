@@ -10,7 +10,7 @@ import java.util.jar.JarInputStream
 @Throws(StartupException::class)
 suspend fun scanDefaultPluginLocations(): JarContent {
     val pluginsFolder = File("plug-ins/")
-    if (!pluginsFolder.mkdirs()) {
+    if (!pluginsFolder.isDirectory && !pluginsFolder.mkdirs()) {
         throw SimpleStartupException("Can't create plug-ins directory", listOf(
             "The plug-ins directory for this game ($pluginsFolder) doesn't seem to exist yet, so this game tried to create it.",
             "But... this failed for some reason..."
@@ -19,19 +19,20 @@ suspend fun scanDefaultPluginLocations(): JarContent {
 
     if (pluginsFolder.list()!!.isEmpty()) {
         // TODO Copy the standard plug-in jar to the plug-ins folder
+        // But don't do that in development!
     }
 
     val thirdPartyContent = scanDirectoryOfJars(pluginsFolder)
 
     // TODO New plug-ins should be added to this list manually
     val developmentProjects = listOf("standard-plugin")
-    val developmentSourceFolders = developmentProjects.flatMap { project -> listOf(
-        File("$project/src/main/kotlin"),
-        File("$project/src/main/java"),
-        File("$project/src/main/resources")
+    val developmentBuildFolders = developmentProjects.flatMap { project -> listOf(
+        File("$project/build/classes/kotlin/main"),
+        File("$project/build/classes/java/main"),
+        File("$project/build/resources/main")
     ) }
 
-    val developmentContent = scanDirectoriesOfClasses(developmentSourceFolders)
+    val developmentContent = scanDirectoriesOfClasses(developmentBuildFolders)
 
     return JarContent.merge(thirdPartyContent, developmentContent)
 }
@@ -77,11 +78,13 @@ suspend fun scanDirectoriesOfClasses(rootDirectories: Collection<File>): JarCont
     val classByteMap = mutableMapOf<String, ByteArray>()
     val resourceByteMap = mutableMapOf<String, ByteArray>()
     for (rootDirectory in rootDirectories) {
-        if (!rootDirectory.isDirectory) {
-            throw IllegalArgumentException("$rootDirectory is not a directory")
-        }
-        for (rootChild in rootDirectory.listFiles()!!) {
-            scanClassOrResourceOrDirectory(this, rootChild, "", classByteMap, resourceByteMap)
+        if (rootDirectory.exists()) {
+            if (!rootDirectory.isDirectory) {
+                throw IllegalArgumentException("$rootDirectory is not a directory")
+            }
+            for (rootChild in rootDirectory.listFiles()!!) {
+                scanClassOrResourceOrDirectory(this, rootChild, "", classByteMap, resourceByteMap)
+            }
         }
     }
     return@withContext JarContent(classByteMap, resourceByteMap)

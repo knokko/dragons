@@ -1,0 +1,43 @@
+<configuration>
+    <appender name="combinedFile" class="ch.qos.logback.core.FileAppender">
+        <file>logs/all.log</file>
+        <encoder>
+            <pattern>%date %level [%thread] %logger{10} [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="vulkanFile" class="ch.qos.logback.core.FileAppender">
+        <file>logs/vulkan.log</file>
+        <encoder>
+            <pattern>%date %level [%thread] %logger{10} [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="vrFile" class="ch.qos.logback.core.FileAppender">
+        <file>logs/vr.log</file>
+        <encoder>
+            <pattern>%date %level [%thread] %logger{10} [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%msg%n</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+    </appender>
+
+    <root>
+        <appender-ref ref="combinedFile" />
+        <appender-ref ref="console" />
+    </root>
+
+    <logger name="Vulkan">
+        <appender-ref ref="vulkanFile" />
+    </logger>
+    <logger name="VR">
+        <appender-ref ref="vrFile" />
+    </logger>
+</configuration>
