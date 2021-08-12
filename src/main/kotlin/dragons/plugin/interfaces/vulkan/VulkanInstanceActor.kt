@@ -44,7 +44,7 @@ interface VulkanInstanceActor: PluginInterface {
          * This set will be initially empty and the plug-in should add layers to this set during
          * manipulateVulkanInstance.
          */
-        val desiredLayers: Set<String>,
+        val desiredLayers: MutableSet<String>,
         /**
          * The set of layers that this plug-in requires to be enabled. These layers will be enabled if they are
          * available and the game will abort and show an error prompt if any layer in this set is not available.
@@ -52,6 +52,6 @@ interface VulkanInstanceActor: PluginInterface {
          * This set will be initially empty and the plug-in should add layers to this set during
          * manipulateVulkanInstance.
          */
-        val requiredLayers: Set<String>
+        val requiredLayers: MutableSet<String>
     )
 }
