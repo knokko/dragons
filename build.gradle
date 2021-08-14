@@ -45,6 +45,15 @@ allprojects {
                     : "natives-windows-x86"
             break
     }
+
+    dependencies {
+        compileOnly 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
+        compileOnly 'org.slf4j:slf4j-api:1.7.32'
+
+        compileOnly platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+        compileOnly "org.lwjgl:lwjgl"
+        compileOnly "org.lwjgl:lwjgl-vulkan"
+    }
 }
 
 dependencies {
@@ -70,6 +79,12 @@ test {
 }
 
 project(':standard-plugin') {
+    dependencies {
+        implementation project(':')
+    }
+}
+
+project(':debug-plugin') {
     dependencies {
         implementation project(':')
     }

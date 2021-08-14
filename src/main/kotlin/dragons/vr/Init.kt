@@ -1,21 +1,19 @@
 package dragons.vr
 
-import dragons.init.MainParameters
+import dragons.init.GameInitProperties
 import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
-import dragons.util.getIntConstantName
 import org.lwjgl.openvr.OpenVR
-import org.lwjgl.openvr.VR
 import org.lwjgl.openvr.VR.*
 import org.lwjgl.system.MemoryStack.stackPush
 import org.slf4j.LoggerFactory.getLogger
 
 @Throws(StartupException::class)
-fun initVr(mainParameters: MainParameters): VrManager {
+fun initVr(initProps: GameInitProperties): VrManager {
     val logger = getLogger("VR")
     if (!VR_IsRuntimeInstalled()) {
         logger.warn("No OpenVR runtime found")
-        if (mainParameters.requiresHmd) {
+        if (initProps.mainParameters.requiresHmd) {
             throw SimpleStartupException(
                 "No OpenVR runtime found", listOf(
                     "It looks like the OpenVR (SteamVR) runtime is not installed on your computer.",
@@ -33,7 +31,7 @@ fun initVr(mainParameters: MainParameters): VrManager {
 
     if (!VR_IsHmdPresent()) {
         logger.warn("Can't find HMD")
-        if (mainParameters.requiresHmd) {
+        if (initProps.mainParameters.requiresHmd) {
             throw SimpleStartupException(
                 "Can't find HMD", listOf(
                     "It looks like no HMD (VR helmet) is connected to your computer.",
@@ -55,7 +53,7 @@ fun initVr(mainParameters: MainParameters): VrManager {
         if (vrError != 0) {
             logger.warn("VR_InitInternal returned $vrError")
             val vrErrorName = VR_GetVRInitErrorAsSymbol(vrError)
-            if (mainParameters.requiresHmd) {
+            if (initProps.mainParameters.requiresHmd) {
                 throw SimpleStartupException(
                     "Failed to initialize OpenVR", listOf(
                         "VR_InitInternal returned error code $vrError ($vrErrorName).",

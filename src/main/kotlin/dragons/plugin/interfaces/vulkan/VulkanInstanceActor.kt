@@ -1,5 +1,6 @@
 package dragons.plugin.interfaces.vulkan
 
+import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.PluginInterface
 
 interface VulkanInstanceActor: PluginInterface {
@@ -8,7 +9,7 @@ interface VulkanInstanceActor: PluginInterface {
      * Plug-ins that implement this method can influence the Vulkan instance extensions and layers that will be
      * enabled. See the documentation of the properties of *Agent* for more information.
      */
-    fun manipulateVulkanInstance(agent: Agent)
+    fun manipulateVulkanInstance(pluginInstance: PluginInstance, agent: Agent)
 
     class Agent(
         /**

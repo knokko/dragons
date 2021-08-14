@@ -3,7 +3,7 @@ package dragons.plugin
 import dragons.plugin.interfaces.PluginInterface
 import kotlin.reflect.KClass
 
-class PluginManager(val magicInstances: Collection<Pair<PluginInterface, PluginInfo>>) {
+class PluginManager(val magicInstances: Collection<Pair<PluginInterface, PluginInstance>>) {
 
     private val magicInterfaceMap = mutableMapOf<Class<*>, Collection<*>>()
 
@@ -12,7 +12,7 @@ class PluginManager(val magicInstances: Collection<Pair<PluginInterface, PluginI
      * PluginInterface!
      */
     @Synchronized
-    fun <T: PluginInterface> getImplementations(magicInterface: Class<T>): Collection<Pair<T, PluginInfo>> {
+    fun <T: PluginInterface> getImplementations(magicInterface: Class<T>): Collection<Pair<T, PluginInstance>> {
         return magicInterfaceMap.getOrPut(magicInterface) {
             if (!implementsOrExtendsInterface(magicInterface, PluginInterface::class.java)) {
                 throw IllegalArgumentException("$magicInterface doesn't extend PluginInterface")
@@ -21,15 +21,15 @@ class PluginManager(val magicInstances: Collection<Pair<PluginInterface, PluginI
             val untypedResult = magicInstances.filter { candidateInstance ->
                 implementsOrExtendsInterface(candidateInstance.first::class.java, magicInterface)
             }
-            val result = ArrayList<Pair<T, PluginInfo>>(untypedResult.size)
+            val result = ArrayList<Pair<T, PluginInstance>>(untypedResult.size)
             for (element in untypedResult) {
-                result.add(element as Pair<T, PluginInfo>)
+                result.add(element as Pair<T, PluginInstance>)
             }
             result
-        } as Collection<Pair<T, PluginInfo>>
+        } as Collection<Pair<T, PluginInstance>>
     }
 
-    fun <T: PluginInterface> getImplementations(magicInterface: KClass<T>): Collection<Pair<T, PluginInfo>> {
+    fun <T: PluginInterface> getImplementations(magicInterface: KClass<T>): Collection<Pair<T, PluginInstance>> {
         return getImplementations(magicInterface.java)
     }
 }

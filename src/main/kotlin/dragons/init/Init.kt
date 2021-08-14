@@ -9,10 +9,10 @@ import dragons.plugin.loading.PluginClassLoader
 import dragons.plugin.loading.scanDefaultPluginLocations
 import dragons.vr.VrManager
 import dragons.vr.initVr
+import dragons.vulkan.destroy.destroyVulkanInstance
 import dragons.vulkan.init.initVulkanInstance
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
-import org.lwjgl.vulkan.VK12.vkDestroyInstance
 import org.lwjgl.vulkan.VkInstance
 import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory.getLogger
@@ -27,14 +27,16 @@ fun main(args: Array<String>) {
         logger.info("Running with main arguments ${args.contentToString()}")
         val mainParameters = MainParameters(args)
 
-        val prepareMainMenuResult = prepareMainMenu(mainParameters)
+        val initProps = GameInitProperties(mainParameters)
+
+        val prepareMainMenuResult = prepareMainMenu(initProps)
         logger.info("Finished preparing the main menu")
 
         logger.info("Start with shutting down the game")
-        vkDestroyInstance(prepareMainMenuResult.vkInstance, null)
+        destroyVulkanInstance(prepareMainMenuResult.vkInstance, prepareMainMenuResult.pluginManager)
         prepareMainMenuResult.vrManager.destroy()
         prepareMainMenuResult.pluginManager.getImplementations(ExitListener::class).forEach {
-                listenerPair -> listenerPair.first.onExit()
+                listenerPair -> listenerPair.first.onExit(listenerPair.second)
         }
         logger.info("Finished shutting down the game")
     } catch (startupProblem: StartupException) {
@@ -50,22 +52,22 @@ fun main(args: Array<String>) {
  * This preparation consists of loading all plug-ins and creating some rendering resources.
  */
 @Throws(StartupException::class)
-fun prepareMainMenu(mainParameters: MainParameters): PrepareMainMenuResult {
+fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
     return runBlocking {
-        val vrJob = async { initVr(mainParameters) }
+        val vrJob = async { initVr(initProps) }
         val pluginJob = async {
             val logger = getLogger(ROOT_LOGGER_NAME)
             logger.info("Scan plug-in locations...")
-            val combinedPluginContent = scanDefaultPluginLocations()
+            val combinedPluginContent = scanDefaultPluginLocations(initProps)
             logger.info("Found ${combinedPluginContent.size} plug-ins:")
             for (pluginPair in combinedPluginContent) {
-                logger.info(pluginPair.second.name)
+                logger.info(pluginPair.second.info.name)
             }
             val pluginClassLoader = PluginClassLoader(combinedPluginContent)
             logger.info("Found ${pluginClassLoader.magicInstances.size} magic plug-in classes")
             val pluginManager = PluginManager(pluginClassLoader.magicInstances)
             pluginManager.getImplementations(PluginsLoadedListener::class.java).forEach {
-                    listenerPair -> listenerPair.first.afterPluginsLoaded()
+                    listenerPair -> listenerPair.first.afterPluginsLoaded(listenerPair.second)
             }
             pluginManager
         }

@@ -1,15 +1,17 @@
 package dragons.plugin.loading
 
+import dragons.init.GameInitProperties
 import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
 import dragons.plugin.PluginInfo
+import dragons.plugin.PluginInstance
 import kotlinx.coroutines.*
 import java.io.File
 import java.nio.file.Files
 import java.util.jar.JarInputStream
 
 @Throws(StartupException::class)
-suspend fun scanDefaultPluginLocations(): Collection<Pair<JarContent, PluginInfo>> {
+suspend fun scanDefaultPluginLocations(gameInitProps: GameInitProperties): Collection<Pair<JarContent, PluginInstance>> {
     val pluginsFolder = File("plug-ins/")
     if (!pluginsFolder.isDirectory && !pluginsFolder.mkdirs()) {
         throw SimpleStartupException("Can't create plug-ins directory", listOf(
@@ -23,10 +25,10 @@ suspend fun scanDefaultPluginLocations(): Collection<Pair<JarContent, PluginInfo
         // But don't do that in development!
     }
 
-    val thirdPartyContent = scanDirectoryOfJars(pluginsFolder)
+    val thirdPartyContent = scanDirectoryOfJars(pluginsFolder, gameInitProps)
 
     // TODO New development plug-ins should be added to this list manually
-    val developmentProjects = listOf("standard-plugin")
+    val developmentProjects = listOf("standard-plugin", "debug-plugin")
 
     val developmentContent = developmentProjects.map { name ->
         val buildDirectories = listOf(
@@ -35,7 +37,10 @@ suspend fun scanDefaultPluginLocations(): Collection<Pair<JarContent, PluginInfo
             File("$name/build/resources/main")
         )
         val projectContent = scanDirectoriesOfClasses(buildDirectories)
-        Pair(projectContent, PluginInfo(name = name.replace("-plugin", "")))
+        Pair(projectContent, PluginInstance(PluginInfo(
+            name = name.replace("-plugin", "")),
+            gameInitProps = gameInitProps
+        ))
     }
 
     return thirdPartyContent + developmentContent
@@ -71,9 +76,9 @@ fun classPathToName(classPath: String): String {
     return classPath.substring(0 until classPath.length - 6).replace('/', '.')
 }
 
-suspend fun scanDirectoryOfJars(rootDirectory: File): Collection<Pair<JarContent, PluginInfo>> = withContext(Dispatchers.IO) {
-    val jarList = mutableListOf<Pair<JarContent, PluginInfo>>()
-    scanJarOrDirectory(this, rootDirectory, jarList)
+suspend fun scanDirectoryOfJars(rootDirectory: File, gameInitProps: GameInitProperties): Collection<Pair<JarContent, PluginInstance>> = withContext(Dispatchers.IO) {
+    val jarList = mutableListOf<Pair<JarContent, PluginInstance>>()
+    scanJarOrDirectory(this, rootDirectory, jarList, gameInitProps)
     return@withContext jarList
 }
 
@@ -124,16 +129,20 @@ private fun scanClassOrResourceOrDirectory(
 }
 
 private fun scanJarOrDirectory(
-    scope: CoroutineScope, file: File, jarList: MutableCollection<Pair<JarContent, PluginInfo>>
+    scope: CoroutineScope, file: File, jarList: MutableCollection<Pair<JarContent, PluginInstance>>,
+    gameInitProps: GameInitProperties
 ) {
     if (file.isFile) {
         if (file.name.endsWith(".jar")) {
             scope.launch {
                 val jarContent = scanJar(JarInputStream(Files.newInputStream(file.toPath())))
                 // TODO Give plug-ins the opportunity to choose a different name than their file name
-                val pluginInfo = PluginInfo(name = file.name.substring(0 until file.name.length - 4))
+                val pluginInstance = PluginInstance(
+                    info = PluginInfo(name = file.name.substring(0 until file.name.length - 4)),
+                    gameInitProps = gameInitProps
+                )
                 synchronized(jarList) {
-                    jarList.add(Pair(jarContent, pluginInfo))
+                    jarList.add(Pair(jarContent, pluginInstance))
                 }
             }
         }
@@ -141,7 +150,7 @@ private fun scanJarOrDirectory(
         val children = file.listFiles()!!
         for (child in children) {
             scope.launch {
-                scanJarOrDirectory(scope, child, jarList)
+                scanJarOrDirectory(scope, child, jarList, gameInitProps)
             }
         }
     }

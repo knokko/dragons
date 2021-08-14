@@ -1,26 +1,26 @@
 package dragons.plugin.loading
 
-import dragons.plugin.PluginInfo
+import dragons.plugin.PluginInstance
 import dragons.plugin.PluginURLHandler
 import dragons.plugin.interfaces.PluginInterface
 import java.lang.reflect.Modifier
 import java.net.URL
 
-private fun extractClasses(jars: Collection<Pair<JarContent, PluginInfo>>): Map<String, Pair<ByteArray, PluginInfo>> {
+private fun extractClasses(jars: Collection<Pair<JarContent, PluginInstance>>): Map<String, Pair<ByteArray, PluginInstance>> {
     val mapList = jars.map { jarPair ->
         jarPair.first.classByteMap.mapValues {
                 entry -> Pair(entry.value, jarPair.second)
         }
     }
 
-    val combinedMap = mutableMapOf<String, Pair<ByteArray, PluginInfo>>()
+    val combinedMap = mutableMapOf<String, Pair<ByteArray, PluginInstance>>()
     for (map in mapList) {
         combinedMap.putAll(map)
     }
     return combinedMap
 }
 
-private fun extractResources(jars: Collection<Pair<JarContent, PluginInfo>>): Map<String, ByteArray> {
+private fun extractResources(jars: Collection<Pair<JarContent, PluginInstance>>): Map<String, ByteArray> {
     val mapList = jars.map { pair -> pair.first.resourceByteMap }
     val combinedMap = mutableMapOf<String, ByteArray>()
     for (map in mapList) {
@@ -30,18 +30,18 @@ private fun extractResources(jars: Collection<Pair<JarContent, PluginInfo>>): Ma
 }
 
 class PluginClassLoader(
-    private var classByteMap: Map<String, Pair<ByteArray, PluginInfo>>?,
+    private var classByteMap: Map<String, Pair<ByteArray, PluginInstance>>?,
     private val resourceMap: Map<String, ByteArray>
 ): ClassLoader() {
 
-    constructor(jars: Collection<Pair<JarContent, PluginInfo>>) : this(extractClasses(jars), extractResources(jars))
+    constructor(jars: Collection<Pair<JarContent, PluginInstance>>) : this(extractClasses(jars), extractResources(jars))
 
-    private val classMap = mutableMapOf<String, Pair<Class<*>, PluginInfo>>()
+    private val classMap = mutableMapOf<String, Pair<Class<*>, PluginInstance>>()
     private val urlHandler = PluginURLHandler(resourceMap)
 
-    val magicInstances: Collection<Pair<PluginInterface, PluginInfo>>
+    val magicInstances: Collection<Pair<PluginInterface, PluginInstance>>
 
-    private fun getOrCreateClass(name: String, knownEntry: Pair<ByteArray, PluginInfo>?): Class<*> {
+    private fun getOrCreateClass(name: String, knownEntry: Pair<ByteArray, PluginInstance>?): Class<*> {
 
         val existing = classMap[name]
         if (existing != null) return existing.first
@@ -73,7 +73,7 @@ class PluginClassLoader(
         // We don't need them anymore after class loading has finished, so allow the garbage collector to free them
         classByteMap = null
 
-        val collectMagicClasses = mutableListOf<Pair<PluginInterface, PluginInfo>>()
+        val collectMagicClasses = mutableListOf<Pair<PluginInterface, PluginInstance>>()
         for (classPair in ArrayList(classMap.values)) {
             val definedClass = classPair.first
             resolveClass(definedClass)

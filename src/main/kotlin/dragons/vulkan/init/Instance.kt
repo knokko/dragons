@@ -5,6 +5,7 @@ import dragons.init.trouble.StartupException
 import dragons.init.trouble.VulkanStartupException
 import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.vulkan.VulkanInstanceActor
+import dragons.plugin.interfaces.vulkan.VulkanInstanceCreationListener
 import dragons.util.VulkanFailureException
 import dragons.util.assertVkSuccess
 import dragons.vr.VrManager
@@ -95,8 +96,8 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
                     desiredLayers = mutableSetOf(),
                     requiredLayers = mutableSetOf()
                 )
-                pluginPair.first.manipulateVulkanInstance(pluginAgent)
-                val pluginName = pluginPair.second.name
+                pluginPair.first.manipulateVulkanInstance(pluginPair.second, pluginAgent)
+                val pluginName = pluginPair.second.info.name
 
                 if (!availableExtensions.containsAll(pluginAgent.requiredExtensions)) {
                     logger.error("Plug-in $pluginName requires the following instance extensions, but not all are available: ${pluginAgent.requiredExtensions}")
@@ -175,7 +176,14 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
                 "CreateInstance"
             )
 
-            VkInstance(pInstance[0], ciInstance)
+            val vkInstance = VkInstance(pInstance[0], ciInstance)
+
+            val creationAgent = VulkanInstanceCreationListener.Agent(vkInstance, ciInstance)
+            pluginManager.getImplementations(VulkanInstanceCreationListener::class).forEach { listenerPair ->
+                listenerPair.first.afterVulkanInstanceCreation(listenerPair.second, creationAgent)
+            }
+
+            vkInstance
         }
     } catch(failure: VulkanFailureException) {
         throw VulkanStartupException(failure)

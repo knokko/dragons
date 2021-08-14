@@ -14,7 +14,7 @@ class TestPluginLoader {
     fun testSimpleJarPluginLoader() {
         val simpleTestPluginContent =
             scanJar(JarInputStream(ClassLoader.getSystemResourceAsStream("dragons/plugins/test/simple.jar")))
-        testSimplePluginLoader(listOf(Pair(simpleTestPluginContent, PluginInfo(name = "simple"))))
+        testSimplePluginLoader(listOf(Pair(simpleTestPluginContent, PluginInstance.createTestInstance("simple"))))
     }
 
     // NOTE: This test will fail before running ./gradlew shadowJar
@@ -24,10 +24,10 @@ class TestPluginLoader {
             File("test-plugins/simple/build/classes/java/main"),
             File("test-plugins/simple/build/classes/kotlin/main")
         )) }
-        testSimplePluginLoader(listOf(Pair(simpleTestPluginContent, PluginInfo(name = "simple"))))
+        testSimplePluginLoader(listOf(Pair(simpleTestPluginContent, PluginInstance.createTestInstance("simple"))))
     }
 
-    private fun testSimplePluginLoader(content: Collection<Pair<JarContent, PluginInfo>>) {
+    private fun testSimplePluginLoader(content: Collection<Pair<JarContent, PluginInstance>>) {
         val classLoader = PluginClassLoader(content)
         val pluginManager = PluginManager(classLoader.magicInstances)
 
@@ -66,8 +66,8 @@ class TestPluginLoader {
 
     private fun testTwinPluginLoader(twinContentA: JarContent, twinContentB: JarContent) {
         val twinContent = listOf(
-            Pair(twinContentA, PluginInfo(name = "twinA")),
-            Pair(twinContentB, PluginInfo(name = "twinB"))
+            Pair(twinContentA, PluginInstance.createTestInstance("twinA")),
+            Pair(twinContentB, PluginInstance.createTestInstance("twinB"))
         )
         val classLoader = PluginClassLoader(twinContent)
         val pluginManager = PluginManager(classLoader.magicInstances)
