@@ -20,9 +20,8 @@ suspend fun scanDefaultPluginLocations(gameInitProps: GameInitProperties): Colle
         ))
     }
 
-    if (pluginsFolder.list()!!.isEmpty()) {
+    if (pluginsFolder.list()!!.isEmpty() && !gameInitProps.isInDevelopment) {
         // TODO Copy the standard plug-in jar to the plug-ins folder
-        // But don't do that in development!
     }
 
     val thirdPartyContent = scanDirectoryOfJars(pluginsFolder, gameInitProps)

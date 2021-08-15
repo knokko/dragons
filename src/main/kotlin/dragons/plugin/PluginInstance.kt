@@ -25,7 +25,7 @@ class PluginInstance(
         fun createTestInstance(pluginName: String): PluginInstance {
             return PluginInstance(
                 info = PluginInfo(name = pluginName),
-                gameInitProps = GameInitProperties(mainParameters = MainParameters(arrayOf()))
+                gameInitProps = GameInitProperties(mainParameters = MainParameters(arrayOf()), isInDevelopment = true)
             )
         }
     }

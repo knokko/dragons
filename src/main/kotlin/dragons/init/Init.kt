@@ -14,9 +14,12 @@ import dragons.vulkan.init.initVulkanInstance
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.lwjgl.vulkan.VkInstance
+import org.slf4j.Logger
 import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory.getLogger
 import java.io.File
+import java.nio.file.Files
+import kotlin.io.path.absolutePathString
 
 fun main(args: Array<String>) {
     try {
@@ -27,7 +30,15 @@ fun main(args: Array<String>) {
         logger.info("Running with main arguments ${args.contentToString()}")
         val mainParameters = MainParameters(args)
 
-        val initProps = GameInitProperties(mainParameters)
+        val isInDevelopment = File("gradlew.bat").exists()
+
+        if (isInDevelopment) {
+            if (!ensurePluginsAreBuilt(logger)) {
+                return
+            }
+        }
+
+        val initProps = GameInitProperties(mainParameters, isInDevelopment)
 
         val prepareMainMenuResult = prepareMainMenu(initProps)
         logger.info("Finished preparing the main menu")
@@ -43,6 +54,28 @@ fun main(args: Array<String>) {
         getLogger(ROOT_LOGGER_NAME).error("Failed to start", startupProblem)
         showStartupTroubleWindow(startupProblem)
     }
+}
+
+fun ensurePluginsAreBuilt(logger: Logger): Boolean {
+    logger.warn("Running in development, so the plug-ins need to be built...")
+
+    // TODO Add Linux support
+    val buildPluginCommand = "./gradlew.bat build -x test"
+    val buildPluginScript = Files.createTempFile("", ".bat")
+    Files.writeString(buildPluginScript, buildPluginCommand)
+
+    val buildPluginsBuilder = ProcessBuilder(buildPluginScript.absolutePathString())
+    buildPluginsBuilder.redirectError(ProcessBuilder.Redirect.INHERIT)
+    val buildPluginsProcess = buildPluginsBuilder.start()
+    val exitCode = buildPluginsProcess.waitFor()
+
+    if (exitCode != 0) {
+        logger.error("Failed to build plug-ins (exit code $exitCode). The game will terminate")
+        return false
+    }
+    logger.warn("Plug-ins were built successfully")
+
+    return true
 }
 
 /**
