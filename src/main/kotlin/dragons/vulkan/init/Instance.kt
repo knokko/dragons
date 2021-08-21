@@ -1,6 +1,7 @@
 package dragons.vulkan.init
 
 import dragons.init.trouble.ExtensionStartupException
+import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
 import dragons.init.trouble.VulkanStartupException
 import dragons.plugin.PluginManager
@@ -21,6 +22,8 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
     try {
         val logger = getLogger("Vulkan")
         val (layersToEnable, extensionsToEnable) = stackPush().use { stack ->
+
+
 
             val pNumAvailableExtensions = stack.callocInt(1)
             assertVkSuccess(
@@ -171,14 +174,40 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
             ciInstance.ppEnabledLayerNames(pChosenLayers)
 
             val pInstance = stack.callocPointer(1)
+            val instanceCreationResult = vkCreateInstance(ciInstance, null, pInstance)
+
+            if (instanceCreationResult == VK_ERROR_INCOMPATIBLE_DRIVER) {
+                throw SimpleStartupException("Insufficient Vulkan support", listOf(
+                    "This game requires at least Vulkan 1.2.0, but your graphics driver only supports Vulkan 1.0.",
+                    "Updating your graphics drivers might resolve this problem."
+                ))
+            }
             assertVkSuccess(
-                vkCreateInstance(ciInstance, null, pInstance),
-                "CreateInstance"
+                instanceCreationResult, "CreateInstance"
             )
+
+            val pVulkanVersion = stack.callocInt(1)
+            assertVkSuccess(
+                vkEnumerateInstanceVersion(pVulkanVersion),
+                "EnumerateInstanceVersion"
+            )
+            val vulkanVersion = pVulkanVersion[0]
+            if (vulkanVersion < VK_MAKE_VERSION(1, 2, 0)) {
+                val versionString = "${VK_VERSION_MAJOR(vulkanVersion)}.${VK_VERSION_MINOR(vulkanVersion)}.${VK_VERSION_PATCH(vulkanVersion)}"
+                throw SimpleStartupException("Insufficient Vulkan support", listOf(
+                    "This game requires at least Vulkan 1.2.0, but your graphics driver only supports up to Vulkan $versionString.",
+                    "Updating your graphics drivers might resolve this problem"
+                ))
+            }
 
             val vkInstance = VkInstance(pInstance[0], ciInstance)
 
-            val creationAgent = VulkanInstanceCreationListener.Agent(vkInstance, ciInstance)
+            val creationAgent = VulkanInstanceCreationListener.Agent(
+                vulkanInstance = vkInstance,
+                enabledLayers = layersToEnable,
+                enabledExtensions = extensionsToEnable,
+                ciInstance = ciInstance
+            )
             pluginManager.getImplementations(VulkanInstanceCreationListener::class).forEach { listenerPair ->
                 listenerPair.first.afterVulkanInstanceCreation(listenerPair.second, creationAgent)
             }

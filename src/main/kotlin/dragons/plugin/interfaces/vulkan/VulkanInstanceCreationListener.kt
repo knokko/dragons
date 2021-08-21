@@ -18,6 +18,14 @@ interface VulkanInstanceCreationListener: PluginInterface {
          */
         val vulkanInstance: VkInstance,
         /**
+         * The set of (instance) layers that were enabled
+         */
+        val enabledLayers: Set<String>,
+        /**
+         * The set of instance extensions that were enabled
+         */
+        val enabledExtensions: Set<String>,
+        /**
          * The *VkInstanceCreateInfo* that was used to create *vulkanInstance*. NOTE: This struct is expected to be
          * allocated on a *MemoryStack* and will probably be invalidated after all *VulkanInstanceCreationListener*s
          * have been notified.

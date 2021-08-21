@@ -10,6 +10,7 @@ import dragons.plugin.loading.scanDefaultPluginLocations
 import dragons.vr.VrManager
 import dragons.vr.initVr
 import dragons.vulkan.destroy.destroyVulkanInstance
+import dragons.vulkan.init.choosePhysicalDevice
 import dragons.vulkan.init.initVulkanInstance
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
@@ -113,6 +114,12 @@ fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
         }
 
         val vkInstance = vulkanInstanceJob.await()
+
+        val vkPhysicalDeviceJob = async {
+            choosePhysicalDevice(vkInstance, pluginManager, vrManager)
+        }
+
+        val vkPhysicalDevice = vkPhysicalDeviceJob.await()
 
         PrepareMainMenuResult(pluginManager, vrManager, vkInstance)
     }
