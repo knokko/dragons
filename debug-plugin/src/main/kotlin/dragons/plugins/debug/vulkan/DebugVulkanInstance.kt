@@ -4,7 +4,7 @@ import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanInstanceActor
 import dragons.plugin.interfaces.vulkan.VulkanInstanceCreationListener
 import dragons.plugin.interfaces.vulkan.VulkanInstanceDestructionListener
-import dragons.util.assertVkSuccess
+import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.EXTDebugUtils.*
 import org.lwjgl.vulkan.VK10.VK_FALSE

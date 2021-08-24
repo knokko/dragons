@@ -7,9 +7,8 @@ import dragons.init.trouble.VulkanStartupException
 import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.vulkan.VulkanInstanceActor
 import dragons.plugin.interfaces.vulkan.VulkanInstanceCreationListener
-import dragons.util.VulkanFailureException
-import dragons.util.assertVkSuccess
 import dragons.vr.VrManager
+import dragons.vulkan.util.*
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
@@ -22,8 +21,6 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
     try {
         val logger = getLogger("Vulkan")
         val (layersToEnable, extensionsToEnable) = stackPush().use { stack ->
-
-
 
             val pNumAvailableExtensions = stack.callocInt(1)
             assertVkSuccess(
@@ -42,10 +39,7 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
                 "EnumerateInstanceExtensionProperties", "extensions"
             )
 
-            val availableExtensions = HashSet<String>()
-            for (extensionIndex in 0 until numAvailableExtensions) {
-                availableExtensions.add(pAvailableExtensions[extensionIndex].extensionNameString())
-            }
+            val availableExtensions = extensionBufferToSet(pAvailableExtensions)
             logger.info("There are ${availableExtensions.size} Vulkan instance extensions available:")
             for (extension in availableExtensions) {
                 logger.info(extension)
@@ -62,10 +56,7 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
                 vkEnumerateInstanceLayerProperties(pNumAvailableLayers, pAvailableLayers),
                 "EnumerateInstanceLayerProperties", "layers"
             )
-            val availableLayers = HashSet<String>()
-            for (index in 0 until numAvailableLayers) {
-                availableLayers.add(pAvailableLayers[index].layerNameString())
-            }
+            val availableLayers = layerBufferToSet(pAvailableLayers)
             logger.info("There are ${availableLayers.size} available Vulkan instance layers:")
             for (layer in availableLayers) {
                 logger.info(layer)
@@ -151,16 +142,6 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
 
         return stackPush().use { stack ->
 
-            val pChosenExtensions = stack.callocPointer(extensionsToEnable.size)
-            for ((index, extension) in extensionsToEnable.withIndex()) {
-                pChosenExtensions.put(index, stack.UTF8(extension))
-            }
-
-            val pChosenLayers = stack.callocPointer(layersToEnable.size)
-            for ((index, layer) in layersToEnable.withIndex()) {
-                pChosenLayers.put(index, stack.UTF8(layer))
-            }
-
             val appInfo = VkApplicationInfo.callocStack(stack)
             appInfo.sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)
             appInfo.pApplicationName(stack.UTF8("Dragons"))
@@ -170,8 +151,8 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
             val ciInstance = VkInstanceCreateInfo.callocStack(stack)
             ciInstance.sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO)
             ciInstance.pApplicationInfo(appInfo)
-            ciInstance.ppEnabledExtensionNames(pChosenExtensions)
-            ciInstance.ppEnabledLayerNames(pChosenLayers)
+            ciInstance.ppEnabledExtensionNames(encodeStrings(extensionsToEnable, stack))
+            ciInstance.ppEnabledLayerNames(encodeStrings(layersToEnable, stack))
 
             val pInstance = stack.callocPointer(1)
             val instanceCreationResult = vkCreateInstance(ciInstance, null, pInstance)

@@ -31,10 +31,13 @@ class TestPluginLoader {
         val classLoader = PluginClassLoader(content)
         val pluginManager = PluginManager(classLoader.magicInstances)
 
-        val loadListeners = pluginManager.getImplementations(PluginsLoadedListener::class.java)
-        assertEquals(1, loadListeners.size)
-        loadListeners.first().first.afterPluginsLoaded()
-        pluginManager.getImplementations(PluginsLoadedListener::class.java).first().first.afterPluginsLoaded()
+        repeat(2) {
+            val loadListeners = pluginManager.getImplementations(PluginsLoadedListener::class)
+            assertEquals(1, loadListeners.size)
+
+            val firstLoadListener = loadListeners.first()
+            firstLoadListener.first.afterPluginsLoaded(firstLoadListener.second)
+        }
 
         assertEquals(2,
             Class.forName("dragons.plugins.test.simple.SimplePluginStore", true, classLoader)
@@ -72,10 +75,12 @@ class TestPluginLoader {
         val classLoader = PluginClassLoader(twinContent)
         val pluginManager = PluginManager(classLoader.magicInstances)
 
-        val loadListeners = pluginManager.getImplementations(PluginsLoadedListener::class.java)
-        assertEquals(1, loadListeners.size)
-        loadListeners.first().first.afterPluginsLoaded()
-        pluginManager.getImplementations(PluginsLoadedListener::class.java).first().first.afterPluginsLoaded()
+        repeat(2) {
+            val loadListeners = pluginManager.getImplementations(PluginsLoadedListener::class)
+            assertEquals(1, loadListeners.size)
+            val firstListener = loadListeners.first()
+            firstListener.first.afterPluginsLoaded(firstListener.second)
+        }
 
         assertEquals("abcdef",
             Class.forName("dragons.plugins.test.twin.TwinStore", true, classLoader)
