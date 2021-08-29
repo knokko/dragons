@@ -19,9 +19,13 @@ interface VulkanDeviceActor: PluginInterface {
         val availableFeatures11: VkPhysicalDeviceVulkan11Features,
         val availableFeatures12: VkPhysicalDeviceVulkan12Features,
 
-        val featuresToEnable10: VkPhysicalDeviceFeatures,
-        val featuresToEnable11: VkPhysicalDeviceVulkan11Features,
-        val featuresToEnable12: VkPhysicalDeviceVulkan12Features,
+        val requestedFeatures10: VkPhysicalDeviceFeatures,
+        val requestedFeatures11: VkPhysicalDeviceVulkan11Features,
+        val requestedFeatures12: VkPhysicalDeviceVulkan12Features,
+
+        val requiredFeatures10: VkPhysicalDeviceFeatures,
+        val requiredFeatures11: VkPhysicalDeviceVulkan11Features,
+        val requiredFeatures12: VkPhysicalDeviceVulkan12Features,
 
         val currentNextChain: VkBaseOutStructure?,
         var extendNextChain: VkBaseOutStructure? = null

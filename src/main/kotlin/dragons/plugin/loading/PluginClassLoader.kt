@@ -117,6 +117,7 @@ class PluginClassLoader(
         return if (resourceBytes != null) {
             URL("dragonsplugin", "pluginname", 0, name, urlHandler)
         } else {
+            println("resourceMap is $resourceMap and resource name is $name")
             super.findResource(name)
         }
     }

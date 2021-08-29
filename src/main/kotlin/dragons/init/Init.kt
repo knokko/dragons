@@ -9,12 +9,16 @@ import dragons.plugin.loading.PluginClassLoader
 import dragons.plugin.loading.scanDefaultPluginLocations
 import dragons.vr.VrManager
 import dragons.vr.initVr
+import dragons.vulkan.destroy.destroyVulkanDevice
 import dragons.vulkan.destroy.destroyVulkanInstance
 import dragons.vulkan.init.choosePhysicalDevice
+import dragons.vulkan.init.createLogicalDevice
 import dragons.vulkan.init.initVulkanInstance
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkInstance
+import org.lwjgl.vulkan.VkPhysicalDevice
 import org.slf4j.Logger
 import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory.getLogger
@@ -45,6 +49,7 @@ fun main(args: Array<String>) {
         logger.info("Finished preparing the main menu")
 
         logger.info("Start with shutting down the game")
+        destroyVulkanDevice(prepareMainMenuResult.vkDevice, prepareMainMenuResult.pluginManager)
         destroyVulkanInstance(prepareMainMenuResult.vkInstance, prepareMainMenuResult.pluginManager)
         prepareMainMenuResult.vrManager.destroy()
         prepareMainMenuResult.pluginManager.getImplementations(ExitListener::class).forEach {
@@ -106,23 +111,27 @@ fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
             pluginManager
         }
 
-        val pluginManager = pluginJob.await()
-        val vrManager = vrJob.await()
-
         val vulkanInstanceJob = async {
-            initVulkanInstance(pluginManager, vrManager)
+            initVulkanInstance(pluginJob.await(), vrJob.await())
         }
-
-        val vkInstance = vulkanInstanceJob.await()
 
         val vkPhysicalDeviceJob = async {
-            choosePhysicalDevice(vkInstance, pluginManager, vrManager)
+            choosePhysicalDevice(vulkanInstanceJob.await(), pluginJob.await(), vrJob.await())
         }
 
-        val vkPhysicalDevice = vkPhysicalDeviceJob.await()
+        val vkDeviceJob = async {
+            createLogicalDevice(vulkanInstanceJob.await(), vkPhysicalDeviceJob.await(), pluginJob.await(), vrJob.await())
+        }
 
-        PrepareMainMenuResult(pluginManager, vrManager, vkInstance)
+        PrepareMainMenuResult(
+            pluginJob.await(), vrJob.await(),
+            vulkanInstanceJob.await(), vkPhysicalDeviceJob.await(), vkDeviceJob.await()
+        )
     }
 }
 
-class PrepareMainMenuResult(val pluginManager: PluginManager, val vrManager: VrManager, val vkInstance: VkInstance)
+class PrepareMainMenuResult(
+    val pluginManager: PluginManager, val vrManager: VrManager,
+    val vkInstance: VkInstance,
+    val vkPhysicalDevice: VkPhysicalDevice, val vkDevice: VkDevice
+)
