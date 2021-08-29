@@ -102,9 +102,18 @@ class TestDevice {
     @Test
     fun testPickQueuePriorities() {
         stackPush().use { stack ->
-            assertEquals(stack.floats(1f), pickQueuePriorities(1, stack))
-            assertEquals(stack.floats(1f, 0f), pickQueuePriorities(2, stack))
-            assertEquals(stack.floats(1f, 1f, 0f), pickQueuePriorities(3, stack))
+            assertEquals(
+                Pair(stack.floats(1f), QueueFamilyInfo(6, 1, 0)),
+                pickQueuePriorities(1, 6, stack)
+            )
+            assertEquals(
+                Pair(stack.floats(1f, 0f), QueueFamilyInfo(15, 1, 1)),
+                pickQueuePriorities(2, 15, stack)
+            )
+            assertEquals(
+                Pair(stack.floats(1f, 1f, 0f), QueueFamilyInfo(0, 2, 1)),
+                pickQueuePriorities(3, 0, stack)
+            )
         }
     }
 
@@ -261,7 +270,7 @@ class TestDevice {
                 memPutInt(transferFamily.address() + VkQueueFamilyProperties.QUEUECOUNT, 1)
             }
 
-            populateDeviceCreateInfo(
+            val populateResult = populateDeviceCreateInfo(
                 ciDevice, vkInstance, vkPhysicalDevice, stack, pluginManager, vrManager, availableExtensions,
                 queueFamilies, availableFeatures10, availableFeatures11, availableFeatures12
             )
@@ -281,13 +290,16 @@ class TestDevice {
                     ciQueue.queueFamilyIndex() == 1
                 }!!
                 assertEquals(stack.floats(1f, 0f), generalFamily.pQueuePriorities())
+                assertEquals(QueueFamilyInfo(1, 1, 1), populateResult.generalQueueFamily)
             }
             run {
                 val transferFamily = ciDevice.pQueueCreateInfos().find { ciQueue ->
                     ciQueue.queueFamilyIndex() == 2
                 }!!
                 assertEquals(stack.floats(1f), transferFamily.pQueuePriorities())
+                assertEquals(QueueFamilyInfo(2, 1, 0), populateResult.transferOnlyQueueFamily!!)
             }
+            assertNull(populateResult.computeOnlyQueueFamily)
             assertEquals(0, ciDevice.enabledLayerCount())
 
             val expectedExtensions = setOf("extension1", "extension2", "extension3", "extension4", "extension5", "extension6", "extension7")
@@ -296,15 +308,19 @@ class TestDevice {
             val expectedFeatures12 = setOf("DRAWINDIRECTCOUNT", "BUFFERDEVICEADDRESS", "HOSTQUERYRESET", "SHADERFLOAT16")
             assertEquals(expectedExtensions.size, ciDevice.enabledExtensionCount())
             assertEquals(expectedExtensions, decodeStringsToSet(ciDevice.ppEnabledExtensionNames()!!))
+            assertEquals(expectedExtensions, populateResult.enabledExtensions)
 
             assertEquals(expectedFeatures10, getEnabledFeatures(ciDevice.pEnabledFeatures()!!))
+            assertEquals(expectedFeatures10, getEnabledFeatures(populateResult.enabledFeatures10))
             run {
                 val pFeatures11 = findInNextChain(ciDevice, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES)!!
                 assertEquals(expectedFeatures11, getEnabledFeatures(VkPhysicalDeviceVulkan11Features.create(pFeatures11.address())))
+                assertEquals(expectedFeatures11, getEnabledFeatures(populateResult.enabledFeatures11))
             }
             run {
                 val pFeatures12 = findInNextChain(ciDevice, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)!!
                 assertEquals(expectedFeatures12, getEnabledFeatures(VkPhysicalDeviceVulkan12Features.create(pFeatures12.address())))
+                assertEquals(expectedFeatures12, getEnabledFeatures(populateResult.enabledFeatures12))
             }
 
             vkDestroyInstance(vkInstance, null)

@@ -49,7 +49,10 @@ fun main(args: Array<String>) {
         logger.info("Finished preparing the main menu")
 
         logger.info("Start with shutting down the game")
-        destroyVulkanDevice(prepareMainMenuResult.vkDevice, prepareMainMenuResult.pluginManager)
+        destroyVulkanDevice(
+            prepareMainMenuResult.vkInstance, prepareMainMenuResult.vkPhysicalDevice, prepareMainMenuResult.vkDevice,
+            prepareMainMenuResult.pluginManager
+        )
         destroyVulkanInstance(prepareMainMenuResult.vkInstance, prepareMainMenuResult.pluginManager)
         prepareMainMenuResult.vrManager.destroy()
         prepareMainMenuResult.pluginManager.getImplementations(ExitListener::class).forEach {

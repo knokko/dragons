@@ -5,8 +5,12 @@ import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
 import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.vulkan.VulkanDeviceActor
+import dragons.plugin.interfaces.vulkan.VulkanDeviceCreationListener
 import dragons.plugin.interfaces.vulkan.VulkanDeviceRater
 import dragons.vr.VrManager
+import dragons.vulkan.queue.DeviceQueue
+import dragons.vulkan.queue.QueueFamily
+import dragons.vulkan.queue.QueueManager
 import dragons.vulkan.util.assertVkSuccess
 import dragons.vulkan.util.combineNextChains
 import dragons.vulkan.util.encodeStrings
@@ -262,7 +266,7 @@ fun createLogicalDevice(
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pNumQueueFamilies, pQueueFamilies)
 
         val ciDevice = VkDeviceCreateInfo.callocStack(stack)
-        populateDeviceCreateInfo(
+        val populateResult = populateDeviceCreateInfo(
             ciDevice, vkInstance, physicalDevice, stack, pluginManager, vrManager, availableExtensions,
             pQueueFamilies, availableFeatures10, availableFeatures11, availableFeatures12
         )
@@ -272,7 +276,41 @@ fun createLogicalDevice(
             vkCreateDevice(physicalDevice, ciDevice, null, pDevice),
             "CreateDevice"
         )
-        VkDevice(pDevice[0], physicalDevice, ciDevice)
+        val device = VkDevice(pDevice[0], physicalDevice, ciDevice)
+
+        fun retrieveQueues(info: QueueFamilyInfo): QueueFamily {
+            val priorityQueues = (0 until info.numPriorityQueues).map { queueIndex ->
+                val pQueue = stack.callocPointer(1)
+                vkGetDeviceQueue(device, info.index, queueIndex, pQueue)
+                DeviceQueue(VkQueue(pQueue[0], device))
+            }
+            val backgroundQueues = (0 until info.numBackgroundQueues).map { partialQueueIndex ->
+                val pQueue = stack.callocPointer(1)
+                vkGetDeviceQueue(device, info.index, partialQueueIndex + info.numPriorityQueues, pQueue)
+                DeviceQueue(VkQueue(pQueue[0], device))
+            }
+            return QueueFamily(priorityQueues = priorityQueues, backgroundQueues = backgroundQueues)
+        }
+
+        fun maybeRetrieveQueues(info: QueueFamilyInfo?) = if (info != null) { retrieveQueues(info) } else { null }
+
+        val queueManager = QueueManager(
+            retrieveQueues(populateResult.generalQueueFamily),
+            maybeRetrieveQueues(populateResult.computeOnlyQueueFamily),
+            maybeRetrieveQueues(populateResult.transferOnlyQueueFamily)
+        )
+
+        val eventAgent = VulkanDeviceCreationListener.Agent(
+            vkInstance, physicalDevice, device,
+            populateResult.enabledExtensions, populateResult.enabledFeatures10,
+            populateResult.enabledFeatures11, populateResult.enabledFeatures12,
+            queueManager
+        )
+        pluginManager.getImplementations(VulkanDeviceCreationListener::class).forEach { pluginPair ->
+            pluginPair.first.afterVulkanDeviceCreation(pluginPair.second, eventAgent)
+        }
+
+        device
     }
 }
 
@@ -283,7 +321,7 @@ internal fun populateDeviceCreateInfo(
     availableExtensions: Set<String>, queueFamilies: VkQueueFamilyProperties.Buffer,
     availableFeatures10: VkPhysicalDeviceFeatures,
     availableFeatures11: VkPhysicalDeviceVulkan11Features, availableFeatures12: VkPhysicalDeviceVulkan12Features
-) {
+): PopulateDeviceResult {
     val availableFeaturesSet10 = getEnabledFeatures(availableFeatures10)
     val availableFeaturesSet11 = getEnabledFeatures(availableFeatures11)
     val availableFeaturesSet12 = getEnabledFeatures(availableFeatures12)
@@ -420,22 +458,32 @@ internal fun populateDeviceCreateInfo(
         numLogicalQueueFamilies += 1
     }
 
+    val generalPriorities = pickQueuePriorities(
+        queueFamilies[generalQueueFamilyIndex].queueCount(), generalQueueFamilyIndex, stack
+    )
+    val computeOnlyPriorities = if (computeOnlyQueueFamilyIndex != null) {
+        pickQueuePriorities(queueFamilies[computeOnlyQueueFamilyIndex].queueCount(), computeOnlyQueueFamilyIndex, stack)
+    } else { null }
+    val transferOnlyPriorities = if (transferOnlyQueueFamilyIndex != null) {
+        pickQueuePriorities(queueFamilies[transferOnlyQueueFamilyIndex].queueCount(), transferOnlyQueueFamilyIndex, stack)
+    } else { null }
+
     val cipQueues = VkDeviceQueueCreateInfo.callocStack(numLogicalQueueFamilies, stack)
     val ciGeneralQueue = cipQueues[0]
     ciGeneralQueue.sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
     ciGeneralQueue.queueFamilyIndex(generalQueueFamilyIndex)
-    ciGeneralQueue.pQueuePriorities(pickQueuePriorities(queueFamilies[generalQueueFamilyIndex].queueCount(), stack))
-    if (computeOnlyQueueFamilyIndex != null) {
+    ciGeneralQueue.pQueuePriorities(generalPriorities.first)
+    if (computeOnlyPriorities != null) {
         val ciComputeQueue = cipQueues[1]
         ciComputeQueue.sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
-        ciComputeQueue.queueFamilyIndex(computeOnlyQueueFamilyIndex)
-        ciComputeQueue.pQueuePriorities(pickQueuePriorities(queueFamilies[computeOnlyQueueFamilyIndex].queueCount(), stack))
+        ciComputeQueue.queueFamilyIndex(computeOnlyPriorities.second.index)
+        ciComputeQueue.pQueuePriorities(computeOnlyPriorities.first)
     }
-    if (transferOnlyQueueFamilyIndex != null) {
+    if (transferOnlyPriorities != null) {
         val ciTransferQueue = cipQueues[cipQueues.capacity() - 1]
         ciTransferQueue.sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
-        ciTransferQueue.queueFamilyIndex(transferOnlyQueueFamilyIndex)
-        ciTransferQueue.pQueuePriorities(pickQueuePriorities(queueFamilies[transferOnlyQueueFamilyIndex].queueCount(), stack))
+        ciTransferQueue.queueFamilyIndex(transferOnlyPriorities.second.index)
+        ciTransferQueue.pQueuePriorities(transferOnlyPriorities.first)
     }
 
     ciDevice.sType(VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO)
@@ -447,6 +495,12 @@ internal fun populateDeviceCreateInfo(
     ciDevice.ppEnabledExtensionNames(encodeStrings(extensionsToEnable, stack))
     ciDevice.pEnabledFeatures(combinedFeatures10)
     ciDevice.pQueueCreateInfos(cipQueues)
+
+    return PopulateDeviceResult(
+        extensionsToEnable, combinedFeatures10,
+        combinedFeatures11, combinedFeatures12,
+        generalPriorities.second, computeOnlyPriorities?.second, transferOnlyPriorities?.second
+    )
 }
 
 private val featureFieldBlackList = listOf("SIZEOF", "ALIGNOF", "STYPE", "PNEXT")
@@ -497,7 +551,9 @@ fun enableFeatures(dest: VkPhysicalDeviceVulkan12Features, featuresToEnable: Col
     enableFeatures(dest.address(), dest::class.java, featuresToEnable)
 }
 
-fun pickQueuePriorities(numAvailableQueues: Int, stack: MemoryStack): FloatBuffer {
+internal fun pickQueuePriorities(
+    numAvailableQueues: Int, queueFamilyIndex: Int, stack: MemoryStack
+): Pair<FloatBuffer, QueueFamilyInfo> {
     val numBackgroundQueues = numAvailableQueues / 2
     val numPriorityQueues = numAvailableQueues - numBackgroundQueues
 
@@ -510,5 +566,32 @@ fun pickQueuePriorities(numAvailableQueues: Int, stack: MemoryStack): FloatBuffe
     }
     result.rewind()
 
-    return result
+    return Pair(result, QueueFamilyInfo(queueFamilyIndex, numPriorityQueues, numBackgroundQueues))
+}
+
+internal class PopulateDeviceResult(
+    val enabledExtensions: Set<String>,
+    val enabledFeatures10: VkPhysicalDeviceFeatures,
+    val enabledFeatures11: VkPhysicalDeviceVulkan11Features,
+    val enabledFeatures12: VkPhysicalDeviceVulkan12Features,
+    val generalQueueFamily: QueueFamilyInfo,
+    val computeOnlyQueueFamily: QueueFamilyInfo?,
+    val transferOnlyQueueFamily: QueueFamilyInfo?
+)
+
+internal class QueueFamilyInfo(val index: Int, val numPriorityQueues: Int, val numBackgroundQueues: Int) {
+    override fun equals(other: Any?): Boolean {
+        return if (other is QueueFamilyInfo) {
+            index == other.index && numPriorityQueues == other.numPriorityQueues && numBackgroundQueues == other.numBackgroundQueues
+        } else {
+            false
+        }
+    }
+
+    override fun hashCode(): Int {
+        var result = index
+        result = 31 * result + numPriorityQueues
+        result = 31 * result + numBackgroundQueues
+        return result
+    }
 }
