@@ -26,6 +26,8 @@ import java.lang.reflect.Modifier
 import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 import kotlin.jvm.Throws
+import kotlin.math.exp
+import kotlin.math.log
 
 @Throws(StartupException::class)
 fun choosePhysicalDevice(vkInstance: VkInstance, pluginManager: PluginManager, vrManager: VrManager): VkPhysicalDevice {
@@ -224,6 +226,7 @@ fun createLogicalDevice(
     vkInstance: VkInstance, physicalDevice: VkPhysicalDevice,
     pluginManager: PluginManager, vrManager: VrManager
 ): VkDevice {
+    val logger = getLogger("Vulkan")
     return stackPush().use { stack ->
 
         val pNumAvailableExtensions = stack.callocInt(1)
@@ -258,6 +261,19 @@ fun createLogicalDevice(
 
         vkGetPhysicalDeviceFeatures2(physicalDevice, availableFeatures)
 
+        logger.info("The following Vulkan 1.0 device features are supported:")
+        for (feature in getEnabledFeatures(availableFeatures10)) {
+            logger.info(feature)
+        }
+        logger.info("The following Vulkan 1.1 device features are supported:")
+        for (feature in getEnabledFeatures(availableFeatures11)) {
+            logger.info(feature)
+        }
+        logger.info("The following Vulkan 1.2 device features are supported:")
+        for (feature in getEnabledFeatures(availableFeatures12)) {
+            logger.info(feature)
+        }
+
         val pNumQueueFamilies = stack.callocInt(1)
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pNumQueueFamilies, null)
         val numQueueFamilies = pNumQueueFamilies[0]
@@ -270,6 +286,40 @@ fun createLogicalDevice(
             ciDevice, vkInstance, physicalDevice, stack, pluginManager, vrManager, availableExtensions,
             pQueueFamilies, availableFeatures10, availableFeatures11, availableFeatures12
         )
+
+        logger.info("The following Vulkan device extensions will be enabled:")
+        for (extension in populateResult.enabledExtensions) {
+            logger.info(extension)
+        }
+        logger.info("The following Vulkan 1.0 device features will be enabled:")
+        for (feature in getEnabledFeatures(populateResult.enabledFeatures10)) {
+            logger.info(feature)
+        }
+        logger.info("The following Vulkan 1.1 device features will be enabled:")
+        for (feature in getEnabledFeatures(populateResult.enabledFeatures11)) {
+            logger.info(feature)
+        }
+        logger.info("The following Vulkan 1.2 device features will be enabled:")
+        for (feature in getEnabledFeatures(populateResult.enabledFeatures12)) {
+            logger.info(feature)
+        }
+
+        logger.info(
+            "The game will use ${populateResult.generalQueueFamily.numPriorityQueues} priority queues " +
+                    "and ${populateResult.generalQueueFamily.numBackgroundQueues} background queues"
+        )
+        if (populateResult.computeOnlyQueueFamily != null) {
+            logger.info(
+                "The game will use ${populateResult.computeOnlyQueueFamily.numPriorityQueues} priority compute-only queues" +
+                        " and ${populateResult.computeOnlyQueueFamily.numBackgroundQueues} background compute-only queues"
+            )
+        }
+        if (populateResult.transferOnlyQueueFamily != null) {
+            logger.info(
+                "The game will use ${populateResult.transferOnlyQueueFamily.numPriorityQueues} priority transfer-only queues" +
+                        " and ${populateResult.transferOnlyQueueFamily.numBackgroundQueues} background transfer-only queues"
+            )
+        }
 
         val pDevice = stack.callocPointer(1)
         assertVkSuccess(
@@ -322,6 +372,8 @@ internal fun populateDeviceCreateInfo(
     availableFeatures10: VkPhysicalDeviceFeatures,
     availableFeatures11: VkPhysicalDeviceVulkan11Features, availableFeatures12: VkPhysicalDeviceVulkan12Features
 ): PopulateDeviceResult {
+    val logger = getLogger("Vulkan")
+
     val availableFeaturesSet10 = getEnabledFeatures(availableFeatures10)
     val availableFeaturesSet11 = getEnabledFeatures(availableFeatures11)
     val availableFeaturesSet12 = getEnabledFeatures(availableFeatures12)
@@ -379,10 +431,18 @@ internal fun populateDeviceCreateInfo(
 
         pluginActor.manipulateVulkanDevice(pluginInstance, agent)
 
+        val pluginName = pluginInstance.info.name
+        logger.info("The $pluginName plug-in requested the following Vulkan device extensions:")
         for (extension in requestedExtensions) {
+            logger.info(extension)
             if (availableExtensions.contains(extension)) {
                 extensionsToEnable.add(extension)
             }
+        }
+
+        logger.info("The $pluginName plug-in requires the following Vulkan device extensions:")
+        for (extension in requiredExtensions) {
+            logger.info(extension)
         }
 
         if (!availableExtensions.containsAll(requiredExtensions)) {
@@ -393,6 +453,21 @@ internal fun populateDeviceCreateInfo(
             )
         }
         extensionsToEnable.addAll(requiredExtensions)
+
+        logger.info("The $pluginName plug-in requested the following Vulkan 1.0 device features:")
+        for (feature in getEnabledFeatures(requestedFeatures10)) {
+            logger.info(feature)
+        }
+
+        logger.info("The $pluginName plug-in requested the following Vulkan 1.1 device features:")
+        for (feature in getEnabledFeatures(requestedFeatures11)) {
+            logger.info(feature)
+        }
+
+        logger.info("The $pluginName plug-in requested the following Vulkan 1.2 device features:")
+        for (feature in getEnabledFeatures(requestedFeatures12)) {
+            logger.info(feature)
+        }
 
         enableFeatures(combinedFeatures10, availableFeaturesSet10.intersect(getEnabledFeatures(requestedFeatures10)))
         enableFeatures(combinedFeatures11, availableFeaturesSet11.intersect(getEnabledFeatures(requestedFeatures11)))
@@ -407,18 +482,30 @@ internal fun populateDeviceCreateInfo(
         }
 
         val requiredFeaturesSet10 = getEnabledFeatures(requiredFeatures10)
+        logger.info("The $pluginName plug-in requires the following Vulkan 1.0 device features:")
+        for (feature in requiredFeaturesSet10) {
+            logger.info(feature)
+        }
         if (!availableFeaturesSet10.containsAll(requiredFeaturesSet10)) {
             missingFeatureException("1.0", availableFeaturesSet10, requiredFeaturesSet10)
         }
         enableFeatures(combinedFeatures10, requiredFeaturesSet10)
 
         val requiredFeaturesSet11 = getEnabledFeatures(requiredFeatures11)
+        logger.info("The $pluginName plug-in requires the following Vulkan 1.1 device features:")
+        for (feature in requiredFeaturesSet11) {
+            logger.info(feature)
+        }
         if (!availableFeaturesSet11.containsAll(requiredFeaturesSet11)) {
             missingFeatureException("1.1", availableFeaturesSet11, requiredFeaturesSet11)
         }
         enableFeatures(combinedFeatures11, requiredFeaturesSet11)
 
         val requiredFeaturesSet12 = getEnabledFeatures(requiredFeatures12)
+        logger.info("The $pluginName plug-in requires the following Vulkan 1.2 device features:")
+        for (feature in requiredFeaturesSet12) {
+            logger.info(feature)
+        }
         if (!availableFeaturesSet12.containsAll(requiredFeaturesSet12)) {
             missingFeatureException("1.2", availableFeaturesSet12, requiredFeaturesSet12)
         }
