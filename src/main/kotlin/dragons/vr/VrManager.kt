@@ -9,5 +9,9 @@ interface VrManager {
         device: VkPhysicalDevice, deviceName: String, availableExtensions: Set<String>
     ): Set<String>
 
+    fun getWidth(): Int
+
+    fun getHeight(): Int
+
     fun destroy()
 }

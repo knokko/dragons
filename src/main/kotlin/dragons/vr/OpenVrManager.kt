@@ -3,6 +3,8 @@ package dragons.vr
 import org.lwjgl.openvr.VR
 import org.lwjgl.openvr.VRCompositor.VRCompositor_GetVulkanDeviceExtensionsRequired
 import org.lwjgl.openvr.VRCompositor.VRCompositor_GetVulkanInstanceExtensionsRequired
+import org.lwjgl.openvr.VRSystem
+import org.lwjgl.openvr.VRSystem.VRSystem_GetRecommendedRenderTargetSize
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memAddress
 import org.lwjgl.system.MemoryUtil.memUTF8
@@ -54,6 +56,25 @@ class OpenVrManager: VrManager {
         }
 
         return result
+    }
+
+    // I might want to cache this
+    override fun getWidth(): Int {
+        return stackPush().use { stack ->
+            val pWidth = stack.callocInt(1)
+            val pHeight = stack.callocInt(1)
+            VRSystem_GetRecommendedRenderTargetSize(pWidth, pHeight)
+            pWidth[0]
+        }
+    }
+
+    override fun getHeight(): Int {
+        return stackPush().use { stack ->
+            val pWidth = stack.callocInt(1)
+            val pHeight = stack.callocInt(1)
+            VRSystem_GetRecommendedRenderTargetSize(pWidth, pHeight)
+            pHeight[0]
+        }
     }
 
     override fun destroy() {

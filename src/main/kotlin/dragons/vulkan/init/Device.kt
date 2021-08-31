@@ -225,7 +225,7 @@ private class DeviceRejectionReason(val rejectingEntity: String, val rejectionRe
 fun createLogicalDevice(
     vkInstance: VkInstance, physicalDevice: VkPhysicalDevice,
     pluginManager: PluginManager, vrManager: VrManager
-): VkDevice {
+): Pair<VkDevice, QueueManager> {
     val logger = getLogger("Vulkan")
     return stackPush().use { stack ->
 
@@ -363,7 +363,7 @@ fun createLogicalDevice(
             pluginPair.first.afterVulkanDeviceCreation(pluginPair.second, eventAgent)
         }
 
-        device
+        Pair(device, queueManager)
     }
 }
 

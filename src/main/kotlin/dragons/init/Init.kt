@@ -14,6 +14,10 @@ import dragons.vulkan.destroy.destroyVulkanInstance
 import dragons.vulkan.init.choosePhysicalDevice
 import dragons.vulkan.init.createLogicalDevice
 import dragons.vulkan.init.initVulkanInstance
+import dragons.vulkan.memory.MemoryInfo
+import dragons.vulkan.memory.allocateStaticMemory
+import dragons.vulkan.memory.destroyStaticMemory
+import dragons.vulkan.queue.QueueManager
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.lwjgl.vulkan.VkDevice
@@ -49,6 +53,7 @@ fun main(args: Array<String>) {
         logger.info("Finished preparing the main menu")
 
         logger.info("Start with shutting down the game")
+        destroyStaticMemory()
         destroyVulkanDevice(
             prepareMainMenuResult.vkInstance, prepareMainMenuResult.vkPhysicalDevice, prepareMainMenuResult.vkDevice,
             prepareMainMenuResult.pluginManager
@@ -122,13 +127,23 @@ fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
             choosePhysicalDevice(vulkanInstanceJob.await(), pluginJob.await(), vrJob.await())
         }
 
+        val memoryInfoJob = async { MemoryInfo(vkPhysicalDeviceJob.await()) }
+
         val vkDeviceJob = async {
             createLogicalDevice(vulkanInstanceJob.await(), vkPhysicalDeviceJob.await(), pluginJob.await(), vrJob.await())
         }
 
+        val staticMemoryJob = async {
+            val (vkDevice, queueManager) = vkDeviceJob.await()
+            allocateStaticMemory(
+                vkDevice, queueManager, pluginJob.await(), vrJob.await(), memoryInfoJob.await(), this
+            )
+        }
+
+        val (vkDevice, queueManager) = vkDeviceJob.await()
         PrepareMainMenuResult(
             pluginJob.await(), vrJob.await(),
-            vulkanInstanceJob.await(), vkPhysicalDeviceJob.await(), vkDeviceJob.await()
+            vulkanInstanceJob.await(), vkPhysicalDeviceJob.await(), vkDevice, queueManager
         )
     }
 }
@@ -136,5 +151,5 @@ fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
 class PrepareMainMenuResult(
     val pluginManager: PluginManager, val vrManager: VrManager,
     val vkInstance: VkInstance,
-    val vkPhysicalDevice: VkPhysicalDevice, val vkDevice: VkDevice
+    val vkPhysicalDevice: VkPhysicalDevice, val vkDevice: VkDevice, val queueManager: QueueManager
 )

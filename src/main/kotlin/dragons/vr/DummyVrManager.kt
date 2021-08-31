@@ -16,5 +16,9 @@ class DummyVrManager(
         return deviceExtensions
     }
 
+    // These values are pretty arbitrary, but some decision had to be made
+    override fun getWidth() = 1600
+    override fun getHeight() = 900
+
     override fun destroy() {}
 }
