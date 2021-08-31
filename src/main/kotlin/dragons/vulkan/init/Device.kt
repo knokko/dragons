@@ -321,12 +321,14 @@ fun createLogicalDevice(
             )
         }
 
+        logger.info("Creating logical device...")
         val pDevice = stack.callocPointer(1)
         assertVkSuccess(
             vkCreateDevice(physicalDevice, ciDevice, null, pDevice),
             "CreateDevice"
         )
         val device = VkDevice(pDevice[0], physicalDevice, ciDevice)
+        logger.info("Created logical device")
 
         fun retrieveQueues(info: QueueFamilyInfo): QueueFamily {
             val priorityQueues = (0 until info.numPriorityQueues).map { queueIndex ->
@@ -349,6 +351,7 @@ fun createLogicalDevice(
             maybeRetrieveQueues(populateResult.computeOnlyQueueFamily),
             maybeRetrieveQueues(populateResult.transferOnlyQueueFamily)
         )
+        logger.info("Retrieved device queues")
 
         val eventAgent = VulkanDeviceCreationListener.Agent(
             vkInstance, physicalDevice, device,

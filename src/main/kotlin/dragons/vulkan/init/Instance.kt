@@ -154,6 +154,7 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
             ciInstance.ppEnabledExtensionNames(encodeStrings(extensionsToEnable, stack))
             ciInstance.ppEnabledLayerNames(encodeStrings(layersToEnable, stack))
 
+            logger.info("Creating instance...")
             val pInstance = stack.callocPointer(1)
             val instanceCreationResult = vkCreateInstance(ciInstance, null, pInstance)
 
@@ -166,6 +167,7 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
             assertVkSuccess(
                 instanceCreationResult, "CreateInstance"
             )
+            logger.info("Created instance")
 
             val pVulkanVersion = stack.callocInt(1)
             assertVkSuccess(
