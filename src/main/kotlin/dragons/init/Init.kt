@@ -15,6 +15,7 @@ import dragons.vulkan.init.choosePhysicalDevice
 import dragons.vulkan.init.createLogicalDevice
 import dragons.vulkan.init.initVulkanInstance
 import dragons.vulkan.memory.MemoryInfo
+import dragons.vulkan.memory.StaticMemory
 import dragons.vulkan.memory.allocateStaticMemory
 import dragons.vulkan.memory.destroyStaticMemory
 import dragons.vulkan.queue.QueueManager
@@ -53,7 +54,7 @@ fun main(args: Array<String>) {
         logger.info("Finished preparing the main menu")
 
         logger.info("Start with shutting down the game")
-        destroyStaticMemory()
+        destroyStaticMemory(prepareMainMenuResult.vkDevice, prepareMainMenuResult.staticMemory)
         destroyVulkanDevice(
             prepareMainMenuResult.vkInstance, prepareMainMenuResult.vkPhysicalDevice, prepareMainMenuResult.vkDevice,
             prepareMainMenuResult.pluginManager
@@ -143,7 +144,8 @@ fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
         val (vkDevice, queueManager) = vkDeviceJob.await()
         PrepareMainMenuResult(
             pluginJob.await(), vrJob.await(),
-            vulkanInstanceJob.await(), vkPhysicalDeviceJob.await(), vkDevice, queueManager
+            vulkanInstanceJob.await(), vkPhysicalDeviceJob.await(), vkDevice, queueManager,
+            staticMemoryJob.await()
         )
     }
 }
@@ -151,5 +153,6 @@ fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
 class PrepareMainMenuResult(
     val pluginManager: PluginManager, val vrManager: VrManager,
     val vkInstance: VkInstance,
-    val vkPhysicalDevice: VkPhysicalDevice, val vkDevice: VkDevice, val queueManager: QueueManager
+    val vkPhysicalDevice: VkPhysicalDevice, val vkDevice: VkDevice, val queueManager: QueueManager,
+    val staticMemory: StaticMemory
 )

@@ -5,6 +5,21 @@ class QueueManager(
     val computeOnlyQueueFamily: QueueFamily?,
     val transferOnlyQueueFamily: QueueFamily?
 ) {
+
+    val relevantQueueFamilies: List<Int>
+
+    init {
+        val collectQueueFamilies = mutableListOf(generalQueueFamily.index)
+        if (computeOnlyQueueFamily != null) {
+            collectQueueFamilies.add(computeOnlyQueueFamily.index)
+        }
+        if (transferOnlyQueueFamily != null) {
+            collectQueueFamilies.add(transferOnlyQueueFamily.index)
+        }
+
+        relevantQueueFamilies = collectQueueFamilies.toList()
+    }
+
     fun getComputeQueueFamily(): QueueFamily {
         return computeOnlyQueueFamily ?: generalQueueFamily
     }

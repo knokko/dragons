@@ -15,16 +15,34 @@ class MemoryInfo(
         vkGetPhysicalDeviceMemoryProperties(device, memoryProperties)
     }
 
-    fun chooseMemoryTypeIndex(requiredMemoryTypeBits: Int, requiredPropertyFlags: Int): Int? {
-        for ((memoryTypeIndex, memoryType) in memoryProperties.memoryTypes().withIndex()) {
+    // TODO Test this
+    fun chooseMemoryTypeIndex(
+        allowedMemoryTypeBits: Int,
+        requiredSize: Long,
+        requiredPropertyFlags: Int = 0,
+        desiredPropertyFlags: Int = 0,
+        neutralPropertyFlags: Int = 0
+    ): Int? {
+        val candidates = memoryProperties.memoryTypes().withIndex().filter { (memoryTypeIndex, memoryType) ->
             // Only consider memory types that are allowed
-            if ((memoryTypeIndex and requiredMemoryTypeBits) == requiredMemoryTypeBits) {
-                // From the allowed memory types, pick the first one that has all the required properties
+            if ((memoryTypeIndex and allowedMemoryTypeBits) != 0) {
+                // Only consider memory types that have all required properties
                 if ((requiredPropertyFlags and memoryType.propertyFlags()) == requiredPropertyFlags) {
-                    return memoryTypeIndex
+                    // And those that are sufficiently big
+                    if (memoryProperties.memoryHeaps(memoryType.heapIndex()).size() >= requiredSize) {
+                        return@filter true
+                    }
                 }
             }
+            return@filter false
         }
-        return null
+
+        return candidates.maxByOrNull { (_, type) ->
+            val positiveScore = 1000 * Integer.bitCount(type.propertyFlags() and desiredPropertyFlags)
+            val innocentPropertyFlags = requiredPropertyFlags or desiredPropertyFlags or neutralPropertyFlags
+            val undesiredPropertyFlags = innocentPropertyFlags.inv()
+            val negativeScore = Integer.bitCount(type.propertyFlags() and undesiredPropertyFlags)
+            positiveScore - negativeScore
+        }?.index
     }
 }

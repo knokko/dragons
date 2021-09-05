@@ -16,11 +16,12 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
 
         // Transformation matrix buffer
         agent.uninitializedBuffers.add(UninitializedBufferMemoryClaim(
-            4 * 16 * MAX_NUM_TRANSFORMATION_MATRICES, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+            4 * 16 * MAX_NUM_TRANSFORMATION_MATRICES, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, agent.queueManager.generalQueueFamily
         ))
         // Indirect drawing buffer
         agent.uninitializedBuffers.add(UninitializedBufferMemoryClaim(
-            VkDrawIndexedIndirectCommand.SIZEOF * MAX_NUM_INDIRECT_DRAW_CALLS, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT
+            VkDrawIndexedIndirectCommand.SIZEOF * MAX_NUM_INDIRECT_DRAW_CALLS, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
+            agent.queueManager.generalQueueFamily
         ))
 
         // TODO Also claim persistent staging memory for the transformation matrices and indirect draw calls

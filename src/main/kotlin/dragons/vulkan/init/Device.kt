@@ -341,7 +341,7 @@ fun createLogicalDevice(
                 vkGetDeviceQueue(device, info.index, partialQueueIndex + info.numPriorityQueues, pQueue)
                 DeviceQueue(VkQueue(pQueue[0], device))
             }
-            return QueueFamily(priorityQueues = priorityQueues, backgroundQueues = backgroundQueues)
+            return QueueFamily(priorityQueues = priorityQueues, backgroundQueues = backgroundQueues, index = info.index)
         }
 
         fun maybeRetrieveQueues(info: QueueFamilyInfo?) = if (info != null) { retrieveQueues(info) } else { null }
