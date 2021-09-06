@@ -18,10 +18,10 @@ class QueueFamily(
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other is QueueFamily) {
-            return index == other.index
+        return if (other is QueueFamily) {
+            index == other.index
         } else {
-            return false
+            false
         }
     }
 

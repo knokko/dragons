@@ -40,6 +40,14 @@ internal class QueueFamilyClaims(
         }
         deviceBufferSize = computeDeviceSize
     }
+
+    override fun equals(other: Any?): Boolean {
+        return if (other is QueueFamilyClaims) {
+            prefilledBufferClaims == other.prefilledBufferClaims && uninitializedBufferClaims == other.uninitializedBufferClaims
+        } else {
+            false
+        }
+    }
 }
 
 internal fun groupMemoryClaims(agents: Collection<VulkanStaticMemoryUser.Agent>): Map<QueueFamily?, QueueFamilyClaims> {
