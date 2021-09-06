@@ -145,7 +145,7 @@ suspend fun allocateStaticMemory(
                 "The game couldn't find a suitable memory type for the static device buffer"
             )))
 
-            logger.info("Allocating static device buffer memory...")
+            logger.info("Allocating static device buffer memory with memory type ${aiDeviceMemory.memoryTypeIndex()}...")
             val pDeviceMemory = stack.callocLong(1)
             assertVkSuccess(
                 vkAllocateMemory(vkDevice, aiDeviceMemory, null, pDeviceMemory),
@@ -193,7 +193,7 @@ suspend fun allocateStaticMemory(
                  "The game couldn't find a suitable memory type for staging buffer memory"
             )))
 
-            logger.info("Allocating static staging combined memory...")
+            logger.info("Allocating static staging combined memory with memory type ${aiStagingMemory.memoryTypeIndex()}...")
             val pStagingMemory = stack.callocLong(1)
             assertVkSuccess(
                 vkAllocateMemory(vkDevice, aiStagingMemory, null, pStagingMemory),
@@ -270,8 +270,8 @@ suspend fun allocateStaticMemory(
 
             val transferQueueFamily = queueManager.getTransferQueueFamily()
 
-            // We use a dedicated command pool because this is a 1-time only transfer
-            // TODO Perhaps keep the command pool for the duration of the game and use it for other transfers
+            // We use a dedicated command pool because this is a 1-time only transfer, and we don't expect to need a next
+            // transfer anytime soon
             logger.info("Creating static transfer command resources...")
             val ciCommandPool = VkCommandPoolCreateInfo.callocStack(stack)
             ciCommandPool.sType(VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO)
@@ -339,7 +339,7 @@ suspend fun allocateStaticMemory(
                         bufferBarrier.size(VK_WHOLE_SIZE)
 
                         vkCmdPipelineBarrier(
-                            copyCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                            copyCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                             0, null, pBufferBarriers, null
                         )
                     }
@@ -378,25 +378,12 @@ suspend fun allocateStaticMemory(
                 vkWaitForFences(vkDevice, pFence, true, -1),
                 "WaitForFences", "static transfer"
             )
+            vkDestroyFence(vkDevice, pFence[0], null)
             logger.info("Static transfer command finished")
 
             val acquireQueueFamilies = groups.entries.filter { (queueFamily, claims) ->
                 queueFamily != null && queueFamily != transferQueueFamily && claims.stagingSize > 0
-            }
-
-            val aiAcquireCommands = VkCommandBufferAllocateInfo.callocStack(stack)
-            aiAcquireCommands.sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO)
-            aiAcquireCommands.commandPool(commandPool)
-            aiAcquireCommands.level(VK_COMMAND_BUFFER_LEVEL_PRIMARY)
-            aiAcquireCommands.commandBufferCount(acquireQueueFamilies.size)
-
-            val pAcquireCommands = stack.callocPointer(acquireQueueFamilies.size)
-
-            logger.info("Start creating queue family ownership transfer commands for static buffers/images...")
-            assertVkSuccess(
-                vkAllocateCommandBuffers(vkDevice, aiAcquireCommands, pAcquireCommands),
-                "AllocateCommandBuffers", "static staging ownership transfers"
-            )
+            }.map { (queueFamily, claims) -> Pair(queueFamily!!, claims) }
 
             val acquireFences = Array(acquireQueueFamilies.size) {
                 pFence.put(0, 0)
@@ -406,24 +393,52 @@ suspend fun allocateStaticMemory(
                 )
                 pFence[0]
             }
-            for ((index, queueFamilyPair) in acquireQueueFamilies.withIndex()) {
-                val commandBuffer = VkCommandBuffer(pAcquireCommands[index], vkDevice)
-                val queueFamily = queueFamilyPair.key!!
+
+            logger.info("Start transferring queue family ownership for static buffers/images")
+            val acquireCommandPools = Array(acquireQueueFamilies.size) { 0L }
+            for ((rawIndex, queueFamilyPair) in acquireQueueFamilies.withIndex()) {
+                val (queueFamily, claims) = queueFamilyPair
+                val ciAcquirePool = VkCommandPoolCreateInfo.callocStack(stack)
+                ciAcquirePool.sType(VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO)
+                ciAcquirePool.flags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
+                ciAcquirePool.queueFamilyIndex(queueFamily.index)
+
+                val pAcquirePool = stack.callocLong(1)
+                assertVkSuccess(
+                    vkCreateCommandPool(vkDevice, ciAcquirePool, null, pAcquirePool),
+                    "CreateCommandPool", "static buffer/image acquire for queue family ${queueFamily.index}"
+                )
+                val acquirePool = pAcquirePool[0]
+                acquireCommandPools[rawIndex] = acquirePool
+
+                val aiAcquireCommand = VkCommandBufferAllocateInfo.callocStack(stack)
+                aiAcquireCommand.sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO)
+                aiAcquireCommand.commandPool(acquirePool)
+                aiAcquireCommand.level(VK_COMMAND_BUFFER_LEVEL_PRIMARY)
+                aiAcquireCommand.commandBufferCount(1)
+
+                val pAcquireCommand = stack.callocPointer(1)
 
                 assertVkSuccess(
-                    vkBeginCommandBuffer(commandBuffer, biCopyCommands),
+                    vkAllocateCommandBuffers(vkDevice, aiAcquireCommand, pAcquireCommand),
+                    "AllocateCommandBuffers", "static staging ownership transfers to queue family {$queueFamily.index}"
+                )
+                val acquireCommandBuffer = VkCommandBuffer(pAcquireCommand[0], vkDevice)
+
+                assertVkSuccess(
+                    vkBeginCommandBuffer(acquireCommandBuffer, biCopyCommands),
                     "BeginCommandBuffer", "queue family ownership transfer to ${queueFamily.index}"
                 )
 
                 val pBufferBarriers: VkBufferMemoryBarrier.Buffer?
-                if (queueFamilyPair.value.prefilledBufferClaims.isNotEmpty()) {
+                if (claims.prefilledBufferClaims.isNotEmpty()) {
                     pBufferBarriers = VkBufferMemoryBarrier.callocStack(1, stack)
                     val bufferBarrier = pBufferBarriers[0]
                     bufferBarrier.sType(VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER)
                     bufferBarrier.srcAccessMask(0) // Ignored because it is an acquire operation
                     bufferBarrier.dstAccessMask(VK_ACCESS_TRANSFER_READ_BIT)
-                    bufferBarrier.srcQueueFamilyIndex(queueFamily.index)
-                    bufferBarrier.dstQueueFamilyIndex(transferQueueFamily.index)
+                    bufferBarrier.srcQueueFamilyIndex(transferQueueFamily.index)
+                    bufferBarrier.dstQueueFamilyIndex(queueFamily.index)
                     bufferBarrier.buffer(deviceBuffers.find { (_, _, bufferQueueFamily) -> bufferQueueFamily == queueFamily }!!.first)
                     bufferBarrier.offset(0)
                     bufferBarrier.size(VK_WHOLE_SIZE)
@@ -433,22 +448,22 @@ suspend fun allocateStaticMemory(
 
                 // TODO Also acquire image ownership
                 vkCmdPipelineBarrier(
-                    commandBuffer, 0, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    acquireCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
                     0, null, pBufferBarriers, null
                 )
 
                 assertVkSuccess(
-                    vkEndCommandBuffer(commandBuffer), "EndCommandBuffer",
+                    vkEndCommandBuffer(acquireCommandBuffer), "EndCommandBuffer",
                     "queue family ownership transfer to ${queueFamily.index}"
                 )
 
                 val siAcquires = VkSubmitInfo.callocStack(1, stack)
                 val siAcquire = siAcquires[0]
                 siAcquire.sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
-                siAcquire.pCommandBuffers(stack.pointers(commandBuffer.address()))
+                siAcquire.pCommandBuffers(stack.pointers(acquireCommandBuffer.address()))
 
                 assertVkSuccess(
-                    vkQueueSubmit(queueFamily.getRandomPriorityQueue().handle, siAcquires, acquireFences[index]),
+                    vkQueueSubmit(queueFamily.getRandomPriorityQueue().handle, siAcquires, acquireFences[rawIndex]),
                     "QueueSubmit", "acquire static resources for queue family ${queueFamily.index}"
                 )
             }
@@ -462,9 +477,14 @@ suspend fun allocateStaticMemory(
                 vkWaitForFences(vkDevice, pAcquireFences, true, -1),
                 "WaitForFences", "static buffer/image acquire"
             )
-            logger.info("Finished transferring ownership of the static buffers and images")
-
+            for (acquireCommandPool in acquireCommandPools) {
+                vkDestroyCommandPool(vkDevice, acquireCommandPool, null)
+            }
+            for (fence in acquireFences) {
+                vkDestroyFence(vkDevice, fence, null)
+            }
             vkDestroyCommandPool(vkDevice, commandPool, null)
+            logger.info("Finished transferring ownership of the static buffers and images")
 
             logger.info("Destroying and freeing static combined staging memory...")
             vkDestroyBuffer(vkDevice, stagingBuffer, null)
