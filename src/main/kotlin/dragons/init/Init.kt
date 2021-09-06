@@ -19,6 +19,7 @@ import dragons.vulkan.memory.StaticMemory
 import dragons.vulkan.memory.allocateStaticMemory
 import dragons.vulkan.memory.destroyStaticMemory
 import dragons.vulkan.queue.QueueManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.lwjgl.vulkan.VkDevice
@@ -101,7 +102,7 @@ fun ensurePluginsAreBuilt(logger: Logger): Boolean {
  */
 @Throws(StartupException::class)
 fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
-    return runBlocking {
+    return runBlocking(Dispatchers.Default) {
         val vrJob = async { initVr(initProps) }
         val pluginJob = async {
             val logger = getLogger(ROOT_LOGGER_NAME)
