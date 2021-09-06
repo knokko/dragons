@@ -5,13 +5,11 @@ import org.lwjgl.vulkan.VkPhysicalDevice
 import org.lwjgl.vulkan.VkPhysicalDeviceMemoryProperties
 
 class MemoryInfo(
-    device: VkPhysicalDevice,
+    val memoryProperties: VkPhysicalDeviceMemoryProperties
 ) {
 
     // The create() method will cause it to be garbage collected, which is suitable in this case
-    val memoryProperties: VkPhysicalDeviceMemoryProperties = VkPhysicalDeviceMemoryProperties.create()
-
-    init {
+    constructor(device: VkPhysicalDevice) : this(VkPhysicalDeviceMemoryProperties.create()) {
         vkGetPhysicalDeviceMemoryProperties(device, memoryProperties)
     }
 
@@ -25,7 +23,7 @@ class MemoryInfo(
     ): Int? {
         val candidates = memoryProperties.memoryTypes().withIndex().filter { (memoryTypeIndex, memoryType) ->
             // Only consider memory types that are allowed
-            if ((memoryTypeIndex and allowedMemoryTypeBits) != 0) {
+            if (((1 shl memoryTypeIndex) and allowedMemoryTypeBits) != 0) {
                 // Only consider memory types that have all required properties
                 if ((requiredPropertyFlags and memoryType.propertyFlags()) == requiredPropertyFlags) {
                     // And those that are sufficiently big
