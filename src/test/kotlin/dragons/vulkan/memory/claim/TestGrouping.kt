@@ -84,4 +84,25 @@ class TestGrouping {
 
         assertEquals(expectedGrouping, groupMemoryClaims(agents))
     }
+
+    @Test
+    fun testPlaceMemoryClaims() {
+        // TODO Also test for images
+        val prefill1 = PrefilledBufferMemoryClaim(100, 0, null) {}
+        val prefill2 = PrefilledBufferMemoryClaim(200, 0, null) {}
+
+        val uninit1 = UninitializedBufferMemoryClaim(300, 0, null)
+        val uninit2 = UninitializedBufferMemoryClaim(400, 0, null)
+        val claims = QueueFamilyClaims(listOf(prefill1, prefill2), listOf(uninit1, uninit2))
+
+        val expectedPlacements = PlacedQueueFamilyClaims(
+            prefilledBufferClaims = listOf(Placed(prefill1, 0), Placed(prefill2, 100)),
+            prefilledBufferStagingOffset = 0,
+            prefilledBufferDeviceOffset = 0,
+            uninitializedBufferClaims = listOf(Placed(uninit1, 0), Placed(uninit2, 300)),
+            uninitializedBufferDeviceOffset = 300
+        )
+
+        assertEquals(expectedPlacements, placeMemoryClaims(claims))
+    }
 }

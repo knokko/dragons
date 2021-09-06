@@ -48,6 +48,12 @@ internal class QueueFamilyClaims(
             false
         }
     }
+
+    override fun hashCode(): Int {
+        var result = prefilledBufferClaims.hashCode()
+        result = 31 * result + uninitializedBufferClaims.hashCode()
+        return result
+    }
 }
 
 internal fun groupMemoryClaims(agents: Collection<VulkanStaticMemoryUser.Agent>): Map<QueueFamily?, QueueFamilyClaims> {
@@ -70,7 +76,21 @@ internal fun groupMemoryClaims(agents: Collection<VulkanStaticMemoryUser.Agent>)
     return queueFamilyMap
 }
 
-internal class Placed<T>(val claim: T, val offset: Long)
+internal class Placed<T>(val claim: T, val offset: Long) {
+    override fun equals(other: Any?): Boolean {
+        return if (other is Placed<*>) {
+            claim == other.claim && offset == other.offset
+        } else {
+            false
+        }
+    }
+
+    override fun hashCode(): Int {
+        var result = claim?.hashCode() ?: 0
+        result = 31 * result + offset.hashCode()
+        return result
+    }
+}
 
 internal class PlacedQueueFamilyClaims(
     val prefilledBufferClaims: Collection<Placed<PrefilledBufferMemoryClaim>>,
@@ -79,7 +99,28 @@ internal class PlacedQueueFamilyClaims(
 
     val uninitializedBufferClaims: Collection<Placed<UninitializedBufferMemoryClaim>>,
     val uninitializedBufferDeviceOffset: Long
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        return if (other is PlacedQueueFamilyClaims) {
+            (prefilledBufferClaims == other.prefilledBufferClaims
+                    && prefilledBufferStagingOffset == other.prefilledBufferStagingOffset
+                    && prefilledBufferDeviceOffset == other.prefilledBufferDeviceOffset
+                    && uninitializedBufferClaims == other.uninitializedBufferClaims
+                    && uninitializedBufferDeviceOffset == other.uninitializedBufferDeviceOffset)
+        } else {
+            false
+        }
+    }
+
+    override fun hashCode(): Int {
+        var result = prefilledBufferClaims.hashCode()
+        result = 31 * result + prefilledBufferStagingOffset.hashCode()
+        result = 31 * result + prefilledBufferDeviceOffset.hashCode()
+        result = 31 * result + uninitializedBufferClaims.hashCode()
+        result = 31 * result + uninitializedBufferDeviceOffset.hashCode()
+        return result
+    }
+}
 
 private fun <T> placeClaims(claims: Collection<T>, getSize: (T) -> Int): Pair<Collection<Placed<T>>, Long> {
     var currentOffset = 0L

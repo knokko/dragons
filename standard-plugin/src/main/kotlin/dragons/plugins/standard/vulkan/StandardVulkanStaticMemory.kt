@@ -3,8 +3,7 @@ package dragons.plugins.standard.vulkan
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.vulkan.memory.claim.UninitializedBufferMemoryClaim
-import org.lwjgl.vulkan.VK10.VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT
-import org.lwjgl.vulkan.VK10.VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkDrawIndexedIndirectCommand
 
 const val MAX_NUM_TRANSFORMATION_MATRICES = 100_000
