@@ -3,7 +3,7 @@ package dragons.vulkan.memory.claim
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.vulkan.queue.QueueFamily
 
-// TODO Test all methods in this class
+// TODO Update the unit tests to take the staging into account
 
 internal fun getUsedQueueFamilies(agents: Collection<VulkanStaticMemoryUser.Agent>): Set<QueueFamily?> {
     val usedQueueFamilies = mutableSetOf<QueueFamily?>()
@@ -14,6 +14,9 @@ internal fun getUsedQueueFamilies(agents: Collection<VulkanStaticMemoryUser.Agen
         for (bufferClaim in agent.uninitializedBuffers) {
             usedQueueFamilies.add(bufferClaim.queueFamily)
         }
+        for (bufferClaim in agent.stagingBuffers) {
+            usedQueueFamilies.add(bufferClaim.queueFamily)
+        }
         // TODO Also consider the images
     }
 
@@ -22,28 +25,18 @@ internal fun getUsedQueueFamilies(agents: Collection<VulkanStaticMemoryUser.Agen
 
 internal class QueueFamilyClaims(
     val prefilledBufferClaims: Collection<PrefilledBufferMemoryClaim>,
-    val uninitializedBufferClaims: Collection<UninitializedBufferMemoryClaim>
+    val uninitializedBufferClaims: Collection<UninitializedBufferMemoryClaim>,
+    val stagingBufferClaims: Collection<StagingBufferMemoryClaim>
 ) {
-    val stagingSize: Long
-    val deviceBufferSize: Long
-
-    init {
-        var computeStagingSize = 0L
-        for (claim in prefilledBufferClaims) {
-            computeStagingSize += claim.size
-        }
-        stagingSize = computeStagingSize
-
-        var computeDeviceSize = computeStagingSize
-        for (claim in uninitializedBufferClaims) {
-            computeDeviceSize += claim.size
-        }
-        deviceBufferSize = computeDeviceSize
-    }
+    val tempStagingSize: Long = prefilledBufferClaims.sumOf { it.size.toLong() }
+    val deviceBufferSize: Long = tempStagingSize + uninitializedBufferClaims.sumOf { it.size.toLong() }
+    val persistentStagingSize: Long = stagingBufferClaims.sumOf { it.size.toLong() }
 
     override fun equals(other: Any?): Boolean {
         return if (other is QueueFamilyClaims) {
-            prefilledBufferClaims == other.prefilledBufferClaims && uninitializedBufferClaims == other.uninitializedBufferClaims
+            prefilledBufferClaims == other.prefilledBufferClaims
+                    && uninitializedBufferClaims == other.uninitializedBufferClaims
+                    && stagingBufferClaims == other.stagingBufferClaims
         } else {
             false
         }
@@ -52,7 +45,12 @@ internal class QueueFamilyClaims(
     override fun hashCode(): Int {
         var result = prefilledBufferClaims.hashCode()
         result = 31 * result + uninitializedBufferClaims.hashCode()
+        result = 31 * result + stagingBufferClaims.hashCode()
         return result
+    }
+
+    override fun toString(): String {
+        return "prefilled: $prefilledBufferClaims \n uninitialized: $uninitializedBufferClaims \n staging: $stagingBufferClaims"
     }
 }
 
@@ -64,13 +62,19 @@ internal fun groupMemoryClaims(agents: Collection<VulkanStaticMemoryUser.Agent>)
 
         val prefilledBufferClaims = mutableListOf<PrefilledBufferMemoryClaim>()
         val uninitializedBufferClaims = mutableListOf<UninitializedBufferMemoryClaim>()
+        val stagingBufferClaims = mutableListOf<StagingBufferMemoryClaim>()
         for (agent in agents) {
             prefilledBufferClaims.addAll(agent.prefilledBuffers.filter { it.queueFamily == queueFamily })
             uninitializedBufferClaims.addAll(agent.uninitializedBuffers.filter { it.queueFamily == queueFamily })
+            stagingBufferClaims.addAll(agent.stagingBuffers.filter { it.queueFamily == queueFamily })
             // TODO Also add the image claims
         }
 
-        queueFamilyMap[queueFamily] = QueueFamilyClaims(prefilledBufferClaims, uninitializedBufferClaims)
+        queueFamilyMap[queueFamily] = QueueFamilyClaims(
+            prefilledBufferClaims,
+            uninitializedBufferClaims,
+            stagingBufferClaims
+        )
     }
 
     return queueFamilyMap
@@ -98,7 +102,10 @@ internal class PlacedQueueFamilyClaims(
     val prefilledBufferDeviceOffset: Long,
 
     val uninitializedBufferClaims: Collection<Placed<UninitializedBufferMemoryClaim>>,
-    val uninitializedBufferDeviceOffset: Long
+    val uninitializedBufferDeviceOffset: Long,
+
+    val stagingBufferClaims: Collection<Placed<StagingBufferMemoryClaim>>,
+    val stagingBufferOffset: Long
 ) {
     override fun equals(other: Any?): Boolean {
         return if (other is PlacedQueueFamilyClaims) {
@@ -106,7 +113,9 @@ internal class PlacedQueueFamilyClaims(
                     && prefilledBufferStagingOffset == other.prefilledBufferStagingOffset
                     && prefilledBufferDeviceOffset == other.prefilledBufferDeviceOffset
                     && uninitializedBufferClaims == other.uninitializedBufferClaims
-                    && uninitializedBufferDeviceOffset == other.uninitializedBufferDeviceOffset)
+                    && uninitializedBufferDeviceOffset == other.uninitializedBufferDeviceOffset
+                    && stagingBufferClaims == other.stagingBufferClaims
+                    && stagingBufferOffset == other.stagingBufferOffset)
         } else {
             false
         }
@@ -118,6 +127,8 @@ internal class PlacedQueueFamilyClaims(
         result = 31 * result + prefilledBufferDeviceOffset.hashCode()
         result = 31 * result + uninitializedBufferClaims.hashCode()
         result = 31 * result + uninitializedBufferDeviceOffset.hashCode()
+        result = 31 * result + stagingBufferClaims.hashCode()
+        result = 31 * result + stagingBufferOffset.hashCode()
         return result
     }
 }
@@ -135,6 +146,7 @@ private fun <T> placeClaims(claims: Collection<T>, getSize: (T) -> Int): Pair<Co
 internal fun placeMemoryClaims(claims: QueueFamilyClaims): PlacedQueueFamilyClaims {
     val (placedPrefilledBufferClaims, totalPrefilledBufferSize) = placeClaims(claims.prefilledBufferClaims) { it.size }
     val (placedUninitializedBufferClaims, _) = placeClaims(claims.uninitializedBufferClaims) { it.size }
+    val (placedStagingBufferClaims, _) = placeClaims(claims.stagingBufferClaims) { it.size }
     // TODO Also place the images
 
     return PlacedQueueFamilyClaims(
@@ -142,6 +154,8 @@ internal fun placeMemoryClaims(claims: QueueFamilyClaims): PlacedQueueFamilyClai
         prefilledBufferStagingOffset = 0,
         prefilledBufferDeviceOffset = 0,
         uninitializedBufferClaims = placedUninitializedBufferClaims,
-        uninitializedBufferDeviceOffset = totalPrefilledBufferSize
+        uninitializedBufferDeviceOffset = totalPrefilledBufferSize,
+        stagingBufferClaims = placedStagingBufferClaims,
+        stagingBufferOffset = 0
     )
 }
