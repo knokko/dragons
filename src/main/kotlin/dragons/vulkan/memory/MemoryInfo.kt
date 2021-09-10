@@ -13,7 +13,6 @@ class MemoryInfo(
         vkGetPhysicalDeviceMemoryProperties(device, memoryProperties)
     }
 
-    // TODO Test this
     fun chooseMemoryTypeIndex(
         allowedMemoryTypeBits: Int,
         requiredSize: Long,

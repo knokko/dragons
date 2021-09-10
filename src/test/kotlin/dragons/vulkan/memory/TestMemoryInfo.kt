@@ -47,7 +47,7 @@ class TestMemoryInfo {
     fun testChooseMemoryTypeIndexOnlyAllowed() {
         stackPush().use { stack ->
 
-            val memoryProperties = VkPhysicalDeviceMemoryProperties.callocStack(stack)
+            val memoryProperties = VkPhysicalDeviceMemoryProperties.calloc(stack)
             populateMemoryProperties(memoryProperties, listOf(
                 // This one will not be in the allowed memory type indices
                 MemoryType(
@@ -90,7 +90,7 @@ class TestMemoryInfo {
     @Test
     fun testChooseMemoryTypeIndexSelection() {
         stackPush().use { stack ->
-            val memoryProperties = VkPhysicalDeviceMemoryProperties.callocStack(stack)
+            val memoryProperties = VkPhysicalDeviceMemoryProperties.calloc(stack)
             populateMemoryProperties(memoryProperties, listOf(
                 MemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 1),
                 MemoryType(
