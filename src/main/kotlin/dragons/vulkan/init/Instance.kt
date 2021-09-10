@@ -142,13 +142,13 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
 
         return stackPush().use { stack ->
 
-            val appInfo = VkApplicationInfo.callocStack(stack)
+            val appInfo = VkApplicationInfo.calloc(stack)
             appInfo.sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)
             appInfo.pApplicationName(stack.UTF8("Dragons"))
             appInfo.applicationVersion(1)
             appInfo.apiVersion(VK_MAKE_VERSION(1, 2, 0))
 
-            val ciInstance = VkInstanceCreateInfo.callocStack(stack)
+            val ciInstance = VkInstanceCreateInfo.calloc(stack)
             ciInstance.sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO)
             ciInstance.pApplicationInfo(appInfo)
             ciInstance.ppEnabledExtensionNames(encodeStrings(extensionsToEnable, stack))

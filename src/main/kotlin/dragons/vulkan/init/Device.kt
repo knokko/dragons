@@ -54,15 +54,15 @@ fun choosePhysicalDevice(vkInstance: VkInstance, pluginManager: PluginManager, v
         val deviceRatings = (0 until numDevices).map { deviceIndex ->
             val physicalDevice = VkPhysicalDevice(pPhysicalDevices[deviceIndex], vkInstance)
 
-            val properties = VkPhysicalDeviceProperties2.callocStack(stack)
+            val properties = VkPhysicalDeviceProperties2.calloc(stack)
             properties.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2)
 
             val properties10 = properties.properties()
 
-            val properties11 = VkPhysicalDeviceVulkan11Properties.callocStack(stack)
+            val properties11 = VkPhysicalDeviceVulkan11Properties.calloc(stack)
             properties11.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES)
 
-            val properties12 = VkPhysicalDeviceVulkan12Properties.callocStack(stack)
+            val properties12 = VkPhysicalDeviceVulkan12Properties.calloc(stack)
             properties12.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES)
 
             properties.pNext(properties11.address())
@@ -118,15 +118,15 @@ fun choosePhysicalDevice(vkInstance: VkInstance, pluginManager: PluginManager, v
                 }
             }
 
-            val availableFeatures = VkPhysicalDeviceFeatures2.callocStack(stack)
+            val availableFeatures = VkPhysicalDeviceFeatures2.calloc(stack)
             availableFeatures.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2)
 
             val availableFeatures10 = availableFeatures.features()
 
-            val availableFeatures11 = VkPhysicalDeviceVulkan11Features.callocStack(stack)
+            val availableFeatures11 = VkPhysicalDeviceVulkan11Features.calloc(stack)
             availableFeatures11.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES)
 
-            val availableFeatures12 = VkPhysicalDeviceVulkan12Features.callocStack(stack)
+            val availableFeatures12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
             availableFeatures12.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)
 
             availableFeatures.pNext(availableFeatures11.address())
@@ -134,7 +134,7 @@ fun choosePhysicalDevice(vkInstance: VkInstance, pluginManager: PluginManager, v
 
             vkGetPhysicalDeviceFeatures2(physicalDevice, availableFeatures)
 
-            val memoryProperties = VkPhysicalDeviceMemoryProperties.callocStack(stack)
+            val memoryProperties = VkPhysicalDeviceMemoryProperties.calloc(stack)
             vkGetPhysicalDeviceMemoryProperties(physicalDevice, memoryProperties)
 
             val pNumQueueFamilies = stack.callocInt(1)
@@ -245,15 +245,15 @@ fun createLogicalDevice(
         val availableExtensions = extensionBufferToSet(pAvailableExtensions)
 
 
-        val availableFeatures = VkPhysicalDeviceFeatures2.callocStack(stack)
+        val availableFeatures = VkPhysicalDeviceFeatures2.calloc(stack)
         availableFeatures.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2)
 
         val availableFeatures10 = availableFeatures.features()
 
-        val availableFeatures11 = VkPhysicalDeviceVulkan11Features.callocStack(stack)
+        val availableFeatures11 = VkPhysicalDeviceVulkan11Features.calloc(stack)
         availableFeatures11.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES)
 
-        val availableFeatures12 = VkPhysicalDeviceVulkan12Features.callocStack(stack)
+        val availableFeatures12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
         availableFeatures12.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)
 
         availableFeatures.pNext(availableFeatures11.address())
@@ -281,7 +281,7 @@ fun createLogicalDevice(
         val pQueueFamilies = VkQueueFamilyProperties.callocStack(numQueueFamilies, stack)
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pNumQueueFamilies, pQueueFamilies)
 
-        val ciDevice = VkDeviceCreateInfo.callocStack(stack)
+        val ciDevice = VkDeviceCreateInfo.calloc(stack)
         val populateResult = populateDeviceCreateInfo(
             ciDevice, vkInstance, physicalDevice, stack, pluginManager, vrManager, availableExtensions,
             pQueueFamilies, availableFeatures10, availableFeatures11, availableFeatures12
@@ -381,21 +381,21 @@ internal fun populateDeviceCreateInfo(
     val availableFeaturesSet11 = getEnabledFeatures(availableFeatures11)
     val availableFeaturesSet12 = getEnabledFeatures(availableFeatures12)
 
-    val combinedFeatures10 = VkPhysicalDeviceFeatures.callocStack(stack)
-    val combinedFeatures11 = VkPhysicalDeviceVulkan11Features.callocStack(stack)
+    val combinedFeatures10 = VkPhysicalDeviceFeatures.calloc(stack)
+    val combinedFeatures11 = VkPhysicalDeviceVulkan11Features.calloc(stack)
     combinedFeatures11.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES)
-    val combinedFeatures12 = VkPhysicalDeviceVulkan12Features.callocStack(stack)
+    val combinedFeatures12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
     combinedFeatures12.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)
 
-    val requestedFeatures10 = VkPhysicalDeviceFeatures.callocStack(stack)
-    val requestedFeatures11 = VkPhysicalDeviceVulkan11Features.callocStack(stack)
-    val requestedFeatures12 = VkPhysicalDeviceVulkan12Features.callocStack(stack)
+    val requestedFeatures10 = VkPhysicalDeviceFeatures.calloc(stack)
+    val requestedFeatures11 = VkPhysicalDeviceVulkan11Features.calloc(stack)
+    val requestedFeatures12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
 
-    val requiredFeatures10 = VkPhysicalDeviceFeatures.callocStack(stack)
-    val requiredFeatures11 = VkPhysicalDeviceVulkan11Features.callocStack(stack)
-    val requiredFeatures12 = VkPhysicalDeviceVulkan12Features.callocStack(stack)
+    val requiredFeatures10 = VkPhysicalDeviceFeatures.calloc(stack)
+    val requiredFeatures11 = VkPhysicalDeviceVulkan11Features.calloc(stack)
+    val requiredFeatures12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
 
-    val deviceProperties = VkPhysicalDeviceProperties.callocStack(stack)
+    val deviceProperties = VkPhysicalDeviceProperties.calloc(stack)
     vkGetPhysicalDeviceProperties(physicalDevice, deviceProperties)
     val deviceName = deviceProperties.deviceNameString()
 

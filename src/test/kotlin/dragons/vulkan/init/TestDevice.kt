@@ -20,7 +20,7 @@ class TestDevice {
     @Test
     fun testGetEnabledFeatures10() {
         stackPush().use { stack ->
-            val features = VkPhysicalDeviceFeatures.callocStack(stack)
+            val features = VkPhysicalDeviceFeatures.calloc(stack)
             assertTrue(getEnabledFeatures(features).isEmpty());
 
             features.drawIndirectFirstInstance(true)
@@ -34,7 +34,7 @@ class TestDevice {
     @Test
     fun testEnableFeatures10() {
         stackPush().use { stack ->
-            val features = VkPhysicalDeviceFeatures.callocStack(stack)
+            val features = VkPhysicalDeviceFeatures.calloc(stack)
             enableFeatures(features, setOf("DEPTHCLAMP", "DRAWINDIRECTFIRSTINSTANCE"))
             assertEquals(setOf("DEPTHCLAMP", "DRAWINDIRECTFIRSTINSTANCE"), getEnabledFeatures(features))
 
@@ -46,7 +46,7 @@ class TestDevice {
     @Test
     fun testGetEnabledFeatures11() {
         stackPush().use { stack ->
-            val features = VkPhysicalDeviceVulkan11Features.callocStack(stack)
+            val features = VkPhysicalDeviceVulkan11Features.calloc(stack)
             features.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES)
             features.pNext(123) // This field should be ignored
 
@@ -61,7 +61,7 @@ class TestDevice {
     @Test
     fun testEnableFeatures11() {
         stackPush().use { stack ->
-            val features = VkPhysicalDeviceVulkan11Features.callocStack(stack)
+            val features = VkPhysicalDeviceVulkan11Features.calloc(stack)
 
             enableFeatures(features, setOf("MULTIVIEW", "SHADERDRAWPARAMETERS"))
             assertEquals(setOf("MULTIVIEW", "SHADERDRAWPARAMETERS"), getEnabledFeatures(features))
@@ -74,7 +74,7 @@ class TestDevice {
     @Test
     fun testGetEnabledFeatures12() {
         stackPush().use { stack ->
-            val features = VkPhysicalDeviceVulkan12Features.callocStack(stack)
+            val features = VkPhysicalDeviceVulkan12Features.calloc(stack)
             assertTrue(getEnabledFeatures(features).isEmpty())
 
             features.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)
@@ -90,7 +90,7 @@ class TestDevice {
     @Test
     fun testEnableFeatures12() {
         stackPush().use { stack ->
-            val features = VkPhysicalDeviceVulkan12Features.callocStack(stack)
+            val features = VkPhysicalDeviceVulkan12Features.calloc(stack)
             features.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)
             features.pNext(820)
 
@@ -231,16 +231,16 @@ class TestDevice {
                 deviceExtensions = setOf("extension1", "extension2")
             )
 
-            val ciDevice = VkDeviceCreateInfo.callocStack(stack)
+            val ciDevice = VkDeviceCreateInfo.calloc(stack)
 
-            val availableFeatures10 = VkPhysicalDeviceFeatures.callocStack(stack)
+            val availableFeatures10 = VkPhysicalDeviceFeatures.calloc(stack)
             enableFeatures(availableFeatures10, availableFeaturesSet10)
 
-            val availableFeatures11 = VkPhysicalDeviceVulkan11Features.callocStack(stack)
+            val availableFeatures11 = VkPhysicalDeviceVulkan11Features.calloc(stack)
             availableFeatures11.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES)
             enableFeatures(availableFeatures11, availableFeaturesSet11)
 
-            val availableFeatures12 = VkPhysicalDeviceVulkan12Features.callocStack(stack)
+            val availableFeatures12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
             availableFeatures12.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)
             enableFeatures(availableFeatures12, availableFeaturesSet12)
 

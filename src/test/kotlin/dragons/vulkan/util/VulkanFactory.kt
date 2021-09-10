@@ -11,7 +11,7 @@ import org.lwjgl.vulkan.VkPhysicalDevice
  */
 fun createDummyVulkanInstance(): VkInstance {
     return stackPush().use { stack ->
-        val ciInstance = VkInstanceCreateInfo.callocStack(stack)
+        val ciInstance = VkInstanceCreateInfo.calloc(stack)
         ciInstance.sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO)
 
         val pInstance = stack.callocPointer(1)

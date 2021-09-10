@@ -30,7 +30,7 @@ class DebugVulkanInstance: VulkanInstanceActor, VulkanInstanceCreationListener, 
         stackPush().use { stack ->
             val logger = getLogger("Vulkan")
 
-            val ciMessenger = VkDebugUtilsMessengerCreateInfoEXT.callocStack(stack)
+            val ciMessenger = VkDebugUtilsMessengerCreateInfoEXT.calloc(stack)
             ciMessenger.sType(VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT)
             ciMessenger.messageSeverity(
                 VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT or
