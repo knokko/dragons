@@ -2,12 +2,13 @@ package dragons.plugins.standard.vulkan.renderpass
 
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.util.assertVkSuccess
-import org.lwjgl.system.MemoryStack
+import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
+import org.slf4j.LoggerFactory.getLogger
 
 fun createBasicRenderPass(vkDevice: VkDevice, renderImageInfo: RenderImageInfo): Long {
-    MemoryStack.stackPush().use { stack ->
+    stackPush().use { stack ->
         val attachments = VkAttachmentDescription.calloc(3, stack)
 
         val colorAttachment = attachments[0]
@@ -23,6 +24,8 @@ fun createBasicRenderPass(vkDevice: VkDevice, renderImageInfo: RenderImageInfo):
         depthAttachment.samples(renderImageInfo.sampleCountBit)
         depthAttachment.loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
         depthAttachment.storeOp(VK_ATTACHMENT_STORE_OP_DONT_CARE)
+        depthAttachment.stencilLoadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE)
+        depthAttachment.stencilStoreOp(VK_ATTACHMENT_STORE_OP_DONT_CARE)
         depthAttachment.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
         depthAttachment.finalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 
@@ -64,11 +67,14 @@ fun createBasicRenderPass(vkDevice: VkDevice, renderImageInfo: RenderImageInfo):
         ciRenderPass.pSubpasses(subpasses)
         // No dependencies
 
+        val logger = getLogger("Vulkan")
         val pRenderPass = stack.callocLong(1)
+        logger.info("Creating basic render pass...")
         assertVkSuccess(
             vkCreateRenderPass(vkDevice, ciRenderPass, null, pRenderPass),
             "CreateRenderPass", "standard plugin: basic"
         )
+        logger.info("Created basic render pass")
         return pRenderPass[0]
     }
 }

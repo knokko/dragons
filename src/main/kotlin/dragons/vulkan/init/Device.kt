@@ -8,6 +8,7 @@ import dragons.plugin.interfaces.vulkan.VulkanDeviceActor
 import dragons.plugin.interfaces.vulkan.VulkanDeviceCreationListener
 import dragons.plugin.interfaces.vulkan.VulkanDeviceRater
 import dragons.vr.VrManager
+import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.queue.DeviceQueue
 import dragons.vulkan.queue.QueueFamily
 import dragons.vulkan.queue.QueueManager
@@ -354,11 +355,13 @@ fun createLogicalDevice(
         )
         logger.info("Retrieved device queues")
 
+        val renderImageInfo = RenderImageInfo(physicalDevice)
+
         val eventAgent = VulkanDeviceCreationListener.Agent(
-            vkInstance, physicalDevice, device, scope,
+            vkInstance, physicalDevice, device, renderImageInfo,
             populateResult.enabledExtensions, populateResult.enabledFeatures10,
             populateResult.enabledFeatures11, populateResult.enabledFeatures12,
-            queueManager
+            queueManager, scope
         )
         pluginManager.getImplementations(VulkanDeviceCreationListener::class).forEach { pluginPair ->
             pluginPair.first.afterVulkanDeviceCreation(pluginPair.second, eventAgent)

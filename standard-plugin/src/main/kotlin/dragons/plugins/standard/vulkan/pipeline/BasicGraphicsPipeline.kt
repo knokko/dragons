@@ -3,8 +3,10 @@ package dragons.plugins.standard.vulkan.pipeline
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack
+import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
+import org.slf4j.LoggerFactory.getLogger
 
 class BasicGraphicsPipeline(
     val handle: Long,
@@ -19,18 +21,21 @@ fun destroyBasicGraphicsPipeline(vkDevice: VkDevice, basicPipeline: BasicGraphic
 }
 
 fun createBasicGraphicsPipeline(vkDevice: VkDevice, basicRenderPass: Long, renderImageInfo: RenderImageInfo): BasicGraphicsPipeline {
-    MemoryStack.stackPush().use { stack ->
+    stackPush().use { stack ->
 
         val (basicDescriptorSetLayout, basicPipelineLayout) = createBasicPipelineLayout(vkDevice, stack)
 
         val ciPipelines = VkGraphicsPipelineCreateInfo.calloc(1, stack)
         createBasicGraphicsPipeline(vkDevice, basicRenderPass, basicPipelineLayout, renderImageInfo, ciPipelines[0], stack)
 
+        val logger = getLogger("Vulkan")
         val pPipelines = stack.callocLong(ciPipelines.capacity())
+        logger.info("Creating basic graphics pipeline...")
         assertVkSuccess(
             vkCreateGraphicsPipelines(vkDevice, VK_NULL_HANDLE, ciPipelines, null, pPipelines),
             "CreateGraphicsPipelines"
         )
+        logger.info("Created basic graphics pipeline")
 
         vkDestroyShaderModule(vkDevice, ciPipelines[0].pStages()[0].module(), null)
         vkDestroyShaderModule(vkDevice, ciPipelines[0].pStages()[1].module(), null)
