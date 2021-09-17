@@ -6,7 +6,19 @@ import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
 
-fun createBasicGraphicsPipeline(vkDevice: VkDevice, basicRenderPass: Long, renderImageInfo: RenderImageInfo): Long {
+class BasicGraphicsPipeline(
+    val handle: Long,
+    val descriptorSetLayout: Long,
+    val pipelineLayout: Long
+)
+
+fun destroyBasicGraphicsPipeline(vkDevice: VkDevice, basicPipeline: BasicGraphicsPipeline) {
+    vkDestroyPipeline(vkDevice, basicPipeline.handle, null)
+    vkDestroyPipelineLayout(vkDevice, basicPipeline.pipelineLayout, null)
+    vkDestroyDescriptorSetLayout(vkDevice, basicPipeline.descriptorSetLayout, null)
+}
+
+fun createBasicGraphicsPipeline(vkDevice: VkDevice, basicRenderPass: Long, renderImageInfo: RenderImageInfo): BasicGraphicsPipeline {
     MemoryStack.stackPush().use { stack ->
 
         val (basicDescriptorSetLayout, basicPipelineLayout) = createBasicPipelineLayout(vkDevice, stack)
@@ -25,7 +37,11 @@ fun createBasicGraphicsPipeline(vkDevice: VkDevice, basicRenderPass: Long, rende
         vkDestroyShaderModule(vkDevice, ciPipelines[0].pStages()[2].module(), null)
         vkDestroyShaderModule(vkDevice, ciPipelines[0].pStages()[3].module(), null)
 
-        return pPipelines[0]
+        return BasicGraphicsPipeline(
+            handle = pPipelines[0],
+            descriptorSetLayout = basicDescriptorSetLayout,
+            pipelineLayout = basicPipelineLayout
+        )
     }
 }
 
