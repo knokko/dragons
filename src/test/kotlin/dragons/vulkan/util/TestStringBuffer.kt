@@ -21,7 +21,7 @@ class TestStringBuffer {
     @Test
     fun testExtensionBufferToSet() {
         stackPush().use { stack ->
-            val extensionProperties = VkExtensionProperties.callocStack(testStrings.size, stack)
+            val extensionProperties = VkExtensionProperties.calloc(testStrings.size, stack)
             for ((index, testString) in testStrings.withIndex()) {
                 memUTF8(testString, true, extensionProperties[index].extensionName())
             }
@@ -32,7 +32,7 @@ class TestStringBuffer {
     @Test
     fun testLayerBufferToSet() {
         stackPush().use { stack ->
-            val layerProperties = VkLayerProperties.callocStack(testStrings.size, stack)
+            val layerProperties = VkLayerProperties.calloc(testStrings.size, stack)
             for ((index, testString) in testStrings.withIndex()) {
                 memUTF8(testString, true, layerProperties[index].layerName())
             }

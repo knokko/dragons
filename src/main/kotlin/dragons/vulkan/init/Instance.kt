@@ -29,7 +29,7 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
             )
             val numAvailableExtensions = pNumAvailableExtensions[0]
 
-            val pAvailableExtensions = VkExtensionProperties.callocStack(numAvailableExtensions, stack)
+            val pAvailableExtensions = VkExtensionProperties.calloc(numAvailableExtensions, stack)
             assertVkSuccess(
                 vkEnumerateInstanceExtensionProperties(
                     null as ByteBuffer?,
@@ -51,7 +51,7 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
                 "EnumerateInstanceLayerProperties", "count"
             )
             val numAvailableLayers = pNumAvailableLayers[0]
-            val pAvailableLayers = VkLayerProperties.callocStack(numAvailableLayers, stack)
+            val pAvailableLayers = VkLayerProperties.calloc(numAvailableLayers, stack)
             assertVkSuccess(
                 vkEnumerateInstanceLayerProperties(pNumAvailableLayers, pAvailableLayers),
                 "EnumerateInstanceLayerProperties", "layers"

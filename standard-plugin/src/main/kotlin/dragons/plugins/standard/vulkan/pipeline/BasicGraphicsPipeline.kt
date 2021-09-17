@@ -51,7 +51,7 @@ fun createBasicGraphicsPipeline(
 }
 
 fun createTessellationState(stack: MemoryStack): VkPipelineTessellationStateCreateInfo {
-    val ciTess = VkPipelineTessellationStateCreateInfo.callocStack(stack)
+    val ciTess = VkPipelineTessellationStateCreateInfo.calloc(stack)
     ciTess.sType(VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO)
     ciTess.patchControlPoints(3)
 
@@ -59,7 +59,7 @@ fun createTessellationState(stack: MemoryStack): VkPipelineTessellationStateCrea
 }
 
 fun createBasicDynamicState(stack: MemoryStack): VkPipelineDynamicStateCreateInfo {
-    val ciDynamic = VkPipelineDynamicStateCreateInfo.callocStack(stack)
+    val ciDynamic = VkPipelineDynamicStateCreateInfo.calloc(stack)
     ciDynamic.sType(VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO)
     ciDynamic.pDynamicStates(stack.ints(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR))
 

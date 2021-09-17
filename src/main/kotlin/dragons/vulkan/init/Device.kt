@@ -94,7 +94,7 @@ fun choosePhysicalDevice(vkInstance: VkInstance, pluginManager: PluginManager, v
             )
             val numExtensions = pNumExtensions[0]
 
-            val pExtensions = VkExtensionProperties.callocStack(numExtensions, stack)
+            val pExtensions = VkExtensionProperties.calloc(numExtensions, stack)
             assertVkSuccess(
                 vkEnumerateDeviceExtensionProperties(physicalDevice, null as ByteBuffer?, pNumExtensions, pExtensions),
                 "EnumerateDeviceExtensionProperties", "extensions for $deviceName"
@@ -141,7 +141,7 @@ fun choosePhysicalDevice(vkInstance: VkInstance, pluginManager: PluginManager, v
             vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pNumQueueFamilies, null)
             val numQueueFamilies = pNumQueueFamilies[0]
 
-            val queueFamilyProperties = VkQueueFamilyProperties.callocStack(numQueueFamilies, stack)
+            val queueFamilyProperties = VkQueueFamilyProperties.calloc(numQueueFamilies, stack)
             vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pNumQueueFamilies, queueFamilyProperties)
 
             // Note: (almost) any real physical device has such a queue family, but it's always better to check than assume
@@ -236,7 +236,7 @@ fun createLogicalDevice(
         )
         val numAvailableExtensions = pNumAvailableExtensions[0]
 
-        val pAvailableExtensions = VkExtensionProperties.callocStack(numAvailableExtensions, stack)
+        val pAvailableExtensions = VkExtensionProperties.calloc(numAvailableExtensions, stack)
         assertVkSuccess(
             vkEnumerateDeviceExtensionProperties(physicalDevice, null as ByteBuffer?, pNumAvailableExtensions, pAvailableExtensions),
             "EnumerateDeviceExtensionProperties", "extensions"
@@ -278,7 +278,7 @@ fun createLogicalDevice(
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pNumQueueFamilies, null)
         val numQueueFamilies = pNumQueueFamilies[0]
 
-        val pQueueFamilies = VkQueueFamilyProperties.callocStack(numQueueFamilies, stack)
+        val pQueueFamilies = VkQueueFamilyProperties.calloc(numQueueFamilies, stack)
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pNumQueueFamilies, pQueueFamilies)
 
         val ciDevice = VkDeviceCreateInfo.calloc(stack)
@@ -558,7 +558,7 @@ internal fun populateDeviceCreateInfo(
         pickQueuePriorities(queueFamilies[transferOnlyQueueFamilyIndex].queueCount(), transferOnlyQueueFamilyIndex, stack)
     } else { null }
 
-    val cipQueues = VkDeviceQueueCreateInfo.callocStack(numLogicalQueueFamilies, stack)
+    val cipQueues = VkDeviceQueueCreateInfo.calloc(numLogicalQueueFamilies, stack)
     val ciGeneralQueue = cipQueues[0]
     ciGeneralQueue.sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
     ciGeneralQueue.queueFamilyIndex(generalQueueFamilyIndex)

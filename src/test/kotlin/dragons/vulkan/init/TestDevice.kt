@@ -244,7 +244,7 @@ class TestDevice {
             availableFeatures12.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)
             enableFeatures(availableFeatures12, availableFeaturesSet12)
 
-            val queueFamilies = VkQueueFamilyProperties.callocStack(3, stack)
+            val queueFamilies = VkQueueFamilyProperties.calloc(3, stack)
             run {
                 val unusedFamily = queueFamilies[0]
                 memPutInt(
