@@ -45,10 +45,6 @@ fun createBasicShaders(vkDevice: VkDevice, stack: MemoryStack): VkPipelineShader
 }
 
 private fun createShaderModule(vkDevice: VkDevice, stack: MemoryStack, stage: String, name: String): Long {
-    // TODO Update the shader content to take the slightly different vertex format into account
-    // and also the array of textures and the single sampler...
-    // TODO And compile the shaders
-
     val shaderResourcePath = "dragons/plugins/standard/vulkan/shaders/$name.$stage.spv"
     val shaderByteCode = mallocBundledResource(shaderResourcePath, BasicVertex::class.java.classLoader)
         ?: throw Error("Can't find shader resource: $shaderResourcePath")

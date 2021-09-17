@@ -7,8 +7,6 @@ layout(location = 3) in vec2 heightTexCoordinates;
 layout(location = 4) flat in int matrixIndex;
 layout(location = 5) flat in int materialIndex;
 layout(location = 6) in float deltaFactor;
-
-// TODO Also add these to the other shaders
 layout(location = 7) flat in int colorTextureIndex;
 layout(location = 8) flat in int heightTextureIndex;
 
@@ -19,6 +17,7 @@ layout(set = 0, binding = 0) uniform Camera {
     vec3 position;
 } camera;
 layout(set = 0, binding = 1) uniform sampler textureSampler;
+
 // Note: this must be identical to BasicPipelineLayout.MAX_NUM_DESCRIPTOR_IMAGES
 // Perhaps I can use specialization constants or 'runtime substitiutions' and compile the shader on runtime
 layout(set = 0, binding = 2) uniform texture2D colorTextures[1000];

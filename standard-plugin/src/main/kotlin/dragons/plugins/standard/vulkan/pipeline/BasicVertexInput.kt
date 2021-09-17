@@ -7,14 +7,13 @@ import org.lwjgl.vulkan.VK12.*
 
 fun createBasicVertexInputState(stack: MemoryStack): VkPipelineVertexInputStateCreateInfo {
 
-    // TODO Update these after expanding BasicVertex (I should at least add indices for color image and height image)
     val bindings = VkVertexInputBindingDescription.calloc(1, stack)
     val binding = bindings[0]
     binding.binding(0)
     binding.stride(BasicVertex.SIZE)
     binding.inputRate(VK_VERTEX_INPUT_RATE_VERTEX)
 
-    val attributes = VkVertexInputAttributeDescription.calloc(7, stack)
+    val attributes = VkVertexInputAttributeDescription.calloc(9, stack)
     val attributePosition = attributes[0]
     attributePosition.location(0)
     attributePosition.binding(0)
@@ -56,6 +55,18 @@ fun createBasicVertexInputState(stack: MemoryStack): VkPipelineVertexInputStateC
     attributeDeltaFactor.binding(0)
     attributeDeltaFactor.format(VK_FORMAT_R32_SFLOAT)
     attributeDeltaFactor.offset(BasicVertex.OFFSET_DELTA_FACTOR)
+
+    val attributeColorTextureIndex = attributes[7]
+    attributeColorTextureIndex.location(7)
+    attributeColorTextureIndex.binding(0)
+    attributeColorTextureIndex.format(VK_FORMAT_R32_SINT)
+    attributeColorTextureIndex.offset(BasicVertex.OFFSET_COLOR_TEXTURE_INDEX)
+
+    val attributeHeightTextureIndex = attributes[8]
+    attributeHeightTextureIndex.location(8)
+    attributeHeightTextureIndex.binding(0)
+    attributeHeightTextureIndex.format(VK_FORMAT_R32_SINT)
+    attributeHeightTextureIndex.offset(BasicVertex.OFFSET_HEIGHT_TEXTURE_INDEX)
 
 
     val ciVertexInput = VkPipelineVertexInputStateCreateInfo.calloc(stack)

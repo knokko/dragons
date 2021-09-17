@@ -9,6 +9,8 @@ layout(location = 3) in vec2 inHeightTexCoordinates[];
 layout(location = 4) in int inMatrixIndex[];
 layout(location = 5) in int inMaterialIndex[];
 layout(location = 6) in float inDeltaFactor[];
+layout(location = 7) in int inColorTextureIndex[];
+layout(location = 8) in int inHeightTextureIndex[];
 
 layout(location = 0) out vec3 outWorldPosition;
 layout(location = 1) out vec3 outBaseNormal;
@@ -17,13 +19,19 @@ layout(location = 3) out vec2 outHeightTexCoordinates;
 layout(location = 4) out int outMatrixIndex;
 layout(location = 5) out int outMaterialIndex;
 layout(location = 6) out float outDeltaFactor;
+layout(location = 7) out int outColorTextureIndex;
+layout(location = 8) out int outHeightTextureIndex;
 
 layout(set = 0, binding = 0) uniform Camera {
     mat4 matrix;
     vec3 position;
 } camera;
-layout(set = 0, binding = 2) uniform sampler2D heightTextureSampler;
-layout(set = 0, binding = 3) readonly buffer Objects {
+layout(set = 0, binding = 1) uniform sampler textureSampler;
+
+// Note: this must be identical to BasicPipelineLayout.MAX_NUM_DESCRIPTOR_IMAGES
+// Perhaps I can use specialization constants or 'runtime substitiutions' and compile the shader on runtime
+layout(set = 0, binding = 3) uniform texture2D heightTextures[1000];
+layout(set = 0, binding = 4) readonly buffer Objects {
     mat4 transformationMatrices[];
 } objects;
 
@@ -40,14 +48,16 @@ void main() {
     vec3 baseNormal = mixVec3(inBaseNormal);
     vec2 colorTexCoordinates = mixVec2(inColorTexCoordinates);
     vec2 heightTexCoordinates = mixVec2(inHeightTexCoordinates);
-    // For now, we will assume each vertex in the same patch will have the same matrix index
+    // For now, we will assume each vertex in the same patch will have the same matrix index and texture indices
     int matrixIndex = inMatrixIndex[0];
+    int colorTextureIndex = inColorTextureIndex[0];
+    int heightTextureIndex = inHeightTextureIndex[0];
     // I can't think of any reason why the materialIndex or deltaFactor should be different
     int materialIndex = inMaterialIndex[0];
     float deltaFactor = inDeltaFactor[0];
 
     mat4 transformationMatrix = objects.transformationMatrices[matrixIndex];
-    float extraHeight = texture(heightTextureSampler, heightTexCoordinates).r;
+    float extraHeight = texture(sampler2D(heightTextures[heightTextureIndex], textureSampler), heightTexCoordinates).r;
     vec3 improvedPosition = basePosition + baseNormal * extraHeight;
     vec4 transformedPosition = transformationMatrix * vec4(improvedPosition, 1.0);
 
@@ -61,4 +71,6 @@ void main() {
     outMatrixIndex = matrixIndex;
     outMaterialIndex = materialIndex;
     outDeltaFactor = deltaFactor;
+    outColorTextureIndex = colorTextureIndex;
+    outHeightTextureIndex = heightTextureIndex;
 }

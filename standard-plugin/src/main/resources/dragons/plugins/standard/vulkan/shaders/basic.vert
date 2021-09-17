@@ -7,6 +7,8 @@ layout(location = 3) in vec2 inHeightTexCoordinates;
 layout(location = 4) in int inMatrixIndex;
 layout(location = 5) in int inMaterialIndex;
 layout(location = 6) in float inDeltaFactor;
+layout(location = 7) in int inColorTextureIndex;
+layout(location = 8) in int inHeightTextureIndex;
 
 layout(location = 0) out vec3 outBasePosition;
 layout(location = 1) out vec3 outBaseNormal;
@@ -15,6 +17,8 @@ layout(location = 3) out vec2 outHeightTexCoordinates;
 layout(location = 4) out int outMatrixIndex;
 layout(location = 5) out int outMaterialIndex;
 layout(location = 6) out float outDeltaFactor;
+layout(location = 7) out int outColorTextureIndex;
+layout(location = 8) out int outHeightTextureIndex;
 
 void main() {
     outBasePosition = inBasePosition;
@@ -24,4 +28,6 @@ void main() {
     outMatrixIndex = inMatrixIndex + gl_BaseInstance;
     outMaterialIndex = inMaterialIndex;
     outDeltaFactor = inDeltaFactor;
+    outColorTextureIndex = inColorTextureIndex;
+    outHeightTextureIndex = inHeightTextureIndex;
 }
