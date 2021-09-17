@@ -15,6 +15,7 @@ import dragons.vulkan.util.assertVkSuccess
 import dragons.vulkan.util.combineNextChains
 import dragons.vulkan.util.encodeStrings
 import dragons.vulkan.util.extensionBufferToSet
+import kotlinx.coroutines.CoroutineScope
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memGetInt
@@ -224,7 +225,7 @@ private class DeviceRejectionReason(val rejectingEntity: String, val rejectionRe
 @Throws(StartupException::class)
 fun createLogicalDevice(
     vkInstance: VkInstance, physicalDevice: VkPhysicalDevice,
-    pluginManager: PluginManager, vrManager: VrManager
+    pluginManager: PluginManager, vrManager: VrManager, scope: CoroutineScope
 ): Pair<VkDevice, QueueManager> {
     val logger = getLogger("Vulkan")
     return stackPush().use { stack ->
@@ -354,7 +355,7 @@ fun createLogicalDevice(
         logger.info("Retrieved device queues")
 
         val eventAgent = VulkanDeviceCreationListener.Agent(
-            vkInstance, physicalDevice, device,
+            vkInstance, physicalDevice, device, scope,
             populateResult.enabledExtensions, populateResult.enabledFeatures10,
             populateResult.enabledFeatures11, populateResult.enabledFeatures12,
             queueManager

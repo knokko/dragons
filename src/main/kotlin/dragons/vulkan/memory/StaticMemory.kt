@@ -54,7 +54,7 @@ suspend fun allocateStaticMemory(
     val memoryUsers = pluginManager.getImplementations(VulkanStaticMemoryUser::class)
     val pluginTasks = memoryUsers.map { (memoryUser, pluginInstance) ->
         scope.async {
-            val agent = VulkanStaticMemoryUser.Agent(queueManager)
+            val agent = VulkanStaticMemoryUser.Agent(queueManager, scope)
             memoryUser.claimStaticMemory(pluginInstance, agent)
             agent
         }
@@ -64,7 +64,7 @@ suspend fun allocateStaticMemory(
     logger.info("All calls to the VulkanStaticMemoryUsers finished")
 
     // The game core also needs to add some static resources...
-    val customAgent = VulkanStaticMemoryUser.Agent(queueManager)
+    val customAgent = VulkanStaticMemoryUser.Agent(queueManager, scope)
     claimStaticCoreMemory(customAgent, vrManager)
     finishedAgents.add(customAgent)
 

@@ -4,6 +4,7 @@ import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.PluginInterface
 import dragons.vulkan.memory.claim.*
 import dragons.vulkan.queue.QueueManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 
 interface VulkanStaticMemoryUser: PluginInterface {
@@ -11,6 +12,7 @@ interface VulkanStaticMemoryUser: PluginInterface {
 
     class Agent(
         val queueManager: QueueManager,
+        val gameInitScope: CoroutineScope,
         val prefilledImages: MutableCollection<PrefilledImageMemoryClaim> = mutableListOf(),
         val uninitializedImages: MutableCollection<UninitializedImageMemoryClaim> = mutableListOf(),
         val prefilledBuffers: MutableCollection<PrefilledBufferMemoryClaim> = mutableListOf(),

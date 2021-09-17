@@ -2,7 +2,9 @@ package dragons.plugin.interfaces.vulkan
 
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.PluginInterface
+import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.queue.QueueManager
+import kotlinx.coroutines.CoroutineScope
 import org.lwjgl.vulkan.*
 
 interface VulkanDeviceCreationListener: PluginInterface {
@@ -18,6 +20,8 @@ interface VulkanDeviceCreationListener: PluginInterface {
         val vulkanPhysicalDevice: VkPhysicalDevice,
         /** The logical device that was just created */
         val vulkanDevice: VkDevice,
+        /** The *RenderImageInfo* corresponding to *vulkanPhysicalDevice* */
+        val renderImageInfo: RenderImageInfo,
         /** The set of device extensions that were enabled */
         val enabledExtensions: Set<String>,
         /** The Vulkan 1.0 device features that were enabled */
@@ -27,6 +31,8 @@ interface VulkanDeviceCreationListener: PluginInterface {
         /** The Vulkan 1.2 device features that were enabled */
         val enabledFeatures12: VkPhysicalDeviceVulkan12Features,
         /** The `QueueManager` of the game. Plug-ins can use this to retrieve the device queues they want. */
-        val queueManager: QueueManager
+        val queueManager: QueueManager,
+        /** The `CoroutineScope` for the initialization of the game (until the main menu is shown)*/
+        val gameInitScope: CoroutineScope
     )
 }

@@ -132,7 +132,9 @@ fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
         val memoryInfoJob = async { MemoryInfo(vkPhysicalDeviceJob.await()) }
 
         val vkDeviceJob = async {
-            createLogicalDevice(vulkanInstanceJob.await(), vkPhysicalDeviceJob.await(), pluginJob.await(), vrJob.await())
+            createLogicalDevice(
+                vulkanInstanceJob.await(), vkPhysicalDeviceJob.await(), pluginJob.await(), vrJob.await(), this
+            )
         }
 
         val staticMemoryJob = async {
