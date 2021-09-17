@@ -22,6 +22,7 @@ import dragons.vulkan.queue.QueueManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import org.lwjgl.system.Platform
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkInstance
 import org.lwjgl.vulkan.VkPhysicalDevice
@@ -75,15 +76,19 @@ fun main(args: Array<String>) {
 fun ensurePluginsAreBuilt(logger: Logger): Boolean {
     logger.warn("Running in development, so the plug-ins need to be built...")
 
-    // TODO Add Linux support
-    val buildPluginCommand = "./gradlew.bat build -x test"
-    val buildPluginScript = Files.createTempFile("", ".bat")
-    Files.writeString(buildPluginScript, buildPluginCommand)
+    val exitCode = if (Platform.get() == Platform.WINDOWS) {
+        val buildPluginCommand = "./gradlew.bat build -x test"
+        val buildPluginScript = Files.createTempFile("", ".bat")
+        Files.writeString(buildPluginScript, buildPluginCommand)
 
-    val buildPluginsBuilder = ProcessBuilder(buildPluginScript.absolutePathString())
-    buildPluginsBuilder.redirectError(ProcessBuilder.Redirect.INHERIT)
-    val buildPluginsProcess = buildPluginsBuilder.start()
-    val exitCode = buildPluginsProcess.waitFor()
+        val buildPluginsBuilder = ProcessBuilder(buildPluginScript.absolutePathString())
+        buildPluginsBuilder.redirectError(ProcessBuilder.Redirect.INHERIT)
+        val buildPluginsProcess = buildPluginsBuilder.start()
+        buildPluginsProcess.waitFor()
+    } else {
+        val buildPluginsProcess = Runtime.getRuntime().exec("./gradlew build -x test")
+        buildPluginsProcess.waitFor()
+    }
 
     if (exitCode != 0) {
         logger.error("Failed to build plug-ins (exit code $exitCode). The game will terminate")
