@@ -1,16 +1,38 @@
 package dragons.vulkan.memory.claim
 
+import dragons.vulkan.memory.VulkanImage
+import dragons.vulkan.queue.QueueFamily
+import kotlinx.coroutines.CompletableDeferred
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.nio.ByteBuffer
 import java.util.function.Consumer
 import java.util.function.Supplier
 
-class PrefilledImageMemoryClaim(
-    val width: Int, val height: Int, val bytesPerPixel: Int, val prefill: Consumer<ByteBuffer>) {
+abstract class ImageMemoryClaim(
+    val width: Int, val height: Int, val bytesPerPixel: Int, val queueFamily: QueueFamily?,
+    val storeResult: CompletableDeferred<VulkanImage>
+) {
+    init {
+        if (width <= 0) throw IllegalArgumentException("Width ($width) must be positive")
+        if (height <= 0) throw IllegalArgumentException("Height ($height) must be positive")
+        if (bytesPerPixel <= 0) throw IllegalArgumentException("bytesPerPixel ($bytesPerPixel) must be positive")
+    }
 
-    constructor(width: Int, height: Int, bytesPerPixel: Int, prefillImage: Supplier<BufferedImage>) : this(
-        width, height, bytesPerPixel, { destBuffer ->
+    fun getNumPixels() = width * height
+
+    fun getByteSize() = getNumPixels() * bytesPerPixel
+}
+
+class PrefilledImageMemoryClaim(
+    width: Int, height: Int, bytesPerPixel: Int, queueFamily: QueueFamily?,
+    storeResult: CompletableDeferred<VulkanImage>, val prefill: (ByteBuffer) -> Unit
+): ImageMemoryClaim(width, height, bytesPerPixel, queueFamily, storeResult) {
+
+    constructor(
+        width: Int, height: Int, bytesPerPixel: Int, queueFamily: QueueFamily,
+        storeResult: CompletableDeferred<VulkanImage>, prefillImage: Supplier<BufferedImage>
+    ) : this(width, height, bytesPerPixel, queueFamily, storeResult, { destBuffer ->
             val sourceImage = prefillImage.get()
 
             if (sourceImage.width != width) {
@@ -45,4 +67,6 @@ class PrefilledImageMemoryClaim(
     )
 }
 
-class UninitializedImageMemoryClaim(val width: Int, val height: Int, val bytesPerPixel: Int)
+class UninitializedImageMemoryClaim(
+    width: Int, height: Int, bytesPerPixel: Int, queueFamily: QueueFamily?, storeResult: CompletableDeferred<VulkanImage>
+): ImageMemoryClaim(width, height, bytesPerPixel, queueFamily, storeResult)

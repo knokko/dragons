@@ -8,12 +8,25 @@ import java.nio.ByteBuffer
 class PrefilledBufferMemoryClaim(
     val size: Int, val usageFlags: Int, val queueFamily: QueueFamily?,
     val storeResult: CompletableDeferred<VulkanBufferRange>, val prefill: (ByteBuffer) -> Unit
-)
+) {
+    init {
+        if (size <= 0) throw IllegalArgumentException("Size ($size) must be positive")
+    }
+}
 
 class UninitializedBufferMemoryClaim(
     val size: Int, val usageFlags: Int, val queueFamily: QueueFamily?,
-    val storeResult: CompletableDeferred<VulkanBufferRange>)
+    val storeResult: CompletableDeferred<VulkanBufferRange>
+) {
+    init {
+        if (size <= 0) throw IllegalArgumentException("Size ($size) must be positive")
+    }
+}
 
 class StagingBufferMemoryClaim(
     val size: Int, val queueFamily: QueueFamily?, val storeResult: CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>
-)
+) {
+    init {
+        if (size <= 0) throw IllegalArgumentException("Size ($size) must be positive")
+    }
+}
