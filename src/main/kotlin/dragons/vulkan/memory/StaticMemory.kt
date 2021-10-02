@@ -3,17 +3,15 @@ package dragons.vulkan.memory
 import dragons.init.trouble.SimpleStartupException
 import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
-import dragons.util.nextMultipleOf
 import dragons.vr.VrManager
 import dragons.vulkan.memory.claim.*
 import dragons.vulkan.memory.claim.PlacedQueueFamilyClaims
-import dragons.vulkan.memory.claim.QueueFamilyClaims
 import dragons.vulkan.memory.claim.groupMemoryClaims
 import dragons.vulkan.memory.claim.placeMemoryClaims
+import dragons.vulkan.memory.scope.MemoryScopeClaims
 import dragons.vulkan.queue.QueueFamily
 import dragons.vulkan.queue.QueueManager
 import dragons.vulkan.util.assertVkSuccess
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
@@ -21,39 +19,8 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memByteBuffer
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
-
-private fun claimStaticCoreMemory(
-    agent: VulkanStaticMemoryUser.Agent, vrManager: VrManager, queueManager: QueueManager
-): CoreStaticMemoryPending {
-    val width = vrManager.getWidth()
-    val height = vrManager.getHeight()
-
-    val leftColorImage = CompletableDeferred<VulkanImage>()
-    val leftDepthImage = CompletableDeferred<VulkanImage>()
-
-    agent.uninitializedImages.add(UninitializedImageMemoryClaim(
-        width, height, 4, queueManager.generalQueueFamily, leftColorImage
-    ))
-    agent.uninitializedImages.add(UninitializedImageMemoryClaim(
-        width, height, 4, queueManager.generalQueueFamily, leftDepthImage
-    ))
-
-    val rightColorImage = CompletableDeferred<VulkanImage>()
-    val rightDepthImage = CompletableDeferred<VulkanImage>()
-
-    agent.uninitializedImages.add(UninitializedImageMemoryClaim(
-        width, height, 4, queueManager.generalQueueFamily, rightColorImage
-    ))
-    agent.uninitializedImages.add(UninitializedImageMemoryClaim(
-        width, height, 4, queueManager.generalQueueFamily, rightDepthImage
-    ))
-
-    return CoreStaticMemoryPending(
-        leftColorImage = leftColorImage, leftDepthImage = leftDepthImage,
-        rightColorImage = rightColorImage, rightDepthImage = rightDepthImage
-    )
-}
 
 class StaticMemory(
     val deviceBufferMemory: Long?,
@@ -64,6 +31,30 @@ class StaticMemory(
     val deviceImages: Collection<VulkanImage>
 )
 
+private suspend fun getFinishedStaticMemoryAgents(
+    logger: Logger, pluginManager: PluginManager, vrManager: VrManager, queueManager: QueueManager, scope: CoroutineScope
+): Pair<Collection<MemoryScopeClaims>, CoreStaticMemoryPending> {
+
+    logger.info("Calling all VulkanStaticMemoryUsers...")
+    val memoryUsers = pluginManager.getImplementations(VulkanStaticMemoryUser::class)
+    val pluginTasks = memoryUsers.map { (memoryUser, pluginInstance) ->
+        scope.async {
+            val agent = VulkanStaticMemoryUser.Agent(queueManager, scope, MemoryScopeClaims())
+            memoryUser.claimStaticMemory(pluginInstance, agent)
+            agent
+        }
+    }
+    logger.info("All calls to the VulkanStaticMemoryUsers started")
+    val finishedClaims = pluginTasks.map { task -> task.await().claims }
+    logger.info("All calls to the VulkanStaticMemoryUsers finished")
+
+    // The game core also needs to add some static resources...
+    val customAgent = VulkanStaticMemoryUser.Agent(queueManager, scope, MemoryScopeClaims())
+    val pendingCoreMemory = claimStaticCoreMemory(customAgent, vrManager, queueManager)
+
+    return Pair(finishedClaims + listOf(customAgent.claims), pendingCoreMemory)
+}
+
 @Throws(SimpleStartupException::class)
 suspend fun allocateStaticMemory(
     vkDevice: VkDevice, queueManager: QueueManager, pluginManager: PluginManager, vrManager: VrManager,
@@ -71,33 +62,19 @@ suspend fun allocateStaticMemory(
 ): StaticMemory {
     val logger = getLogger("Vulkan")
 
-    logger.info("Calling all VulkanStaticMemoryUsers...")
-    val memoryUsers = pluginManager.getImplementations(VulkanStaticMemoryUser::class)
-    val pluginTasks = memoryUsers.map { (memoryUser, pluginInstance) ->
-        scope.async {
-            val agent = VulkanStaticMemoryUser.Agent(queueManager, scope)
-            memoryUser.claimStaticMemory(pluginInstance, agent)
-            agent
-        }
-    }
-    logger.info("All calls to the VulkanStaticMemoryUsers started")
-    val finishedAgents = pluginTasks.map { task -> task.await() }.toMutableList()
-    logger.info("All calls to the VulkanStaticMemoryUsers finished")
-
-    // The game core also needs to add some static resources...
-    val customAgent = VulkanStaticMemoryUser.Agent(queueManager, scope)
-    val pendingCoreMemory = claimStaticCoreMemory(customAgent, vrManager, queueManager)
-    finishedAgents.add(customAgent)
+    val (finishedAgents, pendingCoreMemory) = getFinishedStaticMemoryAgents(
+        logger, pluginManager, vrManager, queueManager, scope
+    )
 
     val groups = groupMemoryClaims(finishedAgents)
     val tempStagingBufferSize = groups.values.sumOf { it.tempStagingSize }
 
     var combinedDeviceBufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT
-    for (claims in groups.values) {
-        for (claim in claims.prefilledBufferClaims) {
+    for (familyClaims in groups.values) {
+        for (claim in familyClaims.claims.prefilledBufferClaims) {
             combinedDeviceBufferUsage = combinedDeviceBufferUsage or claim.usageFlags
         }
-        for (claim in claims.uninitializedBufferClaims) {
+        for (claim in familyClaims.claims.uninitializedBufferClaims) {
             combinedDeviceBufferUsage = combinedDeviceBufferUsage or claim.usageFlags
         }
     }
@@ -108,101 +85,10 @@ suspend fun allocateStaticMemory(
 
     return stackPush().use { stack ->
 
-        fun createPersistentBuffers(
-            getSize: (QueueFamilyClaims) -> Long, bufferUsage: Int, description: String,
-            requiredMemoryPropertyFlags: Int, desiredMemoryPropertyFlags: Int, neutralMemoryPropertyFlags: Int
-        ): Pair<Long?, Collection<Triple<Long, QueueFamily?, Long>>> {
-            logger.info("Creating $description buffers...")
+        val (persistentStagingMemory, persistentStagingBuffers) = createCombinedBuffers(
+            logger = logger, stack = stack, vkDevice = vkDevice, queueManager = queueManager,
+            groups = groups, memoryInfo = memoryInfo,
 
-            val persistentBuffers = groups.entries.filter { (_, claims) ->
-                getSize(claims) > 0
-            }.map { (queueFamily, claims) ->
-                val ciPersistentBuffer = VkBufferCreateInfo.calloc(stack)
-                ciPersistentBuffer.sType(VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
-                ciPersistentBuffer.size(getSize(claims))
-                ciPersistentBuffer.usage(bufferUsage)
-                if (queueFamily == null && queueManager.relevantQueueFamilies.size > 1) {
-                    ciPersistentBuffer.sharingMode(VK_SHARING_MODE_CONCURRENT)
-                    val queueFamilies = queueManager.relevantQueueFamilies
-
-                    val pQueueFamilies = stack.callocInt(queueFamilies.size)
-                    for ((index, queueFamilyIndex) in queueFamilies.withIndex()) {
-                        pQueueFamilies.put(index, queueFamilyIndex)
-                    }
-                    ciPersistentBuffer.pQueueFamilyIndices(pQueueFamilies)
-                } else {
-                    ciPersistentBuffer.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-                }
-
-                val pPersistentBuffer = stack.callocLong(1)
-                assertVkSuccess(
-                    vkCreateBuffer(vkDevice, ciPersistentBuffer, null, pPersistentBuffer),
-                    "CreateBuffer", "$description for queue family ${queueFamily?.index}"
-                )
-                val persistentBuffer = pPersistentBuffer[0]
-
-                val persistentMemoryRequirements = VkMemoryRequirements.calloc(stack)
-                vkGetBufferMemoryRequirements(vkDevice, persistentBuffer, persistentMemoryRequirements)
-                Triple(persistentBuffer, persistentMemoryRequirements, queueFamily)
-            }
-
-            logger.info("Created $description buffers")
-
-            var persistentBufferMemory: Long? = null
-
-            val persistentBufferOffsets = if (persistentBuffers.isNotEmpty()) {
-
-                // Since the flags of all buffers are 0 and the usage of all buffers is identical, the Vulkan specification
-                // guarantees that the alignment and memoryTypeBits of all buffer memory requirements are identical.
-                val memoryTypeBits = persistentBuffers[0].second.memoryTypeBits()
-                val alignment = persistentBuffers[0].second.alignment()
-
-                // We will create 1 buffer per used queue family, but they will share the same memory allocation.
-                var currentOffset = 0L
-                val persistentBufferOffsets = persistentBuffers.map { (_, memoryRequirements, _) ->
-                    val bufferOffset = nextMultipleOf(alignment, currentOffset)
-                    currentOffset = bufferOffset + memoryRequirements.size()
-                    bufferOffset
-                }
-                val persistentMemorySize = currentOffset
-
-                val aiPersistentMemory = VkMemoryAllocateInfo.calloc(stack)
-                aiPersistentMemory.sType(VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
-                aiPersistentMemory.allocationSize(persistentMemorySize)
-                aiPersistentMemory.memoryTypeIndex(memoryInfo.chooseMemoryTypeIndex(
-                    memoryTypeBits, persistentMemorySize,
-                    requiredPropertyFlags = requiredMemoryPropertyFlags,
-                    desiredPropertyFlags = desiredMemoryPropertyFlags,
-                    neutralPropertyFlags = neutralMemoryPropertyFlags
-                )?: throw SimpleStartupException("Memory problem", listOf(
-                    "The game couldn't find a suitable memory type for the $description memory"
-                )))
-
-                logger.info("Allocating $description memory with memory type ${aiPersistentMemory.memoryTypeIndex()}...")
-                val pPersistentMemory = stack.callocLong(1)
-                assertVkSuccess(
-                    vkAllocateMemory(vkDevice, aiPersistentMemory, null, pPersistentMemory),
-                    "AllocateMemory", description
-                )
-                persistentBufferMemory = pPersistentMemory[0]
-                logger.info("Allocated $description memory")
-
-                for ((index, bufferTriple) in persistentBuffers.withIndex()) {
-                    val persistentBuffer = bufferTriple.first
-                    assertVkSuccess(
-                        vkBindBufferMemory(vkDevice, persistentBuffer, persistentBufferMemory, persistentBufferOffsets[index]),
-                        "BindBufferMemory", "$description for queue family ${bufferTriple.third?.index}"
-                    )
-                }
-                persistentBufferOffsets
-            } else { null }
-
-            return Pair(persistentBufferMemory, persistentBuffers.withIndex().map { (index, bufferTriple) ->
-                Triple(bufferTriple.first, bufferTriple.third, persistentBufferOffsets!![index])
-            })
-        }
-
-        val (persistentStagingMemory, persistentStagingBuffers) = createPersistentBuffers(
             getSize = { claims -> claims.persistentStagingSize },
             bufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             description = "persistent staging",
@@ -220,7 +106,10 @@ suspend fun allocateStaticMemory(
             ppPersistentStaging[0]
         } else { null }
 
-        val (deviceBufferMemory, deviceBuffers) = createPersistentBuffers(
+        val (deviceBufferMemory, deviceBuffers) = createCombinedBuffers(
+            logger = logger, stack = stack, vkDevice = vkDevice, queueManager = queueManager,
+            groups = groups, memoryInfo = memoryInfo,
+
             getSize = { claims -> claims.deviceBufferSize },
             bufferUsage = combinedDeviceBufferUsage,
             description = "static device",
@@ -229,137 +118,31 @@ suspend fun allocateStaticMemory(
             neutralMemoryPropertyFlags = 0
         )
 
+        val familiesCommands = FamiliesCommands.construct(vkDevice, groups.keys)
+
         val numDeviceImages = groups.values.sumOf { it.prefilledImageClaims.size + it.uninitializedImageClaims.size }
-        val (deviceImageMemory, devicesImages) = if (numDeviceImages > 0) {
-
-            fun createImage(claim: ImageMemoryClaim, needsPrefill: Boolean): VulkanImage {
-                val mipLevels = 1
-                val arrayLayers = 1
-                // TODO Stop hardcoding these and handle them appropriately
-
-                val ciImage = VkImageCreateInfo.calloc(stack)
-                ciImage.sType(VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
-                ciImage.flags(flags)
-                ciImage.imageType(VK_IMAGE_TYPE_2D)
-                ciImage.format(format)
-                ciImage.extent(VkExtent3D.calloc(stack).set(claim.width, claim.height, 1))
-                ciImage.mipLevels(mipLevels)
-                ciImage.arrayLayers(arrayLayers)
-                ciImage.samples(samples)
-                ciImage.tiling(tiling)
-                if (needsPrefill) {
-                    ciImage.usage(usage or VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-                } else {
-                    ciImage.usage(usage)
-                }
-                if (claim.queueFamily == null && queueManager.relevantQueueFamilies.size > 1) {
-                    ciImage.sharingMode(VK_SHARING_MODE_CONCURRENT)
-
-                    val queueFamilies = queueManager.relevantQueueFamilies
-                    val pQueueFamilies = stack.callocInt(queueFamilies.size)
-                    for ((index, queueFamilyIndex) in queueFamilies.withIndex()) {
-                        pQueueFamilies.put(index, queueFamilyIndex)
-                    }
-                    ciImage.pQueueFamilyIndices(pQueueFamilies)
-                } else {
-                    ciImage.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-                }
-                if (needsPrefill) {
-                    ciImage.initialLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-                } else {
-                    ciImage.initialLayout(initialLayout)
-                }
-
-                val pImage = stack.callocLong(1)
-                assertVkSuccess(
-                    vkCreateImage(vkDevice, ciImage, null, pImage),
-                    "CreateImage", "static"
-                )
-                val image = pImage[0]
-
-                val ciView = VkImageViewCreateInfo.calloc(stack)
-                ciView.sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
-                ciView.flags(viewFlags)
-                ciView.image(image)
-                ciView.viewType(VK_IMAGE_VIEW_TYPE_2D) // TODO Use 2D_ARRAY if needed?
-                ciView.format(format)
-                ciView.components { components ->
-                    components.r(VK_COMPONENT_SWIZZLE_IDENTITY)
-                    components.g(VK_COMPONENT_SWIZZLE_IDENTITY)
-                    components.b(VK_COMPONENT_SWIZZLE_IDENTITY)
-                    components.a(VK_COMPONENT_SWIZZLE_IDENTITY)
-                }
-                ciView.subresourceRange { range ->
-                    range.aspectMask(aspectMask)
-                    range.baseMipLevel(0)
-                    range.levelCount(mipLevels)
-                    range.baseArrayLayer(0)
-                    range.layerCount(arrayLayers)
-                }
-
-                val pImageView = stack.callocLong(1)
-                assertVkSuccess(
-                    vkCreateImageView(vkDevice, ciView, null, pImageView),
-                    "CreateImageView", "full static"
-                )
-                val fullImageView = pImageView[0]
-
-                return VulkanImage(image, fullImageView)
-            }
+        val (deviceImageMemory, claimsToImageMap) = if (numDeviceImages > 0) {
 
             val pairedUninitializedImageClaims = mutableListOf<Pair<UninitializedImageMemoryClaim, VulkanImage>>()
             val pairedPrefilledImageClaims = mutableListOf<Pair<PrefilledImageMemoryClaim, VulkanImage>>()
             for ((_, claims) in groups.entries) {
                 pairedUninitializedImageClaims.addAll(claims.uninitializedImageClaims.map { claim ->
-                    Pair(claim, createImage(claim, false))
+                    Pair(claim, createImage(stack, vkDevice, queueManager ,claim, false))
                 })
                 pairedPrefilledImageClaims.addAll(claims.prefilledImageClaims.map { claim ->
-                    Pair(claim, createImage(claim, true))
+                    Pair(claim, createImage(stack, vkDevice, queueManager, claim, true))
                 })
             }
 
             val allDeviceImages = pairedUninitializedImageClaims.map { (claim, image) -> Pair(image.handle, claim) } +
                     pairedPrefilledImageClaims.map { (claim, image) -> Pair(image.handle, claim) }
 
-            val imageRequirements = VkMemoryRequirements.calloc(stack)
-            var memoryTypeBits = -1 // Note: the binary representation of -1 consists of only ones
-            var nextImageOffset = 0L
-            val imageOffsets = allDeviceImages.map { (image, queueFamily) ->
-                vkGetImageMemoryRequirements(vkDevice, image, imageRequirements)
-                memoryTypeBits = memoryTypeBits and imageRequirements.memoryTypeBits()
+            val claimsToImageMap = bindAndAllocateImageMemory(stack, vkDevice, memoryInfo, allDeviceImages)
 
-                val thisImageOffset = nextMultipleOf(imageRequirements.alignment(), nextImageOffset)
-                nextImageOffset = thisImageOffset + imageRequirements.size()
+            familiesCommands.performInitialTransition(allDeviceImages, queueManager)
 
-                Triple(image, queueFamily, thisImageOffset)
-            }
-
-            val aiImageMemory = VkMemoryAllocateInfo.calloc(stack)
-            aiImageMemory.sType(VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
-            aiImageMemory.allocationSize(nextImageOffset)
-            // TODO I might want to handle the case where this returns null. I'm afraid this is possible in theory
-            aiImageMemory.memoryTypeIndex(memoryInfo.chooseMemoryTypeIndex(
-                memoryTypeBits, aiImageMemory.allocationSize(),
-                requiredPropertyFlags = 0,
-                desiredPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                neutralPropertyFlags = 0
-            )!!)
-
-            val pImageMemory = stack.callocLong(1)
-            assertVkSuccess(
-                vkAllocateMemory(vkDevice, aiImageMemory, null, pImageMemory),
-                "AllocateMemory", "static device image"
-            )
-            val deviceImageMemory = pImageMemory[0]
-
-            for ((image, _, offset) in imageOffsets) {
-                assertVkSuccess(
-                    vkBindImageMemory(vkDevice, image, deviceImageMemory, offset),
-                    "BindImageMemory", "static device image at $offset"
-                )
-            }
-            Pair(deviceBufferMemory, imageOffsets.map { (image, claim) -> Pair(image, claim) })
-        } else { Pair(null, emptyList()) }
+            Pair(deviceBufferMemory, claimsToImageMap)
+        } else { Pair(null, emptyMap()) }
 
         if (tempStagingBufferSize > 0) {
             val ciTempStagingBuffer = VkBufferCreateInfo.calloc(stack)
@@ -552,6 +335,9 @@ suspend fun allocateStaticMemory(
             // TODO Use the general queue family for the depth-stencil transfers because graphics capabilities are required for that
             for ((queueFamily, placements) in placementMap.entries) {
                 for (placedImageClaim in placements.prefilledImageClaims) {
+
+                    val deviceImage = claimsToImageMap[placedImageClaim.claim]!!
+
                     val copyRegions = VkBufferImageCopy.calloc(1, stack)
                     val copyRegion = copyRegions[0]
                     copyRegion.bufferOffset(placedImageClaim.offset)
@@ -575,6 +361,49 @@ suspend fun allocateStaticMemory(
                     vkCmdCopyBufferToImage(
                         copyCommandBuffer, tempStagingBuffer, deviceImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyRegions
                     )
+
+                    val needsOwnershipTransfer = queueFamily != null && queueFamily != transferQueueFamily
+                    val needsLayoutTransfer = placedImageClaim.claim.initialLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+                    if (needsOwnershipTransfer || needsLayoutTransfer) {
+                        val pImageBarriers = VkImageMemoryBarrier.calloc(1, stack)
+                        val imageBarrier = pImageBarriers[0]
+                        imageBarrier.sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
+                        imageBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+                        if (needsOwnershipTransfer) {
+                            imageBarrier.dstAccessMask(0)
+                        } else {
+                            imageBarrier.dstAccessMask(VK_ACCESS_SHADER_READ_BIT)
+                        }
+                        // TODO Check if we need to synchronize explicitly with previous copy command
+                        if (needsLayoutTransfer) {
+                            imageBarrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+                            imageBarrier.newLayout(placedImageClaim.claim.initialLayout)
+                        } else {
+                            imageBarrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+                            imageBarrier.newLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+                        }
+                        if (needsOwnershipTransfer) {
+                            imageBarrier.srcQueueFamilyIndex(transferQueueFamily.index)
+                            imageBarrier.dstQueueFamilyIndex(queueFamily!!.index)
+                        } else {
+                            imageBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+                            imageBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+                        }
+                        imageBarrier.image(deviceImage)
+                        imageBarrier.subresourceRange { ssr ->
+                            ssr.aspectMask(placedImageClaim.claim.aspectMask)
+                            // TODO Handle multiple mip levels and/or array layers
+                            ssr.baseMipLevel(0)
+                            ssr.levelCount(1)
+                            ssr.baseArrayLayer(0)
+                            ssr.layerCount(1)
+                        }
+
+                        vkCmdPipelineBarrier(
+                            copyCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                            0, null, null, pImageBarriers
+                        )
+                    }
                 }
             }
 
@@ -611,6 +440,7 @@ suspend fun allocateStaticMemory(
             vkDestroyFence(vkDevice, pFence[0], null)
             logger.info("Static transfer command finished")
 
+            // TODO Wait... even if no acquire operations are needed, it must still support image layout transfers
             val acquireQueueFamilies = groups.entries.filter { (queueFamily, claims) ->
                 queueFamily != null && queueFamily != transferQueueFamily && claims.tempStagingSize > 0
             }.map { (queueFamily, claims) -> Pair(queueFamily!!, claims) }
@@ -686,6 +516,21 @@ suspend fun allocateStaticMemory(
                     vkEndCommandBuffer(acquireCommandBuffer), "EndCommandBuffer",
                     "queue family ownership transfer to ${queueFamily.index}"
                 )
+
+                for (claim in claims.prefilledImageClaims) {
+                    val needsOwnershipTransfer = queueFamily != null && queueFamily != transferQueueFamily
+                    val needsLayoutTransfer = claim.claim.initialLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+
+                    val deviceImage = claimsToImageMap[claim]!!
+
+                    val imageBarrier = VkImageMemoryBarrier.calloc(stack)
+                    imageBarrier.sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
+                    imageBarrier.srcAccessMask(0) // Ignored because it is an acquire operation
+                    imageBarrier.dstAccessMask(VK_ACCESS_TRANSFER_READ_BIT)
+                    imageBarrier.srcQueueFamilyIndex(transferQueueFamily.index)
+                    imageBarrier.dstQueueFamilyIndex(queueFamily.index)
+                    imageBarrier.image(deviceImage)
+                }
 
                 val siAcquires = VkSubmitInfo.calloc(1, stack)
                 val siAcquire = siAcquires[0]

@@ -6,18 +6,18 @@ class QueueManager(
     val transferOnlyQueueFamily: QueueFamily?
 ) {
 
-    val relevantQueueFamilies: List<Int>
+    val allQueueFamilies: List<QueueFamily>
 
     init {
-        val collectQueueFamilies = mutableListOf(generalQueueFamily.index)
+        val collectQueueFamilies = mutableListOf(generalQueueFamily)
         if (computeOnlyQueueFamily != null) {
-            collectQueueFamilies.add(computeOnlyQueueFamily.index)
+            collectQueueFamilies.add(computeOnlyQueueFamily)
         }
         if (transferOnlyQueueFamily != null) {
-            collectQueueFamilies.add(transferOnlyQueueFamily.index)
+            collectQueueFamilies.add(transferOnlyQueueFamily)
         }
 
-        relevantQueueFamilies = collectQueueFamilies.toList()
+        allQueueFamilies = collectQueueFamilies.toList()
     }
 
     fun getComputeQueueFamily(): QueueFamily {

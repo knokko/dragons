@@ -10,7 +10,22 @@ import java.util.function.Consumer
 import java.util.function.Supplier
 
 abstract class ImageMemoryClaim(
-    val width: Int, val height: Int, val bytesPerPixel: Int, val queueFamily: QueueFamily?,
+    val width: Int, val height: Int, val queueFamily: QueueFamily?,
+    val imageCreateFlags: Int,
+    val imageViewFlags: Int,
+    val bytesPerPixel: Int,
+    val imageFormat: Int,
+    val tiling: Int,
+    val samples: Int,
+    val imageUsage: Int,
+    /**
+     * The game image loader will ensure that the image has this layout when it calls `storeResult`. This doesn't have
+     * to be `VK_IMAGE_LAYOUT_UNDEFINED` or `VK_IMAGE_LAYOUT_PREINITIALIZED`; If you pick something else, the image
+     * loader will perform a layout transition before calling `storeResult`.
+     */
+    val initialLayout: Int,
+    val aspectMask: Int,
+    val accessMask: Int,
     val storeResult: CompletableDeferred<VulkanImage>
 ) {
     init {
