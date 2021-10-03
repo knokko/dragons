@@ -4,8 +4,6 @@ import dragons.vulkan.memory.scope.CombinedMemoryScopeClaims
 import dragons.vulkan.memory.scope.MemoryScopeClaims
 import dragons.vulkan.queue.QueueFamily
 
-// TODO Update the unit tests to take the images into account
-
 internal fun getUsedQueueFamilies(allClaims: Collection<MemoryScopeClaims>): Set<QueueFamily?> {
     val usedQueueFamilies = mutableSetOf<QueueFamily?>()
     for (claims in allClaims) {
@@ -18,10 +16,7 @@ internal fun getUsedQueueFamilies(allClaims: Collection<MemoryScopeClaims>): Set
         for (bufferClaim in claims.stagingBuffers) {
             usedQueueFamilies.add(bufferClaim.queueFamily)
         }
-        for (imageClaim in claims.prefilledImages) {
-            usedQueueFamilies.add(imageClaim.queueFamily)
-        }
-        for (imageClaim in claims.uninitializedImages) {
+        for (imageClaim in claims.images) {
             usedQueueFamilies.add(imageClaim.queueFamily)
         }
     }
@@ -71,23 +66,20 @@ internal fun groupMemoryClaims(allClaims: Collection<MemoryScopeClaims>): Map<Qu
         val prefilledBufferClaims = mutableListOf<PrefilledBufferMemoryClaim>()
         val uninitializedBufferClaims = mutableListOf<UninitializedBufferMemoryClaim>()
         val stagingBufferClaims = mutableListOf<StagingBufferMemoryClaim>()
-        val prefilledImageClaims = mutableListOf<PrefilledImageMemoryClaim>()
-        val uninitializedImageClaims = mutableListOf<UninitializedImageMemoryClaim>()
+        val allImageClaims = mutableListOf<ImageMemoryClaim>()
 
         for (claims in allClaims) {
             prefilledBufferClaims.addAll(claims.prefilledBuffers.filter { it.queueFamily == queueFamily })
             uninitializedBufferClaims.addAll(claims.uninitializedBuffers.filter { it.queueFamily == queueFamily })
             stagingBufferClaims.addAll(claims.stagingBuffers.filter { it.queueFamily == queueFamily })
-            prefilledImageClaims.addAll(claims.prefilledImages.filter { it.queueFamily == queueFamily })
-            uninitializedImageClaims.addAll(claims.uninitializedImages.filter { it.queueFamily == queueFamily })
+            allImageClaims.addAll(claims.images.filter { it.queueFamily == queueFamily })
         }
 
         queueFamilyMap[queueFamily] = QueueFamilyClaims(CombinedMemoryScopeClaims(
             prefilledBufferClaims,
             uninitializedBufferClaims,
             stagingBufferClaims,
-            prefilledImageClaims,
-            uninitializedImageClaims
+            allImageClaims
         ))
     }
 
@@ -142,7 +134,7 @@ internal class PlacedQueueFamilyClaims(
      */
     val stagingBufferOffset: Long,
 
-    val prefilledImageClaims: Collection<Placed<PrefilledImageMemoryClaim>>,
+    val prefilledImageClaims: Collection<Placed<ImageMemoryClaim>>,
     /**
      * The number of bytes between the start of the temporary staging buffer domain **of this queue family** and the
      * first byte of the prefilled image content. (This is currently the sum of the sizes of all prefilled buffers of
@@ -150,7 +142,7 @@ internal class PlacedQueueFamilyClaims(
      */
     val prefilledImageStagingOffset: Long,
 
-    val uninitializedImageClaims: Collection<UninitializedImageMemoryClaim>,
+    val uninitializedImageClaims: Collection<ImageMemoryClaim>,
 ) {
     override fun equals(other: Any?): Boolean {
         return if (other is PlacedQueueFamilyClaims) {

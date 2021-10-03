@@ -3,6 +3,7 @@ package dragons.vulkan.memory.scope
 import dragons.init.trouble.SimpleStartupException
 import dragons.util.nextMultipleOf
 import dragons.vulkan.memory.MemoryInfo
+import dragons.vulkan.memory.VulkanBuffer
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim
 import dragons.vulkan.memory.claim.QueueFamilyClaims
@@ -20,7 +21,7 @@ internal fun createCombinedBuffers(
     groups: Map<QueueFamily?, QueueFamilyClaims>, memoryInfo: MemoryInfo,
     getSize: (QueueFamilyClaims) -> Long, bufferUsage: Int, description: String,
     requiredMemoryPropertyFlags: Int, desiredMemoryPropertyFlags: Int, neutralMemoryPropertyFlags: Int
-): Pair<Long?, Collection<CombinedBufferPart>> {
+): Pair<Long?, Map<QueueFamily?, VulkanBuffer>> {
     logger.info("Creating $description buffers...")
 
     val combinedBuffers = groups.entries.filter { (_, claims) ->
@@ -107,16 +108,12 @@ internal fun createCombinedBuffers(
         persistentBufferOffsets
     } else { null }
 
-    return Pair(persistentBufferMemory, combinedBuffers.withIndex().map { (index, bufferTriple) ->
-        CombinedBufferPart(bufferTriple.first, bufferTriple.third, persistentBufferOffsets!![index])
-    })
+    val queueFamilyToBufferMap = mutableMapOf<QueueFamily?, VulkanBuffer>()
+    for ((bufferHandle, _, queueFamily) in combinedBuffers) {
+        queueFamilyToBufferMap[queueFamily] = VulkanBuffer(bufferHandle)
+    }
+    return Pair(persistentBufferMemory, queueFamilyToBufferMap)
 }
-
-internal class CombinedBufferPart(
-    val buffer: Long,
-    val queueFamily: QueueFamily?,
-    val memoryOffset: Long
-)
 
 internal fun createCombinedStagingBuffer(
     vkDevice: VkDevice, memoryInfo: MemoryInfo, stack: MemoryStack,
@@ -256,19 +253,19 @@ internal fun createImage(
 
 internal fun bindAndAllocateImageMemory(
     stack: MemoryStack, vkDevice: VkDevice, memoryInfo: MemoryInfo,
-    allDeviceImages: Collection<Pair<Long, ImageMemoryClaim>>
-): Map<ImageMemoryClaim, Long> {
+    allDeviceImages: Collection<Pair<ImageMemoryClaim, VulkanImage>>, description: String
+): Map<ImageMemoryClaim, VulkanImage> {
     val imageRequirements = VkMemoryRequirements.calloc(stack)
     var memoryTypeBits = -1 // Note: the binary representation of -1 consists of only ones
     var nextImageOffset = 0L
-    val imageOffsets = allDeviceImages.map { (image, queueFamily) ->
-        vkGetImageMemoryRequirements(vkDevice, image, imageRequirements)
+    val imageOffsets = allDeviceImages.map { (claim, image) ->
+        vkGetImageMemoryRequirements(vkDevice, image.handle, imageRequirements)
         memoryTypeBits = memoryTypeBits and imageRequirements.memoryTypeBits()
 
         val thisImageOffset = nextMultipleOf(imageRequirements.alignment(), nextImageOffset)
         nextImageOffset = thisImageOffset + imageRequirements.size()
 
-        Triple(image, queueFamily, thisImageOffset)
+        Triple(image, claim, thisImageOffset)
     }
 
     val aiImageMemory = VkMemoryAllocateInfo.calloc(stack)
@@ -285,18 +282,18 @@ internal fun bindAndAllocateImageMemory(
     val pImageMemory = stack.callocLong(1)
     assertVkSuccess(
         vkAllocateMemory(vkDevice, aiImageMemory, null, pImageMemory),
-        "AllocateMemory", "static device image"
+        "AllocateMemory", "Scope $description: device image"
     )
     val deviceImageMemory = pImageMemory[0]
 
     for ((image, _, offset) in imageOffsets) {
         assertVkSuccess(
-            vkBindImageMemory(vkDevice, image, deviceImageMemory, offset),
-            "BindImageMemory", "static device image at $offset"
+            vkBindImageMemory(vkDevice, image.handle, deviceImageMemory, offset),
+            "BindImageMemory", "Scope $description: device image at $offset"
         )
     }
 
-    val claimsToImageMap = mutableMapOf<ImageMemoryClaim, Long>()
+    val claimsToImageMap = mutableMapOf<ImageMemoryClaim, VulkanImage>()
     for ((image, claim) in imageOffsets) {
         claimsToImageMap[claim] = image
     }

@@ -2,6 +2,7 @@ package dragons.vulkan.memory
 
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.vr.VrManager
+import dragons.vulkan.memory.claim.ImageMemoryClaim
 import dragons.vulkan.memory.claim.UninitializedImageMemoryClaim
 import dragons.vulkan.queue.QueueManager
 import kotlinx.coroutines.CompletableDeferred
@@ -16,11 +17,9 @@ internal fun claimStaticCoreMemory(
     val leftColorImage = CompletableDeferred<VulkanImage>()
     val leftDepthImage = CompletableDeferred<VulkanImage>()
 
-    agent.claims.uninitializedImages.add(
-        UninitializedImageMemoryClaim(
-        width, height, 4, queueManager.generalQueueFamily, leftColorImage
-    )
-    )
+    agent.claims.images.add(ImageMemoryClaim(
+        width = width, height = height, 4, queueManager.generalQueueFamily, leftColorImage
+    ))
     agent.claims.uninitializedImages.add(
         UninitializedImageMemoryClaim(
         width, height, 4, queueManager.generalQueueFamily, leftDepthImage

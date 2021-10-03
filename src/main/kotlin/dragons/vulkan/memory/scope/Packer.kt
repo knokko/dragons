@@ -2,6 +2,7 @@ package dragons.vulkan.memory.scope
 
 import dragons.vulkan.memory.MemoryInfo
 import dragons.vulkan.memory.VulkanImage
+import dragons.vulkan.memory.claim.ImageMemoryClaim
 import dragons.vulkan.memory.claim.PrefilledImageMemoryClaim
 import dragons.vulkan.memory.claim.UninitializedImageMemoryClaim
 import dragons.vulkan.memory.claim.groupMemoryClaims
@@ -38,7 +39,7 @@ suspend fun packMemoryClaims(
     logger.info("Scope $description: Combined device buffer usage is $combinedDeviceBufferUsage")
 
     return stackPush().use { stack ->
-        val (persistentStagingMemory, persistentStagingBuffers) = createCombinedBuffers(
+        val (persistentStagingMemory, stagingQueueFamilyToBufferMap) = createCombinedBuffers(
             logger = logger, stack = stack, vkDevice = vkDevice, queueManager = queueManager,
             groups = familyClaimsMap, memoryInfo = memoryInfo,
 
@@ -59,7 +60,7 @@ suspend fun packMemoryClaims(
             ppPersistentStaging[0]
         } else { null }
 
-        val (deviceBufferMemory, deviceBuffers) = createCombinedBuffers(
+        val (deviceBufferMemory, deviceQueueFamilyToBufferMap) = createCombinedBuffers(
             logger = logger, stack = stack, vkDevice = vkDevice, queueManager = queueManager,
             groups = familyClaimsMap, memoryInfo = memoryInfo,
 
@@ -73,28 +74,19 @@ suspend fun packMemoryClaims(
 
         val familiesCommands = FamiliesCommands.construct(vkDevice, queueManager, description)
 
-        val numDeviceImages = familyClaimsMap.values.sumOf {
-            it.claims.prefilledImageClaims.size + it.claims.uninitializedImageClaims.size
-        }
+        val numDeviceImages = familyClaimsMap.values.sumOf { it.claims.allImageClaims.size }
         val (deviceImageMemory, claimsToImageMap) = if (numDeviceImages > 0) {
 
-            val pairedUninitializedImageClaims = mutableListOf<Pair<UninitializedImageMemoryClaim, VulkanImage>>()
-            val pairedPrefilledImageClaims = mutableListOf<Pair<PrefilledImageMemoryClaim, VulkanImage>>()
+            val pairedImageClaims = mutableListOf<Pair<ImageMemoryClaim, VulkanImage>>()
             for ((_, claims) in familyClaimsMap.entries) {
-                pairedUninitializedImageClaims.addAll(claims.claims.uninitializedImageClaims.map { claim ->
-                    Pair(claim, createImage(stack, vkDevice, queueManager ,claim, false))
-                })
-                pairedPrefilledImageClaims.addAll(claims.claims.prefilledImageClaims.map { claim ->
-                    Pair(claim, createImage(stack, vkDevice, queueManager, claim, true))
+                pairedImageClaims.addAll(claims.claims.allImageClaims.map { claim ->
+                    Pair(claim, createImage(stack, vkDevice, queueManager, claim, claim.prefill != null))
                 })
             }
 
-            val allDeviceImages = pairedUninitializedImageClaims.map { (claim, image) -> Pair(image.handle, claim) } +
-                    pairedPrefilledImageClaims.map { (claim, image) -> Pair(image.handle, claim) }
+            val claimsToImageMap = bindAndAllocateImageMemory(stack, vkDevice, memoryInfo, pairedImageClaims, description)
 
-            val claimsToImageMap = bindAndAllocateImageMemory(stack, vkDevice, memoryInfo, allDeviceImages)
-
-            familiesCommands.performInitialTransition(allDeviceImages, queueManager)
+            familiesCommands.performInitialTransition(claimsToImageMap, queueManager, description)
 
             Pair(deviceBufferMemory, claimsToImageMap)
         } else { Pair(null, emptyMap()) }
@@ -108,7 +100,11 @@ suspend fun packMemoryClaims(
                 vkDevice, scope, stack, tempStagingMemory, familyClaimsMap, tempStagingAddress, description
             )
 
-            familiesCommands.performStagingCopy(stagingPlacementMap, queueManager)
+            familiesCommands.performStagingCopy(
+                tempStagingBuffer, stagingPlacementMap, claimsToImageMap, deviceQueueFamilyToBufferMap, queueManager, description
+            )
+
+            // TODO Destroy staging resources after all copies and ownership transitions are complete
         }
 
         MemoryScope()
