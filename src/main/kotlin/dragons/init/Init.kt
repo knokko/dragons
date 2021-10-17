@@ -14,10 +14,10 @@ import dragons.vulkan.destroy.destroyVulkanInstance
 import dragons.vulkan.init.choosePhysicalDevice
 import dragons.vulkan.init.createLogicalDevice
 import dragons.vulkan.init.initVulkanInstance
+import dragons.vulkan.memory.CoreStaticMemory
 import dragons.vulkan.memory.MemoryInfo
-import dragons.vulkan.memory.StaticMemory
 import dragons.vulkan.memory.allocateStaticMemory
-import dragons.vulkan.memory.destroyStaticMemory
+import dragons.vulkan.memory.scope.MemoryScope
 import dragons.vulkan.queue.QueueManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -56,7 +56,7 @@ fun main(args: Array<String>) {
         logger.info("Finished preparing the main menu")
 
         logger.info("Start with shutting down the game")
-        destroyStaticMemory(prepareMainMenuResult.vkDevice, prepareMainMenuResult.staticMemory)
+        prepareMainMenuResult.staticMemoryScope.destroy(prepareMainMenuResult.vkDevice)
         destroyVulkanDevice(
             prepareMainMenuResult.vkInstance, prepareMainMenuResult.vkPhysicalDevice, prepareMainMenuResult.vkDevice,
             prepareMainMenuResult.pluginManager
@@ -145,7 +145,7 @@ fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
         val staticMemoryJob = async {
             val (vkDevice, queueManager) = vkDeviceJob.await()
             allocateStaticMemory(
-                vkDevice, queueManager, pluginJob.await(), vrJob.await(), memoryInfoJob.await(), this
+                vkPhysicalDeviceJob.await(), vkDevice, queueManager, pluginJob.await(), vrJob.await(), memoryInfoJob.await(), this
             )
         }
 
@@ -153,7 +153,7 @@ fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
         PrepareMainMenuResult(
             pluginJob.await(), vrJob.await(),
             vulkanInstanceJob.await(), vkPhysicalDeviceJob.await(), vkDevice, queueManager,
-            staticMemoryJob.await()
+            staticMemoryJob.await().first, staticMemoryJob.await().second
         )
     }
 }
@@ -162,5 +162,5 @@ class PrepareMainMenuResult(
     val pluginManager: PluginManager, val vrManager: VrManager,
     val vkInstance: VkInstance,
     val vkPhysicalDevice: VkPhysicalDevice, val vkDevice: VkDevice, val queueManager: QueueManager,
-    val staticMemory: StaticMemory
+    val staticMemoryScope: MemoryScope, val coreStaticMemory: CoreStaticMemory
 )

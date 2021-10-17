@@ -25,14 +25,12 @@ internal class QueueFamilyClaims(val claims: CombinedMemoryScopeClaims) {
     val tempStagingSize: Long
     val deviceBufferSize: Long
     val persistentStagingSize: Long = claims.stagingBufferClaims.sumOf { it.size.toLong() }
-    val deviceImageSize: Long
 
     init {
         val prefilledBufferSize = claims.prefilledBufferClaims.sumOf { it.size.toLong() }
         deviceBufferSize = prefilledBufferSize + claims.uninitializedBufferClaims.sumOf { it.size.toLong() }
 
-        val prefilledImageSize = claims.prefilledImageClaims.sumOf { it.getByteSize().toLong() }
-        deviceImageSize = prefilledImageSize + claims.uninitializedImageClaims.sumOf { it.getByteSize().toLong() }
+        val prefilledImageSize = claims.prefilledImageClaims.sumOf { it.getStagingByteSize().toLong() }
 
         tempStagingSize = prefilledBufferSize + prefilledImageSize
     }
@@ -185,7 +183,7 @@ internal fun placeMemoryClaims(claims: QueueFamilyClaims): PlacedQueueFamilyClai
     val (placedPrefilledBufferClaims, totalPrefilledBufferSize) = placeClaims(claims.claims.prefilledBufferClaims) { it.size }
     val (placedUninitializedBufferClaims, _) = placeClaims(claims.claims.uninitializedBufferClaims) { it.size }
     val (placedStagingBufferClaims, _) = placeClaims(claims.claims.stagingBufferClaims) { it.size }
-    val (placedPrefilledImageClaims, _) = placeClaims(claims.claims.prefilledImageClaims) { it.getByteSize() }
+    val (placedPrefilledImageClaims, _) = placeClaims(claims.claims.prefilledImageClaims) { it.getStagingByteSize() }
 
     return PlacedQueueFamilyClaims(
         prefilledBufferClaims = placedPrefilledBufferClaims,

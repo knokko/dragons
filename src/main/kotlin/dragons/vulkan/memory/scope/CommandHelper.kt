@@ -69,7 +69,7 @@ internal class FamilyCommands(
                         imageBarrier.dstAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
                         dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT
                     } else {
-                        imageBarrier.dstAccessMask(claim.accessMask)
+                        imageBarrier.dstAccessMask(claim.accessMask!!)
                         dstStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
                     }
                     imageBarrier.newLayout(claim.initialLayout)
@@ -186,7 +186,7 @@ internal class FamilyCommands(
                         val imageBarrier = imageBarriers[0]
                         imageBarrier.sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
                         imageBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
-                        imageBarrier.dstAccessMask(if (needsOwnershipTransfer) { 0 } else { placedImageClaim.claim.accessMask })
+                        imageBarrier.dstAccessMask(if (needsOwnershipTransfer) { 0 } else { placedImageClaim.claim.accessMask!! })
                         imageBarrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
                         imageBarrier.newLayout(placedImageClaim.claim.initialLayout)
                         if (needsOwnershipTransfer) {
@@ -276,7 +276,7 @@ internal class FamilyCommands(
                         val imageBarrier = imageBarriers[0]
                         imageBarrier.sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
                         imageBarrier.srcAccessMask(0)
-                        imageBarrier.dstAccessMask(claim.accessMask)
+                        imageBarrier.dstAccessMask(claim.accessMask!!)
                         imageBarrier.oldLayout(claim.initialLayout) // TODO I'm not sure about this one
                         imageBarrier.newLayout(claim.initialLayout)
                         imageBarrier.srcQueueFamilyIndex(usedTransferQueueFamily.index)

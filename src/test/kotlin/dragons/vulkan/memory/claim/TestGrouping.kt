@@ -1,6 +1,7 @@
 package dragons.vulkan.memory.claim
 
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
+import dragons.vulkan.memory.scope.MemoryScopeClaims
 import dragons.vulkan.queue.QueueFamily
 import dragons.vulkan.queue.QueueManager
 import kotlinx.coroutines.CompletableDeferred
@@ -21,34 +22,33 @@ class TestGrouping {
                 transferOnlyQueueFamily = QueueFamily(1, emptyList(), emptyList())
             )
 
-            val agents = listOf(
-                VulkanStaticMemoryUser.Agent(
-                    queueManager = queueManager, gameInitScope = this,
-                            prefilledBuffers = mutableListOf (PrefilledBufferMemoryClaim(
-                        100,
-                        0,
-                        queueManager.generalQueueFamily,
-                        CompletableDeferred()
-                    ) {})
+            val claimsList = listOf(
+                MemoryScopeClaims(
+                    buffers = mutableListOf(BufferMemoryClaim(
+                        size = 100, usageFlags = 0, queueFamily = queueManager.generalQueueFamily,
+                        dstAccessMask = 1, storeResult = CompletableDeferred()
+                    ){})
                 ),
-                VulkanStaticMemoryUser.Agent(
-                    queueManager = queueManager, gameInitScope = this,
-                    uninitializedBuffers = mutableListOf(
-                        UninitializedBufferMemoryClaim(100, 0, queueManager.generalQueueFamily, CompletableDeferred()),
-                        UninitializedBufferMemoryClaim(
-                            100,
-                            0,
-                            queueManager.computeOnlyQueueFamily!!,
-                            CompletableDeferred()
+                MemoryScopeClaims(
+                    buffers = mutableListOf(
+                        BufferMemoryClaim(
+                            size = 100, usageFlags = 0, queueFamily = queueManager.generalQueueFamily,
+                            storeResult = CompletableDeferred(), prefill = null
+                        ),
+                        BufferMemoryClaim(
+                            size = 100, usageFlags = 0, queueFamily = queueManager.computeOnlyQueueFamily!!,
+                            storeResult = CompletableDeferred(), prefill = null
                         )
                     ),
-                    stagingBuffers = mutableListOf(StagingBufferMemoryClaim(200, null, CompletableDeferred()))
+                    stagingBuffers = mutableListOf(StagingBufferMemoryClaim(
+                        size = 200, queueFamily = null, storeResult = CompletableDeferred()
+                    ))
                 )
             )
 
             assertEquals(
                 setOf(null, queueManager.generalQueueFamily, queueManager.computeOnlyQueueFamily),
-                getUsedQueueFamilies(agents)
+                getUsedQueueFamilies(claimsList)
             )
         }
     }

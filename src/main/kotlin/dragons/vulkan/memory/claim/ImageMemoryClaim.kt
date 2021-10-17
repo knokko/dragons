@@ -3,6 +3,8 @@ package dragons.vulkan.memory.claim
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.queue.QueueFamily
 import kotlinx.coroutines.CompletableDeferred
+import org.lwjgl.vulkan.VK10.VK_IMAGE_LAYOUT_UNDEFINED
+import org.lwjgl.vulkan.VK10.VK_SAMPLE_COUNT_1_BIT
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.nio.ByteBuffer
@@ -10,12 +12,12 @@ import java.util.function.Supplier
 
 class ImageMemoryClaim(
     val width: Int, val height: Int, val queueFamily: QueueFamily?,
-    val imageCreateFlags: Int,
-    val imageViewFlags: Int,
-    val bytesPerPixel: Int,
+    val imageCreateFlags: Int = 0,
+    val imageViewFlags: Int = 0,
+    val bytesPerPixel: Int? = null,
     val imageFormat: Int,
     val tiling: Int,
-    val samples: Int,
+    val samples: Int = VK_SAMPLE_COUNT_1_BIT,
     val imageUsage: Int,
     /**
      * The game image loader will ensure that the image has this layout when it calls `storeResult`. This doesn't have
@@ -24,19 +26,28 @@ class ImageMemoryClaim(
      */
     val initialLayout: Int,
     val aspectMask: Int,
-    val accessMask: Int,
+    val accessMask: Int? = null,
     val prefill: ((ByteBuffer) -> Unit)?,
     val storeResult: CompletableDeferred<VulkanImage>
 ) {
     init {
         if (width <= 0) throw IllegalArgumentException("Width ($width) must be positive")
         if (height <= 0) throw IllegalArgumentException("Height ($height) must be positive")
-        if (bytesPerPixel <= 0) throw IllegalArgumentException("bytesPerPixel ($bytesPerPixel) must be positive")
+        if (prefill != null) {
+            if (bytesPerPixel == null) throw IllegalArgumentException("You need to state the bytesPerPixel")
+            if (bytesPerPixel <= 0) throw IllegalArgumentException("bytesPerPixel ($bytesPerPixel) must be positive")
+        }
+        if (prefill != null || initialLayout != VK_IMAGE_LAYOUT_UNDEFINED) {
+            if (accessMask == null) throw IllegalArgumentException("You need to state the accessMask")
+        }
     }
 
     fun getNumPixels() = width * height
 
-    fun getByteSize() = getNumPixels() * bytesPerPixel
+    /**
+     * Note: this could fail if this is an uninitialized image claim
+     */
+    internal fun getStagingByteSize() = getNumPixels() * bytesPerPixel!!
 }
 
 fun prefillBufferedImage(

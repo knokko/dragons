@@ -59,12 +59,16 @@ internal suspend fun fillStagingBuffer(
         for (prefilledClaim in placements.prefilledImageClaims) {
             val claimedStagingPlace = MemoryUtil.memByteBuffer(
                 startStagingAddress + stagingOffset + placements.prefilledImageStagingOffset + prefilledClaim.offset,
-                prefilledClaim.claim.getByteSize()
+                prefilledClaim.claim.getStagingByteSize()
             )
             stagingFillTasks.add(scope.async { prefilledClaim.claim.prefill!!(claimedStagingPlace) })
         }
 
-        stagingOffset += placements.prefilledBufferClaims.sumOf { it.claim.size } + placements.prefilledImageClaims.sumOf { it.claim.getByteSize() }
+        stagingOffset += placements.prefilledBufferClaims.sumOf {
+            it.claim.size
+        } + placements.prefilledImageClaims.sumOf {
+            it.claim.getStagingByteSize()
+        }
     }
 
     for (task in stagingFillTasks) {
