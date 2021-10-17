@@ -1,8 +1,6 @@
 package dragons.vulkan.memory.scope
 
 import dragons.vulkan.memory.claim.PlacedQueueFamilyClaims
-import dragons.vulkan.memory.claim.QueueFamilyClaims
-import dragons.vulkan.memory.claim.placeMemoryClaims
 import dragons.vulkan.queue.QueueFamily
 import dragons.vulkan.util.assertVkSuccess
 import kotlinx.coroutines.CoroutineScope
@@ -15,29 +13,37 @@ import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkMappedMemoryRange
 import org.slf4j.LoggerFactory.getLogger
 
+/**
+ * The placements into the shared staging buffer for *a single* queue family.
+ */
 internal class StagingPlacements(
+    /**
+     * The number of bytes between the start of the shared staging buffer and the start address of this queue family.
+     */
     val externalOffset: Long,
+    /**
+     * The total number of bytes that are reserved for this queue family in the shared staging buffer.
+     */
     val totalBufferSize: Long,
     val internalPlacements: PlacedQueueFamilyClaims
 )
 
 internal suspend fun fillStagingBuffer(
     vkDevice: VkDevice, scope: CoroutineScope, stack: MemoryStack,
-    tempStagingMemory: Long, familyClaimsMap: Map<QueueFamily?, QueueFamilyClaims>, startStagingAddress: Long,
+    tempStagingMemory: Long, familyClaimsMap: Map<QueueFamily?, PlacedQueueFamilyClaims>, startStagingAddress: Long,
     description: String
 ): Map<QueueFamily?, StagingPlacements> {
     val logger = getLogger("Vulkan")
     logger.info("Scope $description: Filling temporary staging combined memory...")
     val stagingFillTasks = ArrayList<Deferred<Unit>>(familyClaimsMap.values.sumOf {
-        it.claims.prefilledBufferClaims.size + it.claims.prefilledImageClaims.size
+        it.prefilledBufferClaims.size + it.prefilledImageClaims.size
     })
 
     var stagingOffset = 0L
 
     val placementMap = mutableMapOf<QueueFamily?, StagingPlacements>()
-    for ((queueFamily, claims) in familyClaimsMap.entries) {
+    for ((queueFamily, placements) in familyClaimsMap.entries) {
 
-        val placements = placeMemoryClaims(claims)
         placementMap[queueFamily] = StagingPlacements(
             stagingOffset, placements.prefilledBufferClaims.sumOf { it.claim.size.toLong() }, placements
         )
@@ -47,7 +53,7 @@ internal suspend fun fillStagingBuffer(
                 startStagingAddress + stagingOffset + placements.prefilledBufferStagingOffset + prefilledClaim.offset,
                 prefilledClaim.claim.size
             )
-            stagingFillTasks.add(scope.async { prefilledClaim.claim.prefill(claimedStagingPlace) })
+            stagingFillTasks.add(scope.async { prefilledClaim.claim.prefill!!(claimedStagingPlace) })
         }
 
         for (prefilledClaim in placements.prefilledImageClaims) {
@@ -55,10 +61,10 @@ internal suspend fun fillStagingBuffer(
                 startStagingAddress + stagingOffset + placements.prefilledImageStagingOffset + prefilledClaim.offset,
                 prefilledClaim.claim.getByteSize()
             )
-            stagingFillTasks.add(scope.async { prefilledClaim.claim.prefill(claimedStagingPlace) })
+            stagingFillTasks.add(scope.async { prefilledClaim.claim.prefill!!(claimedStagingPlace) })
         }
 
-        stagingOffset += claims.tempStagingSize
+        stagingOffset += placements.prefilledBufferClaims.sumOf { it.claim.size } + placements.prefilledImageClaims.sumOf { it.claim.getByteSize() }
     }
 
     for (task in stagingFillTasks) {

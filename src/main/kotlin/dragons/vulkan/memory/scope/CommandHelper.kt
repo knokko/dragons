@@ -3,9 +3,11 @@ package dragons.vulkan.memory.scope
 import dragons.vulkan.memory.VulkanBuffer
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim
+import dragons.vulkan.memory.claim.QueueFamilyClaims
 import dragons.vulkan.queue.QueueFamily
 import dragons.vulkan.queue.QueueManager
 import dragons.vulkan.util.assertVkSuccess
+import dragons.vulkan.util.collectionToBuffer
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
@@ -14,18 +16,19 @@ internal class FamilyCommands(
     private val commandPool: Long,
     /** For transitioning the images from the undefined layout to the desired initial layout */
     val initialTransitionBuffer: VkCommandBuffer,
-    val initialTransitionSemaphore: Long,
     /** For copying the staging buffer to the device buffers and images */
     private val copyBuffer: VkCommandBuffer,
-    val copySemaphore: Long,
     /**
      * For transitioning the images from the transfer destination layout to the desired layout, and to transfer
      * queue family ownership of the device buffers and images.
      */
-    private val finalTransitionBuffer: VkCommandBuffer
+    private val finalTransitionBuffer: VkCommandBuffer,
+    val fence: Long
     // TODO Destroy everything once finished
 ) {
-    fun performInitialTransition(images: Map<ImageMemoryClaim, VulkanImage>, description: String) {
+    fun performInitialTransition(
+        images: Map<ImageMemoryClaim, VulkanImage>, ownQueueFamily: QueueFamily, description: String
+    ) {
         stackPush().use { stack ->
             val biCommandBuffer = VkCommandBufferBeginInfo.calloc(stack)
             biCommandBuffer.sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO)
@@ -84,6 +87,13 @@ internal class FamilyCommands(
                 vkEndCommandBuffer(initialTransitionBuffer), "EndCommandBuffer",
                 "Scope $description: initial image transition"
             )
+
+            val siTransitions = VkSubmitInfo.calloc(1, stack)
+            val siTransition = siTransitions[0]
+            siTransition.sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
+            siTransition.pCommandBuffers(stack.pointers(initialTransitionBuffer))
+
+            ownQueueFamily.getRandomBackgroundQueue().submit(siTransitions, fence)
         }
     }
 
@@ -212,20 +222,16 @@ internal class FamilyCommands(
             val siCopies = VkSubmitInfo.calloc(1, stack)
             val siCopy = siCopies[0]
             siCopy.sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
-            siCopy.waitSemaphoreCount(1)
-            siCopy.pWaitSemaphores(stack.longs(initialTransitionSemaphore))
-            // TODO Figure out what the right pipeline stage would be
-            siCopy.pWaitDstStageMask(stack.ints(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT))
             siCopy.pCommandBuffers(stack.pointers(copyBuffer.address()))
-            siCopy.pSignalSemaphores(stack.longs(copySemaphore))
 
-            ownQueueFamily.getRandomBackgroundQueue().submit(siCopies, VK_NULL_HANDLE)
+            ownQueueFamily.getRandomBackgroundQueue().submit(siCopies, fence)
         }
     }
 
     fun acquireOwnership(
         claimsToImageMap: Map<ImageMemoryClaim, VulkanImage>,
         queueFamilyToBufferMap: Map<QueueFamily?, VulkanBuffer>,
+        bufferDstAccessMask: Int,
         ownQueueFamily: QueueFamily, queueManager: QueueManager, description: String
     ) {
         stackPush().use { stack ->
@@ -239,12 +245,11 @@ internal class FamilyCommands(
             )
 
             if (ownQueueFamily != queueManager.getTransferQueueFamily()) {
-                // TODO Acquire buffer ownership
                 val bufferBarriers = VkBufferMemoryBarrier.calloc(1, stack)
                 val bufferBarrier = bufferBarriers[0]
                 bufferBarrier.sType(VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER)
                 bufferBarrier.srcAccessMask(0)
-                bufferBarrier.dstAccessMask(ehm)
+                bufferBarrier.dstAccessMask(bufferDstAccessMask)
                 bufferBarrier.srcQueueFamilyIndex(queueManager.getTransferQueueFamily().index)
                 bufferBarrier.dstQueueFamilyIndex(ownQueueFamily.index)
                 bufferBarrier.buffer(queueFamilyToBufferMap[ownQueueFamily]!!.handle)
@@ -291,16 +296,18 @@ internal class FamilyCommands(
 
             vkEndCommandBuffer(finalTransitionBuffer)
 
-            // TODO Handle all transition/copy barriers with fences rather than semaphores
             val siTransfers = VkSubmitInfo.calloc(1, stack)
             val siTransfer = siTransfers[0]
             siTransfer.sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
             siTransfer.pCommandBuffers(stack.pointers(finalTransitionBuffer.address()))
 
-            // TODO Create a fence that the FamiliesCommands should eventually wait on
-
-            // TODO Submit
+            ownQueueFamily.getRandomBackgroundQueue().submit(siTransfers, fence)
         }
+    }
+
+    fun destroy(vkDevice: VkDevice) {
+        vkDestroyFence(vkDevice, fence, null)
+        vkDestroyCommandPool(vkDevice, commandPool, null)
     }
 
     companion object {
@@ -330,29 +337,21 @@ internal class FamilyCommands(
                     "AllocateCommandBuffers", description
                 )
 
-                val ciSemaphore = VkSemaphoreCreateInfo.calloc(stack)
-                ciSemaphore.sType(VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO)
+                val ciFence = VkFenceCreateInfo.calloc(stack)
+                ciFence.sType(VK_STRUCTURE_TYPE_FENCE_CREATE_INFO)
 
-                val pSemaphore = stack.callocLong(1)
+                val pFence = stack.callocLong(1)
                 assertVkSuccess(
-                    vkCreateSemaphore(vkDevice, ciSemaphore, null, pSemaphore),
-                    "CreateSemaphore", "Scope $description: initial image layout transition"
+                    vkCreateFence(vkDevice, ciFence, null, pFence),
+                    "CreateFence", "Scope $description: commands"
                 )
-                val initialTransitionSemaphore = pSemaphore[0]
-
-                assertVkSuccess(
-                    vkCreateSemaphore(vkDevice, ciSemaphore, null, pSemaphore),
-                    "CreateSemaphore", "Scope $description: initial image layout transition"
-                )
-                val copySemaphore = pSemaphore[0]
 
                 return FamilyCommands(
                     commandPool = commandPool,
                     initialTransitionBuffer = VkCommandBuffer(pCommandBuffers[0], vkDevice),
-                    initialTransitionSemaphore = initialTransitionSemaphore,
                     copyBuffer = VkCommandBuffer(pCommandBuffers[1], vkDevice),
-                    copySemaphore = copySemaphore,
-                    finalTransitionBuffer = VkCommandBuffer(pCommandBuffers[2], vkDevice)
+                    finalTransitionBuffer = VkCommandBuffer(pCommandBuffers[2], vkDevice),
+                    fence = pFence[0]
                 )
             }
         }
@@ -362,6 +361,7 @@ internal class FamilyCommands(
 fun requiresGraphicsFamily(claim: ImageMemoryClaim) = claim.aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT || claim.aspectMask == VK_IMAGE_ASPECT_STENCIL_BIT
 
 internal class FamiliesCommands(
+    private val vkDevice: VkDevice,
     private val familyMap: Map<QueueFamily, FamilyCommands>
 ) {
     companion object {
@@ -372,7 +372,7 @@ internal class FamiliesCommands(
                 familyMap[queueFamily] = FamilyCommands.construct(vkDevice, queueFamily, description)
             }
 
-            return FamiliesCommands(familyMap.toMap())
+            return FamiliesCommands(vkDevice, familyMap.toMap())
         }
     }
 
@@ -407,56 +407,82 @@ internal class FamiliesCommands(
                         queueFamily == queueManager.getTransferQueueFamily()
                     }
                 }
-            }, description)
-        }
-
-        stackPush().use { stack ->
-            val pCommandBuffer = stack.callocPointer(1)
-            val pSignalSemaphore = stack.callocLong(1)
-
-            val pSubmits = VkSubmitInfo.calloc(1, stack)
-
-            val submission = pSubmits[0]
-            submission.sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
-            submission.pCommandBuffers(pCommandBuffer)
-            submission.pSignalSemaphores(pSignalSemaphore)
-
-            for ((queueFamily, familyCommands) in familyMap.entries) {
-                pCommandBuffer.put(0, familyCommands.initialTransitionBuffer)
-                pSignalSemaphore.put(0, familyCommands.initialTransitionSemaphore)
-                queueFamily.getRandomBackgroundQueue().submit(pSubmits, VK_NULL_HANDLE)
-            }
+            }, queueFamily, description)
         }
     }
 
     fun performStagingCopy(
         tempStagingBuffer: Long,
+        familyClaimsMap: Map<QueueFamily?, QueueFamilyClaims>,
         stagingPlacementMap: Map<QueueFamily?, StagingPlacements>,
         claimsToImageMap: Map<ImageMemoryClaim, VulkanImage>,
         queueFamilyToBufferMap: Map<QueueFamily?, VulkanBuffer>,
         queueManager: QueueManager, description: String
     ) {
-        // The general queue family is needed for depth-stencil transfers
-        familyMap[queueManager.generalQueueFamily]!!.performStagingCopy(
-            tempStagingBuffer, stagingPlacementMap, claimsToImageMap, {
-                    claim -> requiresGraphicsFamily(claim)
-            }, queueFamilyToBufferMap, queueManager.generalQueueFamily, description
-        )
-
-        // The transfer queue family should be used for everything else.
-        familyMap[queueManager.getTransferQueueFamily()]!!.performStagingCopy(
-            tempStagingBuffer, stagingPlacementMap, claimsToImageMap, {
-                claim -> !requiresGraphicsFamily(claim)
-            }, queueFamilyToBufferMap, queueManager.getTransferQueueFamily(), description
-        )
-
-        // Finally, each image and buffer should be acquired by the right queue family (if needed)
-        for ((queueFamily, familyCommands) in familyMap) {
-            familyCommands.acquireOwnership(
-                claimsToImageMap, queueFamilyToBufferMap, queueFamily, queueManager, description
+        stackPush().use { stack ->
+            // First, we should wait until all initial transitions are complete
+            val pAllFences = collectionToBuffer(familyMap.values.map { it.fence }, stack)
+            assertVkSuccess(
+                vkWaitForFences(vkDevice, pAllFences, true, -1),
+                "WaitForFences", "Scope $description: initial image transition"
             )
-        }
 
-        // TODO Wait for completion
+            // The general queue family is needed for depth-stencil transfers
+            familyMap[queueManager.generalQueueFamily]!!.performStagingCopy(
+                tempStagingBuffer, stagingPlacementMap, claimsToImageMap, {
+                        claim -> requiresGraphicsFamily(claim)
+                }, queueFamilyToBufferMap, queueManager.generalQueueFamily, description
+            )
+
+            // The transfer queue family should be used for everything else.
+            familyMap[queueManager.getTransferQueueFamily()]!!.performStagingCopy(
+                tempStagingBuffer, stagingPlacementMap, claimsToImageMap, {
+                        claim -> !requiresGraphicsFamily(claim)
+                }, queueFamilyToBufferMap, queueManager.getTransferQueueFamily(), description
+            )
+
+            // Note: we use a Set because the general queue family *could* also be the transfer queue family
+            val pTransferFences = collectionToBuffer(setOf(
+                familyMap[queueManager.generalQueueFamily]!!.fence,
+                familyMap[queueManager.getTransferQueueFamily()]!!.fence
+            ), stack)
+            assertVkSuccess(
+                vkWaitForFences(vkDevice, pTransferFences, true, -1),
+                "WaitForFences", "Scope $description: staging copy"
+            )
+
+            // Finally, each image and buffer should be acquired by the right queue family (if needed)
+            for ((queueFamily, familyCommands) in familyMap) {
+                var bufferDstAccessMask = 0
+                for (bufferClaim in familyClaimsMap[queueFamily]!!.claims.prefilledBufferClaims) {
+                    bufferDstAccessMask = bufferDstAccessMask or bufferClaim.dstAccessMask
+                }
+                familyCommands.acquireOwnership(
+                    claimsToImageMap, queueFamilyToBufferMap, bufferDstAccessMask, queueFamily, queueManager, description
+                )
+            }
+        }
+    }
+
+    fun finishAndCleanUp(description: String) {
+        stackPush().use { stack ->
+            /*
+             * There are 2 cases:
+             *  - Case 1: No staging copy was needed. In this case, we need to wait on all the image layout transition
+             * fences.
+             *  - Case 2: A staging copy was needed. In this case, we need to wait on all queue family ownership
+             * transfers (which happened right after the staging copy).
+             *
+             * In either case, we need to wait on all fences.
+             */
+            val pAllFences = collectionToBuffer(familyMap.values.map { it.fence }, stack)
+            assertVkSuccess(
+                vkWaitForFences(vkDevice, pAllFences, true, -1),
+                "WaitForFences", "Scope $description: ownership transfer + layout transition"
+            )
+            for (familyCommands in familyMap.values) {
+                familyCommands.destroy(vkDevice)
+            }
+        }
     }
 }

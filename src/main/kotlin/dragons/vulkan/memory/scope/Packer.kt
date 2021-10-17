@@ -1,15 +1,16 @@
 package dragons.vulkan.memory.scope
 
 import dragons.vulkan.memory.MemoryInfo
+import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim
-import dragons.vulkan.memory.claim.PrefilledImageMemoryClaim
-import dragons.vulkan.memory.claim.UninitializedImageMemoryClaim
 import dragons.vulkan.memory.claim.groupMemoryClaims
+import dragons.vulkan.memory.claim.placeMemoryClaims
 import dragons.vulkan.queue.QueueManager
 import dragons.vulkan.util.assertVkSuccess
 import kotlinx.coroutines.CoroutineScope
 import org.lwjgl.system.MemoryStack.stackPush
+import org.lwjgl.system.MemoryUtil.memByteBuffer
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkDevice
 import org.slf4j.LoggerFactory.getLogger
@@ -39,7 +40,7 @@ suspend fun packMemoryClaims(
     logger.info("Scope $description: Combined device buffer usage is $combinedDeviceBufferUsage")
 
     return stackPush().use { stack ->
-        val (persistentStagingMemory, stagingQueueFamilyToBufferMap) = createCombinedBuffers(
+        val (persistentStagingMemory, stagingQueueFamilyToBufferMap, stagingQueueFamilyToOffsetMap) = createCombinedBuffers(
             logger = logger, stack = stack, vkDevice = vkDevice, queueManager = queueManager,
             groups = familyClaimsMap, memoryInfo = memoryInfo,
 
@@ -91,22 +92,74 @@ suspend fun packMemoryClaims(
             Pair(deviceBufferMemory, claimsToImageMap)
         } else { Pair(null, emptyMap()) }
 
+        val placedFamilyClaimsMap = familyClaimsMap.map { (queueFamily, claims) ->
+            Pair(queueFamily, placeMemoryClaims(claims))
+        }.toMap()
+
+        for ((queueFamily, placedClaims) in placedFamilyClaimsMap) {
+            for (placedClaim in placedClaims.uninitializedBufferClaims) {
+                placedClaim.claim.storeResult.complete(VulkanBufferRange(
+                    buffer = deviceQueueFamilyToBufferMap[queueFamily]!!,
+                    offset = placedClaims.uninitializedBufferDeviceOffset + placedClaim.offset,
+                    size = placedClaim.claim.size.toLong()
+                ))
+            }
+            for (claim in placedClaims.uninitializedImageClaims) {
+                claim.storeResult.complete(claimsToImageMap[claim]!!)
+            }
+            for (placedClaim in placedClaims.stagingBufferClaims) {
+                val stagingMemoryAddress = persistentStagingAddress!! + stagingQueueFamilyToOffsetMap[queueFamily]!! + placedClaim.offset
+                val stagingByteBuffer = memByteBuffer(stagingMemoryAddress, placedClaim.claim.size)
+                placedClaim.claim.storeResult.complete(Pair(stagingByteBuffer, VulkanBufferRange(
+                    buffer = stagingQueueFamilyToBufferMap[queueFamily]!!,
+                    offset = placedClaims.stagingBufferOffset + placedClaim.offset,
+                    size = placedClaim.claim.size.toLong()
+                )))
+            }
+        }
+
         if (tempStagingBufferSize > 0) {
             val (tempStagingMemory, tempStagingBuffer, tempStagingAddress) = createCombinedStagingBuffer(
                 vkDevice, memoryInfo, stack, tempStagingBufferSize, description
             )
 
             val stagingPlacementMap = fillStagingBuffer(
-                vkDevice, scope, stack, tempStagingMemory, familyClaimsMap, tempStagingAddress, description
+                vkDevice, scope, stack, tempStagingMemory, placedFamilyClaimsMap, tempStagingAddress, description
             )
 
             familiesCommands.performStagingCopy(
-                tempStagingBuffer, stagingPlacementMap, claimsToImageMap, deviceQueueFamilyToBufferMap, queueManager, description
+                tempStagingBuffer, familyClaimsMap, stagingPlacementMap,
+                claimsToImageMap, deviceQueueFamilyToBufferMap, queueManager, description
             )
 
-            // TODO Destroy staging resources after all copies and ownership transitions are complete
+            familiesCommands.finishAndCleanUp(description)
+
+            vkDestroyBuffer(vkDevice, tempStagingBuffer, null)
+            vkFreeMemory(vkDevice, tempStagingMemory, null)
+        } else {
+            familiesCommands.finishAndCleanUp(description)
         }
 
-        MemoryScope()
+        for ((queueFamily, placedClaims) in placedFamilyClaimsMap) {
+            for (placedClaim in placedClaims.prefilledBufferClaims) {
+                placedClaim.claim.storeResult.complete(VulkanBufferRange(
+                    buffer = deviceQueueFamilyToBufferMap[queueFamily]!!,
+                    offset = placedClaims.prefilledBufferDeviceOffset + placedClaim.offset,
+                    size = placedClaim.claim.size.toLong()
+                ))
+            }
+            for (placedClaim in placedClaims.prefilledImageClaims) {
+                placedClaim.claim.storeResult.complete(claimsToImageMap[placedClaim.claim]!!)
+            }
+        }
+
+        MemoryScope(
+            deviceBufferMemory = deviceBufferMemory,
+            deviceBuffers = deviceQueueFamilyToBufferMap.values,
+            persistentStagingMemory = persistentStagingMemory,
+            persistentStagingBuffers = stagingQueueFamilyToBufferMap.values,
+            deviceImageMemory = deviceImageMemory,
+            deviceImages = claimsToImageMap.values
+        )
     }
 }

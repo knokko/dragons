@@ -21,7 +21,7 @@ internal fun createCombinedBuffers(
     groups: Map<QueueFamily?, QueueFamilyClaims>, memoryInfo: MemoryInfo,
     getSize: (QueueFamilyClaims) -> Long, bufferUsage: Int, description: String,
     requiredMemoryPropertyFlags: Int, desiredMemoryPropertyFlags: Int, neutralMemoryPropertyFlags: Int
-): Pair<Long?, Map<QueueFamily?, VulkanBuffer>> {
+): Triple<Long?, Map<QueueFamily?, VulkanBuffer>, Map<QueueFamily?, Long>> {
     logger.info("Creating $description buffers...")
 
     val combinedBuffers = groups.entries.filter { (_, claims) ->
@@ -49,18 +49,20 @@ internal fun createCombinedBuffers(
             vkCreateBuffer(vkDevice, ciBuffer, null, pBuffer),
             "CreateBuffer", "$description for queue family ${queueFamily?.index}"
         )
-        val buffer = pBuffer[0]
+        val buffer = VulkanBuffer(pBuffer[0])
 
         val memoryRequirements = VkMemoryRequirements.calloc(stack)
-        vkGetBufferMemoryRequirements(vkDevice, buffer, memoryRequirements)
+        vkGetBufferMemoryRequirements(vkDevice, buffer.handle, memoryRequirements)
         Triple(buffer, memoryRequirements, queueFamily)
     }
 
     logger.info("Created $description buffers")
 
-    var persistentBufferMemory: Long? = null
+    val queueFamilyToMemoryOffsetMap = mutableMapOf<QueueFamily?, Long>()
 
-    val persistentBufferOffsets = if (combinedBuffers.isNotEmpty()) {
+    var combinedBufferMemory: Long? = null
+
+    if (combinedBuffers.isNotEmpty()) {
 
         // Since the flags of all buffers are 0 and the usage of all buffers is identical, the Vulkan specification
         // guarantees that the alignment and memoryTypeBits of all buffer memory requirements are identical.
@@ -69,7 +71,7 @@ internal fun createCombinedBuffers(
 
         // We will create 1 buffer per used queue family, but they will share the same memory allocation.
         var currentOffset = 0L
-        val persistentBufferOffsets = combinedBuffers.map { (_, memoryRequirements, _) ->
+        val bufferMemoryOffsets = combinedBuffers.map { (_, memoryRequirements, _) ->
             val bufferOffset = nextMultipleOf(alignment, currentOffset)
             currentOffset = bufferOffset + memoryRequirements.size()
             bufferOffset
@@ -95,24 +97,25 @@ internal fun createCombinedBuffers(
             vkAllocateMemory(vkDevice, aiPersistentMemory, null, pPersistentMemory),
             "AllocateMemory", description
         )
-        persistentBufferMemory = pPersistentMemory[0]
+        combinedBufferMemory = pPersistentMemory[0]
         logger.info("Allocated $description memory")
 
         for ((index, bufferTriple) in combinedBuffers.withIndex()) {
-            val persistentBuffer = bufferTriple.first
+            val buffer = bufferTriple.first
+            queueFamilyToMemoryOffsetMap[bufferTriple.third] = bufferMemoryOffsets[index]
             assertVkSuccess(
-                vkBindBufferMemory(vkDevice, persistentBuffer, persistentBufferMemory, persistentBufferOffsets[index]),
+                vkBindBufferMemory(vkDevice, buffer.handle, combinedBufferMemory, bufferMemoryOffsets[index]),
                 "BindBufferMemory", "$description for queue family ${bufferTriple.third?.index}"
             )
         }
-        persistentBufferOffsets
-    } else { null }
+    }
 
     val queueFamilyToBufferMap = mutableMapOf<QueueFamily?, VulkanBuffer>()
-    for ((bufferHandle, _, queueFamily) in combinedBuffers) {
-        queueFamilyToBufferMap[queueFamily] = VulkanBuffer(bufferHandle)
+    for ((buffer, _, queueFamily) in combinedBuffers) {
+        queueFamilyToBufferMap[queueFamily] = VulkanBuffer(buffer.handle)
     }
-    return Pair(persistentBufferMemory, queueFamilyToBufferMap)
+
+    return Triple(combinedBufferMemory, queueFamilyToBufferMap, queueFamilyToMemoryOffsetMap)
 }
 
 internal fun createCombinedStagingBuffer(

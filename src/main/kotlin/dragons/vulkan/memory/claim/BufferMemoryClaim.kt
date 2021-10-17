@@ -5,18 +5,9 @@ import dragons.vulkan.queue.QueueFamily
 import kotlinx.coroutines.CompletableDeferred
 import java.nio.ByteBuffer
 
-class PrefilledBufferMemoryClaim(
-    val size: Int, val usageFlags: Int, val queueFamily: QueueFamily?,
-    val storeResult: CompletableDeferred<VulkanBufferRange>, val prefill: (ByteBuffer) -> Unit
-) {
-    init {
-        if (size <= 0) throw IllegalArgumentException("Size ($size) must be positive")
-    }
-}
-
-class UninitializedBufferMemoryClaim(
-    val size: Int, val usageFlags: Int, val queueFamily: QueueFamily?,
-    val storeResult: CompletableDeferred<VulkanBufferRange>
+class BufferMemoryClaim(
+    val size: Int, val usageFlags: Int, val dstAccessMask: Int, val queueFamily: QueueFamily?,
+    val storeResult: CompletableDeferred<VulkanBufferRange>, val prefill: ((ByteBuffer) -> Unit)?
 ) {
     init {
         if (size <= 0) throw IllegalArgumentException("Size ($size) must be positive")

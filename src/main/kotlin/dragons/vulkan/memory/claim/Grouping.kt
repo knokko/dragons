@@ -7,10 +7,7 @@ import dragons.vulkan.queue.QueueFamily
 internal fun getUsedQueueFamilies(allClaims: Collection<MemoryScopeClaims>): Set<QueueFamily?> {
     val usedQueueFamilies = mutableSetOf<QueueFamily?>()
     for (claims in allClaims) {
-        for (bufferClaim in claims.prefilledBuffers) {
-            usedQueueFamilies.add(bufferClaim.queueFamily)
-        }
-        for (bufferClaim in claims.uninitializedBuffers) {
+        for (bufferClaim in claims.buffers) {
             usedQueueFamilies.add(bufferClaim.queueFamily)
         }
         for (bufferClaim in claims.stagingBuffers) {
@@ -63,21 +60,18 @@ internal fun groupMemoryClaims(allClaims: Collection<MemoryScopeClaims>): Map<Qu
     val queueFamilyMap = mutableMapOf<QueueFamily?, QueueFamilyClaims>()
     for (queueFamily in usedQueueFamilies) {
 
-        val prefilledBufferClaims = mutableListOf<PrefilledBufferMemoryClaim>()
-        val uninitializedBufferClaims = mutableListOf<UninitializedBufferMemoryClaim>()
+        val allBufferClaims = mutableListOf<BufferMemoryClaim>()
         val stagingBufferClaims = mutableListOf<StagingBufferMemoryClaim>()
         val allImageClaims = mutableListOf<ImageMemoryClaim>()
 
         for (claims in allClaims) {
-            prefilledBufferClaims.addAll(claims.prefilledBuffers.filter { it.queueFamily == queueFamily })
-            uninitializedBufferClaims.addAll(claims.uninitializedBuffers.filter { it.queueFamily == queueFamily })
+            allBufferClaims.addAll(claims.buffers.filter { it.queueFamily == queueFamily })
             stagingBufferClaims.addAll(claims.stagingBuffers.filter { it.queueFamily == queueFamily })
             allImageClaims.addAll(claims.images.filter { it.queueFamily == queueFamily })
         }
 
         queueFamilyMap[queueFamily] = QueueFamilyClaims(CombinedMemoryScopeClaims(
-            prefilledBufferClaims,
-            uninitializedBufferClaims,
+            allBufferClaims,
             stagingBufferClaims,
             allImageClaims
         ))
@@ -107,7 +101,7 @@ internal class Placed<T>(val claim: T, val offset: Long) {
  * placements of any other queue family.**
  */
 internal class PlacedQueueFamilyClaims(
-    val prefilledBufferClaims: Collection<Placed<PrefilledBufferMemoryClaim>>,
+    val prefilledBufferClaims: Collection<Placed<BufferMemoryClaim>>,
     /**
      * The number of bytes between the start of the temporary staging buffer domain **of this queue family** and the
      * first byte of the prefilled buffer content. (This is currently always 0.)
@@ -119,7 +113,7 @@ internal class PlacedQueueFamilyClaims(
      */
     val prefilledBufferDeviceOffset: Long,
 
-    val uninitializedBufferClaims: Collection<Placed<UninitializedBufferMemoryClaim>>,
+    val uninitializedBufferClaims: Collection<Placed<BufferMemoryClaim>>,
     /**
      * The number of bytes between the start of the device buffer domain **of this queue family** and the first byte of
      * the first uninitialized buffer. (This is currently the sum of the sizes of all prefilled buffers of this queue

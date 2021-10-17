@@ -1,6 +1,7 @@
 package dragons.vulkan.memory
 
-class VulkanBuffer(val handle: Long) {
+@JvmInline
+value class VulkanBuffer(val handle: Long) {
     override fun toString() = "VulkanBuffer($handle)"
 }
 
