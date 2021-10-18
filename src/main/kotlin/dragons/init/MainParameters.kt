@@ -17,6 +17,8 @@ class MainParameters(args: Array<String>) {
      */
     val requiresHmd: Boolean
     val forbidDebug: Boolean
+    val testParameters: TestingParameters
+
 
     init {
         for (arg in args) {
@@ -27,10 +29,23 @@ class MainParameters(args: Array<String>) {
 
         requiresHmd = !args.contains("allowWithoutHmd")
         forbidDebug = args.contains("noDebug")
+
+        testParameters = TestingParameters(args)
     }
 
+    companion object {
+        val ALL_PARAMETERS = arrayOf("allowWithoutHmd", "noDebug") + TestingParameters.ALL_PARAMETERS
+    }
+}
+
+class TestingParameters(
+    val staticMemory: Boolean
+) {
+    constructor(mainArgs: Array<String>) : this(
+        staticMemory = mainArgs.contains("testStaticMemory")
+    )
 
     companion object {
-        val ALL_PARAMETERS = arrayOf("allowWithoutHmd", "noDebug")
+        val ALL_PARAMETERS = arrayOf("testStaticMemory")
     }
 }
