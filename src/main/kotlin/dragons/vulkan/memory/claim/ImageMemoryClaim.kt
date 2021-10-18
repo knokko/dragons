@@ -27,8 +27,8 @@ class ImageMemoryClaim(
     val initialLayout: Int,
     val aspectMask: Int,
     val accessMask: Int? = null,
-    val prefill: ((ByteBuffer) -> Unit)?,
-    val storeResult: CompletableDeferred<VulkanImage>
+    val storeResult: CompletableDeferred<VulkanImage>,
+    val prefill: ((ByteBuffer) -> Unit)?
 ) {
     init {
         if (width <= 0) throw IllegalArgumentException("Width ($width) must be positive")

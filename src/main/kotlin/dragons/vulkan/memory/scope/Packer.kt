@@ -47,9 +47,10 @@ suspend fun packMemoryClaims(
             getSize = { claims -> claims.persistentStagingSize },
             bufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             description = "Scope $description: persistent staging",
-            requiredMemoryPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            // Note: the Vulkan specification guarantees that at least 1 memory heap has these properties
+            requiredMemoryPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT or VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             desiredMemoryPropertyFlags = 0,
-            neutralMemoryPropertyFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            neutralMemoryPropertyFlags = 0
         )
 
         val persistentStagingAddress = if (persistentStagingMemory != null) {
