@@ -112,11 +112,17 @@ private fun scanClassOrResourceOrDirectory(
         if (file.name.endsWith(".class")) {
             val className = classPathToName(resourceName)
             scope.launch {
-                classByteMap[className] = Files.readAllBytes(file.toPath())
+                val bytes = Files.readAllBytes(file.toPath())
+                synchronized(classByteMap) {
+                    classByteMap[className] = bytes
+                }
             }
         } else {
             scope.launch {
-                resourceByteMap[resourceName] = Files.readAllBytes(file.toPath())
+                val bytes = Files.readAllBytes(file.toPath())
+                synchronized(resourceByteMap) {
+                    resourceByteMap[resourceName] = bytes
+                }
             }
         }
     } else if (file.isDirectory) {
