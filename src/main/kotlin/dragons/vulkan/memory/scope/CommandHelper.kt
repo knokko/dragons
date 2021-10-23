@@ -256,6 +256,7 @@ internal class FamilyCommands(
                 bufferBarrier.offset(0)
                 bufferBarrier.size(VK_WHOLE_SIZE)
 
+                // TODO Fix dstStageMask
                 vkCmdPipelineBarrier(
                     finalTransitionBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                     0, null, bufferBarriers, null
@@ -426,6 +427,10 @@ internal class FamiliesCommands(
                 vkWaitForFences(vkDevice, pAllFences, true, -1),
                 "WaitForFences", "Scope $description: initial image transition"
             )
+            assertVkSuccess(
+                vkResetFences(vkDevice, pAllFences), "ResetFences",
+                "Scope $description: initial image transition"
+            )
 
             // The general queue family is needed for depth-stencil transfers
             familyMap[queueManager.generalQueueFamily]!!.performStagingCopy(
@@ -449,6 +454,10 @@ internal class FamiliesCommands(
             assertVkSuccess(
                 vkWaitForFences(vkDevice, pTransferFences, true, -1),
                 "WaitForFences", "Scope $description: staging copy"
+            )
+            assertVkSuccess(
+                vkResetFences(vkDevice, pTransferFences), "ResetFences",
+                "Scope $description: staging copy"
             )
 
             // Finally, each image and buffer should be acquired by the right queue family (if needed)
