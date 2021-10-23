@@ -48,6 +48,8 @@ class ImageMemoryClaim(
      * Note: this could fail if this is an uninitialized image claim
      */
     internal fun getStagingByteSize() = getNumPixels() * bytesPerPixel!!
+
+    override fun toString() = "ImageMemoryClaim(width = $width, height = $height, queueFamily = $queueFamily)"
 }
 
 fun prefillBufferedImage(

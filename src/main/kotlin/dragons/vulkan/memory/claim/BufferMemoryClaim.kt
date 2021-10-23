@@ -13,6 +13,8 @@ class BufferMemoryClaim(
         if (size <= 0) throw IllegalArgumentException("Size ($size) must be positive")
         if (prefill != null && dstAccessMask == 0) throw IllegalArgumentException("You need to state dstAccessMask")
     }
+
+    override fun toString() = "BufferMemoryClaim(size = $size, queueFamily = $queueFamily)"
 }
 
 class StagingBufferMemoryClaim(
@@ -21,4 +23,6 @@ class StagingBufferMemoryClaim(
     init {
         if (size <= 0) throw IllegalArgumentException("Size ($size) must be positive")
     }
+
+    override fun toString() = "StagingBufferMemoryClaim(size = $size, queueFamily = $queueFamily)"
 }

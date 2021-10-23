@@ -25,7 +25,7 @@ class QueueFamily(
         }
     }
 
-    override fun hashCode(): Int {
-        return index
-    }
+    override fun hashCode() = index
+
+    override fun toString() = "QueueFamily($index)"
 }

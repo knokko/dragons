@@ -6,7 +6,9 @@ class MemoryScopeClaims(
     val images: MutableCollection<ImageMemoryClaim> = mutableListOf(),
     val buffers: MutableCollection<BufferMemoryClaim> = mutableListOf(),
     val stagingBuffers: MutableCollection<StagingBufferMemoryClaim> = mutableListOf()
-)
+) {
+    override fun toString() = "buffers: $buffers, images: $images, stagingBuffers: $stagingBuffers"
+}
 
 class CombinedMemoryScopeClaims(
     val allBufferClaims: Collection<BufferMemoryClaim>,
