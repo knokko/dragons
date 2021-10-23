@@ -82,15 +82,15 @@ suspend fun packMemoryClaims(
             val pairedImageClaims = mutableListOf<Pair<ImageMemoryClaim, VulkanImage>>()
             for ((_, claims) in familyClaimsMap.entries) {
                 pairedImageClaims.addAll(claims.claims.allImageClaims.map { claim ->
-                    Pair(claim, createImage(stack, vkDevice, queueManager, claim, claim.prefill != null))
+                    Pair(claim, createImage(stack, vkDevice, queueManager, claim))
                 })
             }
 
-            val claimsToImageMap = bindAndAllocateImageMemory(stack, vkDevice, memoryInfo, pairedImageClaims, description)
+            val (deviceImageMemory, claimsToImageMap) = bindAndAllocateImageMemory(stack, vkDevice, memoryInfo, pairedImageClaims, description)
 
             familiesCommands.performInitialTransition(claimsToImageMap, queueManager, description)
 
-            Pair(deviceBufferMemory, claimsToImageMap)
+            Pair(deviceImageMemory, claimsToImageMap)
         } else { Pair(null, emptyMap()) }
 
         val placedFamilyClaimsMap = familyClaimsMap.map { (queueFamily, claims) ->

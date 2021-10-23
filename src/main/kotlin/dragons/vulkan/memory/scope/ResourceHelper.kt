@@ -181,7 +181,7 @@ internal fun createCombinedStagingBuffer(
 
 internal fun createImage(
     stack: MemoryStack, vkDevice: VkDevice, queueManager: QueueManager,
-    claim: ImageMemoryClaim, needsPrefill: Boolean
+    claim: ImageMemoryClaim
 ): VulkanImage {
 
     val mipLevels = 1
@@ -198,7 +198,7 @@ internal fun createImage(
     ciImage.arrayLayers(arrayLayers)
     ciImage.samples(claim.samples)
     ciImage.tiling(claim.tiling)
-    if (needsPrefill) {
+    if (claim.prefill != null) {
         ciImage.usage(claim.imageUsage or VK_IMAGE_USAGE_TRANSFER_DST_BIT)
     } else {
         ciImage.usage(claim.imageUsage)
@@ -224,10 +224,20 @@ internal fun createImage(
     )
     val image = pImage[0]
 
+    return VulkanImage(image)
+}
+
+internal fun createFullImageView(
+    stack: MemoryStack, vkDevice: VkDevice, claim: ImageMemoryClaim, image: VulkanImage
+) {
+    val mipLevels = 1
+    val arrayLayers = 1
+    // TODO Stop hardcoding these and handle them appropriately
+
     val ciView = VkImageViewCreateInfo.calloc(stack)
     ciView.sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
     ciView.flags(claim.imageViewFlags)
-    ciView.image(image)
+    ciView.image(image.handle)
     ciView.viewType(VK_IMAGE_VIEW_TYPE_2D) // TODO Use 2D_ARRAY if needed?
     ciView.format(claim.imageFormat)
     ciView.components { components ->
@@ -250,14 +260,13 @@ internal fun createImage(
         "CreateImageView", "full static"
     )
     val fullImageView = pImageView[0]
-
-    return VulkanImage(image, fullImageView)
+    image.fullView = fullImageView
 }
 
 internal fun bindAndAllocateImageMemory(
     stack: MemoryStack, vkDevice: VkDevice, memoryInfo: MemoryInfo,
     allDeviceImages: Collection<Pair<ImageMemoryClaim, VulkanImage>>, description: String
-): Map<ImageMemoryClaim, VulkanImage> {
+): Pair<Long, Map<ImageMemoryClaim, VulkanImage>> {
     val imageRequirements = VkMemoryRequirements.calloc(stack)
     var memoryTypeBits = -1 // Note: the binary representation of -1 consists of only ones
     var nextImageOffset = 0L
@@ -296,9 +305,13 @@ internal fun bindAndAllocateImageMemory(
         )
     }
 
+    for ((claim, image) in allDeviceImages) {
+        createFullImageView(stack, vkDevice, claim, image)
+    }
+
     val claimsToImageMap = mutableMapOf<ImageMemoryClaim, VulkanImage>()
     for ((image, claim) in imageOffsets) {
         claimsToImageMap[claim] = image
     }
-    return claimsToImageMap.toMap()
+    return Pair(deviceImageMemory, claimsToImageMap.toMap())
 }
