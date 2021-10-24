@@ -24,7 +24,6 @@ internal class FamilyCommands(
      */
     private val finalTransitionBuffer: VkCommandBuffer,
     val fence: Long
-    // TODO Destroy everything once finished
 ) {
     fun performInitialTransition(
         images: Map<ImageMemoryClaim, VulkanImage>, ownQueueFamily: QueueFamily, description: String
@@ -67,12 +66,13 @@ internal class FamilyCommands(
                     val dstStageMask: Int
                     if (needsPrefill) {
                         imageBarrier.dstAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+                        imageBarrier.newLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
                         dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT
                     } else {
                         imageBarrier.dstAccessMask(claim.accessMask!!)
-                        dstStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
+                        imageBarrier.newLayout(claim.initialLayout)
+                        dstStageMask = claim.dstPipelineStageMask!!
                     }
-                    imageBarrier.newLayout(claim.initialLayout)
                     imageBarrier.image(image.handle)
                     imageBarrier.subresourceRange().aspectMask(claim.aspectMask)
 
@@ -153,7 +153,6 @@ internal class FamilyCommands(
                     val deviceImage = claimsToImageMap[placedImageClaim.claim]!!
 
                     val copyRegion = imageCopyRegions[0]
-                    // TODO Ensure that this is a multiple of 4
                     copyRegion.bufferOffset(
                         placements.externalOffset + placements.internalPlacements.prefilledImageStagingOffset
                                 + placedImageClaim.offset
@@ -183,9 +182,17 @@ internal class FamilyCommands(
                     val needsLayoutTransition = placedImageClaim.claim.initialLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
 
                     if (needsOwnershipTransfer || needsLayoutTransition) {
+                        val dstStageMask: Int
                         val imageBarrier = imageBarriers[0]
                         imageBarrier.sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
                         imageBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+                        if (needsOwnershipTransfer) {
+                            imageBarrier.dstAccessMask(0)
+                            dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT
+                        } else {
+                            imageBarrier.dstAccessMask(placedImageClaim.claim.accessMask!!)
+                            dstStageMask = placedImageClaim.claim.dstPipelineStageMask!!
+                        }
                         imageBarrier.dstAccessMask(if (needsOwnershipTransfer) { 0 } else { placedImageClaim.claim.accessMask!! })
                         imageBarrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
                         imageBarrier.newLayout(placedImageClaim.claim.initialLayout)
@@ -207,7 +214,7 @@ internal class FamilyCommands(
                         }
 
                         vkCmdPipelineBarrier(
-                            copyBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                            copyBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask,
                             0, null, null, imageBarriers
                         )
                     }
@@ -231,7 +238,7 @@ internal class FamilyCommands(
     fun acquireOwnership(
         claimsToImageMap: Map<ImageMemoryClaim, VulkanImage>,
         queueFamilyToBufferMap: Map<QueueFamily?, VulkanBuffer>,
-        bufferDstAccessMask: Int,
+        bufferDstAccessMask: Int, bufferDstStageMask: Int,
         ownQueueFamily: QueueFamily, queueManager: QueueManager, description: String
     ) {
         stackPush().use { stack ->
@@ -244,7 +251,7 @@ internal class FamilyCommands(
                 "BeginCommandBuffer", "Scope $description: final ownership transfer"
             )
 
-            if (ownQueueFamily != queueManager.getTransferQueueFamily()) {
+            if (queueFamilyToBufferMap.containsKey(ownQueueFamily) && ownQueueFamily != queueManager.getTransferQueueFamily()) {
                 val bufferBarriers = VkBufferMemoryBarrier.calloc(1, stack)
                 val bufferBarrier = bufferBarriers[0]
                 bufferBarrier.sType(VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER)
@@ -256,9 +263,8 @@ internal class FamilyCommands(
                 bufferBarrier.offset(0)
                 bufferBarrier.size(VK_WHOLE_SIZE)
 
-                // TODO Fix dstStageMask
                 vkCmdPipelineBarrier(
-                    finalTransitionBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    finalTransitionBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, bufferDstStageMask,
                     0, null, bufferBarriers, null
                 )
             }
@@ -415,7 +421,7 @@ internal class FamiliesCommands(
     fun performStagingCopy(
         tempStagingBuffer: Long,
         familyClaimsMap: Map<QueueFamily?, QueueFamilyClaims>,
-        stagingPlacementMap: Map<QueueFamily?, StagingPlacements>,
+        stagingPlacements: CombinedStagingPlacements,
         claimsToImageMap: Map<ImageMemoryClaim, VulkanImage>,
         queueFamilyToBufferMap: Map<QueueFamily?, VulkanBuffer>,
         queueManager: QueueManager, description: String
@@ -434,14 +440,14 @@ internal class FamiliesCommands(
 
             // The general queue family is needed for depth-stencil transfers
             familyMap[queueManager.generalQueueFamily]!!.performStagingCopy(
-                tempStagingBuffer, stagingPlacementMap, claimsToImageMap, {
+                tempStagingBuffer, stagingPlacements.queueFamilies, claimsToImageMap, {
                         claim -> requiresGraphicsFamily(claim)
                 }, queueFamilyToBufferMap, queueManager.generalQueueFamily, description
             )
 
             // The transfer queue family should be used for everything else.
             familyMap[queueManager.getTransferQueueFamily()]!!.performStagingCopy(
-                tempStagingBuffer, stagingPlacementMap, claimsToImageMap, {
+                tempStagingBuffer, stagingPlacements.queueFamilies, claimsToImageMap, {
                         claim -> !requiresGraphicsFamily(claim)
                 }, queueFamilyToBufferMap, queueManager.getTransferQueueFamily(), description
             )
@@ -462,12 +468,20 @@ internal class FamiliesCommands(
 
             // Finally, each image and buffer should be acquired by the right queue family (if needed)
             for ((queueFamily, familyCommands) in familyMap) {
+                val queueFamilyClaims = familyClaimsMap[queueFamily]
                 var bufferDstAccessMask = 0
-                for (bufferClaim in familyClaimsMap[queueFamily]!!.claims.prefilledBufferClaims) {
-                    bufferDstAccessMask = bufferDstAccessMask or bufferClaim.dstAccessMask
+                var bufferDstStageMask = 0
+
+                if (queueFamilyClaims != null) {
+                    for (bufferClaim in queueFamilyClaims.claims.prefilledBufferClaims) {
+                        bufferDstAccessMask = bufferDstAccessMask or bufferClaim.dstAccessMask
+                        bufferDstStageMask = bufferDstStageMask or bufferClaim.dstPipelineStageMask
+                    }
                 }
+
                 familyCommands.acquireOwnership(
-                    claimsToImageMap, queueFamilyToBufferMap, bufferDstAccessMask, queueFamily, queueManager, description
+                    claimsToImageMap, queueFamilyToBufferMap, bufferDstAccessMask, bufferDstStageMask,
+                    queueFamily, queueManager, description
                 )
             }
         }

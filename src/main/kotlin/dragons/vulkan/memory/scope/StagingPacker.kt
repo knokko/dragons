@@ -1,6 +1,10 @@
 package dragons.vulkan.memory.scope
 
+import dragons.util.nextMultipleOf
+import dragons.vulkan.memory.claim.*
+import dragons.vulkan.memory.claim.Placed
 import dragons.vulkan.memory.claim.PlacedQueueFamilyClaims
+import dragons.vulkan.memory.claim.QueueFamilyClaims
 import dragons.vulkan.queue.QueueFamily
 import dragons.vulkan.util.assertVkSuccess
 import kotlinx.coroutines.CoroutineScope
@@ -8,6 +12,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
+import org.lwjgl.system.MemoryUtil.memByteBuffer
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkMappedMemoryRange
@@ -28,46 +33,118 @@ internal class StagingPlacements(
     val internalPlacements: PlacedQueueFamilyClaims
 )
 
-internal suspend fun fillStagingBuffer(
-    vkDevice: VkDevice, scope: CoroutineScope, stack: MemoryStack,
-    tempStagingMemory: Long, familyClaimsMap: Map<QueueFamily?, PlacedQueueFamilyClaims>, startStagingAddress: Long,
-    description: String
-): Map<QueueFamily?, StagingPlacements> {
-    val logger = getLogger("Vulkan")
-    logger.info("Scope $description: Filling temporary staging combined memory...")
-    val stagingFillTasks = ArrayList<Deferred<Unit>>(familyClaimsMap.values.sumOf {
-        it.prefilledBufferClaims.size + it.prefilledImageClaims.size
-    })
+/**
+ * The placements into the shared staging buffer of *all* queue families.
+ */
+internal class CombinedStagingPlacements(
+    /**
+     * The total size (in bytes) of the shared staging buffer
+     */
+    val totalSize: Long,
+    /**
+     * The placements *per queue family*
+     */
+    val queueFamilies: Map<QueueFamily?, StagingPlacements>
+)
 
-    var stagingOffset = 0L
+internal fun determineStagingPlacements(
+    familyClaimsMap: Map<QueueFamily?, QueueFamilyClaims>
+): CombinedStagingPlacements {
 
-    val placementMap = mutableMapOf<QueueFamily?, StagingPlacements>()
-    for ((queueFamily, placements) in familyClaimsMap.entries) {
+    val familyPlacementMap = mutableMapOf<QueueFamily?, StagingPlacements>()
 
-        placementMap[queueFamily] = StagingPlacements(
-            stagingOffset, placements.prefilledBufferClaims.sumOf { it.claim.size.toLong() }, placements
+    var sharedOffset = 0L
+    for ((queueFamily, familyClaims) in familyClaimsMap) {
+        val externalOffset = sharedOffset
+        val claims = familyClaims.claims
+
+        var prefilledBufferFamilyOffset = 0L
+        val prefilledBufferClaims = claims.prefilledBufferClaims.map { claim ->
+            val claimOffset = prefilledBufferFamilyOffset
+            prefilledBufferFamilyOffset += claim.size
+            sharedOffset += claim.size
+            Placed(claim, claimOffset)
+        }
+        val totalPrefilledBufferSize = prefilledBufferFamilyOffset
+
+        val prefilledImageClaims = claims.prefilledImageClaims.map { claim ->
+            // Ensure VUID-vkCmdCopyBufferToImage-bufferOffset-01558 and VUID-vkCmdCopyBufferToImage-srcImage-04053
+            // (In some cases, the image alignment must be 4. In some cases, the image alignment must be *bytesPerPixel*.)
+            // If we use an offset that is a multiple of both, we are always safe. Also, this wastes very little space.
+            val alignment = if (4 % claim.bytesPerPixel!! == 0) { 4 } else { 4 * claim.bytesPerPixel }
+            sharedOffset = nextMultipleOf(alignment.toLong(), sharedOffset)
+            val claimOffset = sharedOffset - externalOffset - totalPrefilledBufferSize
+            sharedOffset += claim.getStagingByteSize()
+            Placed(claim, claimOffset)
+        }
+        val familyStagingSize = sharedOffset - externalOffset
+
+        var uninitializedBufferFamilyOffset = 0L
+        val uninitializedBufferClaims = claims.uninitializedBufferClaims.map { claim ->
+            val claimOffset = uninitializedBufferFamilyOffset
+            uninitializedBufferFamilyOffset += claim.size
+            Placed(claim, claimOffset)
+        }
+
+        var stagingBufferFamilyOffset = 0L
+        val stagingBufferClaims = claims.stagingBufferClaims.map { claim ->
+            val claimOffset = stagingBufferFamilyOffset
+            stagingBufferFamilyOffset += claim.size
+            Placed(claim, claimOffset)
+        }
+
+        val placedClaims = PlacedQueueFamilyClaims(
+            prefilledBufferClaims = prefilledBufferClaims,
+            prefilledBufferStagingOffset = 0,
+            prefilledBufferDeviceOffset = 0,
+            uninitializedBufferClaims = uninitializedBufferClaims,
+            uninitializedBufferDeviceOffset = totalPrefilledBufferSize,
+            stagingBufferClaims = stagingBufferClaims,
+            stagingBufferOffset = 0,
+            prefilledImageStagingOffset = totalPrefilledBufferSize,
+            prefilledImageClaims = prefilledImageClaims,
+            uninitializedImageClaims = claims.uninitializedImageClaims
         )
 
-        for (prefilledClaim in placements.prefilledBufferClaims) {
-            val claimedStagingPlace = MemoryUtil.memByteBuffer(
-                startStagingAddress + stagingOffset + placements.prefilledBufferStagingOffset + prefilledClaim.offset,
-                prefilledClaim.claim.size
+        familyPlacementMap[queueFamily] = StagingPlacements(
+            externalOffset = externalOffset,
+            totalBufferSize = familyStagingSize,
+            internalPlacements = placedClaims
+        )
+    }
+
+    return CombinedStagingPlacements(totalSize = sharedOffset, familyPlacementMap)
+}
+
+internal suspend fun fillStagingBuffer(
+    vkDevice: VkDevice, scope: CoroutineScope, stack: MemoryStack,
+    tempStagingMemory: Long, stagingPlacements: CombinedStagingPlacements, startStagingAddress: Long,
+    description: String
+) {
+    val logger = getLogger("Vulkan")
+    logger.info("Scope $description: Filling temporary staging combined memory...")
+    val stagingFillTasks = ArrayList<Deferred<Unit>>(stagingPlacements.queueFamilies.values.sumOf {
+        it.internalPlacements.prefilledBufferClaims.size + it.internalPlacements.prefilledImageClaims.size
+    })
+
+    for (placements in stagingPlacements.queueFamilies.values) {
+
+        for (placedClaim in placements.internalPlacements.prefilledBufferClaims) {
+            val claimedStagingPlace = memByteBuffer(
+                startStagingAddress + placements.externalOffset
+                        + placements.internalPlacements.prefilledBufferStagingOffset + placedClaim.offset,
+                placedClaim.claim.size
             )
-            stagingFillTasks.add(scope.async { prefilledClaim.claim.prefill!!(claimedStagingPlace) })
+            stagingFillTasks.add(scope.async { placedClaim.claim.prefill!!(claimedStagingPlace) })
         }
 
-        for (prefilledClaim in placements.prefilledImageClaims) {
-            val claimedStagingPlace = MemoryUtil.memByteBuffer(
-                startStagingAddress + stagingOffset + placements.prefilledImageStagingOffset + prefilledClaim.offset,
-                prefilledClaim.claim.getStagingByteSize()
+        for (placedClaim in placements.internalPlacements.prefilledImageClaims) {
+            val claimedStagingPlace = memByteBuffer(
+                startStagingAddress + placements.externalOffset
+                        + placements.internalPlacements.prefilledImageStagingOffset + placedClaim.offset,
+                placedClaim.claim.getStagingByteSize()
             )
-            stagingFillTasks.add(scope.async { prefilledClaim.claim.prefill!!(claimedStagingPlace) })
-        }
-
-        stagingOffset += placements.prefilledBufferClaims.sumOf {
-            it.claim.size
-        } + placements.prefilledImageClaims.sumOf {
-            it.claim.getStagingByteSize()
+            stagingFillTasks.add(scope.async { placedClaim.claim.prefill!!(claimedStagingPlace) })
         }
     }
 
@@ -92,6 +169,4 @@ internal suspend fun fillStagingBuffer(
     logger.info("Scope $description: Flushed combined staging memory; Unmapping it...")
     vkUnmapMemory(vkDevice, tempStagingMemory)
     logger.info("Scope $description: Unmapped combined staging memory")
-
-    return placementMap
 }

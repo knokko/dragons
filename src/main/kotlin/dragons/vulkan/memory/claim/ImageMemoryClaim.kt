@@ -27,6 +27,7 @@ class ImageMemoryClaim(
     val initialLayout: Int,
     val aspectMask: Int,
     val accessMask: Int? = null,
+    val dstPipelineStageMask: Int? = null,
     val storeResult: CompletableDeferred<VulkanImage>,
     val prefill: ((ByteBuffer) -> Unit)?
 ) {
@@ -39,6 +40,7 @@ class ImageMemoryClaim(
         }
         if (prefill != null || initialLayout != VK_IMAGE_LAYOUT_UNDEFINED) {
             if (accessMask == null) throw IllegalArgumentException("You need to state the accessMask")
+            if (dstPipelineStageMask == null) throw IllegalArgumentException("You need to state the dstPipelineStageMask")
         }
     }
 

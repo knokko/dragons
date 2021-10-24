@@ -33,6 +33,7 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
             size = BasicVertex.SIZE * vertexFrequency * vertexFrequency,
             usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
+            dstPipelineStageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
             queueFamily = agent.queueManager.generalQueueFamily,
             storeResult = getVertexBuffer
         ) { destBuffer ->
@@ -66,6 +67,7 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
             size = 4 * 6 * (vertexFrequency - 1) * (vertexFrequency - 1),
             usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             dstAccessMask = VK_ACCESS_INDEX_READ_BIT,
+            dstPipelineStageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
             queueFamily = agent.queueManager.generalQueueFamily,
             storeResult = getIndexBuffer
         ) { destBuffer ->

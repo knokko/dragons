@@ -6,12 +6,14 @@ import kotlinx.coroutines.CompletableDeferred
 import java.nio.ByteBuffer
 
 class BufferMemoryClaim(
-    val size: Int, val usageFlags: Int, val dstAccessMask: Int = 0, val queueFamily: QueueFamily?,
+    val size: Int, val usageFlags: Int,
+    val dstAccessMask: Int = 0, val dstPipelineStageMask: Int = 0, val queueFamily: QueueFamily?,
     val storeResult: CompletableDeferred<VulkanBufferRange>, val prefill: ((ByteBuffer) -> Unit)?
 ) {
     init {
         if (size <= 0) throw IllegalArgumentException("Size ($size) must be positive")
         if (prefill != null && dstAccessMask == 0) throw IllegalArgumentException("You need to state dstAccessMask")
+        if (prefill != null && dstPipelineStageMask == 0) throw IllegalArgumentException("You need to set dstPipelineStageMask")
     }
 
     override fun toString() = "BufferMemoryClaim(size = $size, queueFamily = $queueFamily)"

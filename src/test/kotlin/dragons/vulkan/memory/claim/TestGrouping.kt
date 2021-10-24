@@ -26,7 +26,7 @@ class TestGrouping {
                 MemoryScopeClaims(
                     buffers = mutableListOf(BufferMemoryClaim(
                         size = 100, usageFlags = 0, queueFamily = queueManager.generalQueueFamily,
-                        dstAccessMask = 1, storeResult = CompletableDeferred()
+                        dstAccessMask = 1, dstPipelineStageMask = 1, storeResult = CompletableDeferred()
                     ){})
                 ),
                 MemoryScopeClaims(
@@ -72,6 +72,7 @@ class TestGrouping {
                             tiling = VK_IMAGE_TILING_OPTIMAL, imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                             initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                             aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, accessMask = VK_ACCESS_SHADER_READ_BIT,
+                            dstPipelineStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                             storeResult = CompletableDeferred()
                         ) { },
                         ImageMemoryClaim(
@@ -80,6 +81,7 @@ class TestGrouping {
                             imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                             initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
                             aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, accessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+                            dstPipelineStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
                             storeResult = CompletableDeferred(), prefill = null
                         ),
                         ImageMemoryClaim(
@@ -87,6 +89,7 @@ class TestGrouping {
                             imageFormat = VK_FORMAT_R32_SINT, tiling = VK_IMAGE_TILING_LINEAR,
                             imageUsage = VK_IMAGE_USAGE_STORAGE_BIT, initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                             aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, accessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
+                            dstPipelineStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
                             storeResult = CompletableDeferred(), prefill = null
                         )
                     )
@@ -109,13 +112,25 @@ class TestGrouping {
             transferOnlyQueueFamily = QueueFamily(1, emptyList(), emptyList())
         )
 
-        val prefillBuffer1 = BufferMemoryClaim(100, 0, 1, queueManager.generalQueueFamily, CompletableDeferred()){}
-        val prefillBuffer2 = BufferMemoryClaim(200, 1, 2, queueManager.generalQueueFamily, CompletableDeferred()){}
-        val prefillBuffer3 = BufferMemoryClaim(300, 2, 3, queueManager.computeOnlyQueueFamily, CompletableDeferred()){}
+        val prefillBuffer1 = BufferMemoryClaim(
+            100, 0, 1, 1, queueManager.generalQueueFamily, CompletableDeferred()
+        ){}
+        val prefillBuffer2 = BufferMemoryClaim(
+            200, 1, 2, 2, queueManager.generalQueueFamily, CompletableDeferred()
+        ){}
+        val prefillBuffer3 = BufferMemoryClaim(
+            300, 2, 3, 3, queueManager.computeOnlyQueueFamily, CompletableDeferred()
+        ){}
 
-        val uninitBuffer1 = BufferMemoryClaim(400, 4, 0, null, CompletableDeferred(), null)
-        val uninitBuffer2 = BufferMemoryClaim(500, 8, 0, queueManager.computeOnlyQueueFamily, CompletableDeferred(), null)
-        val uninitBuffer3 = BufferMemoryClaim(600, 13, 0, queueManager.generalQueueFamily, CompletableDeferred(), null)
+        val uninitBuffer1 = BufferMemoryClaim(
+            400, 4, 0, 0, null, CompletableDeferred(), null
+        )
+        val uninitBuffer2 = BufferMemoryClaim(
+            500, 8, 0, 0, queueManager.computeOnlyQueueFamily, CompletableDeferred(), null
+        )
+        val uninitBuffer3 = BufferMemoryClaim(
+            600, 13, 0, 0, queueManager.generalQueueFamily, CompletableDeferred(), null
+        )
 
         val stagingBuffer1 = StagingBufferMemoryClaim(700, null, CompletableDeferred())
         val stagingBuffer2 = StagingBufferMemoryClaim(800, queueManager.computeOnlyQueueFamily, CompletableDeferred())
@@ -127,7 +142,7 @@ class TestGrouping {
                 0, 0, 4,
                 VK_FORMAT_R16G16_UNORM, VK_IMAGE_TILING_LINEAR, VK_SAMPLE_COUNT_4_BIT,
                 VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_HOST_READ_BIT, CompletableDeferred(),
+                VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_HOST_READ_BIT, VK_ACCESS_HOST_READ_BIT, CompletableDeferred(),
                 if (prefill) {{}} else { null }
             )
         }
@@ -181,55 +196,5 @@ class TestGrouping {
 
             assertEquals(expectedGrouping, groupMemoryClaims(claims))
         }
-    }
-
-    @Test
-    fun testPlaceMemoryClaims() {
-        val prefillBuffer1 = BufferMemoryClaim(100, 0, 5, null, CompletableDeferred()) {}
-        val prefillBuffer2 = BufferMemoryClaim(200, 0, 6, null, CompletableDeferred()) {}
-
-        val uninitBuffer1 = BufferMemoryClaim(300, 0, 0, null, CompletableDeferred(), null)
-        val uninitBuffer2 = BufferMemoryClaim(400, 0, 0, null, CompletableDeferred(), null)
-
-        val staging1 = StagingBufferMemoryClaim(500, null, CompletableDeferred())
-        val staging2 = StagingBufferMemoryClaim(600, null, CompletableDeferred())
-
-        fun createImageClaim(width: Int, height: Int, bytesPerPixel: Int, prefill: Boolean): ImageMemoryClaim {
-            return ImageMemoryClaim(
-                width, height, null,
-                0, 0, bytesPerPixel,
-                VK_FORMAT_R16G16_UNORM, VK_IMAGE_TILING_LINEAR, VK_SAMPLE_COUNT_4_BIT,
-                VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_SHADER_READ_BIT, CompletableDeferred(),
-                if (prefill) {{}} else { null }
-            )
-        }
-
-        val prefillImage1 = createImageClaim(100, 200, 1, true)
-        val prefillImage2 = createImageClaim(200, 300, 4, true)
-
-        val uninitImage1 = createImageClaim(400, 300, 3, false)
-        val uninitImage2 = createImageClaim(400, 400, 4, false)
-
-        val claims = QueueFamilyClaims(CombinedMemoryScopeClaims(
-            allBufferClaims = listOf(prefillBuffer1, prefillBuffer2, uninitBuffer1, uninitBuffer2),
-            allImageClaims = listOf(prefillImage1, prefillImage2, uninitImage1, uninitImage2),
-            stagingBufferClaims = listOf(staging1, staging2)
-        ))
-
-        val expectedPlacements = PlacedQueueFamilyClaims(
-            prefilledBufferClaims = listOf(Placed(prefillBuffer1, 0), Placed(prefillBuffer2, 100)),
-            prefilledBufferStagingOffset = 0,
-            prefilledBufferDeviceOffset = 0,
-            uninitializedBufferClaims = listOf(Placed(uninitBuffer1, 0), Placed(uninitBuffer2, 300)),
-            uninitializedBufferDeviceOffset = 300,
-            stagingBufferClaims = listOf(Placed(staging1, 0), Placed(staging2, 500)),
-            stagingBufferOffset = 0,
-            prefilledImageClaims = listOf(Placed(prefillImage1, 0), Placed(prefillImage2, 20_000)),
-            prefilledImageStagingOffset = 300,
-            uninitializedImageClaims = listOf(uninitImage1, uninitImage2),
-        )
-
-        assertEquals(expectedPlacements, placeMemoryClaims(claims))
     }
 }

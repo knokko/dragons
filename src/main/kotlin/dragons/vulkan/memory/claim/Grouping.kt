@@ -22,17 +22,12 @@ internal fun getUsedQueueFamilies(allClaims: Collection<MemoryScopeClaims>): Set
 }
 
 internal class QueueFamilyClaims(val claims: CombinedMemoryScopeClaims) {
-    val tempStagingSize: Long
     val deviceBufferSize: Long
     val persistentStagingSize: Long = claims.stagingBufferClaims.sumOf { it.size.toLong() }
 
     init {
         val prefilledBufferSize = claims.prefilledBufferClaims.sumOf { it.size.toLong() }
         deviceBufferSize = prefilledBufferSize + claims.uninitializedBufferClaims.sumOf { it.size.toLong() }
-
-        val prefilledImageSize = claims.prefilledImageClaims.sumOf { it.getStagingByteSize().toLong() }
-
-        tempStagingSize = prefilledBufferSize + prefilledImageSize
     }
 
     override fun equals(other: Any?): Boolean {
@@ -92,6 +87,8 @@ internal class Placed<T>(val claim: T, val offset: Long) {
         result = 31 * result + offset.hashCode()
         return result
     }
+
+    override fun toString() = "Placed($claim, offset = $offset)"
 }
 
 /**
@@ -167,34 +164,6 @@ internal class PlacedQueueFamilyClaims(
         result = 31 * result + uninitializedImageClaims.hashCode()
         return result
     }
-}
 
-private fun <T> placeClaims(claims: Collection<T>, getSize: (T) -> Int): Pair<Collection<Placed<T>>, Long> {
-    var currentOffset = 0L
-    val placedClaims = claims.map { claim ->
-        val claimOffset = currentOffset
-        currentOffset += getSize(claim)
-        Placed(claim, claimOffset)
-    }
-    return Pair(placedClaims, currentOffset)
-}
-
-internal fun placeMemoryClaims(claims: QueueFamilyClaims): PlacedQueueFamilyClaims {
-    val (placedPrefilledBufferClaims, totalPrefilledBufferSize) = placeClaims(claims.claims.prefilledBufferClaims) { it.size }
-    val (placedUninitializedBufferClaims, _) = placeClaims(claims.claims.uninitializedBufferClaims) { it.size }
-    val (placedStagingBufferClaims, _) = placeClaims(claims.claims.stagingBufferClaims) { it.size }
-    val (placedPrefilledImageClaims, _) = placeClaims(claims.claims.prefilledImageClaims) { it.getStagingByteSize() }
-
-    return PlacedQueueFamilyClaims(
-        prefilledBufferClaims = placedPrefilledBufferClaims,
-        prefilledBufferStagingOffset = 0,
-        prefilledBufferDeviceOffset = 0,
-        uninitializedBufferClaims = placedUninitializedBufferClaims,
-        uninitializedBufferDeviceOffset = totalPrefilledBufferSize,
-        stagingBufferClaims = placedStagingBufferClaims,
-        stagingBufferOffset = 0,
-        prefilledImageClaims = placedPrefilledImageClaims,
-        prefilledImageStagingOffset = totalPrefilledBufferSize,
-        uninitializedImageClaims = claims.claims.uninitializedImageClaims
-    )
+    override fun toString() = "prefilled buffers: $prefilledBufferClaims, prefilled images: $prefilledImageClaims, uninit buffers: $uninitializedBufferClaims"
 }
