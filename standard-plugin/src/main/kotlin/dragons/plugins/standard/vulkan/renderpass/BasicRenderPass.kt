@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory.getLogger
 
 fun createBasicRenderPass(vkDevice: VkDevice, renderImageInfo: RenderImageInfo): Long {
     stackPush().use { stack ->
-        val attachments = VkAttachmentDescription.calloc(3, stack)
+        val attachments = VkAttachmentDescription.calloc(2, stack)
 
         val colorAttachment = attachments[0]
         colorAttachment.format(renderImageInfo.colorFormat)
@@ -29,14 +29,6 @@ fun createBasicRenderPass(vkDevice: VkDevice, renderImageInfo: RenderImageInfo):
         depthAttachment.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
         depthAttachment.finalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 
-        val resolveAttachment = attachments[2]
-        resolveAttachment.format(renderImageInfo.colorFormat)
-        resolveAttachment.samples(VK_SAMPLE_COUNT_1_BIT)
-        resolveAttachment.loadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE)
-        resolveAttachment.storeOp(VK_ATTACHMENT_STORE_OP_STORE)
-        resolveAttachment.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-        resolveAttachment.finalLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-
         val refColorAttachments = VkAttachmentReference.calloc(1, stack)
         val refColorAttachment = refColorAttachments[0]
         refColorAttachment.attachment(0)
@@ -46,11 +38,6 @@ fun createBasicRenderPass(vkDevice: VkDevice, renderImageInfo: RenderImageInfo):
         refDepthAttachment.attachment(1)
         refDepthAttachment.layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 
-        val refResolveAttachments = VkAttachmentReference.calloc(1, stack)
-        val refResolveAttachment = refResolveAttachments[0]
-        refResolveAttachment.attachment(2)
-        refResolveAttachment.layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-
         val subpasses = VkSubpassDescription.calloc(1, stack)
         // Just 1 subpass
         val subpass = subpasses[0]
@@ -58,7 +45,6 @@ fun createBasicRenderPass(vkDevice: VkDevice, renderImageInfo: RenderImageInfo):
         subpass.colorAttachmentCount(1)
         subpass.pColorAttachments(refColorAttachments)
         subpass.pDepthStencilAttachment(refDepthAttachment)
-        subpass.pResolveAttachments(refResolveAttachments)
         // No input, resolve, and preserve attachments
 
         val ciRenderPass = VkRenderPassCreateInfo.calloc(stack)
