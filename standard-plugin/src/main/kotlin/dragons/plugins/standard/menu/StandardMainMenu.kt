@@ -3,7 +3,6 @@ package dragons.plugins.standard.menu
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.menu.MainMenuManager
 import dragons.state.StaticGameState
-import kotlinx.coroutines.delay
 
 class StandardMainMenu: MainMenuManager {
     override fun requestMainMenuControl(pluginInstance: PluginInstance, agent: MainMenuManager.Agent) {
@@ -18,7 +17,20 @@ class StandardMainMenu: MainMenuManager {
     }
 
     override suspend fun controlMainMenu(gameState: StaticGameState) {
-        println("Using the standard main menu...")
-        delay(2000)
+        var numIterationsLeft = 10
+
+        while (numIterationsLeft > 0) {
+            val eyeMatrices = gameState.vrManager.prepareRender()
+            if (eyeMatrices != null) {
+                val (leftEyeMatrix, rightEyeMatrix) = eyeMatrices
+            } else {
+                // TODO Uh ooh
+            }
+
+            gameState.graphics.resolveHelper.resolve(gameState.graphics.vkDevice, gameState.graphics.queueManager, ehm)
+            gameState.vrManager.submitFrames()
+
+            numIterationsLeft--
+        }
     }
 }

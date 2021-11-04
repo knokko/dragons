@@ -3,6 +3,9 @@ package dragons.vulkan.memory
 class VulkanImage(
     /** The handle of the `VkImage` */
     val handle: Long,
+
+    val width: Int,
+    val height: Int
 ) {
     /**
      * A `VkImageView` covering the entire image.

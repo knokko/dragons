@@ -1,5 +1,6 @@
 package dragons.state
 
+import dragons.vr.ResolveHelper
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.CoreStaticMemory
 import dragons.vulkan.memory.scope.MemoryScope
@@ -13,7 +14,10 @@ class StaticGraphicsState(
     val vkPhysicalDevice: VkPhysicalDevice,
     val vkDevice: VkDevice,
     val queueManager: QueueManager,
+
     val renderImageInfo: RenderImageInfo,
+    val resolveHelper: ResolveHelper,
+
     val memoryScope: MemoryScope,
-    val coreMemory: CoreStaticMemory
+    val coreMemory: CoreStaticMemory,
 )
