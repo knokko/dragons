@@ -2,17 +2,17 @@ package dragons.vulkan.memory
 
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.vr.VrManager
+import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.claim.ImageMemoryClaim
+import dragons.vulkan.memory.claim.StagingBufferMemoryClaim
 import dragons.vulkan.queue.QueueManager
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
-import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.*
-import org.lwjgl.vulkan.VkFormatProperties
-import org.lwjgl.vulkan.VkPhysicalDevice
+import java.nio.ByteBuffer
 
 internal fun claimStaticCoreMemory(
-    vkPhysicalDevice: VkPhysicalDevice, agent: VulkanStaticMemoryUser.Agent, vrManager: VrManager, queueManager: QueueManager
+    agent: VulkanStaticMemoryUser.Agent, vrManager: VrManager, queueManager: QueueManager, renderImageInfo: RenderImageInfo
 ): CoreStaticMemoryPending {
     val width = vrManager.getWidth()
     val height = vrManager.getHeight()
@@ -21,28 +21,11 @@ internal fun claimStaticCoreMemory(
     val leftDepthImage = CompletableDeferred<VulkanImage>()
     val rightColorImage = CompletableDeferred<VulkanImage>()
     val rightDepthImage = CompletableDeferred<VulkanImage>()
+    val screenshotBuffer = CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>()
 
-    val eyeColorFormat = VK_FORMAT_R8G8B8A8_SRGB
-
-    /*
-     * Quoting from the Vulkan specification:
-     * "VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT feature must be supported for at least one of
-     * VK_FORMAT_X8_D24_UNORM_PACK32 and VK_FORMAT_D32_SFLOAT, and must be supported for at least one of
-     * VK_FORMAT_D24_UNORM_S8_UINT and VK_FORMAT_D32_SFLOAT_S8_UINT."
-     */
-    val eyeDepthFormat = stackPush().use { stack ->
-        val formatProps = VkFormatProperties.calloc(stack)
-        vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, VK_FORMAT_D24_UNORM_S8_UINT, formatProps)
-
-        if ((formatProps.optimalTilingFeatures() and VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0) {
-            VK_FORMAT_D24_UNORM_S8_UINT
-        } else {
-            VK_FORMAT_D32_SFLOAT_S8_UINT
-        }
-    }
-
-    // TODO Experiment with other sample counts
-    val sampleCount = VK_SAMPLE_COUNT_1_BIT
+    val eyeColorFormat = renderImageInfo.colorFormat
+    val eyeDepthFormat = renderImageInfo.depthStencilFormat
+    val sampleCount = renderImageInfo.sampleCountBit
 
     // Note: transfer_src and sampled are required by OpenVR
     // TODO Create a proper abstraction for this in the VrManager
@@ -69,9 +52,14 @@ internal fun claimStaticCoreMemory(
         ))
     }
 
+    agent.claims.stagingBuffers.add(StagingBufferMemoryClaim(
+        size = 4 * width * height, queueFamily = queueManager.generalQueueFamily, storeResult = screenshotBuffer
+    ))
+
     return CoreStaticMemoryPending(
         leftColorImage = leftColorImage, leftDepthImage = leftDepthImage,
-        rightColorImage = rightColorImage, rightDepthImage = rightDepthImage
+        rightColorImage = rightColorImage, rightDepthImage = rightDepthImage,
+        screenshotBuffer = screenshotBuffer
     )
 }
 
@@ -79,13 +67,15 @@ internal class CoreStaticMemoryPending(
     val leftColorImage: Deferred<VulkanImage>,
     val leftDepthImage: Deferred<VulkanImage>,
     val rightColorImage: Deferred<VulkanImage>,
-    val rightDepthImage: Deferred<VulkanImage>
+    val rightDepthImage: Deferred<VulkanImage>,
+    val screenshotBuffer: Deferred<Pair<ByteBuffer, VulkanBufferRange>>
 ) {
     suspend fun awaitCompletely() = CoreStaticMemory(
         leftColorImage = leftColorImage.await(),
         leftDepthImage = leftDepthImage.await(),
         rightColorImage = rightColorImage.await(),
-        rightDepthImage = rightDepthImage.await()
+        rightDepthImage = rightDepthImage.await(),
+        screenshotBuffer = screenshotBuffer.await()
     )
 }
 
@@ -93,5 +83,6 @@ class CoreStaticMemory(
     val leftColorImage: VulkanImage,
     val leftDepthImage: VulkanImage,
     val rightColorImage: VulkanImage,
-    val rightDepthImage: VulkanImage
+    val rightDepthImage: VulkanImage,
+    val screenshotBuffer: Pair<ByteBuffer, VulkanBufferRange>
 )

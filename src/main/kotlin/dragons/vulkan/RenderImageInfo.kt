@@ -63,20 +63,22 @@ class RenderImageInfo(
         val supportedSampleCounts = limits.sampledImageColorSampleCounts() and limits.sampledImageDepthSampleCounts() and
                 limits.sampledImageStencilSampleCounts()
 
+        // TODO Try out more than 1 sample count
+        sampleCountBit = VK_SAMPLE_COUNT_1_BIT
         // TODO I might want to fetch these from some config file
-        val desiredSampleCounts = arrayOf(VK_SAMPLE_COUNT_8_BIT, VK_SAMPLE_COUNT_4_BIT, VK_SAMPLE_COUNT_2_BIT)
-
-        sampleCountBit = run {
-            for (candidate in desiredSampleCounts) {
-                if ((supportedSampleCounts and candidate) != 0) {
-                    return@run candidate
-                }
-            }
-
-            throw SimpleStartupException("Insufficient sample count support", listOf(
-                "This game requires your graphics card to support at least one of these sampleCountBits: ${desiredSampleCounts.contentToString()}",
-                "but it only supports $supportedSampleCounts"
-            ))
-        }
+//        val desiredSampleCounts = arrayOf(VK_SAMPLE_COUNT_8_BIT, VK_SAMPLE_COUNT_4_BIT, VK_SAMPLE_COUNT_2_BIT)
+//
+//        sampleCountBit = run {
+//            for (candidate in desiredSampleCounts) {
+//                if ((supportedSampleCounts and candidate) != 0) {
+//                    return@run candidate
+//                }
+//            }
+//
+//            throw SimpleStartupException("Insufficient sample count support", listOf(
+//                "This game requires your graphics card to support at least one of these sampleCountBits: ${desiredSampleCounts.contentToString()}",
+//                "but it only supports $supportedSampleCounts"
+//            ))
+//        }
     }
 }

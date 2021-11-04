@@ -4,7 +4,7 @@ import dragons.init.trouble.SimpleStartupException
 import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.vr.VrManager
-import dragons.vulkan.memory.claim.*
+import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.scope.MemoryScope
 import dragons.vulkan.memory.scope.MemoryScopeClaims
 import dragons.vulkan.memory.scope.packMemoryClaims
@@ -12,13 +12,12 @@ import dragons.vulkan.queue.QueueManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import org.lwjgl.vulkan.*
-import org.lwjgl.vulkan.VK12.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
 
 private suspend fun getFinishedStaticMemoryAgents(
-    logger: Logger, vkPhysicalDevice: VkPhysicalDevice,
-    pluginManager: PluginManager, vrManager: VrManager, queueManager: QueueManager, scope: CoroutineScope
+    logger: Logger, pluginManager: PluginManager, vrManager: VrManager, queueManager: QueueManager,
+    renderImageInfo: RenderImageInfo, scope: CoroutineScope
 ): Pair<Collection<MemoryScopeClaims>, CoreStaticMemoryPending> {
 
     logger.info("Calling all VulkanStaticMemoryUsers...")
@@ -36,7 +35,7 @@ private suspend fun getFinishedStaticMemoryAgents(
 
     // The game core also needs to add some static resources...
     val customAgent = VulkanStaticMemoryUser.Agent(queueManager, scope, MemoryScopeClaims())
-    val pendingCoreMemory = claimStaticCoreMemory(vkPhysicalDevice, customAgent, vrManager, queueManager)
+    val pendingCoreMemory = claimStaticCoreMemory(customAgent, vrManager, queueManager, renderImageInfo)
 
     return Pair(finishedClaims + listOf(customAgent.claims), pendingCoreMemory)
 }
@@ -45,12 +44,12 @@ private suspend fun getFinishedStaticMemoryAgents(
 suspend fun allocateStaticMemory(
     vkPhysicalDevice: VkPhysicalDevice, vkDevice: VkDevice,
     queueManager: QueueManager, pluginManager: PluginManager, vrManager: VrManager,
-    memoryInfo: MemoryInfo, scope: CoroutineScope
+    memoryInfo: MemoryInfo, renderImageInfo: RenderImageInfo, scope: CoroutineScope
 ): Pair<MemoryScope, CoreStaticMemory> {
     val logger = getLogger("Vulkan")
 
     val (finishedAgents, pendingCoreMemory) = getFinishedStaticMemoryAgents(
-        logger, vkPhysicalDevice, pluginManager, vrManager, queueManager, scope
+        logger, pluginManager, vrManager, queueManager, renderImageInfo, scope
     )
 
     val staticMemoryScope = packMemoryClaims(vkDevice, queueManager, memoryInfo, scope, finishedAgents, "static")
