@@ -1,31 +1,26 @@
 package dragons.init
 
+import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
 import dragons.init.trouble.gui.showStartupTroubleWindow
 import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.general.ExitListener
 import dragons.plugin.interfaces.general.PluginsLoadedListener
+import dragons.plugin.interfaces.menu.MainMenuManager
 import dragons.plugin.loading.PluginClassLoader
 import dragons.plugin.loading.scanDefaultPluginLocations
-import dragons.vr.VrManager
+import dragons.state.StaticGameState
+import dragons.state.StaticGraphicsState
 import dragons.vr.initVr
 import dragons.vulkan.destroy.destroyVulkanDevice
 import dragons.vulkan.destroy.destroyVulkanInstance
 import dragons.vulkan.init.choosePhysicalDevice
 import dragons.vulkan.init.createLogicalDevice
 import dragons.vulkan.init.initVulkanInstance
-import dragons.vulkan.memory.CoreStaticMemory
 import dragons.vulkan.memory.MemoryInfo
 import dragons.vulkan.memory.allocateStaticMemory
-import dragons.vulkan.memory.scope.MemoryScope
-import dragons.vulkan.queue.QueueManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import org.lwjgl.system.Platform
-import org.lwjgl.vulkan.VkDevice
-import org.lwjgl.vulkan.VkInstance
-import org.lwjgl.vulkan.VkPhysicalDevice
 import org.slf4j.Logger
 import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory.getLogger
@@ -52,21 +47,74 @@ fun main(args: Array<String>) {
 
         val initProps = GameInitProperties(mainParameters, isInDevelopment)
 
-        val prepareMainMenuResult = prepareMainMenu(initProps)
-        logger.info("Finished preparing the main menu")
+        val (staticGameState, priorityProblem) = runBlocking {
+            val staticGameState = prepareMainMenu(initProps, this)
+            logger.info("Finished preparing the main menu")
+
+            val mainMenuCandidates = staticGameState.pluginManager.getImplementations(MainMenuManager::class).map { (manager, instance) ->
+                val agent = MainMenuManager.Agent()
+                manager.requestMainMenuControl(instance, agent)
+                Triple(instance, manager, agent.priority)
+            }.filter { (_, _, priority) -> priority != null }
+            logger.info("The following plug-ins requested to control the main menu:")
+            for ((instance, _, priority) in mainMenuCandidates) {
+                logger.info("Plug-in ${instance.info.name} has priority $priority")
+            }
+
+            val mainMenuWinner1 = mainMenuCandidates.maxByOrNull { (_, _, priority) -> priority!! }
+            if (mainMenuWinner1 == null) {
+                logger.error("Not a single plug-in requested to control the main menu. Aborting...")
+                return@runBlocking Pair(staticGameState, SimpleStartupException(
+                    "No main menu",
+                    listOf(
+                        "Not a single plug-in is able to control the main menu, so the game can't start.",
+                        "This can only happen if the standard plug-in is disabled without alternative."
+                    )
+                ))
+            }
+
+            // To avoid non-determinism, a tie in main menu priority causes start-up to fail
+            val mainMenuWinner2 = mainMenuCandidates.reversed().maxByOrNull { (_, _, priority) -> priority!! }!!
+            if (mainMenuWinner1 !== mainMenuWinner2) {
+                val name1 = mainMenuWinner1.first.info.name
+                val name2 = mainMenuWinner2.first.info.name
+                val priority = mainMenuWinner1.third!!
+                logger.error("The $name1 plug-in and the $name2 plug-in share the highest main menu priority ($priority). Aborting...")
+                return@runBlocking Pair(staticGameState, SimpleStartupException(
+                    "Plug-in conflict",
+                    listOf(
+                        "The $name1 plug-in and the $name2 plug-in share the highest priority to control the main menu ($priority).",
+                        "But, only 1 of them could be chosen.",
+                        "Since no fair choice can be made, the game can't start."
+                    )
+                ))
+            }
+            logger.info("The ${mainMenuWinner1.first.info.name} plug-in gets control of the main menu")
+
+            val nextGameState = mainMenuWinner1.second.controlMainMenu(staticGameState)
+            // TODO Handle the next game state
+
+            Pair(staticGameState, null)
+        }
 
         logger.info("Start with shutting down the game")
-        prepareMainMenuResult.staticMemoryScope.destroy(prepareMainMenuResult.vkDevice)
+        val staticGraphics = staticGameState.graphics
+        staticGraphics.memoryScope.destroy(staticGraphics.vkDevice)
         destroyVulkanDevice(
-            prepareMainMenuResult.vkInstance, prepareMainMenuResult.vkPhysicalDevice, prepareMainMenuResult.vkDevice,
-            prepareMainMenuResult.pluginManager
+            staticGraphics.vkInstance, staticGraphics.vkPhysicalDevice, staticGraphics.vkDevice,
+            staticGameState.pluginManager
         )
-        destroyVulkanInstance(prepareMainMenuResult.vkInstance, prepareMainMenuResult.pluginManager)
-        prepareMainMenuResult.vrManager.destroy()
-        prepareMainMenuResult.pluginManager.getImplementations(ExitListener::class).forEach {
+        destroyVulkanInstance(staticGraphics.vkInstance, staticGameState.pluginManager)
+        staticGameState.vrManager.destroy()
+        staticGameState.pluginManager.getImplementations(ExitListener::class).forEach {
                 listenerPair -> listenerPair.first.onExit(listenerPair.second)
         }
         logger.info("Finished shutting down the game")
+
+        // The user should be informed about the conflict
+        if (priorityProblem != null) {
+            throw priorityProblem
+        }
     } catch (startupProblem: StartupException) {
         getLogger(ROOT_LOGGER_NAME).error("Failed to start", startupProblem)
         showStartupTroubleWindow(startupProblem)
@@ -106,9 +154,11 @@ fun ensurePluginsAreBuilt(logger: Logger): Boolean {
  * This preparation consists of loading all plug-ins and creating some rendering resources.
  */
 @Throws(StartupException::class)
-fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
+fun prepareMainMenu(initProps: GameInitProperties, staticCoroutineScope: CoroutineScope): StaticGameState {
     return runBlocking(Dispatchers.Default) {
+
         val vrJob = async { initVr(initProps) }
+
         val pluginJob = async {
             val logger = getLogger(ROOT_LOGGER_NAME)
             logger.info("Scan plug-in locations...")
@@ -123,44 +173,58 @@ fun prepareMainMenu(initProps: GameInitProperties): PrepareMainMenuResult {
             pluginManager.getImplementations(PluginsLoadedListener::class.java).forEach {
                     listenerPair -> listenerPair.first.afterPluginsLoaded(listenerPair.second)
             }
-            pluginManager
+            Pair(pluginManager, pluginClassLoader)
         }
+
+        val (pluginManager, pluginClassLoader) = pluginJob.await()
+        val vrManager = vrJob.await()
 
         val vulkanInstanceJob = async {
-            initVulkanInstance(pluginJob.await(), vrJob.await())
+            initVulkanInstance(pluginManager, vrManager)
         }
 
+        val vulkanInstance = vulkanInstanceJob.await()
         val vkPhysicalDeviceJob = async {
-            choosePhysicalDevice(vulkanInstanceJob.await(), pluginJob.await(), vrJob.await())
+            choosePhysicalDevice(vulkanInstance, pluginManager, vrManager)
         }
 
-        val memoryInfoJob = async { MemoryInfo(vkPhysicalDeviceJob.await()) }
+        val vulkanPhysicalDevice = vkPhysicalDeviceJob.await()
+
+        val memoryInfoJob = async { MemoryInfo(vulkanPhysicalDevice) }
 
         val vkDeviceJob = async {
             createLogicalDevice(
-                vulkanInstanceJob.await(), vkPhysicalDeviceJob.await(), pluginJob.await(), vrJob.await(), this
+                vulkanInstance, vulkanPhysicalDevice, pluginManager, vrManager, this
             )
         }
+
+        val (vulkanDevice, queueManager, renderImageInfo) = vkDeviceJob.await()
+        val memoryInfo = memoryInfoJob.await()
 
         val staticMemoryJob = async {
-            val (vkDevice, queueManager) = vkDeviceJob.await()
             allocateStaticMemory(
-                vkPhysicalDeviceJob.await(), vkDevice, queueManager, pluginJob.await(), vrJob.await(), memoryInfoJob.await(), this
+                vulkanPhysicalDevice, vulkanDevice, queueManager,
+                pluginManager, vrManager, memoryInfo, renderImageInfo, this
             )
         }
 
-        val (vkDevice, queueManager) = vkDeviceJob.await()
-        PrepareMainMenuResult(
-            pluginJob.await(), vrJob.await(),
-            vulkanInstanceJob.await(), vkPhysicalDeviceJob.await(), vkDevice, queueManager,
-            staticMemoryJob.await().first, staticMemoryJob.await().second
+        val (staticMemoryScope, coreStaticMemory) = staticMemoryJob.await()
+
+        StaticGameState(
+            graphics = StaticGraphicsState(
+                vulkanInstance,
+                vulkanPhysicalDevice,
+                vulkanDevice,
+                queueManager,
+                renderImageInfo,
+                staticMemoryScope,
+                coreStaticMemory
+            ),
+            initProperties = initProps,
+            pluginManager = pluginManager,
+            vrManager = vrManager,
+            classLoader = pluginClassLoader,
+            coroutineScope = staticCoroutineScope
         )
     }
 }
-
-class PrepareMainMenuResult(
-    val pluginManager: PluginManager, val vrManager: VrManager,
-    val vkInstance: VkInstance,
-    val vkPhysicalDevice: VkPhysicalDevice, val vkDevice: VkDevice, val queueManager: QueueManager,
-    val staticMemoryScope: MemoryScope, val coreStaticMemory: CoreStaticMemory
-)
