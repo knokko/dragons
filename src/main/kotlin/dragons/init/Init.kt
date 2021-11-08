@@ -6,11 +6,13 @@ import dragons.init.trouble.gui.showStartupTroubleWindow
 import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.general.ExitListener
 import dragons.plugin.interfaces.general.PluginsLoadedListener
+import dragons.plugin.interfaces.general.StaticStateListener
 import dragons.plugin.interfaces.menu.MainMenuManager
 import dragons.plugin.loading.PluginClassLoader
 import dragons.plugin.loading.scanDefaultPluginLocations
 import dragons.state.StaticGameState
 import dragons.state.StaticGraphicsState
+import dragons.vr.ResolveHelper
 import dragons.vr.initVr
 import dragons.vulkan.destroy.destroyVulkanDevice
 import dragons.vulkan.destroy.destroyVulkanInstance
@@ -48,8 +50,8 @@ fun main(args: Array<String>) {
         val initProps = GameInitProperties(mainParameters, isInDevelopment)
 
         val (staticGameState, priorityProblem) = runBlocking {
-            val staticGameState = prepareMainMenu(initProps, this)
-            logger.info("Finished preparing the main menu")
+            val staticGameState = prepareStaticGameState(initProps, this)
+            logger.info("Finished preparing the static game state")
 
             val mainMenuCandidates = staticGameState.pluginManager.getImplementations(MainMenuManager::class).map { (manager, instance) ->
                 val agent = MainMenuManager.Agent()
@@ -148,14 +150,17 @@ fun ensurePluginsAreBuilt(logger: Logger): Boolean {
 }
 
 /**
- * This method does the preparation that needs to be done before the main menu can be shown and should thus be called
- * at the start of the application.
+ * This method constructs the part of the game state that should persist throughout the entire game session. This game
+ * state consists mostly of Vulkan resources (crucial stuff like the Instance as well as some important GPU memory
+ * allocations). This method will also load all plug-ins and fire some plug-in events (especially Vulkan-related events).
  *
- * This preparation consists of loading all plug-ins and creating some rendering resources.
+ * This method should be called soon after the game is started. When this method returns, the main menu should be
+ * created and opened.
  */
 @Throws(StartupException::class)
-fun prepareMainMenu(initProps: GameInitProperties, staticCoroutineScope: CoroutineScope): StaticGameState {
-    return runBlocking(Dispatchers.Default) {
+fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: CoroutineScope): StaticGameState {
+    // Use IO dispatcher because the workload is expected to be a mixture of computations, IO, and blocking native calls
+    return runBlocking(Dispatchers.IO) {
 
         val vrJob = async { initVr(initProps) }
 
@@ -210,13 +215,24 @@ fun prepareMainMenu(initProps: GameInitProperties, staticCoroutineScope: Corouti
 
         val (staticMemoryScope, coreStaticMemory) = staticMemoryJob.await()
 
-        StaticGameState(
+        val resolveHelper = ResolveHelper(
+            leftSourceImage = coreStaticMemory.leftColorImage,
+            rightSourceImage = coreStaticMemory.rightColorImage,
+            leftResolvedImage = coreStaticMemory.leftResolveImage,
+            rightResolvedImage = coreStaticMemory.rightResolveImage,
+            vkDevice = vulkanDevice,
+            queueManager = queueManager,
+            renderImageInfo = renderImageInfo
+        )
+
+        val staticGameState = StaticGameState(
             graphics = StaticGraphicsState(
                 vulkanInstance,
                 vulkanPhysicalDevice,
                 vulkanDevice,
                 queueManager,
                 renderImageInfo,
+                resolveHelper,
                 staticMemoryScope,
                 coreStaticMemory
             ),
@@ -226,5 +242,12 @@ fun prepareMainMenu(initProps: GameInitProperties, staticCoroutineScope: Corouti
             classLoader = pluginClassLoader,
             coroutineScope = staticCoroutineScope
         )
+
+        for ((stateListener, pluginInstance) in pluginManager.getImplementations(StaticStateListener::class)) {
+            val agent = StaticStateListener.Agent(staticGameState)
+            stateListener.afterStaticStateCreation(pluginInstance, agent)
+        }
+
+        staticGameState
     }
 }

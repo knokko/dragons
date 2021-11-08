@@ -1,15 +1,10 @@
 package dragons.plugins.standard.state
 
-import dragons.plugins.standard.vulkan.pipeline.BasicGraphicsPipeline
-import kotlinx.coroutines.Deferred
-
 class StandardPluginState {
 
-    lateinit var basicGraphicsPipeline: Deferred<BasicGraphicsPipeline>
+    lateinit var graphics: StandardGraphicsState
 
-    fun hasBasicGraphicsPipeline() = this::basicGraphicsPipeline.isInitialized
+    fun hasGraphics() = this::graphics.isInitialized
 
-    lateinit var basicRenderPass: Deferred<Long>
-
-    fun hasBasicRenderPass() = this::basicRenderPass.isInitialized
+    val preGraphics = StandardPreGraphicsState()
 }

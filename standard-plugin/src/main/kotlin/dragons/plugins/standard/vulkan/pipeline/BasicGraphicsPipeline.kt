@@ -20,13 +20,18 @@ fun destroyBasicGraphicsPipeline(vkDevice: VkDevice, basicPipeline: BasicGraphic
     vkDestroyDescriptorSetLayout(vkDevice, basicPipeline.descriptorSetLayout, null)
 }
 
-fun createBasicGraphicsPipeline(vkDevice: VkDevice, basicRenderPass: Long, renderImageInfo: RenderImageInfo): BasicGraphicsPipeline {
+fun createBasicGraphicsPipeline(
+    vkDevice: VkDevice, basicRenderPass: Long, renderImageInfo: RenderImageInfo,
+    width: Int, height: Int
+): BasicGraphicsPipeline {
     stackPush().use { stack ->
 
         val (basicDescriptorSetLayout, basicPipelineLayout) = createBasicPipelineLayout(vkDevice, stack)
 
         val ciPipelines = VkGraphicsPipelineCreateInfo.calloc(1, stack)
-        createBasicGraphicsPipeline(vkDevice, basicRenderPass, basicPipelineLayout, renderImageInfo, ciPipelines[0], stack)
+        createBasicGraphicsPipeline(
+            vkDevice, basicRenderPass, basicPipelineLayout, renderImageInfo, ciPipelines[0], width, height, stack
+        )
 
         val logger = getLogger("Vulkan")
         val pPipelines = stack.callocLong(ciPipelines.capacity())
@@ -52,7 +57,7 @@ fun createBasicGraphicsPipeline(vkDevice: VkDevice, basicRenderPass: Long, rende
 
 fun createBasicGraphicsPipeline(
     vkDevice: VkDevice, basicRenderPass: Long, basicPipelineLayout: Long, renderImageInfo: RenderImageInfo,
-    ciPipeline: VkGraphicsPipelineCreateInfo, stack: MemoryStack
+    ciPipeline: VkGraphicsPipelineCreateInfo, width: Int, height: Int, stack: MemoryStack
 ) {
     ciPipeline.sType(VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
     ciPipeline.flags(0)
@@ -60,12 +65,11 @@ fun createBasicGraphicsPipeline(
     ciPipeline.pVertexInputState(createBasicVertexInputState(stack))
     ciPipeline.pInputAssemblyState(createBasicInputAssembly(stack))
     ciPipeline.pTessellationState(createTessellationState(stack))
-    ciPipeline.pViewportState(createBasicViewportState(stack))
+    ciPipeline.pViewportState(createBasicViewportState(stack, width, height))
     ciPipeline.pRasterizationState(createBasicRasterizationState(stack))
     ciPipeline.pMultisampleState(createBasicMultisampleState(renderImageInfo, stack))
     ciPipeline.pDepthStencilState(createBasicDepthStencilState(stack))
     ciPipeline.pColorBlendState(createBasicColorBlendState(stack))
-    ciPipeline.pDynamicState(createBasicDynamicState(stack))
     ciPipeline.layout(basicPipelineLayout)
     ciPipeline.renderPass(basicRenderPass)
     ciPipeline.subpass(0)
@@ -77,12 +81,4 @@ fun createTessellationState(stack: MemoryStack): VkPipelineTessellationStateCrea
     ciTess.patchControlPoints(3)
 
     return ciTess
-}
-
-fun createBasicDynamicState(stack: MemoryStack): VkPipelineDynamicStateCreateInfo {
-    val ciDynamic = VkPipelineDynamicStateCreateInfo.calloc(stack)
-    ciDynamic.sType(VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO)
-    ciDynamic.pDynamicStates(stack.ints(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR))
-
-    return ciDynamic
 }

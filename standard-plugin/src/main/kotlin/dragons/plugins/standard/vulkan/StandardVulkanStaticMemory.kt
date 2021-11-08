@@ -2,6 +2,7 @@ package dragons.plugins.standard.vulkan
 
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
+import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.vertex.BasicVertex
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.claim.BufferMemoryClaim
@@ -16,16 +17,9 @@ const val MAX_NUM_INDIRECT_DRAW_CALLS = 100_000
 
 class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
 
-    private val getTransformationMatrixDeviceBuffer = CompletableDeferred<VulkanBufferRange>()
-
-    private val getTransformationMatrixStagingBuffer = CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>()
-    private val getIndirectDrawingStagingBuffer = CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>()
-
-    private val getVertexBuffer = CompletableDeferred<VulkanBufferRange>()
-    private val getIndexBuffer = CompletableDeferred<VulkanBufferRange>()
-
     override fun claimStaticMemory(pluginInstance: PluginInstance, agent: VulkanStaticMemoryUser.Agent) {
 
+        val preGraphics = (pluginInstance.state as StandardPluginState).preGraphics
         val vertexFrequency = 10
 
         // Testing terrain vertex buffer
@@ -35,7 +29,7 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
             dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
             dstPipelineStageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
             queueFamily = agent.queueManager.generalQueueFamily,
-            storeResult = getVertexBuffer
+            storeResult = preGraphics.vertexBuffer
         ) { destBuffer ->
             val vertices = BasicVertex.createArray(destBuffer, 0, (vertexFrequency * vertexFrequency).toLong())
             for (indexZ in 0 until vertexFrequency) {
@@ -69,7 +63,7 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
             dstAccessMask = VK_ACCESS_INDEX_READ_BIT,
             dstPipelineStageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
             queueFamily = agent.queueManager.generalQueueFamily,
-            storeResult = getIndexBuffer
+            storeResult = preGraphics.indexBuffer
         ) { destBuffer ->
             for (lowZ in 0 until vertexFrequency - 1) {
                 val highZ = lowZ + 1
@@ -92,25 +86,28 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
             }
         })
 
-        // Transformation matrix buffer
+        // Transformation matrix buffers
         agent.claims.buffers.add(BufferMemoryClaim(
             size = 4 * 16 * MAX_NUM_TRANSFORMATION_MATRICES,
             usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             queueFamily = agent.queueManager.generalQueueFamily,
-            storeResult = getTransformationMatrixDeviceBuffer,
+            storeResult = preGraphics.transformationMatrixDeviceBuffer,
             prefill = null
         ))
         agent.claims.stagingBuffers.add(StagingBufferMemoryClaim(
             size = 4 * 16 * MAX_NUM_TRANSFORMATION_MATRICES,
             queueFamily = agent.queueManager.generalQueueFamily,
-            storeResult = getTransformationMatrixStagingBuffer
+            storeResult = preGraphics.transformationMatrixStagingBuffer
         ))
 
         // Indirect drawing buffer
         agent.claims.stagingBuffers.add(StagingBufferMemoryClaim(
             size = VkDrawIndexedIndirectCommand.SIZEOF * MAX_NUM_INDIRECT_DRAW_CALLS,
             queueFamily = agent.queueManager.generalQueueFamily,
-            storeResult = getIndirectDrawingStagingBuffer
+            storeResult = preGraphics.indirectDrawingBuffer
+        ))
+        agent.claims.stagingBuffers.add(StagingBufferMemoryClaim(
+            size = 4, queueFamily = agent.queueManager.generalQueueFamily, storeResult = preGraphics.indirectDrawCountBuffer
         ))
     }
 }

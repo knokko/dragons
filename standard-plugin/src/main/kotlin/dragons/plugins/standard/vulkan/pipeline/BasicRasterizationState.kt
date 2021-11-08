@@ -2,19 +2,30 @@ package dragons.plugins.standard.vulkan.pipeline
 
 import dragons.vulkan.RenderImageInfo
 import org.lwjgl.system.MemoryStack
+import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
-import org.lwjgl.vulkan.VkPipelineMultisampleStateCreateInfo
-import org.lwjgl.vulkan.VkPipelineRasterizationStateCreateInfo
-import org.lwjgl.vulkan.VkPipelineViewportStateCreateInfo
 
-fun createBasicViewportState(stack: MemoryStack): VkPipelineViewportStateCreateInfo {
+fun createBasicViewportState(stack: MemoryStack, width: Int, height: Int): VkPipelineViewportStateCreateInfo {
+    val viewports = VkViewport.calloc(1, stack)
+    val viewport = viewports[0]
+    viewport.x(0f)
+    viewport.y(0f)
+    viewport.width(width.toFloat())
+    viewport.height(height.toFloat())
+    viewport.minDepth(0f)
+    viewport.maxDepth(1f)
+
+    val scissors = VkRect2D.calloc(1, stack)
+    val scissor = scissors[0]
+    scissor.offset { it.set(0, 0) }
+    scissor.extent { it.set(width, height) }
+
     val ciViewport = VkPipelineViewportStateCreateInfo.calloc(stack)
     ciViewport.sType(VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO)
-    // We will use a dynamic viewport and scissor
     ciViewport.viewportCount(1)
-    ciViewport.pViewports(null)
+    ciViewport.pViewports(viewports)
     ciViewport.scissorCount(1)
-    ciViewport.pScissors(null)
+    ciViewport.pScissors(scissors)
 
     return ciViewport
 }

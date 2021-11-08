@@ -22,12 +22,13 @@ class StandardMainMenu: MainMenuManager {
         while (numIterationsLeft > 0) {
             val eyeMatrices = gameState.vrManager.prepareRender()
             if (eyeMatrices != null) {
+
                 val (leftEyeMatrix, rightEyeMatrix) = eyeMatrices
+                gameState.graphics.resolveHelper.resolve(gameState.graphics.vkDevice, gameState.graphics.queueManager, ehm)
             } else {
                 // TODO Uh ooh
             }
 
-            gameState.graphics.resolveHelper.resolve(gameState.graphics.vkDevice, gameState.graphics.queueManager, ehm)
             gameState.vrManager.submitFrames()
 
             numIterationsLeft--

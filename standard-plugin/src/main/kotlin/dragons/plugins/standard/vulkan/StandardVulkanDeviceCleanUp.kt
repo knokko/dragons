@@ -5,6 +5,7 @@ import dragons.plugin.interfaces.vulkan.VulkanDeviceDestructionListener
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.pipeline.destroyBasicGraphicsPipeline
 import kotlinx.coroutines.runBlocking
+import org.lwjgl.vulkan.VK12.vkDestroyFramebuffer
 import org.lwjgl.vulkan.VK12.vkDestroyRenderPass
 import org.slf4j.LoggerFactory.getLogger
 
@@ -17,15 +18,23 @@ class StandardVulkanDeviceCleanUp: VulkanDeviceDestructionListener {
         runBlocking {
             val state = pluginInstance.state as StandardPluginState
             val logger = getLogger("Vulkan")
-            if (state.hasBasicGraphicsPipeline()) {
+            if (state.hasGraphics()) {
+                val graphicsState = state.graphics
+
                 logger.info("Destroying basic graphics pipeline...")
-                destroyBasicGraphicsPipeline(agent.vulkanDevice, state.basicGraphicsPipeline.await())
+                destroyBasicGraphicsPipeline(agent.vulkanDevice, graphicsState.basicGraphicsPipeline)
                 logger.info("Destroyed basic graphics pipeline")
-            }
-            if (state.hasBasicRenderPass()) {
+
                 logger.info("Destroying basic render pass...")
-                vkDestroyRenderPass(agent.vulkanDevice, state.basicRenderPass.await(), null)
+                vkDestroyRenderPass(agent.vulkanDevice, graphicsState.basicRenderPass, null)
                 logger.info("Destroyed basic render pass")
+
+                logger.info("Destroying basic framebuffers...")
+                vkDestroyFramebuffer(agent.vulkanDevice, graphicsState.basicLeftFramebuffer, null)
+                vkDestroyFramebuffer(agent.vulkanDevice, graphicsState.basicRightFramebuffer, null)
+                logger.info("Destroyed basic framebuffers")
+
+                // TODO Destroy the command resources
             }
         }
     }

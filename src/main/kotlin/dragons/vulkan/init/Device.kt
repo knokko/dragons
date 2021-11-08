@@ -361,7 +361,7 @@ fun createLogicalDevice(
             vkInstance, physicalDevice, device, renderImageInfo,
             populateResult.enabledExtensions, populateResult.enabledFeatures10,
             populateResult.enabledFeatures11, populateResult.enabledFeatures12,
-            queueManager, scope
+            queueManager, vrManager, scope
         )
         pluginManager.getImplementations(VulkanDeviceCreationListener::class).forEach { pluginPair ->
             pluginPair.first.afterVulkanDeviceCreation(pluginPair.second, eventAgent)
