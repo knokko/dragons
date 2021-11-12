@@ -39,7 +39,7 @@ suspend fun packMemoryClaims(
     }
 
     logger.info("Scope $description: The combined temporary staging buffer size is ${combinedStagingPlacements.totalSize / 1000_000} MB")
-    logger.info("Scope $description: Buffer sizes are ${familyClaimsMap.values.map { it.deviceBufferSize / 1000_000}} MB")
+    logger.info("Scope $description: Buffer sizes are ${combinedStagingPlacements.queueFamilies.values.map { it.deviceBufferSize / 1000_000}} MB")
     logger.info("Scope $description: Combined device buffer usage is $combinedDeviceBufferUsage")
 
     return stackPush().use { stack ->
@@ -47,7 +47,7 @@ suspend fun packMemoryClaims(
             logger = logger, stack = stack, vkDevice = vkDevice, queueManager = queueManager,
             groups = familyClaimsMap, memoryInfo = memoryInfo,
 
-            getSize = { claims -> claims.persistentStagingSize },
+            getSize = { claims, _ -> claims.persistentStagingSize },
             bufferUsage = combinedStagingBufferUsage,
             description = "Scope $description: persistent staging",
             // Note: the Vulkan specification guarantees that at least 1 memory heap has these properties
@@ -69,7 +69,7 @@ suspend fun packMemoryClaims(
             logger = logger, stack = stack, vkDevice = vkDevice, queueManager = queueManager,
             groups = familyClaimsMap, memoryInfo = memoryInfo,
 
-            getSize = { claims -> claims.deviceBufferSize },
+            getSize = { _, queueFamily -> combinedStagingPlacements.queueFamilies[queueFamily]!!.deviceBufferSize },
             bufferUsage = combinedDeviceBufferUsage,
             description = "Scope $description: device",
             requiredMemoryPropertyFlags = 0,

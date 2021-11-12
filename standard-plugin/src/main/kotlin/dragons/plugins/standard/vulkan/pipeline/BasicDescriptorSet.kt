@@ -112,7 +112,6 @@ fun createBasicDescriptorSet(
         val biStorages = VkDescriptorBufferInfo.calloc(1, stack)
         val biStorage = biStorages[0]
         biStorage.buffer(transformationMatrixDeviceBuffer.buffer.handle)
-        // TODO Ensure that offset has the right alignment...
         biStorage.offset(transformationMatrixDeviceBuffer.offset)
         biStorage.range(transformationMatrixDeviceBuffer.size)
 

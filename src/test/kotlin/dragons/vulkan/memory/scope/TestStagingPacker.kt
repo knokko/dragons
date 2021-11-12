@@ -11,17 +11,17 @@ class TestStagingPacker {
     @Test
     fun testDetermineStagingPlacements() {
         val prefillBuffer1 = BufferMemoryClaim(
-            100, 0, 5, 5, null, CompletableDeferred()
+            100, 0, 5, 5, 5, null, CompletableDeferred()
         ) {}
         val prefillBuffer2 = BufferMemoryClaim(
-            200, 0, 6, 6, null, CompletableDeferred()
+            200, 0, 6, 6, 3, null, CompletableDeferred()
         ) {}
 
         val uninitBuffer1 = BufferMemoryClaim(
-            300, 0, 0, 0, null, CompletableDeferred(), null
+            300, 0, 0, 0, 3, null, CompletableDeferred(), null
         )
         val uninitBuffer2 = BufferMemoryClaim(
-            400, 0, 0, 0, null, CompletableDeferred(), null
+            400, 0, 0, 0, 5, null, CompletableDeferred(), null
         )
 
         val staging1 = StagingBufferMemoryClaim(500, null, 0, CompletableDeferred())
@@ -51,15 +51,15 @@ class TestStagingPacker {
         ))
 
         val expectedPlacements = PlacedQueueFamilyClaims(
-            prefilledBufferClaims = listOf(Placed(prefillBuffer1, 0), Placed(prefillBuffer2, 100)),
+            prefilledBufferClaims = listOf(Placed(prefillBuffer1, 0), Placed(prefillBuffer2, 102)),
             prefilledBufferStagingOffset = 0,
             prefilledBufferDeviceOffset = 0,
-            uninitializedBufferClaims = listOf(Placed(uninitBuffer1, 0), Placed(uninitBuffer2, 300)),
-            uninitializedBufferDeviceOffset = 300,
+            uninitializedBufferClaims = listOf(Placed(uninitBuffer1, 1), Placed(uninitBuffer2, 303)),
+            uninitializedBufferDeviceOffset = 302,
             stagingBufferClaims = listOf(Placed(staging1, 0), Placed(staging2, 500)),
             stagingBufferOffset = 0,
-            prefilledImageClaims = listOf(Placed(prefillImage1, 0), Placed(prefillImage2, 20_000)),
-            prefilledImageStagingOffset = 300,
+            prefilledImageClaims = listOf(Placed(prefillImage1, 2), Placed(prefillImage2, 20_002)),
+            prefilledImageStagingOffset = 302,
             uninitializedImageClaims = listOf(uninitImage1, uninitImage2),
         )
 

@@ -22,13 +22,7 @@ internal fun getUsedQueueFamilies(allClaims: Collection<MemoryScopeClaims>): Set
 }
 
 internal class QueueFamilyClaims(val claims: CombinedMemoryScopeClaims) {
-    val deviceBufferSize: Long
     val persistentStagingSize: Long = claims.stagingBufferClaims.sumOf { it.size.toLong() }
-
-    init {
-        val prefilledBufferSize = claims.prefilledBufferClaims.sumOf { it.size.toLong() }
-        deviceBufferSize = prefilledBufferSize + claims.uninitializedBufferClaims.sumOf { it.size.toLong() }
-    }
 
     override fun equals(other: Any?): Boolean {
         return if (other is QueueFamilyClaims) {

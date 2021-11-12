@@ -100,7 +100,7 @@ internal class FamilyCommands(
     fun performStagingCopy(
         tempStagingBuffer: Long, stagingPlacementMap: Map<QueueFamily?, StagingPlacements>,
         claimsToImageMap: Map<ImageMemoryClaim, VulkanImage>, imageClaimFilter: (ImageMemoryClaim) -> Boolean,
-        queueFamilyToBufferMap: Map<QueueFamily?, VulkanBuffer>,
+        shouldDoBufferCopies: Boolean, queueFamilyToBufferMap: Map<QueueFamily?, VulkanBuffer>,
         ownQueueFamily: QueueFamily, description: String
     ) {
         stackPush().use { stack ->
@@ -119,14 +119,15 @@ internal class FamilyCommands(
             val imageBarriers = VkImageMemoryBarrier.calloc(1, stack)
 
             for ((queueFamily, placements) in stagingPlacementMap) {
-                if (placements.totalBufferSize > 0L) {
+                if (placements.stagingBufferSize > 0L && shouldDoBufferCopies) {
 
                     val copyRegion = bufferCopyRegions[0]
                     copyRegion.srcOffset(placements.externalOffset + placements.internalPlacements.prefilledBufferStagingOffset)
                     copyRegion.dstOffset(placements.internalPlacements.prefilledBufferDeviceOffset)
-                    copyRegion.size(placements.totalBufferSize)
+                    copyRegion.size(placements.stagingBufferSize)
 
                     val deviceBuffer = queueFamilyToBufferMap[queueFamily]!!
+
                     vkCmdCopyBuffer(copyBuffer, tempStagingBuffer, deviceBuffer.handle, bufferCopyRegions)
 
                     // If another exclusive queue family needs the buffer, we need to release our ownership
@@ -308,12 +309,12 @@ internal class FamilyCommands(
 
             vkEndCommandBuffer(finalTransitionBuffer)
 
-            val siTransfers = VkSubmitInfo.calloc(1, stack)
-            val siTransfer = siTransfers[0]
-            siTransfer.sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
-            siTransfer.pCommandBuffers(stack.pointers(finalTransitionBuffer.address()))
+            val siTransitions = VkSubmitInfo.calloc(1, stack)
+            val siTransition = siTransitions[0]
+            siTransition.sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
+            siTransition.pCommandBuffers(stack.pointers(finalTransitionBuffer.address()))
 
-            ownQueueFamily.getRandomBackgroundQueue().submit(siTransfers, fence)
+            ownQueueFamily.getRandomBackgroundQueue().submit(siTransitions, fence)
         }
     }
 
@@ -447,14 +448,14 @@ internal class FamiliesCommands(
             familyMap[queueManager.generalQueueFamily]!!.performStagingCopy(
                 tempStagingBuffer, stagingPlacements.queueFamilies, claimsToImageMap, {
                         claim -> requiresGraphicsFamily(claim)
-                }, queueFamilyToBufferMap, queueManager.generalQueueFamily, description
+                }, false, queueFamilyToBufferMap, queueManager.generalQueueFamily, description
             )
 
             // The transfer queue family should be used for everything else.
             familyMap[queueManager.getTransferQueueFamily()]!!.performStagingCopy(
                 tempStagingBuffer, stagingPlacements.queueFamilies, claimsToImageMap, {
                         claim -> !requiresGraphicsFamily(claim)
-                }, queueFamilyToBufferMap, queueManager.getTransferQueueFamily(), description
+                }, true, queueFamilyToBufferMap, queueManager.getTransferQueueFamily(), description
             )
 
             // Note: we use a Set because the general queue family *could* also be the transfer queue family

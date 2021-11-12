@@ -19,17 +19,17 @@ import org.slf4j.LoggerFactory.getLogger
 internal fun createCombinedBuffers(
     logger: Logger, stack: MemoryStack, vkDevice: VkDevice, queueManager: QueueManager,
     groups: Map<QueueFamily?, QueueFamilyClaims>, memoryInfo: MemoryInfo,
-    getSize: (QueueFamilyClaims) -> Long, bufferUsage: Int, description: String,
+    getSize: (QueueFamilyClaims, QueueFamily?) -> Long, bufferUsage: Int, description: String,
     requiredMemoryPropertyFlags: Int, desiredMemoryPropertyFlags: Int, neutralMemoryPropertyFlags: Int
 ): Triple<Long?, Map<QueueFamily?, VulkanBuffer>, Map<QueueFamily?, Long>> {
     logger.info("Creating $description buffers...")
 
-    val combinedBuffers = groups.entries.filter { (_, claims) ->
-        getSize(claims) > 0
+    val combinedBuffers = groups.entries.filter { (queueFamily, claims) ->
+        getSize(claims, queueFamily) > 0
     }.map { (queueFamily, claims) ->
         val ciBuffer = VkBufferCreateInfo.calloc(stack)
         ciBuffer.sType(VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
-        ciBuffer.size(getSize(claims))
+        ciBuffer.size(getSize(claims, queueFamily))
         ciBuffer.usage(bufferUsage)
         if (queueFamily == null && queueManager.allQueueFamilies.size > 1) {
             ciBuffer.sharingMode(VK_SHARING_MODE_CONCURRENT)

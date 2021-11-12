@@ -1,7 +1,6 @@
 package dragons.vulkan.memory.scope
 
 import dragons.util.nextMultipleOf
-import dragons.vulkan.memory.claim.*
 import dragons.vulkan.memory.claim.Placed
 import dragons.vulkan.memory.claim.PlacedQueueFamilyClaims
 import dragons.vulkan.memory.claim.QueueFamilyClaims
@@ -11,7 +10,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import org.lwjgl.system.MemoryStack
-import org.lwjgl.system.MemoryUtil
 import org.lwjgl.system.MemoryUtil.memByteBuffer
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkDevice
@@ -29,7 +27,13 @@ internal class StagingPlacements(
     /**
      * The total number of bytes that are reserved for this queue family in the shared staging buffer.
      */
-    val totalBufferSize: Long,
+    val stagingBufferSize: Long,
+    /**
+     * The size (in bytes) that the device local buffer will need.
+     *
+     * Note: this field doesn't really belong in this class, but it is convenient to put it here (at least for now).
+     */
+    val deviceBufferSize: Long,
     val internalPlacements: PlacedQueueFamilyClaims
 )
 
@@ -60,9 +64,16 @@ internal fun determineStagingPlacements(
 
         var prefilledBufferFamilyOffset = 0L
         val prefilledBufferClaims = claims.prefilledBufferClaims.map { claim ->
-            val claimOffset = prefilledBufferFamilyOffset
-            prefilledBufferFamilyOffset += claim.size
-            sharedOffset += claim.size
+            /**
+             * The final offset for the claim will be claimOffset + prefilledBufferDeviceOffset. But, since
+             * prefilledBufferDeviceOffset is always 0, this is simply claimOffset.
+             *
+             * We need to ensure that claimOffset is a multiple of the alignment of the claim.
+             */
+            val gapSize = nextMultipleOf(claim.alignment.toLong(), prefilledBufferFamilyOffset) - prefilledBufferFamilyOffset
+            val claimOffset = prefilledBufferFamilyOffset + gapSize
+            prefilledBufferFamilyOffset += claim.size + gapSize
+            sharedOffset += claim.size + gapSize
             Placed(claim, claimOffset)
         }
         val totalPrefilledBufferSize = prefilledBufferFamilyOffset
@@ -81,6 +92,17 @@ internal fun determineStagingPlacements(
 
         var uninitializedBufferFamilyOffset = 0L
         val uninitializedBufferClaims = claims.uninitializedBufferClaims.map { claim ->
+            /*
+             * The final device offset for the claim will be claimOffset + uninitializedBufferDeviceOffset,
+             * which is equal to claimOffset + totalPrefilledBufferSize.
+             *
+             * We need to ensure that this is a multiple of the claim's alignment.
+             */
+            val idealClaimFinalOffset = uninitializedBufferFamilyOffset + totalPrefilledBufferSize
+            val requiredClaimFinalOffset = nextMultipleOf(claim.alignment.toLong(), idealClaimFinalOffset)
+            val gapSize = requiredClaimFinalOffset - idealClaimFinalOffset
+            uninitializedBufferFamilyOffset += gapSize
+
             val claimOffset = uninitializedBufferFamilyOffset
             uninitializedBufferFamilyOffset += claim.size
             Placed(claim, claimOffset)
@@ -108,7 +130,8 @@ internal fun determineStagingPlacements(
 
         familyPlacementMap[queueFamily] = StagingPlacements(
             externalOffset = externalOffset,
-            totalBufferSize = familyStagingSize,
+            stagingBufferSize = familyStagingSize,
+            deviceBufferSize = uninitializedBufferFamilyOffset + totalPrefilledBufferSize,
             internalPlacements = placedClaims
         )
     }

@@ -129,6 +129,8 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
         agent.claims.buffers.add(BufferMemoryClaim(
             size = 64 + 12,
             usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT or VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            // TODO Query this from physical device limits
+            alignment = 64,
             queueFamily = agent.queueManager.generalQueueFamily,
             storeResult = preGraphics.cameraDeviceBuffer,
             prefill = null
@@ -143,6 +145,8 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
         agent.claims.buffers.add(BufferMemoryClaim(
             size = 4 * 16 * MAX_NUM_TRANSFORMATION_MATRICES,
             usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            // TODO Query this from physical device limits
+            alignment = 16,
             queueFamily = agent.queueManager.generalQueueFamily,
             storeResult = preGraphics.transformationMatrixDeviceBuffer,
             prefill = null
