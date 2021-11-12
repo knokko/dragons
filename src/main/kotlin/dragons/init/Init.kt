@@ -51,6 +51,7 @@ fun main(args: Array<String>) {
 
         val (staticGameState, priorityProblem) = runBlocking {
             val staticGameState = prepareStaticGameState(initProps, this)
+            staticGameState.vrManager.setGraphicsState(staticGameState.graphics)
             logger.info("Finished preparing the static game state")
 
             val mainMenuCandidates = staticGameState.pluginManager.getImplementations(MainMenuManager::class).map { (manager, instance) ->
@@ -100,6 +101,7 @@ fun main(args: Array<String>) {
         }
 
         logger.info("Start with shutting down the game")
+        staticGameState.vrManager.destroy()
         val staticGraphics = staticGameState.graphics
         staticGraphics.memoryScope.destroy(staticGraphics.vkDevice)
         staticGraphics.resolveHelper.destroy(staticGraphics.vkDevice)
@@ -108,7 +110,6 @@ fun main(args: Array<String>) {
             staticGameState.pluginManager
         )
         destroyVulkanInstance(staticGraphics.vkInstance, staticGameState.pluginManager)
-        staticGameState.vrManager.destroy()
         staticGameState.pluginManager.getImplementations(ExitListener::class).forEach {
                 listenerPair -> listenerPair.first.onExit(listenerPair.second)
         }

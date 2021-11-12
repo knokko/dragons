@@ -1,20 +1,23 @@
 package dragons.vr
 
+import dragons.state.StaticGraphicsState
 import org.joml.Matrix4f
-import org.lwjgl.openvr.HmdMatrix34
-import org.lwjgl.openvr.HmdMatrix44
-import org.lwjgl.openvr.TrackedDevicePose
+import org.lwjgl.openvr.*
 import org.lwjgl.openvr.VR.*
 import org.lwjgl.openvr.VRCompositor.*
 import org.lwjgl.openvr.VRSystem.*
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memAddress
 import org.lwjgl.system.MemoryUtil.memUTF8
+import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkPhysicalDevice
 import org.slf4j.LoggerFactory.getLogger
 import java.lang.Thread.sleep
 
 class OpenVrManager: VrManager {
+
+    private lateinit var graphicsState: StaticGraphicsState
+
     override fun getVulkanInstanceExtensions(availableExtensions: Set<String>): Set<String> {
         val extensionStringSize = VRCompositor_GetVulkanInstanceExtensionsRequired(null)
         val logger = getLogger("VR")
@@ -80,6 +83,10 @@ class OpenVrManager: VrManager {
         }
     }
 
+    override fun setGraphicsState(graphicsState: StaticGraphicsState) {
+        this.graphicsState = graphicsState
+    }
+
     private fun vrToJomlMatrix(vrMatrix: HmdMatrix34): Matrix4f {
         return Matrix4f(
             vrMatrix.m(0), vrMatrix.m(4), vrMatrix.m(8), 0f,
@@ -136,11 +143,43 @@ class OpenVrManager: VrManager {
     }
 
     override fun submitFrames() {
-        TODO("Not yet implemented")
+        stackPush().use { stack ->
+            val queue = graphicsState.queueManager.generalQueueFamily.getRandomPriorityQueue()
+
+            val vulkanTexture = VRVulkanTextureData.calloc(stack)
+            // Fill image in later
+            vulkanTexture.m_pDevice(graphicsState.vkDevice.address())
+            vulkanTexture.m_pPhysicalDevice(graphicsState.vkPhysicalDevice.address())
+            vulkanTexture.m_pInstance(graphicsState.vkInstance.address())
+            vulkanTexture.m_pQueue(queue.handle.address())
+            vulkanTexture.m_nQueueFamilyIndex(graphicsState.queueManager.generalQueueFamily.index)
+            vulkanTexture.m_nWidth(getWidth())
+            vulkanTexture.m_nHeight(getHeight())
+            vulkanTexture.m_nFormat(VK_FORMAT_R8G8B8A8_SRGB)
+            vulkanTexture.m_nSampleCount(VK_SAMPLE_COUNT_1_BIT)
+
+            val vrTexture = Texture.calloc(stack)
+            vrTexture.handle(vulkanTexture.address())
+            vrTexture.eType(ETextureType_TextureType_Vulkan)
+            vrTexture.eColorSpace(EColorSpace_ColorSpace_Auto)
+
+            synchronized(queue) {
+                vulkanTexture.m_nImage(graphicsState.coreMemory.leftResolveImage.handle)
+                val leftResult = VRCompositor_Submit(EVREye_Eye_Left, vrTexture, null, EVRSubmitFlags_Submit_Default)
+
+                vulkanTexture.m_nImage(graphicsState.coreMemory.rightResolveImage.handle)
+                val rightResult = VRCompositor_Submit(EVREye_Eye_Right, vrTexture, null, EVRSubmitFlags_Submit_Default)
+
+                if (leftResult != 0 || rightResult != 0) {
+                    println("Submit results are ($leftResult, $rightResult)")
+                }
+            }
+        }
     }
 
     override fun destroy() {
         getLogger("VR").info("Shutting down OpenVR")
+        vkDeviceWaitIdle(graphicsState.vkDevice)
         VR_ShutdownInternal()
     }
 }

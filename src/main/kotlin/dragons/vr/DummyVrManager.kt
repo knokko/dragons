@@ -1,5 +1,6 @@
 package dragons.vr
 
+import dragons.state.StaticGraphicsState
 import org.joml.Math.toRadians
 import org.joml.Matrix4f
 import org.lwjgl.vulkan.VkPhysicalDevice
@@ -23,6 +24,10 @@ class DummyVrManager(
     // These values are pretty arbitrary, but some decision had to be made
     override fun getWidth() = 1600
     override fun getHeight() = 900
+
+    override fun setGraphicsState(graphicsState: StaticGraphicsState) {
+        // The dummy VR manager doesn't need the graphics state
+    }
 
     private var lastRenderTime: Long? = null
 

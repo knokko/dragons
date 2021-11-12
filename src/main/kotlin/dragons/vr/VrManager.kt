@@ -1,5 +1,6 @@
 package dragons.vr
 
+import dragons.state.StaticGraphicsState
 import org.joml.Matrix4f
 import org.lwjgl.vulkan.VkPhysicalDevice
 
@@ -13,6 +14,11 @@ interface VrManager {
     fun getWidth(): Int
 
     fun getHeight(): Int
+
+    /**
+     * Should only be used by the game core
+     */
+    fun setGraphicsState(graphicsState: StaticGraphicsState)
 
     /**
      * Blocks the current thread until the right moment to start rendering the next frame. It will return a pair

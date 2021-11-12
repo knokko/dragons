@@ -39,7 +39,7 @@ class StandardMainMenu: MainMenuManager {
         }
 
         // TODO Add more iterations (and eventually loop indefinitely)
-        var numIterationsLeft = 1
+        var numIterationsLeft = 1000
 
         while (numIterationsLeft > 0) {
             val eyeMatrices = gameState.vrManager.prepareRender()
@@ -58,8 +58,7 @@ class StandardMainMenu: MainMenuManager {
                     gameState.graphics.queueManager.generalQueueFamily.getRandomPriorityQueue().submit(pSubmits, VK_NULL_HANDLE)
                 }
 
-                gameState.graphics.resolveHelper.resolve(gameState.graphics.vkDevice, gameState.graphics.queueManager, renderFinishedSemaphore, true)
-                println("Rendered main menu")
+                gameState.graphics.resolveHelper.resolve(gameState.graphics.vkDevice, gameState.graphics.queueManager, renderFinishedSemaphore, false)
             } else {
                 println("Can't render main menu")
             }
