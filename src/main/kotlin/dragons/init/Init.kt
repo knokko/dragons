@@ -222,6 +222,8 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
             rightSourceImage = coreStaticMemory.rightColorImage,
             leftResolvedImage = coreStaticMemory.leftResolveImage,
             rightResolvedImage = coreStaticMemory.rightResolveImage,
+            screenshotStagingBuffer = coreStaticMemory.screenshotBuffer.second,
+            screenshotHostBuffer = coreStaticMemory.screenshotBuffer.first,
             vkDevice = vulkanDevice,
             queueManager = queueManager,
             renderImageInfo = renderImageInfo

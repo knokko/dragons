@@ -58,7 +58,7 @@ class StandardMainMenu: MainMenuManager {
                     gameState.graphics.queueManager.generalQueueFamily.getRandomPriorityQueue().submit(pSubmits, VK_NULL_HANDLE)
                 }
 
-                gameState.graphics.resolveHelper.resolve(gameState.graphics.vkDevice, gameState.graphics.queueManager, renderFinishedSemaphore)
+                gameState.graphics.resolveHelper.resolve(gameState.graphics.vkDevice, gameState.graphics.queueManager, renderFinishedSemaphore, true)
                 println("Rendered main menu")
             } else {
                 println("Can't render main menu")

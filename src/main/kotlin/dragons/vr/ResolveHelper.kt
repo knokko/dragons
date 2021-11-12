@@ -1,23 +1,33 @@
 package dragons.vr
 
 import dragons.vulkan.RenderImageInfo
+import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.queue.QueueManager
 import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
+import java.awt.Color
+import java.awt.image.BufferedImage
+import java.awt.image.BufferedImage.TYPE_INT_ARGB
+import java.io.File
+import java.nio.ByteBuffer
+import javax.imageio.ImageIO
 
 class ResolveHelper(
     private val leftSourceImage: VulkanImage,
     private val rightSourceImage: VulkanImage,
     val leftResolvedImage: VulkanImage,
     val rightResolvedImage: VulkanImage,
+    val screenshotStagingBuffer: VulkanBufferRange,
+    val screenshotHostBuffer: ByteBuffer,
     vkDevice: VkDevice, queueManager: QueueManager, renderImageInfo: RenderImageInfo
 ) {
 
     private val resolveCommandPool: Long
     private val resolveCommandBuffer: VkCommandBuffer
+    private val screenshotCommandBuffer: VkCommandBuffer
     private val fence: Long
 
     init {
@@ -38,14 +48,15 @@ class ResolveHelper(
             aiBuffer.`sType$Default`()
             aiBuffer.commandPool(resolveCommandPool)
             aiBuffer.level(VK_COMMAND_BUFFER_LEVEL_PRIMARY)
-            aiBuffer.commandBufferCount(1)
+            aiBuffer.commandBufferCount(2)
 
-            val pBuffer = stack.callocPointer(1)
+            val pBuffer = stack.callocPointer(2)
             assertVkSuccess(
                 vkAllocateCommandBuffers(vkDevice, aiBuffer, pBuffer),
                 "AllocateCommandBuffers", "resolve eye images"
             )
             this.resolveCommandBuffer = VkCommandBuffer(pBuffer[0], vkDevice)
+            this.screenshotCommandBuffer = VkCommandBuffer(pBuffer[1], vkDevice)
 
             val biCommand = VkCommandBufferBeginInfo.calloc(stack)
             biCommand.`sType$Default`()
@@ -176,6 +187,29 @@ class ResolveHelper(
                 "EndCommandBuffer", "resolve eye images"
             )
 
+            assertVkSuccess(
+                vkBeginCommandBuffer(this.screenshotCommandBuffer, biCommand),
+                "BeginCommandBuffer", "screenshot"
+            )
+
+            val screenshotRegions = VkBufferImageCopy.calloc(1, stack)
+            val screenshotRegion = screenshotRegions[0]
+            screenshotRegion.bufferOffset(screenshotStagingBuffer.offset)
+            screenshotRegion.bufferRowLength(0)
+            screenshotRegion.bufferImageHeight(0)
+            screenshotRegion.imageSubresource(::fillSrl)
+            screenshotRegions.imageOffset { it.set(0, 0, 0) }
+            screenshotRegion.imageExtent { it.set(leftResolvedImage.width, leftResolvedImage.height, 1) }
+
+            vkCmdCopyImageToBuffer(
+                screenshotCommandBuffer, leftResolvedImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                screenshotStagingBuffer.buffer.handle, screenshotRegions
+            )
+
+            assertVkSuccess(
+                vkEndCommandBuffer(screenshotCommandBuffer), "EndCommandBuffer", "screenshot"
+            )
+
             val ciFence = VkFenceCreateInfo.calloc(stack)
             ciFence.`sType$Default`()
 
@@ -188,7 +222,7 @@ class ResolveHelper(
         }
     }
 
-    fun resolve(vkDevice: VkDevice, queueManager: QueueManager, waitSemaphore: Long) {
+    fun resolve(vkDevice: VkDevice, queueManager: QueueManager, waitSemaphore: Long, takeScreenshot: Boolean) {
         stackPush().use { stack ->
             val pSubmitInfo = VkSubmitInfo.calloc(1, stack)
             pSubmitInfo.`sType$Default`()
@@ -203,6 +237,38 @@ class ResolveHelper(
                 vkWaitForFences(vkDevice, stack.longs(this.fence), true, -1),
                 "WaitForFences", "resolve eye images"
             )
+            assertVkSuccess(
+                vkResetFences(vkDevice, stack.longs(this.fence)), "ResetFences", "resolve eye images"
+            )
+
+            if (takeScreenshot) {
+                pSubmitInfo.waitSemaphoreCount(0)
+                pSubmitInfo.pCommandBuffers(stack.pointers(screenshotCommandBuffer.address()))
+
+                queueManager.generalQueueFamily.getRandomPriorityQueue().submit(pSubmitInfo, this.fence)
+                assertVkSuccess(
+                    vkWaitForFences(vkDevice, stack.longs(this.fence), true, -1),
+                    "WaitForFences", "screenshot"
+                )
+                assertVkSuccess(
+                    vkResetFences(vkDevice, stack.longs(this.fence)), "ResetFences", "screenshot"
+                )
+
+                val screenshot = BufferedImage(leftResolvedImage.width, leftResolvedImage.height, TYPE_INT_ARGB)
+                for (x in 0 until leftResolvedImage.width) {
+                    for (y in 0 until leftResolvedImage.height) {
+                        val bufferIndex = 4 * (x + y * leftResolvedImage.width)
+                        val red = screenshotHostBuffer[bufferIndex].toInt() and 0xFF
+                        val green = screenshotHostBuffer[bufferIndex + 1].toInt() and 0xFF
+                        val blue = screenshotHostBuffer[bufferIndex + 2].toInt() and 0xFF
+                        val alpha = screenshotHostBuffer[bufferIndex + 3].toInt() and 0xFF
+                        val color = Color(red, green, blue, alpha)
+                        screenshot.setRGB(x, y, color.rgb)
+                    }
+                }
+
+                ImageIO.write(screenshot, "PNG", File("screenshot.png"))
+            }
         }
     }
 

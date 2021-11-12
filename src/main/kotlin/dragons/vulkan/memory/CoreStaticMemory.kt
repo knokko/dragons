@@ -67,7 +67,7 @@ internal fun claimStaticCoreMemory(
     }
 
     agent.claims.stagingBuffers.add(StagingBufferMemoryClaim(
-        size = 4 * width * height, queueFamily = queueManager.generalQueueFamily, storeResult = screenshotBuffer
+        size = 4 * width * height, usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueFamily = queueManager.generalQueueFamily, storeResult = screenshotBuffer
     ))
 
     return CoreStaticMemoryPending(
