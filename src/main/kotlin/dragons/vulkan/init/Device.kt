@@ -246,7 +246,6 @@ fun createLogicalDevice(
 
         val availableExtensions = extensionBufferToSet(pAvailableExtensions)
 
-
         val availableFeatures = VkPhysicalDeviceFeatures2.calloc(stack)
         availableFeatures.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2)
 
@@ -581,7 +580,7 @@ internal fun populateDeviceCreateInfo(
     }
 
     ciDevice.sType(VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO)
-    ciDevice.pNext(combinedFeatures11.address())
+    ciDevice.pNext(combinedFeatures11)
     combinedFeatures11.pNext(combinedFeatures12.address())
     if (nextChain != null) {
         combinedFeatures12.pNext(nextChain.address())

@@ -8,15 +8,16 @@ import org.lwjgl.vulkan.VkDescriptorSetLayoutCreateInfo
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkPipelineLayoutCreateInfo
 
-const val MAX_NUM_DESCRIPTOR_IMAGES = 1000
+// NOTE: This must match the sizes hardcoded in the fragment shader and tessellation evaluation shader
+const val MAX_NUM_DESCRIPTOR_IMAGES = 100
 
 fun createBasicPipelineLayout(vkDevice: VkDevice, stack: MemoryStack): Pair<Long, Long> {
     val bindings = VkDescriptorSetLayoutBinding.calloc(5, stack)
-    val ciCameraMatrix = bindings[0]
-    ciCameraMatrix.binding(0)
-    ciCameraMatrix.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-    ciCameraMatrix.descriptorCount(1)
-    ciCameraMatrix.stageFlags(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT or VK_SHADER_STAGE_FRAGMENT_BIT)
+    val ciCamera = bindings[0]
+    ciCamera.binding(0)
+    ciCamera.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+    ciCamera.descriptorCount(1)
+    ciCamera.stageFlags(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT or VK_SHADER_STAGE_FRAGMENT_BIT)
 
     val ciSampler = bindings[1]
     ciSampler.binding(1)
@@ -24,17 +25,17 @@ fun createBasicPipelineLayout(vkDevice: VkDevice, stack: MemoryStack): Pair<Long
     ciSampler.descriptorCount(1)
     ciSampler.stageFlags(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT or VK_SHADER_STAGE_FRAGMENT_BIT)
 
-    val ciColorImage = bindings[2]
-    ciColorImage.binding(2)
-    ciColorImage.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
-    ciColorImage.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
-    ciColorImage.stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT)
+    val ciColorImages = bindings[2]
+    ciColorImages.binding(2)
+    ciColorImages.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+    ciColorImages.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
+    ciColorImages.stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT)
 
-    val ciHeightImage = bindings[3]
-    ciHeightImage.binding(3)
-    ciHeightImage.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
-    ciHeightImage.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
-    ciHeightImage.stageFlags(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT or VK_SHADER_STAGE_FRAGMENT_BIT)
+    val ciHeightImages = bindings[3]
+    ciHeightImages.binding(3)
+    ciHeightImages.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+    ciHeightImages.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
+    ciHeightImages.stageFlags(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT or VK_SHADER_STAGE_FRAGMENT_BIT)
 
     val ciTransformationMatrices = bindings[4]
     ciTransformationMatrices.binding(4)

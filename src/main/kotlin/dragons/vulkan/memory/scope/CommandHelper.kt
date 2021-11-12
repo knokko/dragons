@@ -284,7 +284,7 @@ internal class FamilyCommands(
                         imageBarrier.sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
                         imageBarrier.srcAccessMask(0)
                         imageBarrier.dstAccessMask(claim.accessMask!!)
-                        imageBarrier.oldLayout(claim.initialLayout) // TODO I'm not sure about this one
+                        imageBarrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
                         imageBarrier.newLayout(claim.initialLayout)
                         imageBarrier.srcQueueFamilyIndex(usedTransferQueueFamily.index)
                         imageBarrier.dstQueueFamilyIndex(ownQueueFamily.index)
@@ -297,6 +297,11 @@ internal class FamilyCommands(
                             ssr.baseArrayLayer(0)
                             ssr.layerCount(1)
                         }
+
+                        vkCmdPipelineBarrier(
+                            finalTransitionBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, claim.dstPipelineStageMask!!,
+                            0, null, null, imageBarriers
+                        )
                     }
                 }
             }

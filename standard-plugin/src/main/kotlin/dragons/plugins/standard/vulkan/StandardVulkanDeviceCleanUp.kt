@@ -5,8 +5,7 @@ import dragons.plugin.interfaces.vulkan.VulkanDeviceDestructionListener
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.pipeline.destroyBasicGraphicsPipeline
 import kotlinx.coroutines.runBlocking
-import org.lwjgl.vulkan.VK12.vkDestroyFramebuffer
-import org.lwjgl.vulkan.VK12.vkDestroyRenderPass
+import org.lwjgl.vulkan.VK12.*
 import org.slf4j.LoggerFactory.getLogger
 
 class StandardVulkanDeviceCleanUp: VulkanDeviceDestructionListener {
@@ -34,7 +33,13 @@ class StandardVulkanDeviceCleanUp: VulkanDeviceDestructionListener {
                 vkDestroyFramebuffer(agent.vulkanDevice, graphicsState.basicRightFramebuffer, null)
                 logger.info("Destroyed basic framebuffers")
 
-                // TODO Destroy the command resources
+                logger.info("Destroying basic descriptor pool...")
+                vkDestroyDescriptorPool(agent.vulkanDevice, graphicsState.basicDescriptorPool, null)
+                logger.info("Destroyed basic descriptor pool")
+
+                logger.info("Destroying basic sampler...")
+                vkDestroySampler(agent.vulkanDevice, graphicsState.basicSampler, null)
+                logger.info("Destroyed basic sampler")
             }
         }
     }

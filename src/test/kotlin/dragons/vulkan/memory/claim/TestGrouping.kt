@@ -8,7 +8,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.lwjgl.vulkan.VK10.*
+import org.lwjgl.vulkan.VK12.*
 
 class TestGrouping {
 
@@ -132,9 +132,9 @@ class TestGrouping {
             600, 13, 0, 0, queueManager.generalQueueFamily, CompletableDeferred(), null
         )
 
-        val stagingBuffer1 = StagingBufferMemoryClaim(700, null, CompletableDeferred())
-        val stagingBuffer2 = StagingBufferMemoryClaim(800, queueManager.computeOnlyQueueFamily, CompletableDeferred())
-        val stagingBuffer3 = StagingBufferMemoryClaim(900, queueManager.computeOnlyQueueFamily, CompletableDeferred())
+        val stagingBuffer1 = StagingBufferMemoryClaim(700, null, 0, CompletableDeferred())
+        val stagingBuffer2 = StagingBufferMemoryClaim(800, queueManager.computeOnlyQueueFamily, 0, CompletableDeferred())
+        val stagingBuffer3 = StagingBufferMemoryClaim(900, queueManager.computeOnlyQueueFamily, 0, CompletableDeferred())
 
         fun createImageClaim(width: Int, height: Int, queueFamily: QueueFamily?, prefill: Boolean): ImageMemoryClaim {
             return ImageMemoryClaim(

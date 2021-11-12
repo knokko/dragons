@@ -2,7 +2,7 @@ package dragons.vulkan.util
 
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.lwjgl.vulkan.VK10.*
+import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkApplicationInfo
 import org.lwjgl.vulkan.VkBaseOutStructure
 import org.lwjgl.vulkan.VkDeviceCreateInfo

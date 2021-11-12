@@ -24,8 +24,8 @@ class TestStagingPacker {
             400, 0, 0, 0, null, CompletableDeferred(), null
         )
 
-        val staging1 = StagingBufferMemoryClaim(500, null, CompletableDeferred())
-        val staging2 = StagingBufferMemoryClaim(600, null, CompletableDeferred())
+        val staging1 = StagingBufferMemoryClaim(500, null, 0, CompletableDeferred())
+        val staging2 = StagingBufferMemoryClaim(600, null, 0, CompletableDeferred())
 
         fun createImageClaim(width: Int, height: Int, bytesPerPixel: Int, prefill: Boolean): ImageMemoryClaim {
             return ImageMemoryClaim(

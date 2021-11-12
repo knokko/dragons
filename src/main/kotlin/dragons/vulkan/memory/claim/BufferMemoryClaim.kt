@@ -20,7 +20,8 @@ class BufferMemoryClaim(
 }
 
 class StagingBufferMemoryClaim(
-    val size: Int, val queueFamily: QueueFamily?, val storeResult: CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>
+    val size: Int, val queueFamily: QueueFamily?, val usageFlags: Int = 0,
+    val storeResult: CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>
 ) {
     init {
         if (size <= 0) throw IllegalArgumentException("Size ($size) must be positive")

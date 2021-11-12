@@ -2,7 +2,7 @@ package dragons.plugins.standard.vulkan
 
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanDeviceRater
-import org.lwjgl.vulkan.VK10.*
+import org.lwjgl.vulkan.VK12.*
 
 class StandardVulkanDeviceRater: VulkanDeviceRater {
     override fun ratePhysicalDevice(pluginInstance: PluginInstance, agent: VulkanDeviceRater.Agent) {

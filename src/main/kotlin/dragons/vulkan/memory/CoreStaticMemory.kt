@@ -61,8 +61,8 @@ internal fun claimStaticCoreMemory(
             // TODO Create a proper abstraction for this in the VrManager
             imageUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT or VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
             initialLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, prefill = null,
-            storeResult = resolveImage
+            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, accessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            dstPipelineStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT, prefill = null, storeResult = resolveImage
         ))
     }
 

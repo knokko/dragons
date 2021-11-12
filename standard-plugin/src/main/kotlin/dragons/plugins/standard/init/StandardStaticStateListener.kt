@@ -2,12 +2,13 @@ package dragons.plugins.standard.init
 
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.general.StaticStateListener
+import dragons.plugins.standard.state.StandardGraphicsBuffers
 import dragons.plugins.standard.state.StandardGraphicsState
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.vulkan.util.assertVkSuccess
 import kotlinx.coroutines.runBlocking
 import org.lwjgl.system.MemoryStack.stackPush
-import org.lwjgl.vulkan.VK10.vkCreateFramebuffer
+import org.lwjgl.vulkan.VK12.vkCreateFramebuffer
 import org.lwjgl.vulkan.VkFramebufferCreateInfo
 
 class StandardStaticStateListener: StaticStateListener {
@@ -32,7 +33,7 @@ class StandardStaticStateListener: StaticStateListener {
             val pFramebuffer = stack.callocLong(1)
 
             ciFramebuffer.pAttachments(stack.longs(
-                coreGraphics.coreMemory.leftColorImage.handle, coreGraphics.coreMemory.leftDepthImage.handle
+                coreGraphics.coreMemory.leftColorImage.fullView!!, coreGraphics.coreMemory.leftDepthImage.fullView!!
             ))
             assertVkSuccess(
                 vkCreateFramebuffer(coreGraphics.vkDevice, ciFramebuffer, null, pFramebuffer),
@@ -41,7 +42,7 @@ class StandardStaticStateListener: StaticStateListener {
             val leftFramebuffer = pFramebuffer[0]
 
             ciFramebuffer.pAttachments(stack.longs(
-                coreGraphics.coreMemory.rightColorImage.handle, coreGraphics.coreMemory.rightDepthImage.handle
+                coreGraphics.coreMemory.rightColorImage.fullView!!, coreGraphics.coreMemory.rightDepthImage.fullView!!
             ))
             assertVkSuccess(
                 vkCreateFramebuffer(coreGraphics.vkDevice, ciFramebuffer, null, pFramebuffer),
@@ -51,6 +52,9 @@ class StandardStaticStateListener: StaticStateListener {
 
             val (transformationMatrixHostBuffer, transformationMatrixStagingBuffer) = runBlocking {
                 state.preGraphics.transformationMatrixStagingBuffer.await()
+            }
+            val (cameraHostBuffer, cameraStagingBuffer) = runBlocking {
+                state.preGraphics.cameraStagingBuffer.await()
             }
             val (indirectDrawHostBuffer, indirectDrawDeviceBuffer) = runBlocking {
                 state.preGraphics.indirectDrawingBuffer.await()
@@ -64,16 +68,27 @@ class StandardStaticStateListener: StaticStateListener {
                 basicRenderPass = basicRenderPass,
                 basicLeftFramebuffer = leftFramebuffer,
                 basicRightFramebuffer = rightFramebuffer,
+                basicDescriptorPool = state.preGraphics.basicDescriptorPool.await(),
+                basicDescriptorSet = state.preGraphics.basicDescriptorSet.await(),
+                basicSampler = state.preGraphics.basicSampler.await(),
 
-                transformationMatrixDeviceBuffer = state.preGraphics.transformationMatrixDeviceBuffer.await(),
-                transformationMatrixStagingBuffer = transformationMatrixStagingBuffer,
-                transformationMatrixHostBuffer = transformationMatrixHostBuffer,
-                indirectDrawDeviceBuffer = indirectDrawDeviceBuffer,
-                indirectDrawHostBuffer = indirectDrawHostBuffer,
-                indirectDrawCountDeviceBuffer = indirectDrawCountDeviceBuffer,
-                indirectDrawCountHostBuffer = indirectDrawCountHostBuffer,
-                vertexBuffer = state.preGraphics.vertexBuffer.await(),
-                indexBuffer = state.preGraphics.indexBuffer.await()
+                buffers = StandardGraphicsBuffers(
+                    transformationMatrixDevice = state.preGraphics.transformationMatrixDeviceBuffer.await(),
+                    transformationMatrixStaging = transformationMatrixStagingBuffer,
+                    transformationMatrixHost = transformationMatrixHostBuffer,
+                    cameraDevice = state.preGraphics.cameraDeviceBuffer.await(),
+                    cameraStaging = cameraStagingBuffer,
+                    cameraHost = cameraHostBuffer,
+                    indirectDrawDevice = indirectDrawDeviceBuffer,
+                    indirectDrawHost = indirectDrawHostBuffer,
+                    indirectDrawCountDevice = indirectDrawCountDeviceBuffer,
+                    indirectDrawCountHost = indirectDrawCountHostBuffer,
+                    vertex = state.preGraphics.vertexBuffer.await(),
+                    index = state.preGraphics.indexBuffer.await()
+                ),
+
+                testColorImage = state.preGraphics.testColorImage.await(),
+                testHeightImage = state.preGraphics.testHeightImage.await()
             )}
         }
     }

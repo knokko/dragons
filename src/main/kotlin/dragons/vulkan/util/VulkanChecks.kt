@@ -1,7 +1,7 @@
 package dragons.vulkan.util
 
 import dragons.util.getIntConstantName
-import org.lwjgl.vulkan.VK10.VK_TIMEOUT
+import org.lwjgl.vulkan.VK12.VK_TIMEOUT
 import org.lwjgl.vulkan.VK12
 import org.slf4j.LoggerFactory
 import kotlin.jvm.Throws

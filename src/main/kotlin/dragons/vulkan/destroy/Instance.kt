@@ -2,7 +2,7 @@ package dragons.vulkan.destroy
 
 import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.vulkan.VulkanInstanceDestructionListener
-import org.lwjgl.vulkan.VK10.vkDestroyInstance
+import org.lwjgl.vulkan.VK12.vkDestroyInstance
 import org.lwjgl.vulkan.VkInstance
 import org.slf4j.LoggerFactory.getLogger
 

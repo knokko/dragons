@@ -25,12 +25,16 @@ suspend fun packMemoryClaims(
     val combinedStagingPlacements = determineStagingPlacements(familyClaimsMap)
 
     var combinedDeviceBufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT
+    var combinedStagingBufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT
     for (familyClaims in familyClaimsMap.values) {
         for (claim in familyClaims.claims.prefilledBufferClaims) {
             combinedDeviceBufferUsage = combinedDeviceBufferUsage or claim.usageFlags
         }
         for (claim in familyClaims.claims.uninitializedBufferClaims) {
             combinedDeviceBufferUsage = combinedDeviceBufferUsage or claim.usageFlags
+        }
+        for (claim in familyClaims.claims.stagingBufferClaims) {
+            combinedStagingBufferUsage = combinedStagingBufferUsage or claim.usageFlags
         }
     }
 
@@ -44,7 +48,7 @@ suspend fun packMemoryClaims(
             groups = familyClaimsMap, memoryInfo = memoryInfo,
 
             getSize = { claims -> claims.persistentStagingSize },
-            bufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            bufferUsage = combinedStagingBufferUsage,
             description = "Scope $description: persistent staging",
             // Note: the Vulkan specification guarantees that at least 1 memory heap has these properties
             requiredMemoryPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT or VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -91,10 +95,6 @@ suspend fun packMemoryClaims(
 
             Pair(deviceImageMemory, claimsToImageMap)
         } else { Pair(null, emptyMap()) }
-
-//        val placedFamilyClaimsMap = familyClaimsMap.map { (queueFamily, claims) ->
-//            Pair(queueFamily, placeMemoryClaims(claims))
-//        }.toMap()
 
         for ((queueFamily, stagingPlacements) in combinedStagingPlacements.queueFamilies) {
             for (placedClaim in stagingPlacements.internalPlacements.uninitializedBufferClaims) {

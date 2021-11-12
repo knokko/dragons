@@ -224,7 +224,7 @@ internal fun createImage(
     )
     val image = pImage[0]
 
-    return VulkanImage(image)
+    return VulkanImage(image, claim.width, claim.height)
 }
 
 internal fun createFullImageView(

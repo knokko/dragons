@@ -14,6 +14,7 @@ interface VulkanStaticMemoryUser: PluginInterface {
     class Agent(
         val queueManager: QueueManager,
         val gameInitScope: CoroutineScope,
-        val claims: MemoryScopeClaims
+        val claims: MemoryScopeClaims,
+        val pluginClassLoader: ClassLoader
     )
 }

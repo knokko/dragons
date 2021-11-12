@@ -93,7 +93,7 @@ fun main(args: Array<String>) {
             }
             logger.info("The ${mainMenuWinner1.first.info.name} plug-in gets control of the main menu")
 
-            val nextGameState = mainMenuWinner1.second.controlMainMenu(staticGameState)
+            val nextGameState = mainMenuWinner1.second.controlMainMenu(mainMenuWinner1.first, staticGameState)
             // TODO Handle the next game state
 
             Pair(staticGameState, null)
@@ -102,6 +102,7 @@ fun main(args: Array<String>) {
         logger.info("Start with shutting down the game")
         val staticGraphics = staticGameState.graphics
         staticGraphics.memoryScope.destroy(staticGraphics.vkDevice)
+        staticGraphics.resolveHelper.destroy(staticGraphics.vkDevice)
         destroyVulkanDevice(
             staticGraphics.vkInstance, staticGraphics.vkPhysicalDevice, staticGraphics.vkDevice,
             staticGameState.pluginManager
@@ -162,6 +163,7 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
     // Use IO dispatcher because the workload is expected to be a mixture of computations, IO, and blocking native calls
     return runBlocking(Dispatchers.IO) {
 
+        val prepareScope = this
         val vrJob = async { initVr(initProps) }
 
         val pluginJob = async {
@@ -199,7 +201,7 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
 
         val vkDeviceJob = async {
             createLogicalDevice(
-                vulkanInstance, vulkanPhysicalDevice, pluginManager, vrManager, this
+                vulkanInstance, vulkanPhysicalDevice, pluginManager, vrManager, prepareScope
             )
         }
 
@@ -208,8 +210,8 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
 
         val staticMemoryJob = async {
             allocateStaticMemory(
-                vulkanPhysicalDevice, vulkanDevice, queueManager,
-                pluginManager, vrManager, memoryInfo, renderImageInfo, this
+                vulkanDevice, queueManager, pluginManager, pluginClassLoader,
+                vrManager, memoryInfo, renderImageInfo, prepareScope
             )
         }
 

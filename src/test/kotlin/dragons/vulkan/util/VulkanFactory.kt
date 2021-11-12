@@ -1,7 +1,7 @@
 package dragons.vulkan.util
 
 import org.lwjgl.system.MemoryStack.stackPush
-import org.lwjgl.vulkan.VK10.*
+import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkInstance
 import org.lwjgl.vulkan.VkInstanceCreateInfo
 import org.lwjgl.vulkan.VkPhysicalDevice

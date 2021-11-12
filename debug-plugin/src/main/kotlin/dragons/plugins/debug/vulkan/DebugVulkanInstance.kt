@@ -7,7 +7,7 @@ import dragons.plugin.interfaces.vulkan.VulkanInstanceDestructionListener
 import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.EXTDebugUtils.*
-import org.lwjgl.vulkan.VK10.VK_FALSE
+import org.lwjgl.vulkan.VK12.VK_FALSE
 import org.lwjgl.vulkan.VkDebugUtilsMessengerCallbackDataEXT
 import org.lwjgl.vulkan.VkDebugUtilsMessengerCreateInfoEXT
 import org.slf4j.LoggerFactory.getLogger

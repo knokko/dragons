@@ -5,10 +5,12 @@ import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.MAX_NUM_INDIRECT_DRAW_CALLS
 import dragons.state.StaticGameState
 import dragons.vulkan.util.assertVkSuccess
+import org.joml.Matrix4f
 import org.lwjgl.system.MemoryStack.stackPush
+import org.lwjgl.system.MemoryUtil.memAddress
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.KHRDrawIndirectCount.vkCmdDrawIndexedIndirectCountKHR
-import org.lwjgl.vulkan.VK10.*
+import org.lwjgl.vulkan.VK12.*
 
 fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: StaticGameState): Pair<Long, VkCommandBuffer> {
     return stackPush().use { stack ->
@@ -32,6 +34,7 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
         aiCommandBuffer.`sType$Default`()
         aiCommandBuffer.commandPool(commandPool)
         aiCommandBuffer.level(VK_COMMAND_BUFFER_LEVEL_PRIMARY)
+        aiCommandBuffer.commandBufferCount(1)
 
         val pCommandBuffer = stack.callocPointer(1)
         assertVkSuccess(
@@ -46,6 +49,58 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
         assertVkSuccess(
             vkBeginCommandBuffer(commandBuffer, biCommandBuffer),
             "BeginCommandBuffer", contextInfo
+        )
+
+        // Before rendering, we should copy the staging buffers of the camera + transformation matrices to the device
+        val cameraCopyRegions = VkBufferCopy.calloc(1, stack)
+        val cameraCopyRegion = cameraCopyRegions[0]
+        cameraCopyRegion.srcOffset(pluginGraphics.buffers.cameraStaging.offset)
+        cameraCopyRegion.dstOffset(pluginGraphics.buffers.cameraDevice.offset)
+        cameraCopyRegions.size(pluginGraphics.buffers.cameraDevice.size)
+
+        vkCmdCopyBuffer(
+            commandBuffer, pluginGraphics.buffers.cameraStaging.buffer.handle,
+            pluginGraphics.buffers.cameraDevice.buffer.handle, cameraCopyRegions
+        )
+
+        val transformationCopyRegions = VkBufferCopy.calloc(1, stack)
+        val transformationCopyRegion = transformationCopyRegions[0]
+        transformationCopyRegion.srcOffset(pluginGraphics.buffers.transformationMatrixStaging.offset)
+        transformationCopyRegion.dstOffset(pluginGraphics.buffers.transformationMatrixDevice.offset)
+        // TODO Consider copying no more matrices than are actually used
+        transformationCopyRegion.size(pluginGraphics.buffers.transformationMatrixStaging.size)
+
+        vkCmdCopyBuffer(
+            commandBuffer, pluginGraphics.buffers.transformationMatrixStaging.buffer.handle,
+            pluginGraphics.buffers.transformationMatrixDevice.buffer.handle, transformationCopyRegions
+        )
+
+        val copyBufferBarriers = VkBufferMemoryBarrier.calloc(2, stack)
+
+        val copyCameraBarrier = copyBufferBarriers[0]
+        copyCameraBarrier.`sType$Default`()
+        copyCameraBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+        copyCameraBarrier.dstAccessMask(VK_ACCESS_SHADER_READ_BIT)
+        copyCameraBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+        copyCameraBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+        copyCameraBarrier.buffer(pluginGraphics.buffers.cameraDevice.buffer.handle)
+        copyCameraBarrier.offset(pluginGraphics.buffers.cameraDevice.offset)
+        copyCameraBarrier.size(pluginGraphics.buffers.cameraDevice.size)
+
+        val copyTransformBarrier = copyBufferBarriers[1]
+        copyTransformBarrier.`sType$Default`()
+        copyTransformBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+        copyTransformBarrier.dstAccessMask(VK_ACCESS_SHADER_READ_BIT)
+        copyTransformBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+        copyTransformBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+        copyTransformBarrier.buffer(pluginGraphics.buffers.transformationMatrixDevice.buffer.handle)
+        copyTransformBarrier.offset(pluginGraphics.buffers.transformationMatrixDevice.offset)
+        copyTransformBarrier.size(pluginGraphics.buffers.transformationMatrixDevice.size)
+
+        vkCmdPipelineBarrier(
+            commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT or VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            0, null, copyBufferBarriers, null
         )
 
         val clearValues = VkClearValue.calloc(2, stack)
@@ -73,6 +128,7 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
         biRenderPass.clearValueCount(2)
         biRenderPass.pClearValues(clearValues)
 
+        // TODO Distinguish between left and right eye matrix
         for (framebuffer in arrayOf(pluginState.graphics.basicLeftFramebuffer, pluginState.graphics.basicRightFramebuffer)) {
             biRenderPass.framebuffer(framebuffer)
 
@@ -80,23 +136,24 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pluginState.graphics.basicGraphicsPipeline.handle)
             vkCmdBindVertexBuffers(
                 commandBuffer, 0,
-                stack.longs(pluginGraphics.vertexBuffer.buffer.handle),
-                stack.longs(pluginGraphics.vertexBuffer.offset)
+                stack.longs(pluginGraphics.buffers.vertex.buffer.handle),
+                stack.longs(pluginGraphics.buffers.vertex.offset)
             )
             vkCmdBindIndexBuffer(
                 commandBuffer,
-                pluginGraphics.indexBuffer.buffer.handle, pluginGraphics.indexBuffer.offset,
+                pluginGraphics.buffers.index.buffer.handle, pluginGraphics.buffers.index.offset,
                 VK_INDEX_TYPE_UINT32
             )
             vkCmdBindDescriptorSets(
                 commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pluginState.graphics.basicGraphicsPipeline.pipelineLayout,
-                0, descriptorSets, null
+                // TODO Use 2 descriptor sets rather than 1
+                0, stack.longs(pluginState.graphics.basicDescriptorSet), null
             )
-            vkCmdDrawIndexedIndirectCountKHR(
+            vkCmdDrawIndexedIndirectCount(
                 commandBuffer,
-                pluginGraphics.indirectDrawDeviceBuffer.buffer.handle, pluginGraphics.indirectDrawDeviceBuffer.offset,
-                pluginGraphics.indirectDrawCountDeviceBuffer.buffer.handle, pluginGraphics.indirectDrawCountDeviceBuffer.offset,
+                pluginGraphics.buffers.indirectDrawDevice.buffer.handle, pluginGraphics.buffers.indirectDrawDevice.offset,
+                pluginGraphics.buffers.indirectDrawCountDevice.buffer.handle, pluginGraphics.buffers.indirectDrawCountDevice.offset,
                 MAX_NUM_INDIRECT_DRAW_CALLS, VkDrawIndexedIndirectCommand.SIZEOF
             )
             vkCmdEndRenderPass(commandBuffer)
@@ -108,4 +165,55 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
 
         Pair(commandPool, commandBuffer)
     }
+}
+
+fun fillDrawingBuffers(
+    pluginInstance: PluginInstance, gameState: StaticGameState, leftEyeMatrix: Matrix4f, rightEyeMatrix: Matrix4f
+) {
+    val numDrawCalls = 3
+    val buffers = (pluginInstance.state as StandardPluginState).graphics.buffers
+
+    buffers.indirectDrawCountHost.putInt(0, numDrawCalls)
+
+    // TODO Find a more stable way to determine these
+    val numIndices = (buffers.index.size / 4).toInt()
+    val firstIndex = 0
+    val vertexOffset = 0
+
+    val drawCall1 = VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost))
+    drawCall1.indexCount(numIndices)
+    drawCall1.instanceCount(1)
+    drawCall1.firstIndex(firstIndex)
+    drawCall1.vertexOffset(vertexOffset)
+    drawCall1.firstInstance(0)
+
+    val drawCall2 = VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + VkDrawIndexedIndirectCommand.SIZEOF)
+    drawCall2.indexCount(numIndices)
+    drawCall2.instanceCount(1)
+    drawCall2.firstIndex(firstIndex)
+    drawCall2.vertexOffset(vertexOffset)
+    drawCall2.firstInstance(1)
+
+    val drawCall3 = VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + 2 * VkDrawIndexedIndirectCommand.SIZEOF)
+    drawCall3.indexCount(numIndices)
+    drawCall3.instanceCount(1)
+    drawCall3.firstIndex(firstIndex)
+    drawCall3.vertexOffset(vertexOffset)
+    drawCall3.firstInstance(2)
+
+    // TODO Add support for right eye
+    leftEyeMatrix.get(0, buffers.cameraHost)
+    // TODO Add support for camera position
+    buffers.cameraHost.putFloat(64, 0f)
+    buffers.cameraHost.putFloat(68, 2f)
+    buffers.cameraHost.putFloat(72, 0f)
+
+    val transformationMatrix1 = Matrix4f().scale(100f).translate(-1.6f, 0f, -0.5f)
+    transformationMatrix1.get(0, buffers.transformationMatrixHost)
+
+    val transformationMatrix2 = Matrix4f().scale(100f).translate(-0.5f, 0f, -0.5f)
+    transformationMatrix2.get(64, buffers.transformationMatrixHost)
+
+    val transformationMatrix3 = Matrix4f().scale(100f).translate(0.6f, 0f, -0.5f)
+    transformationMatrix3.get(128, buffers.transformationMatrixHost)
 }

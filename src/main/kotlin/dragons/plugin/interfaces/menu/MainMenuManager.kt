@@ -14,5 +14,5 @@ interface MainMenuManager: PluginInterface {
     )
 
     // TODO Use return value to indicate the next game state
-    suspend fun controlMainMenu(gameState: StaticGameState)
+    suspend fun controlMainMenu(pluginInstance: PluginInstance, gameState: StaticGameState)
 }
