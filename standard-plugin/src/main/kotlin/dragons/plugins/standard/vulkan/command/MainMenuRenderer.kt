@@ -170,7 +170,7 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
 fun fillDrawingBuffers(
     pluginInstance: PluginInstance, gameState: StaticGameState, leftEyeMatrix: Matrix4f, rightEyeMatrix: Matrix4f
 ) {
-    val numDrawCalls = 3
+    val numDrawCalls = 300
     val buffers = (pluginInstance.state as StandardPluginState).graphics.buffers
 
     buffers.indirectDrawCountHost.putInt(0, numDrawCalls)
@@ -180,26 +180,17 @@ fun fillDrawingBuffers(
     val firstIndex = 0
     val vertexOffset = 0
 
-    val drawCall1 = VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost))
-    drawCall1.indexCount(numIndices)
-    drawCall1.instanceCount(1)
-    drawCall1.firstIndex(firstIndex)
-    drawCall1.vertexOffset(vertexOffset)
-    drawCall1.firstInstance(0)
+    for (currentDrawCall in 0 until numDrawCalls) {
+        val drawCall1 = VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + currentDrawCall * VkDrawIndexedIndirectCommand.SIZEOF)
+        drawCall1.indexCount(numIndices)
+        drawCall1.instanceCount(1)
+        drawCall1.firstIndex(firstIndex)
+        drawCall1.vertexOffset(vertexOffset)
+        drawCall1.firstInstance(currentDrawCall)
 
-    val drawCall2 = VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + VkDrawIndexedIndirectCommand.SIZEOF)
-    drawCall2.indexCount(numIndices)
-    drawCall2.instanceCount(1)
-    drawCall2.firstIndex(firstIndex)
-    drawCall2.vertexOffset(vertexOffset)
-    drawCall2.firstInstance(1)
-
-    val drawCall3 = VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + 2 * VkDrawIndexedIndirectCommand.SIZEOF)
-    drawCall3.indexCount(numIndices)
-    drawCall3.instanceCount(1)
-    drawCall3.firstIndex(firstIndex)
-    drawCall3.vertexOffset(vertexOffset)
-    drawCall3.firstInstance(2)
+        val transformationMatrix1 = Matrix4f().scale(10f).translate(-10f + 2f * ((currentDrawCall % 100) / 10), -4f + 4f * (currentDrawCall / 100), -10f + 2f * (currentDrawCall % 10))
+        transformationMatrix1.get(64 * currentDrawCall, buffers.transformationMatrixHost)
+    }
 
     // TODO Add support for right eye
     leftEyeMatrix.get(0, buffers.cameraHost)
@@ -208,12 +199,11 @@ fun fillDrawingBuffers(
     buffers.cameraHost.putFloat(68, 2f)
     buffers.cameraHost.putFloat(72, 0f)
 
-    val transformationMatrix1 = Matrix4f().scale(100f).translate(-1.6f, 0f, -0.5f)
-    transformationMatrix1.get(0, buffers.transformationMatrixHost)
 
-    val transformationMatrix2 = Matrix4f().scale(100f).translate(-0.5f, 0f, -0.5f)
+
+    val transformationMatrix2 = Matrix4f().scale(10f).translate(0f, -4f, 0f)
     transformationMatrix2.get(64, buffers.transformationMatrixHost)
 
-    val transformationMatrix3 = Matrix4f().scale(100f).translate(0.6f, 0f, -0.5f)
+    val transformationMatrix3 = Matrix4f().scale(10f).translate(0f, -4f, 4f)
     transformationMatrix3.get(128, buffers.transformationMatrixHost)
 }
