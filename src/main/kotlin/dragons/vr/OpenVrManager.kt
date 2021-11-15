@@ -1,12 +1,7 @@
 package dragons.vr
 
 import dragons.state.StaticGraphicsState
-import org.joml.AxisAngle4f
-import org.joml.Math.PI
-import org.joml.Math.toRadians
 import org.joml.Matrix4f
-import org.joml.Quaternionf
-import org.joml.Vector3f
 import org.lwjgl.openvr.*
 import org.lwjgl.openvr.VR.*
 import org.lwjgl.openvr.VRCompositor.*
@@ -18,9 +13,7 @@ import org.lwjgl.system.MemoryUtil.memUTF8
 import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkPhysicalDevice
 import org.slf4j.LoggerFactory.getLogger
-import java.lang.System.currentTimeMillis
 import java.lang.Thread.sleep
-import java.text.NumberFormat
 
 class OpenVrManager: VrManager {
 
@@ -105,26 +98,25 @@ class OpenVrManager: VrManager {
     }
 
     private fun vrToJomlMatrix(vrMatrix: HmdMatrix44): Matrix4f {
-        return Matrix4f(vrMatrix.m())
+        return Matrix4f(vrMatrix.m()).transpose()
     }
 
     private fun createEyeMatrix(stack: MemoryStack, pose: TrackedDevicePose, leftOrRight: Int): Matrix4f {
         val matrixBuffer = HmdMatrix44.calloc(stack)
         val matrixBuffer2 = HmdMatrix34.calloc(stack)
-        val projectionMatrix = vrToJomlMatrix(VRSystem_GetProjectionMatrix(leftOrRight, 0.01f, 100f, matrixBuffer)).transpose().scale(1f, -1f, 1f)
 
-        val rawViewMatrix = pose.mDeviceToAbsoluteTracking()
-        val viewMatrix = vrToJomlMatrix(rawViewMatrix).invert()
+        // I'm not sure why I need to scale this by (1, -1, 1), but the results are much better
+        val projectionMatrix = vrToJomlMatrix(
+            VRSystem_GetProjectionMatrix(leftOrRight, 0.01f, 100f, matrixBuffer)
+        ).scale(1f, -1f, 1f)
 
-        // TODO Maybe invert this
-        val eyeToHeadTransform = vrToJomlMatrix(VRSystem_GetEyeToHeadTransform(leftOrRight, matrixBuffer2))
+        // These matrices are inverted in https://github.com/ValveSoftware/openvr/blob/master/samples/hellovr_vulkan/hellovr_vulkan_main.cpp
+        // I'm not sure why, but I will just follow it.
+        val transformToDeviceMatrix = vrToJomlMatrix(pose.mDeviceToAbsoluteTracking()).invert()
 
-        return projectionMatrix.mul(eyeToHeadTransform).mul(viewMatrix)
+        val deviceToEyeMatrix = vrToJomlMatrix(VRSystem_GetEyeToHeadTransform(leftOrRight, matrixBuffer2)).invert()
 
-        // matMVP = m_mat4ProjectionLeft * m_mat4eyePosLeft * m_mat4HMDPose;
-        // m_mat4ProjectionLeft is obtained from GetProjectionMatrix
-        // m_mat4eyePosLeft is obtained from GetEyeToHeadTransform
-        // m_mat4HMDPose is the inverse of DeviceToAbsoluteTracking of Hmd (viewMatrix)
+        return projectionMatrix.mul(deviceToEyeMatrix).mul(transformToDeviceMatrix)
     }
 
     override fun prepareRender(): Pair<Matrix4f, Matrix4f>? {

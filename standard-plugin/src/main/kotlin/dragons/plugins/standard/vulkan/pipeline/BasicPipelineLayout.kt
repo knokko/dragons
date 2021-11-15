@@ -2,11 +2,8 @@ package dragons.plugins.standard.vulkan.pipeline
 
 import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack
+import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
-import org.lwjgl.vulkan.VkDescriptorSetLayoutBinding
-import org.lwjgl.vulkan.VkDescriptorSetLayoutCreateInfo
-import org.lwjgl.vulkan.VkDevice
-import org.lwjgl.vulkan.VkPipelineLayoutCreateInfo
 
 // NOTE: This must match the sizes hardcoded in the fragment shader and tessellation evaluation shader
 const val MAX_NUM_DESCRIPTOR_IMAGES = 100
@@ -53,10 +50,16 @@ fun createBasicPipelineLayout(vkDevice: VkDevice, stack: MemoryStack): Pair<Long
         "CreateDescriptorSetLayout", "basic"
     )
 
+    val pushConstants = VkPushConstantRange.calloc(1, stack)
+    val pushEyeIndex = pushConstants[0]
+    pushEyeIndex.stageFlags(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)
+    pushEyeIndex.offset(0)
+    pushEyeIndex.size(4)
+
     val ciLayout = VkPipelineLayoutCreateInfo.calloc(stack)
     ciLayout.sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
     ciLayout.pSetLayouts(pSetLayouts)
-    ciLayout.pPushConstantRanges(null)
+    ciLayout.pPushConstantRanges(pushConstants)
 
     val pLayout = stack.callocLong(1)
     assertVkSuccess(

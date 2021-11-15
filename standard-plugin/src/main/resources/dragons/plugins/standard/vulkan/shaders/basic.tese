@@ -23,7 +23,7 @@ layout(location = 7) out int outColorTextureIndex;
 layout(location = 8) out int outHeightTextureIndex;
 
 layout(set = 0, binding = 0) uniform Camera {
-    mat4 matrix;
+    mat4 eyeMatrices[2];
     vec3 position;
 } camera;
 layout(set = 0, binding = 1) uniform sampler textureSampler;
@@ -34,6 +34,10 @@ layout(set = 0, binding = 3) uniform texture2D heightTextures[100];
 layout(set = 0, binding = 4) readonly buffer Objects {
     mat4 transformationMatrices[];
 } objects;
+
+layout(push_constant) uniform PushConstants {
+    int eyeIndex;
+} pushConstants;
 
 vec2 mixVec2(const vec2 vectors[gl_MaxPatchVertices]) {
     return gl_TessCoord.x * vectors[0] + gl_TessCoord.y * vectors[1] + gl_TessCoord.z * vectors[2];
@@ -62,7 +66,7 @@ void main() {
     vec4 transformedPosition = transformationMatrix * vec4(improvedPosition, 1.0);
 
     // TODO Wait... if we only compute the position here, how does the control shader determine distance to camera?
-    gl_Position = camera.matrix * transformedPosition;
+    gl_Position = camera.eyeMatrices[pushConstants.eyeIndex] * transformedPosition;
 
     outWorldPosition = transformedPosition.xyz;
     outBaseNormal = baseNormal;

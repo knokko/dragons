@@ -54,7 +54,7 @@ class DummyVrManager(
         val combinedMatrix = projectionMatrix.mul(viewMatrix)
 
         lastRenderTime = currentTimeMillis()
-        return Pair(Matrix4f(combinedMatrix), Matrix4f(combinedMatrix))
+        return Pair(Matrix4f(combinedMatrix).translate(-0.2f, 0f, 0f), Matrix4f(combinedMatrix).translate(0.2f, 0f, 0f))
     }
 
     override fun submitFrames() {

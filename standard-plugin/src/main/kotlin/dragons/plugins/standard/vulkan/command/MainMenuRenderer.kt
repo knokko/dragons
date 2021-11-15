@@ -6,10 +6,10 @@ import dragons.plugins.standard.vulkan.MAX_NUM_INDIRECT_DRAW_CALLS
 import dragons.state.StaticGameState
 import dragons.vulkan.util.assertVkSuccess
 import org.joml.Matrix4f
+import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memAddress
 import org.lwjgl.vulkan.*
-import org.lwjgl.vulkan.KHRDrawIndirectCount.vkCmdDrawIndexedIndirectCountKHR
 import org.lwjgl.vulkan.VK12.*
 
 fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: StaticGameState): Pair<Long, VkCommandBuffer> {
@@ -128,8 +128,7 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
         biRenderPass.clearValueCount(2)
         biRenderPass.pClearValues(clearValues)
 
-        // TODO Distinguish between left and right eye matrix
-        for (framebuffer in arrayOf(pluginState.graphics.basicLeftFramebuffer, pluginState.graphics.basicRightFramebuffer)) {
+        for ((eyeIndex, framebuffer) in arrayOf(pluginState.graphics.basicLeftFramebuffer, pluginState.graphics.basicRightFramebuffer).withIndex()) {
             biRenderPass.framebuffer(framebuffer)
 
             vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
@@ -143,6 +142,13 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
                 commandBuffer,
                 pluginGraphics.buffers.index.buffer.handle, pluginGraphics.buffers.index.offset,
                 VK_INDEX_TYPE_UINT32
+            )
+            vkCmdPushConstants(
+                commandBuffer,
+                pluginGraphics.basicGraphicsPipeline.pipelineLayout,
+                VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+                0,
+                stack.ints(eyeIndex)
             )
             vkCmdBindDescriptorSets(
                 commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -192,18 +198,10 @@ fun fillDrawingBuffers(
         transformationMatrix1.get(64 * currentDrawCall, buffers.transformationMatrixHost)
     }
 
-    // TODO Add support for right eye
     leftEyeMatrix.get(0, buffers.cameraHost)
+    rightEyeMatrix.get(64, buffers.cameraHost)
     // TODO Add support for camera position
-    buffers.cameraHost.putFloat(64, 0f)
-    buffers.cameraHost.putFloat(68, 2f)
-    buffers.cameraHost.putFloat(72, 0f)
-
-
-
-    val transformationMatrix2 = Matrix4f().scale(10f).translate(0f, -4f, 0f)
-    transformationMatrix2.get(64, buffers.transformationMatrixHost)
-
-    val transformationMatrix3 = Matrix4f().scale(10f).translate(0f, -4f, 4f)
-    transformationMatrix3.get(128, buffers.transformationMatrixHost)
+    buffers.cameraHost.putFloat(128, 0f)
+    buffers.cameraHost.putFloat(132, 2f)
+    buffers.cameraHost.putFloat(136, 0f)
 }

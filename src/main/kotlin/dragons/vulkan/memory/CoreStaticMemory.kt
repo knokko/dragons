@@ -23,7 +23,8 @@ internal fun claimStaticCoreMemory(
     val rightColorImage = CompletableDeferred<VulkanImage>()
     val rightDepthImage = CompletableDeferred<VulkanImage>()
     val rightResolveImage = CompletableDeferred<VulkanImage>()
-    val screenshotBuffer = CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>()
+    val screenshotBufferLeft = CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>()
+    val screenshotBufferRight = CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>()
 
     val eyeColorFormat = renderImageInfo.colorFormat
     val eyeDepthFormat = renderImageInfo.depthStencilFormat
@@ -66,14 +67,21 @@ internal fun claimStaticCoreMemory(
         ))
     }
 
-    agent.claims.stagingBuffers.add(StagingBufferMemoryClaim(
-        size = 4 * width * height, usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueFamily = queueManager.generalQueueFamily, storeResult = screenshotBuffer
-    ))
+    for (screenshotBuffer in arrayOf(screenshotBufferLeft, screenshotBufferRight)) {
+        agent.claims.stagingBuffers.add(
+            StagingBufferMemoryClaim(
+                size = 4 * width * height,
+                usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                queueFamily = queueManager.generalQueueFamily,
+                storeResult = screenshotBuffer
+            )
+        )
+    }
 
     return CoreStaticMemoryPending(
         leftColorImage = leftColorImage, leftDepthImage = leftDepthImage, leftResolveImage = leftResolveImage,
         rightColorImage = rightColorImage, rightDepthImage = rightDepthImage, rightResolveImage = rightResolveImage,
-        screenshotBuffer = screenshotBuffer
+        screenshotBufferLeft = screenshotBufferLeft, screenshotBufferRight = screenshotBufferRight
     )
 }
 
@@ -84,7 +92,8 @@ internal class CoreStaticMemoryPending(
     val rightColorImage: Deferred<VulkanImage>,
     val rightDepthImage: Deferred<VulkanImage>,
     private val rightResolveImage: Deferred<VulkanImage>,
-    val screenshotBuffer: Deferred<Pair<ByteBuffer, VulkanBufferRange>>
+    val screenshotBufferLeft: Deferred<Pair<ByteBuffer, VulkanBufferRange>>,
+    val screenshotBufferRight: Deferred<Pair<ByteBuffer, VulkanBufferRange>>
 ) {
     suspend fun awaitCompletely() = CoreStaticMemory(
         leftColorImage = leftColorImage.await(),
@@ -93,7 +102,8 @@ internal class CoreStaticMemoryPending(
         rightColorImage = rightColorImage.await(),
         rightDepthImage = rightDepthImage.await(),
         rightResolveImage = rightResolveImage.await(),
-        screenshotBuffer = screenshotBuffer.await()
+        leftScreenshotBuffer = screenshotBufferLeft.await(),
+        rightScreenshotBuffer = screenshotBufferRight.await()
     )
 }
 
@@ -104,5 +114,6 @@ class CoreStaticMemory(
     val rightColorImage: VulkanImage,
     val rightDepthImage: VulkanImage,
     internal val rightResolveImage: VulkanImage,
-    val screenshotBuffer: Pair<ByteBuffer, VulkanBufferRange>
+    val leftScreenshotBuffer: Pair<ByteBuffer, VulkanBufferRange>,
+    val rightScreenshotBuffer: Pair<ByteBuffer, VulkanBufferRange>
 )

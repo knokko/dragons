@@ -23,7 +23,7 @@ fun createBasicDescriptorPool(vkDevice: VkDevice): Long {
 
         val colorImagesPoolSize = poolSizes[2]
         colorImagesPoolSize.type(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
-        colorImagesPoolSize.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES) // TODO Verify that this is correct
+        colorImagesPoolSize.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
 
         val heightImagesPoolSize = poolSizes[3]
         heightImagesPoolSize.type(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)

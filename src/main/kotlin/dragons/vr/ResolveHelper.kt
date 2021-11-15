@@ -20,8 +20,10 @@ class ResolveHelper(
     private val rightSourceImage: VulkanImage,
     val leftResolvedImage: VulkanImage,
     val rightResolvedImage: VulkanImage,
-    val screenshotStagingBuffer: VulkanBufferRange,
-    val screenshotHostBuffer: ByteBuffer,
+    val leftScreenshotStagingBuffer: VulkanBufferRange,
+    val rightScreenshotStagingBuffer: VulkanBufferRange,
+    val leftScreenshotHostBuffer: ByteBuffer,
+    val rightScreenshotHostBuffer: ByteBuffer,
     vkDevice: VkDevice, queueManager: QueueManager, renderImageInfo: RenderImageInfo
 ) {
 
@@ -194,16 +196,23 @@ class ResolveHelper(
 
             val screenshotRegions = VkBufferImageCopy.calloc(1, stack)
             val screenshotRegion = screenshotRegions[0]
-            screenshotRegion.bufferOffset(screenshotStagingBuffer.offset)
+            // bufferOffset will be set later
             screenshotRegion.bufferRowLength(0)
             screenshotRegion.bufferImageHeight(0)
             screenshotRegion.imageSubresource(::fillSrl)
             screenshotRegions.imageOffset { it.set(0, 0, 0) }
             screenshotRegion.imageExtent { it.set(leftResolvedImage.width, leftResolvedImage.height, 1) }
 
+            screenshotRegion.bufferOffset(leftScreenshotStagingBuffer.offset)
             vkCmdCopyImageToBuffer(
                 screenshotCommandBuffer, leftResolvedImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                screenshotStagingBuffer.buffer.handle, screenshotRegions
+                leftScreenshotStagingBuffer.buffer.handle, screenshotRegions
+            )
+
+            screenshotRegion.bufferOffset(rightScreenshotStagingBuffer.offset)
+            vkCmdCopyImageToBuffer(
+                screenshotCommandBuffer, rightResolvedImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                rightScreenshotStagingBuffer.buffer.handle, screenshotRegions
             )
 
             assertVkSuccess(
@@ -254,20 +263,26 @@ class ResolveHelper(
                     vkResetFences(vkDevice, stack.longs(this.fence)), "ResetFences", "screenshot"
                 )
 
-                val screenshot = BufferedImage(leftResolvedImage.width, leftResolvedImage.height, TYPE_INT_ARGB)
-                for (x in 0 until leftResolvedImage.width) {
-                    for (y in 0 until leftResolvedImage.height) {
-                        val bufferIndex = 4 * (x + y * leftResolvedImage.width)
-                        val red = screenshotHostBuffer[bufferIndex].toInt() and 0xFF
-                        val green = screenshotHostBuffer[bufferIndex + 1].toInt() and 0xFF
-                        val blue = screenshotHostBuffer[bufferIndex + 2].toInt() and 0xFF
-                        val alpha = screenshotHostBuffer[bufferIndex + 3].toInt() and 0xFF
-                        val color = Color(red, green, blue, alpha)
-                        screenshot.setRGB(x, y, color.rgb)
+                for ((resolvedImage, screenshotHostBuffer, suffix) in arrayOf(
+                    Triple(leftResolvedImage, leftScreenshotHostBuffer, "Left"),
+                    Triple(rightResolvedImage, rightScreenshotHostBuffer, "Right")
+                )
+                ) {
+                    val screenshot = BufferedImage(resolvedImage.width, resolvedImage.height, TYPE_INT_ARGB)
+                    for (x in 0 until resolvedImage.width) {
+                        for (y in 0 until resolvedImage.height) {
+                            val bufferIndex = 4 * (x + y * resolvedImage.width)
+                            val red = screenshotHostBuffer[bufferIndex].toInt() and 0xFF
+                            val green = screenshotHostBuffer[bufferIndex + 1].toInt() and 0xFF
+                            val blue = screenshotHostBuffer[bufferIndex + 2].toInt() and 0xFF
+                            val alpha = screenshotHostBuffer[bufferIndex + 3].toInt() and 0xFF
+                            val color = Color(red, green, blue, alpha)
+                            screenshot.setRGB(x, y, color.rgb)
+                        }
                     }
-                }
 
-                ImageIO.write(screenshot, "PNG", File("screenshot.png"))
+                    ImageIO.write(screenshot, "PNG", File("screenshot$suffix.png"))
+                }
             }
         }
     }
