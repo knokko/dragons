@@ -55,6 +55,7 @@ class StandardMainMenu: MainMenuManager {
                     pSubmit.waitSemaphoreCount(0)
                     pSubmit.pCommandBuffers(stack.pointers(mainCommandBuffer.address()))
                     pSubmit.pSignalSemaphores(stack.longs(renderFinishedSemaphore))
+                    gameState.vrManager.markFirstFrameQueueSubmit()
                     gameState.graphics.queueManager.generalQueueFamily.getRandomPriorityQueue().submit(pSubmits, VK_NULL_HANDLE)
                 }
 

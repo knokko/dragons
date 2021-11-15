@@ -57,6 +57,10 @@ class DummyVrManager(
         return Pair(Matrix4f(combinedMatrix).translate(-0.2f, 0f, 0f), Matrix4f(combinedMatrix).translate(0.2f, 0f, 0f))
     }
 
+    override fun markFirstFrameQueueSubmit() {
+        // We don't need to do anything here
+    }
+
     override fun submitFrames() {
         // We don't really need to do anything here
     }

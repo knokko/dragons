@@ -19,6 +19,11 @@ class OpenVrManager: VrManager {
 
     private lateinit var graphicsState: StaticGraphicsState
 
+    init {
+        VRCompositor_SetExplicitTimingMode(
+            EVRCompositorTimingMode_VRCompositorTimingMode_Explicit_RuntimePerformsPostPresentHandoff
+        )
+    }
     override fun getVulkanInstanceExtensions(availableExtensions: Set<String>): Set<String> {
         val extensionStringSize = VRCompositor_GetVulkanInstanceExtensionsRequired(null)
         val logger = getLogger("VR")
@@ -138,6 +143,11 @@ class OpenVrManager: VrManager {
         }
 
         return result
+    }
+
+    override fun markFirstFrameQueueSubmit() {
+        val result = VRCompositor_SubmitExplicitTimingData()
+        if (result != 0) println("VRCompositor_SubmitExplicitTimingData() returned $result")
     }
 
     override fun submitFrames() {

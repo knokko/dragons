@@ -27,6 +27,12 @@ interface VrManager {
      */
     fun prepareRender(): Pair<Matrix4f, Matrix4f>?
 
+    /**
+     * This should be called right before the first `vkQueueSubmit` of each frame. This helps the VR manager with
+     * getting better timing information and thus more accurate view matrices.
+     */
+    fun markFirstFrameQueueSubmit()
+
     fun submitFrames()
 
     fun destroy()
