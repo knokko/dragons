@@ -211,7 +211,7 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
 
         val staticMemoryJob = async {
             allocateStaticMemory(
-                vulkanDevice, queueManager, pluginManager, pluginClassLoader,
+                vulkanPhysicalDevice, vulkanDevice, queueManager, pluginManager, pluginClassLoader,
                 vrManager, memoryInfo, renderImageInfo, prepareScope
             )
         }

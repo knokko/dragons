@@ -89,7 +89,6 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
 
         // Testing terrain color image
         agent.claims.images.add(ImageMemoryClaim(
-            // TODO How about bytesPerPixel = 3? (and also change imageFormat)
             width = 1024, height = 1024, queueFamily = agent.queueManager.generalQueueFamily, bytesPerPixel = 4,
             imageFormat = VK_FORMAT_R8G8B8A8_SRGB, tiling = VK_IMAGE_TILING_OPTIMAL,
             imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT, initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -130,8 +129,7 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
             // 2 4x4 float matrices and 1 vec3 float
             size = 2 * 64 + 12,
             usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT or VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            // TODO Query this from physical device limits
-            alignment = 64,
+            alignment = agent.vkPhysicalDeviceLimits.minUniformBufferOffsetAlignment().toInt(),
             queueFamily = agent.queueManager.generalQueueFamily,
             storeResult = preGraphics.cameraDeviceBuffer,
             prefill = null
@@ -146,8 +144,7 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
         agent.claims.buffers.add(BufferMemoryClaim(
             size = 4 * 16 * MAX_NUM_TRANSFORMATION_MATRICES,
             usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-            // TODO Query this from physical device limits
-            alignment = 16,
+            alignment = agent.vkPhysicalDeviceLimits.minStorageBufferOffsetAlignment().toInt(),
             queueFamily = agent.queueManager.generalQueueFamily,
             storeResult = preGraphics.transformationMatrixDeviceBuffer,
             prefill = null

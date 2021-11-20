@@ -238,7 +238,7 @@ internal fun createFullImageView(
     ciView.sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
     ciView.flags(claim.imageViewFlags)
     ciView.image(image.handle)
-    ciView.viewType(VK_IMAGE_VIEW_TYPE_2D) // TODO Use 2D_ARRAY if needed?
+    ciView.viewType(VK_IMAGE_VIEW_TYPE_2D)
     ciView.format(claim.imageFormat)
     ciView.components { components ->
         components.r(VK_COMPONENT_SWIZZLE_IDENTITY)

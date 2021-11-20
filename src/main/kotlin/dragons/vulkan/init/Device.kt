@@ -28,8 +28,6 @@ import java.lang.reflect.Modifier
 import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 import kotlin.jvm.Throws
-import kotlin.math.exp
-import kotlin.math.log
 
 @Throws(StartupException::class)
 fun choosePhysicalDevice(vkInstance: VkInstance, pluginManager: PluginManager, vrManager: VrManager): VkPhysicalDevice {
