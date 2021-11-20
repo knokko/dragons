@@ -7,11 +7,11 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
 
-fun createBasicDescriptorPool(vkDevice: VkDevice): Long {
+fun createBasicStaticDescriptorPool(vkDevice: VkDevice): Long {
     return stackPush().use { stack ->
 
         // Uniform descriptor, texture sampling descriptor, and storage descriptor
-        val poolSizes = VkDescriptorPoolSize.calloc(5, stack)
+        val poolSizes = VkDescriptorPoolSize.calloc(3, stack)
 
         val uniformPoolSize = poolSizes[0]
         uniformPoolSize.type(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
@@ -21,15 +21,7 @@ fun createBasicDescriptorPool(vkDevice: VkDevice): Long {
         samplerPoolSize.type(VK_DESCRIPTOR_TYPE_SAMPLER)
         samplerPoolSize.descriptorCount(1)
 
-        val colorImagesPoolSize = poolSizes[2]
-        colorImagesPoolSize.type(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
-        colorImagesPoolSize.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
-
-        val heightImagesPoolSize = poolSizes[3]
-        heightImagesPoolSize.type(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
-        heightImagesPoolSize.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
-
-        val storagePoolSize = poolSizes[4]
+        val storagePoolSize = poolSizes[2]
         storagePoolSize.type(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
         storagePoolSize.descriptorCount(1)
 
@@ -42,23 +34,43 @@ fun createBasicDescriptorPool(vkDevice: VkDevice): Long {
         val pDescriptorPool = stack.callocLong(1)
         assertVkSuccess(
             vkCreateDescriptorPool(vkDevice, ciDescriptorPool, null, pDescriptorPool),
-            "CreateDescriptorPool", "standard plug-in: basic"
+            "CreateDescriptorPool", "standard plug-in: basic static"
         )
         pDescriptorPool[0]
     }
 }
 
-fun createBasicDescriptorSet(
+fun createBasicDynamicDescriptorPool(vkDevice: VkDevice): Long {
+    return stackPush().use { stack ->
+        // Color images and height images
+        val poolSizes = VkDescriptorPoolSize.calloc(2, stack)
+        val colorImagesPoolSize = poolSizes[0]
+        colorImagesPoolSize.type(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+        colorImagesPoolSize.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
+
+        val heightImagesPoolSize = poolSizes[1]
+        heightImagesPoolSize.type(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+        heightImagesPoolSize.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
+
+        val ciDescriptorPool = VkDescriptorPoolCreateInfo.calloc(stack)
+        ciDescriptorPool.`sType$Default`()
+        ciDescriptorPool.maxSets(1)
+        ciDescriptorPool.pPoolSizes(poolSizes)
+
+        val pDescriptorPool = stack.callocLong(1)
+        assertVkSuccess(
+            vkCreateDescriptorPool(vkDevice, ciDescriptorPool, null, pDescriptorPool),
+            "CreateDescriptorPool", "standard plug-in: basic dynamic"
+        )
+        pDescriptorPool[0]
+    }
+}
+
+fun createBasicStaticDescriptorSet(
     vkDevice: VkDevice, descriptorPool: Long, descriptorSetLayout: Long,
     cameraDeviceBuffer: VulkanBufferRange, transformationMatrixDeviceBuffer: VulkanBufferRange,
-    sampler: Long, colorImages: List<VulkanImage>, heightImages: List<VulkanImage>
+    sampler: Long
 ): Long {
-    if (colorImages.size > MAX_NUM_DESCRIPTOR_IMAGES) {
-        throw IllegalArgumentException("Too many color images (${colorImages.size}): at most $MAX_NUM_DESCRIPTOR_IMAGES are allowed")
-    }
-    if (heightImages.size > MAX_NUM_DESCRIPTOR_IMAGES) {
-        throw IllegalArgumentException("Too many height images (${heightImages.size}): at most $MAX_NUM_DESCRIPTOR_IMAGES are allowed")
-    }
     return stackPush().use { stack ->
         val aiDescriptor = VkDescriptorSetAllocateInfo.calloc(stack)
         aiDescriptor.sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
@@ -68,7 +80,7 @@ fun createBasicDescriptorSet(
         val pDescriptorSet = stack.callocLong(1)
         assertVkSuccess(
             vkAllocateDescriptorSets(vkDevice, aiDescriptor, pDescriptorSet),
-            "AllocateDescriptorSets", "standard plug-in: basic"
+            "AllocateDescriptorSets", "standard plug-in: basic static"
         )
         val basicDescriptorSet = pDescriptorSet[0]
 
@@ -82,6 +94,75 @@ fun createBasicDescriptorSet(
         val iiSampler = iiSamplers[0]
         iiSampler.sampler(sampler)
         // imageView and imageLayout are ignored
+
+        val biStorages = VkDescriptorBufferInfo.calloc(1, stack)
+        val biStorage = biStorages[0]
+        biStorage.buffer(transformationMatrixDeviceBuffer.buffer.handle)
+        biStorage.offset(transformationMatrixDeviceBuffer.offset)
+        biStorage.range(transformationMatrixDeviceBuffer.size)
+
+        val descriptorWrites = VkWriteDescriptorSet.calloc(3, stack)
+        val uniformWrite = descriptorWrites[0]
+        uniformWrite.sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
+        uniformWrite.dstSet(basicDescriptorSet)
+        uniformWrite.dstBinding(0)
+        uniformWrite.dstArrayElement(0)
+        uniformWrite.descriptorCount(1)
+        uniformWrite.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+        uniformWrite.pBufferInfo(biUniforms)
+
+        val samplerWrite = descriptorWrites[1]
+        samplerWrite.`sType$Default`()
+        samplerWrite.dstSet(basicDescriptorSet)
+        samplerWrite.dstBinding(1)
+        samplerWrite.dstArrayElement(0)
+        samplerWrite.descriptorCount(1)
+        samplerWrite.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLER)
+        samplerWrite.pImageInfo(iiSamplers)
+
+        val storageWrite = descriptorWrites[2]
+        storageWrite.sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
+        storageWrite.dstSet(basicDescriptorSet)
+        storageWrite.dstBinding(2)
+        storageWrite.dstArrayElement(0)
+        storageWrite.descriptorCount(1)
+        storageWrite.descriptorType(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+        storageWrite.pBufferInfo(biStorages)
+
+        vkUpdateDescriptorSets(vkDevice, descriptorWrites, null)
+        basicDescriptorSet
+    }
+}
+
+fun createBasicDynamicDescriptorSet(
+    vkDevice: VkDevice, descriptorPool: Long, descriptorSetLayout: Long
+): Long {
+    return stackPush().use { stack ->
+        val aiDescriptor = VkDescriptorSetAllocateInfo.calloc(stack)
+        aiDescriptor.sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
+        aiDescriptor.descriptorPool(descriptorPool)
+        aiDescriptor.pSetLayouts(stack.longs(descriptorSetLayout))
+
+        val pDescriptorSet = stack.callocLong(1)
+        assertVkSuccess(
+            vkAllocateDescriptorSets(vkDevice, aiDescriptor, pDescriptorSet),
+            "AllocateDescriptorSets", "standard plug-in: basic dynamic"
+        )
+        pDescriptorSet[0]
+    }
+}
+
+fun updateBasicDynamicDescriptorSet(
+    vkDevice: VkDevice, basicDynamicDescriptorSet: Long, colorImages: List<VulkanImage>, heightImages: List<VulkanImage>
+) {
+    if (colorImages.size > MAX_NUM_DESCRIPTOR_IMAGES) {
+        throw IllegalArgumentException("Too many color images (${colorImages.size}): at most $MAX_NUM_DESCRIPTOR_IMAGES are allowed")
+    }
+    if (heightImages.size > MAX_NUM_DESCRIPTOR_IMAGES) {
+        throw IllegalArgumentException("Too many height images (${heightImages.size}): at most $MAX_NUM_DESCRIPTOR_IMAGES are allowed")
+    }
+
+    stackPush().use { stack ->
 
         val iiColorImages = VkDescriptorImageInfo.calloc(MAX_NUM_DESCRIPTOR_IMAGES, stack)
         val backupColorImage = colorImages.first()
@@ -109,60 +190,27 @@ fun createBasicDescriptorSet(
             }
         }
 
-        val biStorages = VkDescriptorBufferInfo.calloc(1, stack)
-        val biStorage = biStorages[0]
-        biStorage.buffer(transformationMatrixDeviceBuffer.buffer.handle)
-        biStorage.offset(transformationMatrixDeviceBuffer.offset)
-        biStorage.range(transformationMatrixDeviceBuffer.size)
+        val descriptorWrites = VkWriteDescriptorSet.calloc(2, stack)
 
-        val descriptorWrites = VkWriteDescriptorSet.calloc(5, stack)
-        val uniformWrite = descriptorWrites[0]
-        uniformWrite.sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
-        uniformWrite.dstSet(basicDescriptorSet)
-        uniformWrite.dstBinding(0)
-        uniformWrite.dstArrayElement(0)
-        uniformWrite.descriptorCount(1)
-        uniformWrite.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-        uniformWrite.pBufferInfo(biUniforms)
-
-        val samplerWrite = descriptorWrites[1]
-        samplerWrite.`sType$Default`()
-        samplerWrite.dstSet(basicDescriptorSet)
-        samplerWrite.dstBinding(1)
-        samplerWrite.dstArrayElement(0)
-        samplerWrite.descriptorCount(1)
-        samplerWrite.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLER)
-        samplerWrite.pImageInfo(iiSamplers)
-
-        val colorImageWrites = descriptorWrites[2]
+        val colorImageWrites = descriptorWrites[0]
         colorImageWrites.`sType$Default`()
-        colorImageWrites.dstSet(basicDescriptorSet)
-        colorImageWrites.dstBinding(2)
+        colorImageWrites.dstSet(basicDynamicDescriptorSet)
+        colorImageWrites.dstBinding(0)
         colorImageWrites.dstArrayElement(0)
         colorImageWrites.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
         colorImageWrites.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
         colorImageWrites.pImageInfo(iiColorImages)
 
-        val heightImageWrites = descriptorWrites[3]
+        val heightImageWrites = descriptorWrites[1]
         heightImageWrites.`sType$Default`()
-        heightImageWrites.dstSet(basicDescriptorSet)
-        heightImageWrites.dstBinding(3)
+        heightImageWrites.dstSet(basicDynamicDescriptorSet)
+        heightImageWrites.dstBinding(1)
         heightImageWrites.dstArrayElement(0)
         heightImageWrites.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
         heightImageWrites.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
         heightImageWrites.pImageInfo(iiHeightImages)
 
-        val storageWrite = descriptorWrites[4]
-        storageWrite.sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
-        storageWrite.dstSet(basicDescriptorSet)
-        storageWrite.dstBinding(4)
-        storageWrite.dstArrayElement(0)
-        storageWrite.descriptorCount(1)
-        storageWrite.descriptorType(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
-        storageWrite.pBufferInfo(biStorages)
-
         vkUpdateDescriptorSets(vkDevice, descriptorWrites, null)
-        basicDescriptorSet
     }
 }
 

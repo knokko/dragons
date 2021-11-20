@@ -153,8 +153,7 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
             vkCmdBindDescriptorSets(
                 commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pluginState.graphics.basicGraphicsPipeline.pipelineLayout,
-                // TODO Use 2 descriptor sets rather than 1
-                0, stack.longs(pluginState.graphics.basicDescriptorSet), null
+                0, stack.longs(pluginGraphics.basicStaticDescriptorSet, pluginGraphics.basicDynamicDescriptorSet), null
             )
             vkCmdDrawIndexedIndirectCount(
                 commandBuffer,

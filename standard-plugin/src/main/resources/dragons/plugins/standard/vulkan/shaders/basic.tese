@@ -28,12 +28,13 @@ layout(set = 0, binding = 0) uniform Camera {
 } camera;
 layout(set = 0, binding = 1) uniform sampler textureSampler;
 
-// Note: this must be identical to BasicPipelineLayout.MAX_NUM_DESCRIPTOR_IMAGES
-// Perhaps I can use specialization constants or 'runtime substitiutions' and compile the shader on runtime
-layout(set = 0, binding = 3) uniform texture2D heightTextures[100];
-layout(set = 0, binding = 4) readonly buffer Objects {
+layout(set = 0, binding = 2) readonly buffer Objects {
     mat4 transformationMatrices[];
 } objects;
+
+// Note: this must be identical to BasicPipelineLayout.MAX_NUM_DESCRIPTOR_IMAGES
+// Perhaps I can use specialization constants or 'runtime substitiutions' and compile the shader on runtime
+layout(set = 1, binding = 1) uniform texture2D heightTextures[100];
 
 layout(push_constant) uniform PushConstants {
     int eyeIndex;

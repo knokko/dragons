@@ -3,7 +3,6 @@ package dragons.plugins.standard.state
 import dragons.plugins.standard.vulkan.pipeline.BasicGraphicsPipeline
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
-import org.lwjgl.vulkan.VkCommandBuffer
 import java.nio.ByteBuffer
 
 class StandardGraphicsState(
@@ -11,8 +10,10 @@ class StandardGraphicsState(
     val basicRenderPass: Long,
     val basicLeftFramebuffer: Long,
     val basicRightFramebuffer: Long,
-    val basicDescriptorPool: Long,
-    val basicDescriptorSet: Long,
+    val basicStaticDescriptorPool: Long,
+    val basicDynamicDescriptorPool: Long,
+    val basicStaticDescriptorSet: Long,
+    val basicDynamicDescriptorSet: Long,
     val basicSampler: Long,
     val buffers: StandardGraphicsBuffers,
 

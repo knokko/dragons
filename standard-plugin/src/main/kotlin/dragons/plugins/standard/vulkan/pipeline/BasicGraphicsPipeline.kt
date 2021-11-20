@@ -10,14 +10,16 @@ import org.slf4j.LoggerFactory.getLogger
 
 class BasicGraphicsPipeline(
     val handle: Long,
-    val descriptorSetLayout: Long,
+    val staticDescriptorSetLayout: Long,
+    val dynamicDescriptorSetLayout: Long,
     val pipelineLayout: Long
 )
 
 fun destroyBasicGraphicsPipeline(vkDevice: VkDevice, basicPipeline: BasicGraphicsPipeline) {
     vkDestroyPipeline(vkDevice, basicPipeline.handle, null)
     vkDestroyPipelineLayout(vkDevice, basicPipeline.pipelineLayout, null)
-    vkDestroyDescriptorSetLayout(vkDevice, basicPipeline.descriptorSetLayout, null)
+    vkDestroyDescriptorSetLayout(vkDevice, basicPipeline.staticDescriptorSetLayout, null)
+    vkDestroyDescriptorSetLayout(vkDevice, basicPipeline.dynamicDescriptorSetLayout, null)
 }
 
 fun createBasicGraphicsPipeline(
@@ -26,7 +28,7 @@ fun createBasicGraphicsPipeline(
 ): BasicGraphicsPipeline {
     stackPush().use { stack ->
 
-        val (basicDescriptorSetLayout, basicPipelineLayout) = createBasicPipelineLayout(vkDevice, stack)
+        val (basicStaticDescriptorSetLayout, basicDynamicDescriptorSetLayout, basicPipelineLayout) = createBasicPipelineLayout(vkDevice, stack)
 
         val ciPipelines = VkGraphicsPipelineCreateInfo.calloc(1, stack)
         createBasicGraphicsPipeline(
@@ -49,7 +51,8 @@ fun createBasicGraphicsPipeline(
 
         return BasicGraphicsPipeline(
             handle = pPipelines[0],
-            descriptorSetLayout = basicDescriptorSetLayout,
+            staticDescriptorSetLayout = basicStaticDescriptorSetLayout,
+            dynamicDescriptorSetLayout = basicDynamicDescriptorSetLayout,
             pipelineLayout = basicPipelineLayout
         )
     }

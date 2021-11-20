@@ -68,8 +68,10 @@ class StandardStaticStateListener: StaticStateListener {
                 basicRenderPass = basicRenderPass,
                 basicLeftFramebuffer = leftFramebuffer,
                 basicRightFramebuffer = rightFramebuffer,
-                basicDescriptorPool = state.preGraphics.basicDescriptorPool.await(),
-                basicDescriptorSet = state.preGraphics.basicDescriptorSet.await(),
+                basicStaticDescriptorPool = state.preGraphics.basicStaticDescriptorPool.await(),
+                basicDynamicDescriptorPool = state.preGraphics.basicDynamicDescriptorPool.await(),
+                basicStaticDescriptorSet = state.preGraphics.basicStaticDescriptorSet.await(),
+                basicDynamicDescriptorSet = state.preGraphics.basicDynamicDescriptorSet.await(),
                 basicSampler = state.preGraphics.basicSampler.await(),
 
                 buffers = StandardGraphicsBuffers(

@@ -9,8 +9,10 @@ import java.nio.ByteBuffer
 class StandardPreGraphicsState(
     val basicGraphicsPipeline: CompletableDeferred<BasicGraphicsPipeline> = CompletableDeferred(),
     val basicRenderPass: CompletableDeferred<Long> = CompletableDeferred(),
-    val basicDescriptorPool: CompletableDeferred<Long> = CompletableDeferred(),
-    val basicDescriptorSet: CompletableDeferred<Long> = CompletableDeferred(),
+    val basicStaticDescriptorPool: CompletableDeferred<Long> = CompletableDeferred(),
+    val basicDynamicDescriptorPool: CompletableDeferred<Long> = CompletableDeferred(),
+    val basicStaticDescriptorSet: CompletableDeferred<Long> = CompletableDeferred(),
+    val basicDynamicDescriptorSet: CompletableDeferred<Long> = CompletableDeferred(),
     val basicSampler: CompletableDeferred<Long> = CompletableDeferred(),
 
     val transformationMatrixDeviceBuffer: CompletableDeferred<VulkanBufferRange> = CompletableDeferred(),

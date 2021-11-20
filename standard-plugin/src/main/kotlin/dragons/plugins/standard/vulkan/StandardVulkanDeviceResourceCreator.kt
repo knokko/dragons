@@ -3,13 +3,8 @@ package dragons.plugins.standard.vulkan
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanDeviceCreationListener
 import dragons.plugins.standard.state.StandardPluginState
-import dragons.plugins.standard.state.StandardPreGraphicsState
-import dragons.plugins.standard.vulkan.pipeline.createBasicDescriptorPool
-import dragons.plugins.standard.vulkan.pipeline.createBasicDescriptorSet
-import dragons.plugins.standard.vulkan.pipeline.createBasicGraphicsPipeline
-import dragons.plugins.standard.vulkan.pipeline.createBasicSampler
+import dragons.plugins.standard.vulkan.pipeline.*
 import dragons.plugins.standard.vulkan.renderpass.createBasicRenderPass
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 class StandardVulkanDeviceResourceCreator: VulkanDeviceCreationListener {
@@ -28,22 +23,35 @@ class StandardVulkanDeviceResourceCreator: VulkanDeviceCreationListener {
             val basicSampler = createBasicSampler(agent.vulkanDevice)
             state.preGraphics.basicSampler.complete(basicSampler)
 
-            val descriptorPool = createBasicDescriptorPool(agent.vulkanDevice)
-            state.preGraphics.basicDescriptorPool.complete(descriptorPool)
+            val staticDescriptorPool = createBasicStaticDescriptorPool(agent.vulkanDevice)
+            state.preGraphics.basicStaticDescriptorPool.complete(staticDescriptorPool)
 
-            val descriptorSetLayout = state.preGraphics.basicGraphicsPipeline.await().descriptorSetLayout
+            val dynamicDescriptorPool = createBasicDynamicDescriptorPool(agent.vulkanDevice)
+            state.preGraphics.basicDynamicDescriptorPool.complete(dynamicDescriptorPool)
+
+            val basicPipeline = state.preGraphics.basicGraphicsPipeline.await()
+            val staticDescriptorSetLayout = basicPipeline.staticDescriptorSetLayout
+            val dynamicDescriptorSetLayout = basicPipeline.dynamicDescriptorSetLayout
 
             val cameraDeviceBuffer = state.preGraphics.cameraDeviceBuffer.await()
             val transformationMatrixDeviceBuffer = state.preGraphics.transformationMatrixDeviceBuffer.await()
 
-            // TODO Move this to a distinct descriptor set that is filled later
+            state.preGraphics.basicStaticDescriptorSet.complete(createBasicStaticDescriptorSet(
+                agent.vulkanDevice, staticDescriptorPool, staticDescriptorSetLayout,
+                cameraDeviceBuffer, transformationMatrixDeviceBuffer, basicSampler
+            ))
+
+            val basicDynamicDescriptorSet = createBasicDynamicDescriptorSet(
+                agent.vulkanDevice, dynamicDescriptorPool, dynamicDescriptorSetLayout
+            )
+            state.preGraphics.basicDynamicDescriptorSet.complete(basicDynamicDescriptorSet)
+
+            // TODO Update this descriptor set later
             val testColorImage = state.preGraphics.testColorImage.await()
             val testHeightImage = state.preGraphics.testHeightImage.await()
-
-            state.preGraphics.basicDescriptorSet.complete(createBasicDescriptorSet(
-                agent.vulkanDevice, descriptorPool, descriptorSetLayout, cameraDeviceBuffer, transformationMatrixDeviceBuffer,
-                basicSampler, listOf(testColorImage), listOf(testHeightImage)
-            ))
+            updateBasicDynamicDescriptorSet(
+                agent.vulkanDevice, basicDynamicDescriptorSet, listOf(testColorImage), listOf(testHeightImage)
+            )
         }
     }
 }

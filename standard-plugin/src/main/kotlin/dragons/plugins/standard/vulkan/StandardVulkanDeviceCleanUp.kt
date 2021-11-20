@@ -33,9 +33,10 @@ class StandardVulkanDeviceCleanUp: VulkanDeviceDestructionListener {
                 vkDestroyFramebuffer(agent.vulkanDevice, graphicsState.basicRightFramebuffer, null)
                 logger.info("Destroyed basic framebuffers")
 
-                logger.info("Destroying basic descriptor pool...")
-                vkDestroyDescriptorPool(agent.vulkanDevice, graphicsState.basicDescriptorPool, null)
-                logger.info("Destroyed basic descriptor pool")
+                logger.info("Destroying basic descriptor pools...")
+                vkDestroyDescriptorPool(agent.vulkanDevice, graphicsState.basicStaticDescriptorPool, null)
+                vkDestroyDescriptorPool(agent.vulkanDevice, graphicsState.basicDynamicDescriptorPool, null)
+                logger.info("Destroyed basic descriptor pools")
 
                 logger.info("Destroying basic sampler...")
                 vkDestroySampler(agent.vulkanDevice, graphicsState.basicSampler, null)
