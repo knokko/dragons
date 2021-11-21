@@ -34,6 +34,14 @@ value class BasicVertex(val address: Long) {
     get() = memGetFloat(address + OFFSET_DELTA_FACTOR)
     set(value) = memPutFloat(address + OFFSET_DELTA_FACTOR, value)
 
+    var colorTextureIndex: Int
+    get() = memGetInt(address + OFFSET_COLOR_TEXTURE_INDEX)
+    set(value) = memPutInt(address + OFFSET_COLOR_TEXTURE_INDEX, value)
+
+    var heightTextureIndex: Int
+    get() = memGetInt(address + OFFSET_HEIGHT_TEXTURE_INDEX)
+    set(value) = memPutInt(address + OFFSET_HEIGHT_TEXTURE_INDEX, value)
+
     companion object {
 
         const val OFFSET_BASE_POSITION = 0
