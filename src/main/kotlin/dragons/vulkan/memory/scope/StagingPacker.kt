@@ -25,9 +25,13 @@ internal class StagingPlacements(
      */
     val externalOffset: Long,
     /**
-     * The total number of bytes that are reserved for this queue family in the shared staging buffer.
+     * The total number of bytes that are reserved for **both buffers and images** for this queue family in the shared staging buffer.
      */
     val stagingBufferSize: Long,
+    /**
+     * The total number of bytes that are reserved for **buffers** for this queue family in the shared staging buffer.
+     */
+    val stagingBufferOnlyBufferSize: Long,
     /**
      * The size (in bytes) that the device local buffer will need.
      *
@@ -131,6 +135,7 @@ internal fun determineStagingPlacements(
         familyPlacementMap[queueFamily] = StagingPlacements(
             externalOffset = externalOffset,
             stagingBufferSize = familyStagingSize,
+            stagingBufferOnlyBufferSize = totalPrefilledBufferSize,
             deviceBufferSize = uninitializedBufferFamilyOffset + totalPrefilledBufferSize,
             internalPlacements = placedClaims
         )

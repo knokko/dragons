@@ -119,12 +119,12 @@ internal class FamilyCommands(
             val imageBarriers = VkImageMemoryBarrier.calloc(1, stack)
 
             for ((queueFamily, placements) in stagingPlacementMap) {
-                if (placements.stagingBufferSize > 0L && shouldDoBufferCopies) {
+                if (placements.stagingBufferOnlyBufferSize > 0L && shouldDoBufferCopies) {
 
                     val copyRegion = bufferCopyRegions[0]
                     copyRegion.srcOffset(placements.externalOffset + placements.internalPlacements.prefilledBufferStagingOffset)
                     copyRegion.dstOffset(placements.internalPlacements.prefilledBufferDeviceOffset)
-                    copyRegion.size(placements.stagingBufferSize)
+                    copyRegion.size(placements.stagingBufferOnlyBufferSize)
 
                     val deviceBuffer = queueFamilyToBufferMap[queueFamily]!!
 
