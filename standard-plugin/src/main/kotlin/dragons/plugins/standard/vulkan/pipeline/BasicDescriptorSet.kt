@@ -153,7 +153,7 @@ fun createBasicDynamicDescriptorSet(
 }
 
 fun updateBasicDynamicDescriptorSet(
-    vkDevice: VkDevice, basicDynamicDescriptorSet: Long, colorImages: List<VulkanImage>, heightImages: List<VulkanImage>
+    vkDevice: VkDevice, basicDynamicDescriptorSet: Long, colorImages: List<VulkanImage?>, heightImages: List<VulkanImage?>
 ) {
     if (colorImages.size > MAX_NUM_DESCRIPTOR_IMAGES) {
         throw IllegalArgumentException("Too many color images (${colorImages.size}): at most $MAX_NUM_DESCRIPTOR_IMAGES are allowed")
@@ -165,12 +165,19 @@ fun updateBasicDynamicDescriptorSet(
     stackPush().use { stack ->
 
         val iiColorImages = VkDescriptorImageInfo.calloc(MAX_NUM_DESCRIPTOR_IMAGES, stack)
-        val backupColorImage = colorImages.first()
+        val backupColorImage = colorImages.firstOrNull { candidate -> candidate != null }
+            ?: throw IllegalArgumentException("At least 1 color image is required")
+
         for (index in 0 until MAX_NUM_DESCRIPTOR_IMAGES) {
             val iiColorImage = iiColorImages[index]
             // sampler will be ignored
             if (index < colorImages.size) {
-                iiColorImage.imageView(colorImages[index].fullView!!)
+                val maybeImage = colorImages[index]
+                if (maybeImage != null) {
+                    iiColorImage.imageView(maybeImage.fullView!!)
+                } else {
+                    iiColorImage.imageView(backupColorImage.fullView!!)
+                }
             } else {
                 iiColorImage.imageView(backupColorImage.fullView!!)
             }
@@ -178,13 +185,20 @@ fun updateBasicDynamicDescriptorSet(
         }
 
         val iiHeightImages = VkDescriptorImageInfo.calloc(MAX_NUM_DESCRIPTOR_IMAGES, stack)
-        val backupHeightImage = heightImages.first()
+        val backupHeightImage = heightImages.firstOrNull { candidate -> candidate != null }
+            ?: throw IllegalArgumentException("At least 1 height image is required")
+
         for (index in 0 until MAX_NUM_DESCRIPTOR_IMAGES) {
             val iiHeightImage = iiHeightImages[index]
             // sampler will be ignored
             iiHeightImage.imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
             if (index < heightImages.size) {
-                iiHeightImage.imageView(heightImages[index].fullView!!)
+                val maybeImage = heightImages[index]
+                if (maybeImage != null) {
+                    iiHeightImage.imageView(maybeImage.fullView!!)
+                } else {
+                    iiHeightImage.imageView(backupHeightImage.fullView!!)
+                }
             } else {
                 iiHeightImage.imageView(backupHeightImage.fullView!!)
             }

@@ -3,10 +3,10 @@ package dragons.plugins.standard.vulkan.command
 import dragons.plugin.PluginInstance
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.MAX_NUM_INDIRECT_DRAW_CALLS
+import dragons.plugins.standard.vulkan.pipeline.updateBasicDynamicDescriptorSet
 import dragons.state.StaticGameState
 import dragons.vulkan.util.assertVkSuccess
 import org.joml.Matrix4f
-import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memAddress
 import org.lwjgl.vulkan.*
@@ -15,9 +15,17 @@ import org.lwjgl.vulkan.VK12.*
 fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: StaticGameState): Pair<Long, VkCommandBuffer> {
     return stackPush().use { stack ->
         val contextInfo = "standard plug-in: main menu rendering"
+
         val pluginState = pluginInstance.state as StandardPluginState
         val pluginGraphics = pluginState.graphics
         val graphicsState = gameState.graphics
+
+        updateBasicDynamicDescriptorSet(
+            graphicsState.vkDevice,
+            pluginGraphics.basicDynamicDescriptorSet,
+            pluginGraphics.mainMenu.textureSet.colorTextureList,
+            pluginGraphics.mainMenu.textureSet.heightTextureList
+        )
 
         val ciCommandPool = VkCommandPoolCreateInfo.calloc(stack)
         ciCommandPool.`sType$Default`()
@@ -135,12 +143,13 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pluginState.graphics.basicGraphicsPipeline.handle)
             vkCmdBindVertexBuffers(
                 commandBuffer, 0,
-                stack.longs(pluginGraphics.buffers.vertex.buffer.handle),
-                stack.longs(pluginGraphics.buffers.vertex.offset)
+                stack.longs(pluginGraphics.mainMenu.modelSet.vertexBuffer.handle),
+                stack.longs(0)
             )
             vkCmdBindIndexBuffer(
                 commandBuffer,
-                pluginGraphics.buffers.index.buffer.handle, pluginGraphics.buffers.index.offset,
+                pluginGraphics.mainMenu.modelSet.indexBuffer.handle,
+                0,
                 VK_INDEX_TYPE_UINT32
             )
             vkCmdPushConstants(
@@ -176,14 +185,17 @@ fun fillDrawingBuffers(
     pluginInstance: PluginInstance, gameState: StaticGameState, leftEyeMatrix: Matrix4f, rightEyeMatrix: Matrix4f
 ) {
     val numDrawCalls = 300
-    val buffers = (pluginInstance.state as StandardPluginState).graphics.buffers
+    val graphicsState = (pluginInstance.state as StandardPluginState).graphics
+    val buffers = graphicsState.buffers
+
 
     buffers.indirectDrawCountHost.putInt(0, numDrawCalls)
 
     // TODO Find a more stable way to determine these
-    val numIndices = (buffers.index.size / 4).toInt()
-    val firstIndex = 0
-    val vertexOffset = 0
+    val skyland = graphicsState.mainMenu.skyland
+    val numIndices = (skyland.indices.size / 4).toInt()
+    val firstIndex = (skyland.indices.offset / 4).toInt()
+    val vertexOffset = skyland.vertices.offset.toInt()
 
     for (currentDrawCall in 0 until numDrawCalls) {
         val drawCall1 = VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + currentDrawCall * VkDrawIndexedIndirectCommand.SIZEOF)

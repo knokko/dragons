@@ -45,13 +45,6 @@ class StandardVulkanDeviceResourceCreator: VulkanDeviceCreationListener {
                 agent.vulkanDevice, dynamicDescriptorPool, dynamicDescriptorSetLayout
             )
             state.preGraphics.basicDynamicDescriptorSet.complete(basicDynamicDescriptorSet)
-
-            // TODO Update this descriptor set later
-            val testColorImage = state.preGraphics.testColorImage.await()
-            val testHeightImage = state.preGraphics.testHeightImage.await()
-            updateBasicDynamicDescriptorSet(
-                agent.vulkanDevice, basicDynamicDescriptorSet, listOf(testColorImage), listOf(testHeightImage)
-            )
         }
     }
 }

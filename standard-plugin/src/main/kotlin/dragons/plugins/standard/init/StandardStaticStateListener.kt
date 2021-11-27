@@ -85,12 +85,8 @@ class StandardStaticStateListener: StaticStateListener {
                     indirectDrawHost = indirectDrawHostBuffer,
                     indirectDrawCountDevice = indirectDrawCountDeviceBuffer,
                     indirectDrawCountHost = indirectDrawCountHostBuffer,
-                    vertex = state.preGraphics.vertexBuffer.await(),
-                    index = state.preGraphics.indexBuffer.await()
                 ),
-
-                testColorImage = state.preGraphics.testColorImage.await(),
-                testHeightImage = state.preGraphics.testHeightImage.await()
+                mainMenu = state.preGraphics.mainMenu.await(),
             )}
         }
     }

@@ -3,6 +3,7 @@ package dragons.plugins.standard.vulkan
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.plugins.standard.state.StandardPluginState
+import dragons.plugins.standard.vulkan.model.generator.generateSkylandModel
 import dragons.plugins.standard.vulkan.vertex.BasicVertex
 import dragons.vulkan.memory.claim.BufferMemoryClaim
 import dragons.vulkan.memory.claim.ImageMemoryClaim
@@ -21,94 +22,68 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
     override fun claimStaticMemory(pluginInstance: PluginInstance, agent: VulkanStaticMemoryUser.Agent) {
 
         val preGraphics = (pluginInstance.state as StandardPluginState).preGraphics
-        val vertexFrequency = 10
 
-        // Testing terrain vertex buffer
+        val mainMenuSkyland = generateSkylandModel({
+            0.5f
+        }, preGraphics.mainMenu.skyland.baseColorTextureIndex, preGraphics.mainMenu.skyland.baseHeightTextureIndex)
+
+        // Main menu skyland vertex buffer
         agent.claims.buffers.add(BufferMemoryClaim(
-            size = BasicVertex.SIZE * vertexFrequency * vertexFrequency,
+            size = BasicVertex.SIZE * mainMenuSkyland.numVertices,
             usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
             dstPipelineStageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
             queueFamily = agent.queueManager.generalQueueFamily,
-            storeResult = preGraphics.vertexBuffer
+            storeResult = preGraphics.mainMenu.skyland.vertices
         ) { destBuffer ->
-            val vertices = BasicVertex.createArray(destBuffer, 0, (vertexFrequency * vertexFrequency).toLong())
-            for (indexZ in 0 until vertexFrequency) {
-                for (indexX in 0 until vertexFrequency) {
-                    val vertexIndex = indexX + vertexFrequency * indexZ
-                    val x = indexX.toFloat() / (vertexFrequency - 1).toFloat()
-                    val z = indexZ.toFloat() / (vertexFrequency - 1).toFloat()
-
-                    val vertex = vertices[vertexIndex]
-                    vertex.position.x = x
-                    vertex.position.y = 0f
-                    vertex.position.z = z
-                    vertex.normal.x = 0f
-                    vertex.normal.y = 1f
-                    vertex.normal.z = 0f
-                    vertex.colorTextureCoordinates.x = x
-                    vertex.colorTextureCoordinates.y = z
-                    vertex.heightTextureCoordinates.x = x
-                    vertex.heightTextureCoordinates.y = z
-                    vertex.matrixIndex = 0
-                    vertex.materialIndex = BasicVertex.MATERIAL_TERRAIN
-                    vertex.deltaFactor = 1f
-                }
-            }
+            val vertices = BasicVertex.createArray(destBuffer, 0, mainMenuSkyland.numVertices.toLong())
+            mainMenuSkyland.fillVertexBuffer(vertices)
         })
 
-        // Testing terrain index buffer
+        // Main menu skyland index buffer
         agent.claims.buffers.add(BufferMemoryClaim(
-            size = 4 * 6 * (vertexFrequency - 1) * (vertexFrequency - 1),
+            size = 4 * mainMenuSkyland.numIndices,
+            alignment = 4,
             usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             dstAccessMask = VK_ACCESS_INDEX_READ_BIT,
             dstPipelineStageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
             queueFamily = agent.queueManager.generalQueueFamily,
-            storeResult = preGraphics.indexBuffer
+            storeResult = preGraphics.mainMenu.skyland.indices,
         ) { destBuffer ->
-            for (lowZ in 0 until vertexFrequency - 1) {
-                val highZ = lowZ + 1
-                for (lowX in 0 until vertexFrequency - 1) {
-                    val highX = lowX + 1
-
-                    val indexLL = lowX + vertexFrequency * lowZ
-                    val indexHL = highX + vertexFrequency * lowZ
-                    val indexLH = lowX + vertexFrequency * highZ
-                    val indexHH = highX + vertexFrequency * highZ
-
-                    destBuffer.putInt(indexLH)
-                    destBuffer.putInt(indexHH)
-                    destBuffer.putInt(indexHL)
-
-                    destBuffer.putInt(indexHL)
-                    destBuffer.putInt(indexLL)
-                    destBuffer.putInt(indexLH)
-                }
-            }
+            mainMenuSkyland.fillIndexBuffer(destBuffer.asIntBuffer())
         })
 
-        // Testing terrain color image
-        agent.claims.images.add(ImageMemoryClaim(
-            width = 1024, height = 1024, queueFamily = agent.queueManager.generalQueueFamily, bytesPerPixel = 4,
-            imageFormat = VK_FORMAT_R8G8B8A8_SRGB, tiling = VK_IMAGE_TILING_OPTIMAL,
-            imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT, initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, accessMask = VK_ACCESS_SHADER_READ_BIT,
-            dstPipelineStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, storeResult = preGraphics.testColorImage,
-            prefill = prefillBufferedImage(
-                // TODO Start loading the image asynchronously earlier
-                { ImageIO.read(agent.pluginClassLoader.getResourceAsStream("dragons/plugins/standard/images/testTerrain.jpg")) },
-                1024, 1024, 4
+        // Main menu skyland color image
+        agent.claims.images.add(
+            ImageMemoryClaim(
+                width = 1024,
+                height = 1024,
+                queueFamily = agent.queueManager.generalQueueFamily,
+                bytesPerPixel = 4,
+                imageFormat = VK_FORMAT_R8G8B8A8_SRGB,
+                tiling = VK_IMAGE_TILING_OPTIMAL,
+                imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT,
+                initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                accessMask = VK_ACCESS_SHADER_READ_BIT,
+                dstPipelineStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                storeResult = preGraphics.mainMenu.skylandColorTexture.image,
+                prefill = prefillBufferedImage(
+                    // TODO Start loading the image asynchronously earlier
+                    { ImageIO.read(agent.pluginClassLoader.getResourceAsStream("dragons/plugins/standard/images/testTerrain.jpg")) },
+                    1024, 1024, 4
+                )
             )
-        ))
+        )
 
-        // Testing terrain height image
+        // Main menu skyland height image
         agent.claims.images.add(ImageMemoryClaim(
             width = 128, height = 128, queueFamily = agent.queueManager.generalQueueFamily, bytesPerPixel = 4,
             imageFormat = VK_FORMAT_R32_SFLOAT, tiling = VK_IMAGE_TILING_OPTIMAL,
             imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT, initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, accessMask = VK_ACCESS_SHADER_READ_BIT,
             dstPipelineStageMask = VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT or VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            storeResult = preGraphics.testHeightImage
+            storeResult = preGraphics.mainMenu.skylandHeightTexture.image
         ) { destBuffer ->
             val bufferedHeightImage = ImageIO.read(
                 agent.pluginClassLoader.getResourceAsStream("dragons/plugins/standard/images/testTerrainHeight.png")

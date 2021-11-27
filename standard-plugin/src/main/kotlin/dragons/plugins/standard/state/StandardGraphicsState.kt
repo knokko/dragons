@@ -1,8 +1,8 @@
 package dragons.plugins.standard.state
 
+import dragons.plugins.standard.menu.MainMenuModels
 import dragons.plugins.standard.vulkan.pipeline.BasicGraphicsPipeline
 import dragons.vulkan.memory.VulkanBufferRange
-import dragons.vulkan.memory.VulkanImage
 import java.nio.ByteBuffer
 
 class StandardGraphicsState(
@@ -16,9 +16,7 @@ class StandardGraphicsState(
     val basicDynamicDescriptorSet: Long,
     val basicSampler: Long,
     val buffers: StandardGraphicsBuffers,
-
-    val testColorImage: VulkanImage,
-    val testHeightImage: VulkanImage,
+    val mainMenu: MainMenuModels,
 )
 
 class StandardGraphicsBuffers(
@@ -32,6 +30,4 @@ class StandardGraphicsBuffers(
     val indirectDrawHost: ByteBuffer,
     val indirectDrawCountDevice: VulkanBufferRange,
     val indirectDrawCountHost: ByteBuffer,
-    val vertex: VulkanBufferRange,
-    val index: VulkanBufferRange
 )

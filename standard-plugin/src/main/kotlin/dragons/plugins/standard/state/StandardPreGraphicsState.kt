@@ -1,8 +1,8 @@
 package dragons.plugins.standard.state
 
+import dragons.plugins.standard.menu.MainMenuPreModels
 import dragons.plugins.standard.vulkan.pipeline.BasicGraphicsPipeline
 import dragons.vulkan.memory.VulkanBufferRange
-import dragons.vulkan.memory.VulkanImage
 import kotlinx.coroutines.CompletableDeferred
 import java.nio.ByteBuffer
 
@@ -21,9 +21,5 @@ class StandardPreGraphicsState(
     val cameraStagingBuffer: CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>> = CompletableDeferred(),
     val indirectDrawingBuffer: CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>> = CompletableDeferred(),
     val indirectDrawCountBuffer: CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>> = CompletableDeferred(),
-    val vertexBuffer: CompletableDeferred<VulkanBufferRange> = CompletableDeferred(),
-    val indexBuffer: CompletableDeferred<VulkanBufferRange> = CompletableDeferred(),
-
-    val testColorImage: CompletableDeferred<VulkanImage> = CompletableDeferred(),
-    val testHeightImage: CompletableDeferred<VulkanImage> = CompletableDeferred()
+    val mainMenu: MainMenuPreModels = MainMenuPreModels(),
 )
