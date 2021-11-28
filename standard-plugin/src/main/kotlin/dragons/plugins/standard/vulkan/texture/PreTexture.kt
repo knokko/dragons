@@ -5,7 +5,7 @@ import kotlinx.coroutines.CompletableDeferred
 
 class PreTexture(
     val image: CompletableDeferred<VulkanImage> = CompletableDeferred(),
-    val index: Int,
+    var index: Int = -1,
     val type: TextureType
 ) {
     suspend fun await(): Texture {

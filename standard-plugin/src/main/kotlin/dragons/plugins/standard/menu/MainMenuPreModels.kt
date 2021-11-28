@@ -1,34 +1,36 @@
 package dragons.plugins.standard.menu
 
 import dragons.plugins.standard.vulkan.model.PreModel
+import dragons.plugins.standard.vulkan.pipeline.MAX_NUM_DESCRIPTOR_IMAGES
 import dragons.plugins.standard.vulkan.texture.PreTexture
+import dragons.plugins.standard.vulkan.texture.PreTextureSet
 import dragons.plugins.standard.vulkan.texture.TextureType
 
 class MainMenuPreModels {
 
+    val skylandColorTexture = PreTexture(type = TextureType.COLOR)
+    val skylandHeightTexture = PreTexture(type = TextureType.HEIGHT)
+
+    val textureSet = PreTextureSet(
+        listOf(
+            skylandColorTexture,
+            skylandHeightTexture
+        ),
+        MAX_NUM_DESCRIPTOR_IMAGES
+    )
+
     val skyland = PreModel(
-        baseColorTextureIndex = 0,
+        baseColorTextureIndex = skylandColorTexture.index,
         numColorTextures = 1,
-        baseHeightTextureIndex = 0,
+        baseHeightTextureIndex = skylandHeightTexture.index,
         numHeightTextures = 1,
         numTransformationMatrices = 1
     )
 
-    val skylandColorTexture = PreTexture(
-        index = 0,
-        type = TextureType.COLOR
-    )
-
-    val skylandHeightTexture = PreTexture(
-        index = 0,
-        type = TextureType.HEIGHT
-    )
-
     suspend fun await(): MainMenuModels {
         return MainMenuModels(
-            skyland = this.skyland.await(),
-            skylandColorTexture = this.skylandColorTexture.await(),
-            skylandHeightTexture = this.skylandHeightTexture.await()
+            textureSet = this.textureSet.await(),
+            skyland = this.skyland.await()
         )
     }
 }
