@@ -3,6 +3,7 @@ package dragons.vr
 import dragons.state.StaticGraphicsState
 import org.joml.Math.toRadians
 import org.joml.Matrix4f
+import org.joml.Vector3f
 import org.lwjgl.vulkan.VkPhysicalDevice
 import java.lang.System.currentTimeMillis
 import java.lang.Thread.sleep
@@ -31,7 +32,7 @@ class DummyVrManager(
 
     private var lastRenderTime: Long? = null
 
-    override fun prepareRender(): Pair<Matrix4f, Matrix4f> {
+    override fun prepareRender(): Triple<Vector3f, Matrix4f, Matrix4f> {
         if (lastRenderTime != null) {
             // This should cause a framerate of ~90 fps
             val nextRenderTime = lastRenderTime!! + 1000 / 90
@@ -50,11 +51,15 @@ class DummyVrManager(
         // Let the camera rotate slowly
         val viewMatrix = Matrix4f()
             .rotateXYZ(toRadians(20f), toRadians(((currentTimeMillis() / 10) % 360).toFloat()), 0f)
-            .translate(0f, 10f, 0f)
+            .translate(0f, -1.7f, 0f)
         val combinedMatrix = projectionMatrix.mul(viewMatrix)
 
         lastRenderTime = currentTimeMillis()
-        return Pair(Matrix4f(combinedMatrix).translate(-0.2f, 0f, 0f), Matrix4f(combinedMatrix).translate(0.2f, 0f, 0f))
+        return Triple(
+            Vector3f(0f, 1.7f, 0f),
+            Matrix4f(combinedMatrix).translate(-0.04f, 0f, 0f),
+            Matrix4f(combinedMatrix).translate(0.04f, 0f, 0f)
+        )
     }
 
     override fun markFirstFrameQueueSubmit() {

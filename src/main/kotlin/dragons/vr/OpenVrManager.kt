@@ -2,6 +2,7 @@ package dragons.vr
 
 import dragons.state.StaticGraphicsState
 import org.joml.Matrix4f
+import org.joml.Vector3f
 import org.lwjgl.openvr.*
 import org.lwjgl.openvr.VR.*
 import org.lwjgl.openvr.VRCompositor.*
@@ -106,7 +107,7 @@ class OpenVrManager: VrManager {
         return Matrix4f(vrMatrix.m()).transpose()
     }
 
-    private fun createEyeMatrix(stack: MemoryStack, pose: TrackedDevicePose, leftOrRight: Int): Matrix4f {
+    private fun createEyeMatrix(stack: MemoryStack, pose: TrackedDevicePose, leftOrRight: Int): Pair<Matrix4f, Vector3f> {
         val matrixBuffer = HmdMatrix44.calloc(stack)
         val matrixBuffer2 = HmdMatrix34.calloc(stack)
 
@@ -121,11 +122,14 @@ class OpenVrManager: VrManager {
 
         val deviceToEyeMatrix = vrToJomlMatrix(VRSystem_GetEyeToHeadTransform(leftOrRight, matrixBuffer2)).invert()
 
-        return projectionMatrix.mul(deviceToEyeMatrix).mul(transformToDeviceMatrix)
+        val transformToEyeMatrix = deviceToEyeMatrix.mul(transformToDeviceMatrix)
+        val eyePosition = transformToEyeMatrix.getTranslation(Vector3f()).mul(-1f)
+
+        return Pair(projectionMatrix.mul(transformToEyeMatrix), eyePosition)
     }
 
-    override fun prepareRender(): Pair<Matrix4f, Matrix4f>? {
-        var result: Pair<Matrix4f, Matrix4f>? = null
+    override fun prepareRender(): Triple<Vector3f, Matrix4f, Matrix4f>? {
+        var result: Triple<Vector3f, Matrix4f, Matrix4f>? = null
         stackPush().use { stack ->
             val renderPoses = TrackedDevicePose.calloc(k_unMaxTrackedDeviceCount, stack)
             val gamePoses = null
@@ -134,7 +138,12 @@ class OpenVrManager: VrManager {
             if (getPoseResult == 0) {
                 val renderPose = renderPoses[0]
                 if (renderPose.bPoseIsValid()) {
-                    result = Pair(createEyeMatrix(stack, renderPose, EVREye_Eye_Left), createEyeMatrix(stack, renderPose, EVREye_Eye_Right))
+                    val (leftEyeMatrix, leftEyePosition) = createEyeMatrix(stack, renderPose, EVREye_Eye_Left)
+                    val (rightEyeMatrix, rightEyePosition) = createEyeMatrix(stack, renderPose, EVREye_Eye_Right)
+                    val averageEyePosition = leftEyePosition.add(rightEyePosition).mul(0.5f)
+                    result = Triple(
+                        averageEyePosition, leftEyeMatrix, rightEyeMatrix
+                    )
                 }
             } else {
                 getLogger("VR").error("VRCompositor_WaitGetPoses returned $getPoseResult")

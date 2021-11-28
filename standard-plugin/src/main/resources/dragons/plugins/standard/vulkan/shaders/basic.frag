@@ -157,6 +157,7 @@ void main() {
     vec3 specularColor = material.specularMaterialFactor * textureColor + material.specularLightFactor * lightColor;
     float shininess = material.shininess;
 
+    // TODO Stop hardcoding this
     vec3 toLight = normalize(vec3(100, 120, 10));
     vec3 toView = normalize(camera.position - worldPosition);
 

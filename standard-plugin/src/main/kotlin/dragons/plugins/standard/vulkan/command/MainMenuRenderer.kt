@@ -7,6 +7,7 @@ import dragons.plugins.standard.vulkan.pipeline.updateBasicDynamicDescriptorSet
 import dragons.state.StaticGameState
 import dragons.vulkan.util.assertVkSuccess
 import org.joml.Matrix4f
+import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memAddress
 import org.lwjgl.vulkan.*
@@ -182,12 +183,12 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
 }
 
 fun fillDrawingBuffers(
-    pluginInstance: PluginInstance, gameState: StaticGameState, leftEyeMatrix: Matrix4f, rightEyeMatrix: Matrix4f
+    pluginInstance: PluginInstance, gameState: StaticGameState,
+    averageEyePosition: Vector3f, leftEyeMatrix: Matrix4f, rightEyeMatrix: Matrix4f
 ) {
     val numDrawCalls = 300
     val graphicsState = (pluginInstance.state as StandardPluginState).graphics
     val buffers = graphicsState.buffers
-
 
     buffers.indirectDrawCountHost.putInt(0, numDrawCalls)
 
@@ -211,8 +212,7 @@ fun fillDrawingBuffers(
 
     leftEyeMatrix.get(0, buffers.cameraHost)
     rightEyeMatrix.get(64, buffers.cameraHost)
-    // TODO Add support for camera position
-    buffers.cameraHost.putFloat(128, 0f)
-    buffers.cameraHost.putFloat(132, 2f)
-    buffers.cameraHost.putFloat(136, 0f)
+    buffers.cameraHost.putFloat(128, averageEyePosition.x)
+    buffers.cameraHost.putFloat(132, averageEyePosition.y)
+    buffers.cameraHost.putFloat(136, averageEyePosition.z)
 }

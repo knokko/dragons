@@ -45,8 +45,8 @@ class StandardMainMenu: MainMenuManager {
             val eyeMatrices = gameState.vrManager.prepareRender()
             if (eyeMatrices != null) {
 
-                val (leftEyeMatrix, rightEyeMatrix) = eyeMatrices
-                fillDrawingBuffers(pluginInstance, gameState, leftEyeMatrix, rightEyeMatrix)
+                val (averageEyePosition, leftEyeMatrix, rightEyeMatrix) = eyeMatrices
+                fillDrawingBuffers(pluginInstance, gameState, averageEyePosition, leftEyeMatrix, rightEyeMatrix)
 
                 stackPush().use { stack ->
                     val pSubmits = VkSubmitInfo.calloc(1, stack)
