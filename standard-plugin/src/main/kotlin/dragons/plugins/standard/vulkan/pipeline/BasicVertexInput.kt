@@ -53,7 +53,7 @@ fun createBasicVertexInputState(stack: MemoryStack): VkPipelineVertexInputStateC
     val attributeDeltaFactor = attributes[6]
     attributeDeltaFactor.location(6)
     attributeDeltaFactor.binding(0)
-    attributeDeltaFactor.format(VK_FORMAT_R32_SFLOAT)
+    attributeDeltaFactor.format(VK_FORMAT_R32G32_SFLOAT)
     attributeDeltaFactor.offset(BasicVertex.OFFSET_DELTA_FACTOR)
 
     val attributeColorTextureIndex = attributes[7]

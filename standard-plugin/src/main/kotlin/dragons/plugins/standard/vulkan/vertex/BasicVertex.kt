@@ -28,11 +28,10 @@ value class BasicVertex(val address: Long) {
 
     /**
      * The distance (in meters) of 1 unit distance on the height texture. This is needed to determine the slope of
-     * locations on the height map.
+     * locations on the height map. This is normally identical to the 'in-game' (width, height) of the height texture.
      */
-    var deltaFactor: Float
-    get() = memGetFloat(address + OFFSET_DELTA_FACTOR)
-    set(value) = memPutFloat(address + OFFSET_DELTA_FACTOR, value)
+    val deltaFactor: Vec2f
+    get() = Vec2f(address + OFFSET_DELTA_FACTOR)
 
     var colorTextureIndex: Int
     get() = memGetInt(address + OFFSET_COLOR_TEXTURE_INDEX)
@@ -51,7 +50,7 @@ value class BasicVertex(val address: Long) {
         const val OFFSET_MATRIX_INDEX = OFFSET_HEIGHT_TEXTURE_COORDINATES + Vec2f.SIZE
         const val OFFSET_MATERIAL_INDEX = OFFSET_MATRIX_INDEX + Int.SIZE_BYTES
         const val OFFSET_DELTA_FACTOR = OFFSET_MATERIAL_INDEX + Int.SIZE_BYTES
-        const val OFFSET_COLOR_TEXTURE_INDEX = OFFSET_DELTA_FACTOR + Float.SIZE_BYTES
+        const val OFFSET_COLOR_TEXTURE_INDEX = OFFSET_DELTA_FACTOR + Vec2f.SIZE
         const val OFFSET_HEIGHT_TEXTURE_INDEX = OFFSET_COLOR_TEXTURE_INDEX + Int.SIZE_BYTES
 
         const val SIZE = OFFSET_HEIGHT_TEXTURE_INDEX + Int.SIZE_BYTES

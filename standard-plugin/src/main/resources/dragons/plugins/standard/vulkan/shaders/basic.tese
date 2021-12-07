@@ -8,7 +8,7 @@ layout(location = 2) in vec2 inColorTexCoordinates[];
 layout(location = 3) in vec2 inHeightTexCoordinates[];
 layout(location = 4) in int inMatrixIndex[];
 layout(location = 5) in int inMaterialIndex[];
-layout(location = 6) in float inDeltaFactor[];
+layout(location = 6) in vec2 inDeltaFactor[];
 layout(location = 7) in int inColorTextureIndex[];
 layout(location = 8) in int inHeightTextureIndex[];
 
@@ -18,7 +18,7 @@ layout(location = 2) out vec2 outColorTexCoordinates;
 layout(location = 3) out vec2 outHeightTexCoordinates;
 layout(location = 4) out int outMatrixIndex;
 layout(location = 5) out int outMaterialIndex;
-layout(location = 6) out float outDeltaFactor;
+layout(location = 6) out vec2 outDeltaFactor;
 layout(location = 7) out int outColorTextureIndex;
 layout(location = 8) out int outHeightTextureIndex;
 
@@ -57,9 +57,9 @@ void main() {
     int matrixIndex = inMatrixIndex[0];
     int colorTextureIndex = inColorTextureIndex[0];
     int heightTextureIndex = inHeightTextureIndex[0];
-    // I can't think of any reason why the materialIndex or deltaFactor should be different
+    // I can't think of any reason why the materialIndex or deltaFactor should differ per vertex
     int materialIndex = inMaterialIndex[0];
-    float deltaFactor = inDeltaFactor[0];
+    vec2 deltaFactor = inDeltaFactor[0];
 
     mat4 transformationMatrix = objects.transformationMatrices[matrixIndex];
     float extraHeight = texture(sampler2D(heightTextures[heightTextureIndex], textureSampler), heightTexCoordinates).r;

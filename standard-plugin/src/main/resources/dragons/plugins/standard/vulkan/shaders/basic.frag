@@ -6,7 +6,7 @@ layout(location = 2) in vec2 colorTexCoordinates;
 layout(location = 3) in vec2 heightTexCoordinates;
 layout(location = 4) flat in int matrixIndex;
 layout(location = 5) flat in int materialIndex;
-layout(location = 6) in float deltaFactor;
+layout(location = 6) in vec2 deltaFactor;
 layout(location = 7) flat in int colorTextureIndex;
 layout(location = 8) flat in int heightTextureIndex;
 
@@ -91,7 +91,6 @@ vec3 computeHeightNormal() {
 
     // The normal vector is basically the derivative of the height. We approximate this by using a small delta x and z
     float delta = 0.001;
-    float deltaDistance = delta * deltaFactor;
 
     float heightLowX = sampleHeight(heightTexCoordinates - vec2(delta, 0.0));
     float heightHighX = sampleHeight(heightTexCoordinates + vec2(delta, 0.0));
@@ -100,8 +99,8 @@ vec3 computeHeightNormal() {
 
     float heightDiffX = heightHighX - heightLowX;
     float heightDiffZ = heightHighZ - heightLowZ;
-    vec3 heightVecX = vec3(2.0 * deltaDistance, heightDiffX, 0.0);
-    vec3 heightVecZ = vec3(0.0, heightDiffZ, 2.0 * deltaDistance);
+    vec3 heightVecX = vec3(2.0 * delta * deltaFactor.x, heightDiffX, 0.0);
+    vec3 heightVecZ = vec3(0.0, heightDiffZ, 2.0 * delta * deltaFactor.y);
 
     return normalize(cross(heightVecZ, heightVecX));
 }
