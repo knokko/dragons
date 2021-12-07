@@ -83,6 +83,8 @@ test {
 project(':standard-plugin') {
     dependencies {
         implementation project(':')
+        testImplementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+        testImplementation "org.lwjgl:lwjgl"
         testImplementation platform('org.junit:junit-bom:5.7.2')
         testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
     }
