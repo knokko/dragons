@@ -108,31 +108,17 @@ class OpenVrManager: VrManager {
     }
 
     private fun createEyeMatrix(stack: MemoryStack, pose: TrackedDevicePose, leftOrRight: Int): Pair<Matrix4f, Vector3f> {
-        val matrixBuffer = HmdMatrix44.calloc(stack)
-        val matrixBuffer2 = HmdMatrix34.calloc(stack)
-
-        // I'm not sure why I need to scale this by (1, -1, 1), but the results are much better
-//        val projectionMatrix = vrToJomlMatrix(
-//            VRSystem_GetProjectionMatrix(leftOrRight, 0.01f, 100f, matrixBuffer)
-//        ).scale(1f, -1f, 1f)
-//        val projectionMatrix = Matrix4f().perspective(
-//            Angle.degrees(70f).radians, getWidth().toFloat() / getHeight().toFloat(), 0.01f, 100f, true
-//        ).scale(1f, -1f, 1f)
+        val matrixBuffer = HmdMatrix34.calloc(stack)
 
         val pfLeft = stack.callocFloat(1)
         val pfRight = stack.callocFloat(1)
         val pfTop = stack.callocFloat(1)
         val pfBottom = stack.callocFloat(1)
         VRSystem_GetProjectionRaw(leftOrRight, pfLeft, pfRight, pfTop, pfBottom)
-        //val projectionMatrix = Matrix4f().setFrustum(pfLeft[0], pfRight[0], pfBottom[0], pfTop[0], 0.01f, 100f, true).scale(1f, -1f, 1f)
         val projectionMatrix = composeProjection(pfLeft[0], pfRight[0], pfTop[0], pfBottom[0], 0.01f, 100f).scale(1f, -1f, 1f)
 
-        // These matrices are inverted in https://github.com/ValveSoftware/openvr/blob/master/samples/hellovr_vulkan/hellovr_vulkan_main.cpp
-        // I'm not sure why, but I will just follow it.
         val transformToDeviceMatrix = vrToJomlMatrix(pose.mDeviceToAbsoluteTracking()).invert()
-        //val transformToDeviceMatrix = Matrix4f().rotateX((System.currentTimeMillis() % 5000).toFloat() / 300f)
-
-        val deviceToEyeMatrix = vrToJomlMatrix(VRSystem_GetEyeToHeadTransform(leftOrRight, matrixBuffer2)).invert()
+        val deviceToEyeMatrix = vrToJomlMatrix(VRSystem_GetEyeToHeadTransform(leftOrRight, matrixBuffer)).invert()
 
         val transformToEyeMatrix = deviceToEyeMatrix.mul(transformToDeviceMatrix)
         val eyePosition = transformToEyeMatrix.getTranslation(Vector3f()).mul(-1f)
@@ -155,22 +141,14 @@ class OpenVrManager: VrManager {
         val sy = fBottom + fTop
         val p = Matrix4f()
 
-        p.m00(2 * idx)
-        p.m10(0f)
-        p.m20(sx * idx)
-        p.m30(0f)
-        p.m01(0f)
-        p.m11(2 * idy)
-        p.m21(-sy * idy)
-        p.m31(0f)
-        p.m02(0f)
-        p.m12(0f)
-        p.m22(-(zFar + zNear) * idz)
-        p.m32(-2 * zFar * zNear * idz)
-        p.m03(0f)
-        p.m13(0f)
-        p.m23(-1.0f)
-        p.m33(0f)
+        // This is a slightly modified version of https://github.com/ValveSoftware/openvr/issues/1052
+        // The original post was for OpenGL, but I negated p.m21 to account for Vulkans slightly different coordinate system
+        // Also, this matrix is scaled by (1, -1, 1) after this method for the same reason
+        p.m00(2 * idx); p.m10(0f);      p.m20(sx * idx);              p.m30(0f)
+        p.m01(0f);      p.m11(2 * idy); p.m21(-sy * idy);             p.m31(0f)
+        p.m02(0f);      p.m12(0f);      p.m22(-(zFar + zNear) * idz); p.m32(-2 * zFar * zNear * idz)
+        p.m03(0f);      p.m13(0f);      p.m23(-1.0f);                 p.m33(0f)
+
         return p
     }
 
