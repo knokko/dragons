@@ -10,6 +10,7 @@ import dragons.plugins.standard.vulkan.texture.TextureSet
 class MainMenuModels(
     val textureSet: TextureSet,
     val skyland: Model,
+    val flower1: Model
     ) {
 
     val modelSet: ModelSet = ModelSet(

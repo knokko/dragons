@@ -5,10 +5,8 @@ import dragons.vulkan.memory.VulkanBufferRange
 class Model(
     val vertices: VulkanBufferRange,
     val indices: VulkanBufferRange,
-    val baseColorTextureIndex: Int,
-    val numColorTextures: Int,
-    val baseHeightTextureIndex: Int,
-    val numHeightTextures: Int,
+    val colorTextures: List<Int>,
+    val heightTextures: List<Int>,
     val numTransformationMatrices: Int
 ) {
 }

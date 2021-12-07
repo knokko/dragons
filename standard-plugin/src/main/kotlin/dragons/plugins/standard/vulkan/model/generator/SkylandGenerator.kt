@@ -60,7 +60,6 @@ fun generateSkylandModel(
             // colorTextureCoordinates and heightTextureCoordinates will be filled in per vertex
             vertex.matrixIndex = 0
             vertex.materialIndex = BasicVertex.MATERIAL_TERRAIN
-            vertex.deltaFactor = 1f
             vertex.colorTextureIndex = colorTextureIndex
             vertex.heightTextureIndex = heightTextureIndex
         }
@@ -77,12 +76,18 @@ fun generateSkylandModel(
             center.heightTextureCoordinates.y = 0.5f
         }
 
+        // We need the largest radius to compute the delta factor
+        var largestRadius = 0f
 
         // Fill the remaining vertices
         for (angleIndex in 0 until numVerticesPerCircle) {
 
             val angle = 360f * angleIndex.toFloat() / numVerticesPerCircle.toFloat()
             val radius = radiusFunction(angle)
+            if (radius > largestRadius) {
+                largestRadius = radius
+            }
+
             for (radiusIndex in 0 until numVerticesPerAngle) {
 
                 val distanceFactor = (radiusIndex + 1).toFloat() / numVerticesPerAngle.toFloat()
@@ -99,6 +104,12 @@ fun generateSkylandModel(
                 vertex.position.x = distance * directionX
                 vertex.position.z = distance * directionZ
             }
+        }
+
+        // Now that the largest radius is known, we can set the right delta factors
+        for (vertex in vertices) {
+            vertex.deltaFactor.x = 2f * largestRadius
+            vertex.deltaFactor.y = 2f * largestRadius
         }
     }
 

@@ -21,11 +21,15 @@ class ModelSet(
             if (model.indices.buffer != this.indexBuffer) {
                 throw IllegalArgumentException("All models in a ModelSet must use the same index buffer")
             }
-            if (model.baseColorTextureIndex + model.numColorTextures > MAX_NUM_DESCRIPTOR_IMAGES) {
-                throw IllegalArgumentException("Can't use more than $MAX_NUM_DESCRIPTOR_IMAGES color images")
+            for (colorTextureIndex in model.colorTextures) {
+                if (colorTextureIndex >= MAX_NUM_DESCRIPTOR_IMAGES) {
+                    throw IllegalArgumentException("Can't use more than $MAX_NUM_DESCRIPTOR_IMAGES color images")
+                }
             }
-            if (model.baseHeightTextureIndex + model.numHeightTextures > MAX_NUM_DESCRIPTOR_IMAGES) {
-                throw IllegalArgumentException("Can't use more than $MAX_NUM_DESCRIPTOR_IMAGES height images")
+            for (heightTextureIndex in model.heightTextures) {
+                if (heightTextureIndex >= MAX_NUM_DESCRIPTOR_IMAGES) {
+                    throw IllegalArgumentException("Can't use more than $MAX_NUM_DESCRIPTOR_IMAGES height images")
+                }
             }
         }
     }
