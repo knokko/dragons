@@ -154,13 +154,14 @@ class OpenVrManager: VrManager {
         val sx = fRight + fLeft
         val sy = fBottom + fTop
         val p = Matrix4f()
+
         p.m00(2 * idx)
         p.m10(0f)
         p.m20(sx * idx)
         p.m30(0f)
         p.m01(0f)
         p.m11(2 * idy)
-        p.m21(sy * idy)
+        p.m21(-sy * idy)
         p.m31(0f)
         p.m02(0f)
         p.m12(0f)
