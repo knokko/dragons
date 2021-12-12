@@ -152,13 +152,16 @@ fun circleTopShape(
             }
         }, fillIndexBuffer = { indexBuffer ->
             // Note: the center vertex occupies the first element in the vertex buffer
-            for (ringIndex1 in 1 .. numRingVertices) {
+            for (ringIndex1 in 1 until numRingVertices) {
                 val ringIndex2 = ringIndex1 + 1
 
                 indexBuffer.put(0)
                 indexBuffer.put(ringIndex2)
                 indexBuffer.put(ringIndex1)
             }
+            indexBuffer.put(0)
+            indexBuffer.put(1)
+            indexBuffer.put(numRingVertices)
         }
     )
 }

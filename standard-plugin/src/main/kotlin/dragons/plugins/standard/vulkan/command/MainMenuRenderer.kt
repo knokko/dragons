@@ -14,6 +14,7 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memAddress
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
+import java.util.*
 
 fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: StaticGameState): Pair<Long, VkCommandBuffer> {
     return stackPush().use { stack ->
@@ -226,8 +227,10 @@ fun fillDrawingBuffers(
         vertexOffset(flowerVertexOffset)
         firstInstance(300)
 
+        val rng = Random(1234)
+
         for (flowerMatrixIndex in 0 until numFlowerMatrices) {
-            val transformationMatrix = Matrix4f().scale(10f).translate(flowerMatrixIndex.toFloat(), 0f, 0f)
+            val transformationMatrix = Matrix4f().scale(2f).translate(8 * rng.nextFloat() - 4, 0f, 8 * rng.nextFloat() - 4)
             transformationMatrix.get(64 * (300 + flowerMatrixIndex), buffers.transformationMatrixHost)
         }
     }
