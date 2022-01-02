@@ -118,9 +118,9 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
         val clearValues = VkClearValue.calloc(2, stack)
         val colorClearValue = clearValues[0]
         colorClearValue.color { color ->
-            color.float32(0, 1f)
-            color.float32(1, 1f)
-            color.float32(2, 0f)
+            color.float32(0, 68f / 255f)
+            color.float32(1, 107f / 255f)
+            color.float32(2, 176f / 255f)
             color.float32(3, 1f)
         }
         val depthClearValue = clearValues[1]
@@ -190,7 +190,7 @@ fun fillDrawingBuffers(
     averageEyePosition: Vector3f, leftEyeMatrix: Matrix4f, rightEyeMatrix: Matrix4f
 ) {
     val numTerrainDrawCalls = 300
-    val numDrawCalls = numTerrainDrawCalls + 1
+    val numDrawCalls = numTerrainDrawCalls + 2
     val graphicsState = (pluginInstance.state as StandardPluginState).graphics
     val buffers = graphicsState.buffers
 
@@ -202,10 +202,6 @@ fun fillDrawingBuffers(
     val firstTerrainIndex = (skyland.indices.offset / 4).toInt()
     val terrainVertexOffset = (skyland.vertices.offset / BasicVertex.SIZE).toInt()
 
-    val flower1 = graphicsState.mainMenu.flower1
-    val numFlowerIndices = (flower1.indices.size / 4).toInt()
-    val firstFlowerIndex = (flower1.indices.offset / 4).toInt()
-    val flowerVertexOffset = (flower1.vertices.offset / BasicVertex.SIZE).toInt()
 
     for (currentDrawCall in 0 until numTerrainDrawCalls) {
         val drawCall1 = VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + currentDrawCall * VkDrawIndexedIndirectCommand.SIZEOF)
@@ -219,20 +215,58 @@ fun fillDrawingBuffers(
         transformationMatrix1.get(64 * currentDrawCall, buffers.transformationMatrixHost)
     }
 
-    val numFlowerMatrices = FlowerGenerators.BUSH_SIZE1
-    VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + 300 * VkDrawIndexedIndirectCommand.SIZEOF).run {
-        indexCount(numFlowerIndices)
-        instanceCount(numFlowerMatrices)
-        firstIndex(firstFlowerIndex)
-        vertexOffset(flowerVertexOffset)
-        firstInstance(300)
+    run {
+        val flower1 = graphicsState.mainMenu.flower1
+        val numFlowerIndices = (flower1.indices.size / 4).toInt()
+        val firstFlowerIndex = (flower1.indices.offset / 4).toInt()
+        val flowerVertexOffset = (flower1.vertices.offset / BasicVertex.SIZE).toInt()
 
-        val rng = Random(1234)
+        val numFlowerMatrices = FlowerGenerators.BUSH_SIZE1
+        val baseDrawIndex = numTerrainDrawCalls
+        val baseMatrixIndex = numTerrainDrawCalls
+        VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + baseDrawIndex * VkDrawIndexedIndirectCommand.SIZEOF)
+            .run {
+                indexCount(numFlowerIndices)
+                instanceCount(numFlowerMatrices)
+                firstIndex(firstFlowerIndex)
+                vertexOffset(flowerVertexOffset)
+                firstInstance(baseMatrixIndex)
 
-        for (flowerMatrixIndex in 0 until numFlowerMatrices) {
-            val transformationMatrix = Matrix4f().scale(2f).translate(8 * rng.nextFloat() - 4, 0f, 8 * rng.nextFloat() - 4)
-            transformationMatrix.get(64 * (300 + flowerMatrixIndex), buffers.transformationMatrixHost)
-        }
+                val rng = Random(1234)
+
+                for (flowerMatrixIndex in 0 until numFlowerMatrices) {
+                    val transformationMatrix =
+                        Matrix4f().scale(1f).translate(6 * rng.nextFloat() - 3, 0f, 6 * rng.nextFloat() - 3)
+                    transformationMatrix.get(64 * (baseMatrixIndex + flowerMatrixIndex), buffers.transformationMatrixHost)
+                }
+            }
+    }
+
+    run {
+        val flower2 = graphicsState.mainMenu.flower2
+        val numFlowerIndices = (flower2.indices.size / 4).toInt()
+        val firstFlowerIndex = (flower2.indices.offset / 4).toInt()
+        val flowerVertexOffset = (flower2.vertices.offset / BasicVertex.SIZE).toInt()
+
+        val numFlowerMatrices = FlowerGenerators.BUSH_SIZE1
+        val baseDrawIndex = numTerrainDrawCalls + 1
+        val baseMatrixIndex = numTerrainDrawCalls + FlowerGenerators.BUSH_SIZE1
+        VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + baseDrawIndex * VkDrawIndexedIndirectCommand.SIZEOF)
+            .run {
+                indexCount(numFlowerIndices)
+                instanceCount(numFlowerMatrices)
+                firstIndex(firstFlowerIndex)
+                vertexOffset(flowerVertexOffset)
+                firstInstance(baseMatrixIndex)
+
+                val rng = Random(12345)
+
+                for (flowerMatrixIndex in 0 until numFlowerMatrices) {
+                    val transformationMatrix =
+                        Matrix4f().scale(1f).translate(6 * rng.nextFloat() - 3, 0f, 6 * rng.nextFloat() - 3)
+                    transformationMatrix.get(64 * (baseMatrixIndex + flowerMatrixIndex), buffers.transformationMatrixHost)
+                }
+            }
     }
 
     leftEyeMatrix.get(0, buffers.cameraHost)
