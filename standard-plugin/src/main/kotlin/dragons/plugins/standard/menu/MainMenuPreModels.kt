@@ -17,6 +17,11 @@ class MainMenuPreModels {
     val flowerTop1ColorTexture = PreTexture(type = TextureType.COLOR)
     val flowerTop1HeightTexture = PreTexture(type = TextureType.HEIGHT)
 
+    val flowerStem2ColorTexture = PreTexture(type = TextureType.COLOR)
+    val flowerStem2HeightTexture = PreTexture(type = TextureType.HEIGHT)
+    val flowerTop2ColorTexture = PreTexture(type = TextureType.COLOR)
+    val flowerTop2HeightTexture = PreTexture(type = TextureType.HEIGHT)
+
     val textureSet = PreTextureSet(
         listOf(
             skylandColorTexture,
@@ -24,7 +29,11 @@ class MainMenuPreModels {
             flowerStem1ColorTexture,
             flowerStem1HeightTexture,
             flowerTop1ColorTexture,
-            flowerTop1HeightTexture
+            flowerTop1HeightTexture,
+            flowerStem2ColorTexture,
+            flowerStem2HeightTexture,
+            flowerTop2ColorTexture,
+            flowerTop2HeightTexture
         ),
         MAX_NUM_DESCRIPTOR_IMAGES
     )
@@ -41,11 +50,18 @@ class MainMenuPreModels {
         numTransformationMatrices = FlowerGenerators.BUSH_SIZE1
     )
 
+    val flower2 = PreModel(
+        colorTextures = listOf(flowerStem2ColorTexture.index, flowerTop2ColorTexture.index),
+        heightTextures = listOf(flowerStem2HeightTexture.index, flowerTop2HeightTexture.index),
+        numTransformationMatrices = FlowerGenerators.BUSH_SIZE1
+    )
+
     suspend fun await(): MainMenuModels {
         return MainMenuModels(
             textureSet = this.textureSet.await(),
             skyland = this.skyland.await(),
-            flower1 = this.flower1.await()
+            flower1 = this.flower1.await(),
+            flower2 = this.flower2.await()
         )
     }
 }

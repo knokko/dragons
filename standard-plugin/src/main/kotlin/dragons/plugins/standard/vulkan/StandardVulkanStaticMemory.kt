@@ -55,6 +55,18 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
         claimColorImage(agent, 64, 64, preGraphics.mainMenu.flowerTop1ColorTexture) { _, _ -> Color.YELLOW }
         claimHeightImage(agent, 16, 16, preGraphics.mainMenu.flowerTop1HeightTexture) { _, _ -> 0f }
 
+        val mainMenuFlower2 = generateFlowerBushModel(Array(8) { FlowerGenerators.modelProps2(
+            stemColorTextureIndex = preGraphics.mainMenu.flowerStem2ColorTexture.index,
+            stemHeightTextureIndex = preGraphics.mainMenu.flowerStem2HeightTexture.index,
+            topColorTextureIndex = preGraphics.mainMenu.flowerTop2ColorTexture.index,
+            topHeightTextureIndex = preGraphics.mainMenu.flowerTop2HeightTexture.index
+        ) }.toList())
+        claimVertexAndIndexBuffer(agent, preGraphics.mainMenu.flower2, mainMenuFlower2)
+        claimColorImage(agent, 32, 128, preGraphics.mainMenu.flowerStem2ColorTexture) { _, _ -> Color.GREEN }
+        claimHeightImage(agent, 4, 32, preGraphics.mainMenu.flowerStem2HeightTexture) { _, _ -> 0f }
+        claimColorImage(agent, 64, 64, preGraphics.mainMenu.flowerTop2ColorTexture) { _, _ -> Color.RED}
+        claimHeightImage(agent, 16, 16, preGraphics.mainMenu.flowerTop2HeightTexture) { _, _ -> 0f }
+
         // Camera buffers
         agent.claims.buffers.add(BufferMemoryClaim(
             // 2 4x4 float matrices and 1 vec3 float

@@ -1,9 +1,10 @@
 package dragons.plugins.standard.vulkan.model.generator
 
-import dragons.plugins.standard.vulkan.vertex.BasicVertex
+import dragons.plugins.standard.vulkan.vertex.BasicVertex.Companion.MATERIAL_TERRAIN
 import dragons.util.Angle
 import dragons.util.Distance
-import org.joml.Math.PI
+import org.joml.Math.*
+import org.joml.Vector3f
 
 fun generateFlowerBushModel(flowerProperties: List<FlowerModelProperties>): ModelGenerator {
     val generators = mutableListOf<ModelGenerator>()
@@ -48,7 +49,7 @@ private fun createFlowerStem(matrixIndex: Int, props: FlowerModelProperties): Mo
                     currentVertex.normal.z = normalZ
 
                     currentVertex.matrixIndex = matrixIndex
-                    currentVertex.materialIndex = BasicVertex.MATERIAL_TERRAIN
+                    currentVertex.materialIndex = MATERIAL_TERRAIN
                     currentVertex.deltaFactor.x = deltaFactorX
                     currentVertex.deltaFactor.y = deltaFactorY
 
@@ -95,6 +96,316 @@ class FlowerModelProperties(
 
 typealias FlowerTopShape = (matrixIndex: Int, props: FlowerModelProperties) -> ModelGenerator
 
+class LeafRing(val angle: Angle, val numLeafs: Int)
+
+fun leafRingTopShape(
+    innerRadius: Distance,
+    numInnerRingVertices: Int,
+    rings: Collection<LeafRing>,
+    leafLength: Distance,
+    numVerticesPerLeafHalf: Int,
+    leafWidthFunction: (Float) -> Distance,
+    leafDepthFunction: (Float) -> Distance
+) = { matrixIndex: Int, props: FlowerModelProperties ->
+
+    val totalNumLeafs = rings.sumOf { it.numLeafs }
+
+    // The number of vertices on 1 side (top or bottom) of the leaf.
+    val numVerticesPerLeafSide = 2 * numVerticesPerLeafHalf
+
+    // The number of vertices per leaf is simply twice the number of vertices per leaf side
+    val numVerticesPerLeaf = 2 * numVerticesPerLeafSide
+
+    // 1 quad between each consecutive inner vertex
+    val numIndicesPerLeafSide = 6 * (numVerticesPerLeafHalf - 1)
+
+    // The number of indices to 'glue' the top side to the bottom side. It needs 1 quad for each consecutive inner vertex.
+    val numSideGlueIndices = 6 * (numVerticesPerLeafSide - 1)
+
+    // We also need 1 quad to connect the bottom end to the top end
+    val numEndGlueIndices = 6
+
+    val numIndicesPerLeaf = 2 * numIndicesPerLeafSide + 2 * numSideGlueIndices + numEndGlueIndices
+
+    ModelGenerator(
+        numVertices = 2 * (1 + numInnerRingVertices) + totalNumLeafs * numVerticesPerLeaf,
+        numIndices = (3 + 3 + 6) * numInnerRingVertices + totalNumLeafs * numIndicesPerLeaf,
+        fillVertexBuffer = { vertexBuffer ->
+
+            val innerDepth = leafDepthFunction(0f)
+            for ((indexOffset, scaleY) in arrayOf(Pair(0, 1f), Pair(1 + numInnerRingVertices, -1f))) {
+
+                // The center vertex
+                vertexBuffer[indexOffset].run {
+                    position.x = 0f
+                    position.y = (props.stemLength + innerDepth * scaleY).meters
+                    position.z = 0f
+
+                    normal.x = 0f
+                    normal.y = scaleY
+                    normal.z = 0f
+
+                    colorTextureCoordinates.x = 0.5f
+                    colorTextureCoordinates.y = 0.5f
+                }
+
+                // The inner ring vertices
+                for (rawIndex in 0 until numInnerRingVertices) {
+                    val angle = Angle.degrees(360f * rawIndex.toFloat() / numInnerRingVertices.toFloat())
+                    vertexBuffer[indexOffset + rawIndex + 1].run {
+                        position.x = angle.sin * innerRadius.meters
+                        position.y = (props.stemLength + innerDepth * scaleY).meters
+                        position.z = angle.cos * innerRadius.meters
+
+                        normal.x = 0f
+                        normal.y = scaleY
+                        normal.z = 0f
+
+                        colorTextureCoordinates.x = 0.5f + angle.sin * 0.25f
+                        colorTextureCoordinates.y = 0.5f + angle.cos * 0.25f
+                    }
+                }
+            }
+
+            // The leaf vertices
+            var firstRingVertexIndex = 2 * (1 + numInnerRingVertices)
+
+            for (ring in rings) {
+
+                val verticalFactor = ring.angle.sin
+                val horizontalFactor = ring.angle.cos
+
+                for (leafIndex in 0 until ring.numLeafs) {
+                    val firstLeafVertexIndex = firstRingVertexIndex + leafIndex * numVerticesPerLeaf
+
+                    val horizontalAngle = Angle.degrees(360f * leafIndex.toFloat() / ring.numLeafs.toFloat())
+
+                    val baseX = horizontalAngle.sin * innerRadius.meters
+                    val baseY = props.stemLength.meters
+                    val baseZ = horizontalAngle.cos * innerRadius.meters
+                    val base = Vector3f(baseX, baseY, baseZ)
+
+                    val flatLengthDirectionX = horizontalAngle.sin
+                    val flatLengthDirectionZ = horizontalAngle.cos
+
+                    val flatWidthDirectionX = flatLengthDirectionZ
+                    val flatWidthDirectionZ = -flatLengthDirectionX
+
+                    val lengthDirectionX = horizontalFactor * flatLengthDirectionX
+                    val lengthDirectionY = verticalFactor
+                    val lengthDirectionZ = horizontalFactor * flatLengthDirectionZ
+                    val lengthDirection = Vector3f(lengthDirectionX, lengthDirectionY, lengthDirectionZ)
+
+                    val widthDirectionX = flatWidthDirectionX
+                    val widthDirectionY = 0f
+                    val widthDirectionZ = flatWidthDirectionZ
+                    val widthDirection = Vector3f(widthDirectionX, widthDirectionY, widthDirectionZ)
+
+                    val depthDirectionX = -verticalFactor * flatLengthDirectionX
+                    val depthDirectionY = horizontalFactor
+                    val depthDirectionZ = -verticalFactor * flatLengthDirectionZ
+                    val depthDirection = Vector3f(depthDirectionX, depthDirectionY, depthDirectionZ)
+
+                    fun addVertex(internalIndex: Int, lengthFactor: Float, positiveWidth: Boolean, positiveDepth: Boolean) {
+                        val positiveWidthFactor = if (positiveWidth) 1f else -1f
+                        val halfWidth = leafWidthFunction(lengthFactor).meters * positiveWidthFactor
+
+                        val positiveDepthFactor = if (positiveDepth) 1f else -1f
+                        val halfDepth = leafDepthFunction(lengthFactor).meters * positiveDepthFactor
+
+                        val length = lengthFactor * leafLength.meters
+
+                        vertexBuffer[firstLeafVertexIndex + internalIndex].run {
+                            val positionVector = Vector3f(base)
+                            positionVector.add(lengthDirection.mul(length, Vector3f()))
+                            positionVector.add(widthDirection.mul(halfWidth, Vector3f()))
+                            positionVector.add(depthDirection.mul(halfDepth, Vector3f()))
+
+                            position.x = positionVector.x
+                            position.y = positionVector.y
+                            position.z = positionVector.z
+
+                            normal.x = depthDirection.x * positiveDepthFactor
+                            normal.y = depthDirection.y * positiveDepthFactor
+                            normal.z = depthDirection.z * positiveDepthFactor
+
+                            colorTextureCoordinates.x = 0.5f + horizontalAngle.sin * (0.25f + lengthFactor * 0.25f)
+                            colorTextureCoordinates.y = 0.5f + horizontalAngle.cos * (0.25f + lengthFactor * 0.25f)
+                        }
+                    }
+
+                    for ((sideIndex, positiveDepth) in arrayOf(true, false).withIndex()) {
+                        val internalIndexOffset = sideIndex * numVerticesPerLeafSide
+
+                        // Left vertices
+                        for (rawIndex in 0 until numVerticesPerLeafHalf) {
+                            addVertex(
+                                internalIndexOffset + rawIndex,
+                                rawIndex.toFloat() / (numVerticesPerLeafHalf - 1).toFloat(),
+                                positiveWidth = false, positiveDepth
+                            )
+                        }
+
+                        // Right vertices
+                        for (rawIndex in 0 until numVerticesPerLeafHalf) {
+                            addVertex(
+                                internalIndexOffset + numVerticesPerLeafHalf + rawIndex,
+                                rawIndex.toFloat() / (numVerticesPerLeafHalf - 1).toFloat(),
+                                positiveWidth = true, positiveDepth
+                            )
+                        }
+                    }
+                }
+
+                firstRingVertexIndex += ring.numLeafs * numVerticesPerLeaf
+            }
+
+            // Some properties are shared between all vertices
+            val deltaFactor = (innerRadius + leafLength).meters
+
+            for (vertex in vertexBuffer) {
+                vertex.matrixIndex = matrixIndex
+                vertex.materialIndex = MATERIAL_TERRAIN
+                vertex.deltaFactor.x = deltaFactor
+                vertex.deltaFactor.y = deltaFactor
+                vertex.heightTextureCoordinates.x = vertex.colorTextureCoordinates.x
+                vertex.heightTextureCoordinates.y = vertex.colorTextureCoordinates.y
+                vertex.colorTextureIndex = props.topColorTextureIndex
+                vertex.heightTextureIndex = props.topHeightTextureIndex
+            }
+        }, fillIndexBuffer = { indexBuffer ->
+
+            // The top center
+            var indexCenter = 0
+            for (innerIndex in 1 until numInnerRingVertices) {
+                indexBuffer.put(indexCenter)
+                indexBuffer.put(indexCenter + innerIndex + 1)
+                indexBuffer.put(indexCenter + innerIndex)
+            }
+            indexBuffer.put(indexCenter)
+            indexBuffer.put(indexCenter + 1)
+            indexBuffer.put(indexCenter + numInnerRingVertices)
+
+            // The bottom center
+            indexCenter = 1 + numInnerRingVertices
+            for (innerIndex in 1 until numInnerRingVertices) {
+                indexBuffer.put(indexCenter)
+                indexBuffer.put(indexCenter + innerIndex)
+                indexBuffer.put(indexCenter + innerIndex + 1)
+            }
+            indexBuffer.put(indexCenter)
+            indexBuffer.put(indexCenter + numInnerRingVertices)
+            indexBuffer.put(indexCenter + 1)
+
+            // The center side
+            for (innerIndex in 1 until numInnerRingVertices) {
+                val indexTopRight = innerIndex
+                val indexTopLeft = innerIndex + 1
+                val indexBottomRight = indexTopRight + 1 + numInnerRingVertices
+                val indexBottomLeft = indexBottomRight + 1
+
+                indexBuffer.put(indexBottomLeft)
+                indexBuffer.put(indexBottomRight)
+                indexBuffer.put(indexTopRight)
+
+                indexBuffer.put(indexTopRight)
+                indexBuffer.put(indexTopLeft)
+                indexBuffer.put(indexBottomLeft)
+            }
+
+            // The leaves...
+            var firstRingVertexIndex = 2 * (1 + numInnerRingVertices)
+            for (ring in rings) {
+
+                for (leafCounter in 0 until ring.numLeafs) {
+
+                    // Connect the subsequent top vertices
+                    for (rawLeafIndex in 0 until numVerticesPerLeafHalf - 1) {
+                        val topLeftBack = firstRingVertexIndex + numVerticesPerLeafHalf + rawLeafIndex
+                        val topRightBack = firstRingVertexIndex + rawLeafIndex
+                        val topLeftFront = topLeftBack + 1
+                        val topRightFront = topRightBack + 1
+
+                        indexBuffer.put(topRightBack)
+                        indexBuffer.put(topRightFront)
+                        indexBuffer.put(topLeftFront)
+
+                        indexBuffer.put(topLeftFront)
+                        indexBuffer.put(topLeftBack)
+                        indexBuffer.put(topRightBack)
+                    }
+
+                    // Connect the bottom side to the top side
+                    for (rawLeafIndex in 0 until numVerticesPerLeafHalf - 1) {
+                        val topBack = firstRingVertexIndex + rawLeafIndex
+                        val topFront = topBack + 1
+                        val bottomBack = topBack + numVerticesPerLeafSide
+                        val bottomFront = bottomBack + 1
+
+                        indexBuffer.put(bottomBack)
+                        indexBuffer.put(bottomFront)
+                        indexBuffer.put(topFront)
+
+                        indexBuffer.put(topFront)
+                        indexBuffer.put(topBack)
+                        indexBuffer.put(bottomBack)
+                    }
+                    for (rawLeafIndex in 0 until numVerticesPerLeafHalf - 1) {
+                        val topBack = numVerticesPerLeafHalf + firstRingVertexIndex + rawLeafIndex
+                        val topFront = topBack + 1
+                        val bottomBack = topBack + numVerticesPerLeafSide
+                        val bottomFront = bottomBack + 1
+
+                        indexBuffer.put(bottomFront)
+                        indexBuffer.put(bottomBack)
+                        indexBuffer.put(topBack)
+
+                        indexBuffer.put(topBack)
+                        indexBuffer.put(topFront)
+                        indexBuffer.put(bottomFront)
+                    }
+
+                    // Connect the top end vertices to the bottom end vertices
+                    val indexTopRight = firstRingVertexIndex + numVerticesPerLeafHalf - 1
+                    val indexTopLeft = indexTopRight + numVerticesPerLeafHalf
+                    val indexBottomRight = indexTopRight + numVerticesPerLeafSide
+                    val indexBottomLeft = indexBottomRight + numVerticesPerLeafHalf
+
+                    indexBuffer.put(indexBottomRight)
+                    indexBuffer.put(indexBottomLeft)
+                    indexBuffer.put(indexTopLeft)
+
+                    indexBuffer.put(indexTopLeft)
+                    indexBuffer.put(indexTopRight)
+                    indexBuffer.put(indexBottomRight)
+
+                    firstRingVertexIndex += numVerticesPerLeafSide
+
+                    // Connect the subsequent bottom vertices
+                    for (rawLeafIndex in 0 until numVerticesPerLeafHalf - 1) {
+                        val bottomLeftBack = firstRingVertexIndex + numVerticesPerLeafHalf + rawLeafIndex
+                        val bottomRightBack = firstRingVertexIndex + rawLeafIndex
+                        val bottomLeftFront = bottomLeftBack + 1
+                        val bottomRightFront = bottomRightBack + 1
+
+                        indexBuffer.put(bottomLeftBack)
+                        indexBuffer.put(bottomLeftFront)
+                        indexBuffer.put(bottomRightFront)
+
+                        indexBuffer.put(bottomRightFront)
+                        indexBuffer.put(bottomRightBack)
+                        indexBuffer.put(bottomLeftBack)
+                    }
+
+
+
+                    firstRingVertexIndex += numVerticesPerLeafSide
+                }
+            }
+        }
+    )
+}
+
 fun circleTopShape(
     numRingVertices: Int,
     radius: Distance
@@ -113,7 +424,7 @@ fun circleTopShape(
                 vertex.normal.z = 0f
 
                 vertex.matrixIndex = matrixIndex
-                vertex.materialIndex = BasicVertex.MATERIAL_TERRAIN
+                vertex.materialIndex = MATERIAL_TERRAIN
 
                 vertex.deltaFactor.x = 2f * radius.meters
                 vertex.deltaFactor.y = 2f * radius.meters
@@ -178,5 +489,27 @@ object FlowerGenerators {
         topColorTextureIndex = topColorTextureIndex, topHeightTextureIndex = topHeightTextureIndex
     )
 
-    val BUSH_SIZE1 = 8
+    fun modelProps2(
+        stemColorTextureIndex: Int, stemHeightTextureIndex: Int,
+        topColorTextureIndex: Int, topHeightTextureIndex: Int
+    ) = FlowerModelProperties(
+        stemLength = Distance.meters(0.3f), stemRadius = Distance.milliMeters(20),
+        numHorizontalStemParts = 6, numVerticalStemParts = 4,
+        topShape = leafRingTopShape(
+            innerRadius = Distance.milliMeters(40),
+            numInnerRingVertices = 15,
+            rings = listOf(
+                LeafRing(angle = Angle.degrees(30f), numLeafs = 15),
+                LeafRing(angle = Angle.degrees(-20f), numLeafs = 10)
+            ),
+            leafLength = Distance.milliMeters(50),
+            numVerticesPerLeafHalf = 6,
+            leafWidthFunction = { lengthFactor -> Distance.milliMeters(6f + 10f * sin(lengthFactor * PI.toFloat())) },
+            leafDepthFunction = { Distance.milliMeters(1) }
+        ),
+        stemColorTextureIndex = stemColorTextureIndex, stemHeightTextureIndex = stemHeightTextureIndex,
+        topColorTextureIndex = topColorTextureIndex, topHeightTextureIndex = topHeightTextureIndex
+    )
+
+    const val BUSH_SIZE1 = 8
 }
