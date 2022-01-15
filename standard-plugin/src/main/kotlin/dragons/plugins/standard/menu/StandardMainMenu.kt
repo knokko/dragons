@@ -61,7 +61,7 @@ class StandardMainMenu: MainMenuManager {
 
                 gameState.graphics.resolveHelper.resolve(
                     gameState.graphics.vkDevice, gameState.graphics.queueManager,
-                    renderFinishedSemaphore, true
+                    renderFinishedSemaphore, numIterationsLeft == 1 // TODO Only take screenshot when asked
                 )
             } else {
                 println("Can't render main menu")
