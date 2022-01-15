@@ -1,9 +1,15 @@
 package dragons.vr
 
 import dragons.state.StaticGraphicsState
+import dragons.vulkan.util.assertVkSuccess
 import org.joml.Matrix4f
 import org.joml.Vector3f
-import org.lwjgl.vulkan.VkPhysicalDevice
+import org.lwjgl.PointerBuffer
+import org.lwjgl.system.MemoryStack
+import org.lwjgl.system.MemoryStack.stackPush
+import org.lwjgl.vulkan.*
+import org.lwjgl.vulkan.VK10.*
+import org.slf4j.Logger
 
 interface VrManager {
     fun getVulkanInstanceExtensions(availableExtensions: Set<String>): Set<String>
@@ -11,6 +17,56 @@ interface VrManager {
     fun getVulkanDeviceExtensions(
         device: VkPhysicalDevice, deviceName: String, availableExtensions: Set<String>
     ): Set<String>
+
+    /**
+     * The game core should use this method to create the Vulkan instance rather than calling `vkCreateInstance`
+     * directly because the `OpenXrManager` needs to use `xrCreateVulkanInstanceKHR` instead. The other implementations
+     * will simply call `vkCreateInstance`.
+     */
+    fun createVulkanInstance(
+        ciInstance: VkInstanceCreateInfo,
+        pInstance: PointerBuffer
+    ): Int {
+        return vkCreateInstance(ciInstance, null, pInstance)
+    }
+
+    /**
+     * The game core should use this method to enumerate the Vulkan physical devices rather than calling
+     * `vkEnumeratePhysicalDevices` directly because the `OpenXrManager` requires a specific physical device (it will
+     * return only that physical device rather than all available physical devices).
+     */
+    fun enumerateVulkanPhysicalDevices(
+        logger: Logger,
+        vkInstance: VkInstance,
+        stack: MemoryStack
+    ): PointerBuffer {
+        val pNumDevices = stack.callocInt(1)
+        assertVkSuccess(
+            vkEnumeratePhysicalDevices(vkInstance, pNumDevices, null),
+            "EnumeratePhysicalDevices", "count"
+        )
+        val numDevices = pNumDevices[0]
+        logger.info("There are $numDevices physical devices with Vulkan support")
+
+        val pPhysicalDevices = stack.callocPointer(numDevices)
+        assertVkSuccess(
+            vkEnumeratePhysicalDevices(vkInstance, pNumDevices, pPhysicalDevices),
+            "EnumeratePhysicalDevices", "device pointers"
+        )
+
+        return pPhysicalDevices
+    }
+
+    /**
+     * The game core should use this method to create the Vulkan logical device rather than calling `vkCreateDevice`
+     * directly because the `OpenXrManager` needs to use `xrCreateVulkanDeviceKHR` instead. The other implementations
+     * will simply call `vkCreateDevice`.
+     */
+    fun createVulkanLogicalDevice(
+        physicalDevice: VkPhysicalDevice, ciDevice: VkDeviceCreateInfo, pDevice: PointerBuffer
+    ): Int {
+        return vkCreateDevice(physicalDevice, ciDevice, null, pDevice)
+    }
 
     fun getWidth(): Int
 

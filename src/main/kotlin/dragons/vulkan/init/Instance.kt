@@ -145,7 +145,7 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
             val appInfo = VkApplicationInfo.calloc(stack)
             appInfo.sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)
             appInfo.pApplicationName(stack.UTF8("Dragons"))
-            appInfo.applicationVersion(1)
+            appInfo.applicationVersion(1) // TODO Query application name and version from somewhere else
             appInfo.apiVersion(VK_MAKE_VERSION(1, 2, 0))
 
             val ciInstance = VkInstanceCreateInfo.calloc(stack)
@@ -156,7 +156,7 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
 
             logger.info("Creating instance...")
             val pInstance = stack.callocPointer(1)
-            val instanceCreationResult = vkCreateInstance(ciInstance, null, pInstance)
+            val instanceCreationResult = vrManager.createVulkanInstance(ciInstance, pInstance)
 
             if (instanceCreationResult == VK_ERROR_INCOMPATIBLE_DRIVER) {
                 throw SimpleStartupException("Insufficient Vulkan support", listOf(

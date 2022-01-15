@@ -34,19 +34,8 @@ fun choosePhysicalDevice(vkInstance: VkInstance, pluginManager: PluginManager, v
     val logger = getLogger("Vulkan")
 
     return stackPush().use { stack ->
-        val pNumDevices = stack.callocInt(1)
-        assertVkSuccess(
-            vkEnumeratePhysicalDevices(vkInstance, pNumDevices, null),
-            "EnumeratePhysicalDevices", "count"
-        )
-        val numDevices = pNumDevices[0]
-        logger.info("There are $numDevices physical devices with Vulkan support")
-
-        val pPhysicalDevices = stack.callocPointer(numDevices)
-        assertVkSuccess(
-            vkEnumeratePhysicalDevices(vkInstance, pNumDevices, pPhysicalDevices),
-            "EnumeratePhysicalDevices", "device pointers"
-        )
+        val pPhysicalDevices = vrManager.enumerateVulkanPhysicalDevices(logger, vkInstance, stack)
+        val numDevices = pPhysicalDevices.capacity()
 
         val deviceRaters = pluginManager.getImplementations(VulkanDeviceRater::class)
         val deviceNames = Array(numDevices) { "" }
@@ -322,10 +311,7 @@ fun createLogicalDevice(
 
         logger.info("Creating logical device...")
         val pDevice = stack.callocPointer(1)
-        assertVkSuccess(
-            vkCreateDevice(physicalDevice, ciDevice, null, pDevice),
-            "CreateDevice"
-        )
+        assertVkSuccess(vrManager.createVulkanLogicalDevice(physicalDevice, ciDevice, pDevice), "CreateDevice")
         val device = VkDevice(pDevice[0], physicalDevice, ciDevice)
         logger.info("Created logical device")
 

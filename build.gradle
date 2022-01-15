@@ -27,16 +27,13 @@ allprojects {
     sourceCompatibility = "16"
 
     project.ext.jomlVersion = "1.10.1"
-    project.ext.lwjglVersion = "3.3.0"
+    project.ext.lwjglVersion = "3.3.1-SNAPSHOT"
     switch (OperatingSystem.current()) {
         case OperatingSystem.LINUX:
             def osArch = System.getProperty("os.arch")
             project.ext.lwjglNatives = osArch.startsWith("arm") || osArch.startsWith("aarch64")
                     ? "natives-linux-${osArch.contains("64") || osArch.startsWith("armv8") ? "arm64" : "arm32"}"
                     : "natives-linux"
-            break
-        case OperatingSystem.MAC_OS:
-            project.ext.lwjglNatives = natives-macos
             break
         case OperatingSystem.WINDOWS:
             def osArch = System.getProperty("os.arch")
@@ -66,11 +63,11 @@ dependencies {
     implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
     implementation "org.lwjgl:lwjgl"
     implementation "org.lwjgl:lwjgl-openvr"
+    implementation "org.lwjgl:lwjgl-openxr"
     implementation "org.lwjgl:lwjgl-vulkan"
     implementation "org.joml:joml:${jomlVersion}"
     runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
     runtimeOnly "org.lwjgl:lwjgl-openvr::$lwjglNatives"
-    if (lwjglNatives == "natives-macos") runtimeOnly "org.lwjgl:lwjgl-vulkan::$lwjglNatives"
 
     testImplementation platform('org.junit:junit-bom:5.7.2')
     testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
