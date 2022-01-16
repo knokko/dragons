@@ -11,6 +11,7 @@ import org.joml.Vector3f
 import org.lwjgl.PointerBuffer
 import org.lwjgl.openxr.*
 import org.lwjgl.openxr.KHRVulkanEnable2.*
+import org.lwjgl.openxr.XR10.xrCreateSession
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
@@ -45,6 +46,8 @@ internal class OpenXrManager(
 
     private lateinit var graphicsState: StaticGraphicsState
     private lateinit var vkQueue: DeviceQueue
+    private lateinit var xrSession: XrSession
+    private lateinit var swapchain: OpenXrSwapchain
 
     // TODO Ensure queue synchronization in xrBeginFrame, xrEndFrame, xrAcquireSwapchainImage, and xrReleaseSwapchainImage
     override fun createVulkanInstance(
@@ -135,9 +138,28 @@ internal class OpenXrManager(
 
     override fun setGraphicsState(graphicsState: StaticGraphicsState) {
         this.graphicsState = graphicsState
-        this.vkQueue = graphicsState.queueManager.generalQueueFamily.getRandomPriorityQueue()
+        this.vkQueue = graphicsState.queueManager.generalQueueFamily.getFirstPriorityQueue()
 
-        TODO("Create XRVK session...")
+        stackPush().use { stack ->
+            val graphicsBinding = XrGraphicsBindingVulkan2KHR.calloc(stack)
+            graphicsBinding.`type$Default`()
+            graphicsBinding.instance(graphicsState.vkInstance)
+            graphicsBinding.physicalDevice(graphicsState.vkPhysicalDevice)
+            graphicsBinding.device(graphicsState.vkDevice)
+            graphicsBinding.queueFamilyIndex(graphicsState.queueManager.generalQueueFamily.index)
+            graphicsBinding.queueIndex(graphicsState.queueManager.generalQueueFamily.getFirstPriorityQueueIndex())
+
+            val ciSession = XrSessionCreateInfo.calloc(stack)
+            ciSession.`type$Default`()
+            ciSession.next(graphicsBinding.address())
+            ciSession.systemId(xrSystemId)
+
+            val pSession = stack.callocPointer(1)
+            assertXrSuccess(xrCreateSession(xrInstance, ciSession, pSession), "CreateSession")
+            this.xrSession = XrSession(pSession[0], xrInstance)
+        }
+
+        this.swapchain = createOpenXrSwapchain(xrSession, graphicsState, width, height)
     }
 
     override fun prepareRender(): Triple<Vector3f, Matrix4f, Matrix4f>? {

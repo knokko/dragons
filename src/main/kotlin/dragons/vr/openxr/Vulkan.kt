@@ -1,9 +1,11 @@
 package dragons.vr.openxr
 
 import dragons.init.trouble.SimpleStartupException
-import dragons.vr.assertXrSuccess
+import dragons.state.StaticGraphicsState
 import org.lwjgl.openxr.KHRVulkanEnable2
-import org.lwjgl.openxr.XR10
+import org.lwjgl.openxr.KHRVulkanEnable2.xrGetVulkanGraphicsRequirements2KHR
+import org.lwjgl.openxr.XR10.XR_VERSION_MAJOR
+import org.lwjgl.openxr.XR10.XR_VERSION_MINOR
 import org.lwjgl.openxr.XrGraphicsRequirementsVulkan2KHR
 import org.lwjgl.openxr.XrInstance
 import org.lwjgl.system.MemoryStack.stackPush
@@ -13,14 +15,14 @@ fun checkOpenXrVulkanVersion(xrInstance: XrInstance, xrSystemId: Long) {
         val xrRequirements = XrGraphicsRequirementsVulkan2KHR.calloc(stack)
         xrRequirements.`type$Default`()
         assertXrSuccess(
-            KHRVulkanEnable2.xrGetVulkanGraphicsRequirements2KHR(xrInstance, xrSystemId, xrRequirements),
+            xrGetVulkanGraphicsRequirements2KHR(xrInstance, xrSystemId, xrRequirements),
             "GetVulkanGraphicsRequirements2KHR"
         )
 
-        val minMajorVersion = XR10.XR_VERSION_MAJOR(xrRequirements.minApiVersionSupported()).toInt()
-        val minMinorVersion = XR10.XR_VERSION_MINOR(xrRequirements.minApiVersionSupported()).toInt()
-        val maxMajorVersion = XR10.XR_VERSION_MAJOR(xrRequirements.maxApiVersionSupported()).toInt()
-        val maxMinorVersion = XR10.XR_VERSION_MINOR(xrRequirements.maxApiVersionSupported()).toInt()
+        val minMajorVersion = XR_VERSION_MAJOR(xrRequirements.minApiVersionSupported()).toInt()
+        val minMinorVersion = XR_VERSION_MINOR(xrRequirements.minApiVersionSupported()).toInt()
+        val maxMajorVersion = XR_VERSION_MAJOR(xrRequirements.maxApiVersionSupported()).toInt()
+        val maxMinorVersion = XR_VERSION_MINOR(xrRequirements.maxApiVersionSupported()).toInt()
 
         if (minMajorVersion > 1 || (minMajorVersion == 1 && minMinorVersion > 2)) {
             throw SimpleStartupException(

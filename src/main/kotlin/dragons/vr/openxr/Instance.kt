@@ -2,9 +2,10 @@ package dragons.vr.openxr
 
 import dragons.init.GameInitProperties
 import dragons.init.trouble.ExtensionStartupException
-import dragons.vr.assertXrSuccess
 import org.lwjgl.openxr.*
+import org.lwjgl.openxr.EXTDebugUtils.XR_EXT_DEBUG_UTILS_EXTENSION_NAME
 import org.lwjgl.openxr.KHRVulkanEnable2.XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME
+import org.lwjgl.openxr.XR10.XR_MAKE_VERSION
 import org.lwjgl.openxr.XR10.xrCreateInstance
 import org.lwjgl.system.MemoryStack.stackPush
 import org.slf4j.Logger
@@ -28,7 +29,10 @@ internal fun createOpenXrInstance(initProps: GameInitProperties, logger: Logger)
             return null
         }
 
-        val extensionsToEnable = setOf(XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME)
+        val extensionsToEnable = mutableSetOf(XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME)
+        if (!initProps.mainParameters.forbidDebug && availableExtensions.contains(XR_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
+            extensionsToEnable.add(XR_EXT_DEBUG_UTILS_EXTENSION_NAME)
+        }
 
         val availableLayers = getAvailableOpenXrLayers(logger)
         val layersToEnable = mutableSetOf<String>()
@@ -39,7 +43,7 @@ internal fun createOpenXrInstance(initProps: GameInitProperties, logger: Logger)
         val xrAppInfo = XrApplicationInfo.calloc(stack)
         xrAppInfo.applicationName(stack.UTF8("Dragons"))
         xrAppInfo.applicationVersion(1) // TODO Query application name and version from somewhere else
-        xrAppInfo.apiVersion(XR10.XR_MAKE_VERSION(1, 0, 0))
+        xrAppInfo.apiVersion(XR_MAKE_VERSION(1, 0, 0))
 
         logger.info("The following ${extensionsToEnable.size} OpenXR extensions will be enabled:")
         val pExtensionsToEnable = stack.callocPointer(extensionsToEnable.size)

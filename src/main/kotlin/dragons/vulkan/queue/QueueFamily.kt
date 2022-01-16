@@ -2,9 +2,13 @@ package dragons.vulkan.queue
 
 class QueueFamily(
     val index: Int,
-    val priorityQueues: Collection<DeviceQueue>,
-    val backgroundQueues: Collection<DeviceQueue>
+    val priorityQueues: List<DeviceQueue>,
+    val backgroundQueues: List<DeviceQueue>
 ) {
+    fun getFirstPriorityQueue() = priorityQueues[0]
+
+    fun getFirstPriorityQueueIndex() = 0
+
     fun getRandomBackgroundQueue(): DeviceQueue {
         return if (backgroundQueues.isEmpty()) {
             getRandomPriorityQueue()
