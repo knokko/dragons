@@ -2,7 +2,6 @@ package dragons.vr.openxr
 
 import dragons.init.GameInitProperties
 import dragons.init.trouble.SimpleStartupException
-import dragons.vr.assertXrSuccess
 import org.lwjgl.openxr.XR10
 import org.lwjgl.openxr.XrInstance
 import org.lwjgl.openxr.XrSystemGetInfo

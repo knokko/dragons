@@ -1,6 +1,5 @@
 package dragons.vr.openxr
 
-import dragons.vr.assertXrSuccess
 import org.lwjgl.openxr.XR10.XR_TYPE_API_LAYER_PROPERTIES
 import org.lwjgl.openxr.XR10.xrEnumerateApiLayerProperties
 import org.lwjgl.openxr.XrApiLayerProperties

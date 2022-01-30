@@ -1,6 +1,5 @@
 package dragons.vr.openxr
 
-import dragons.vr.assertXrSuccess
 import org.lwjgl.openxr.XR10.XR_TYPE_EXTENSION_PROPERTIES
 import org.lwjgl.openxr.XR10.xrEnumerateInstanceExtensionProperties
 import org.lwjgl.openxr.XrExtensionProperties
