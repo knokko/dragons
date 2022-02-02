@@ -85,6 +85,7 @@ fun tryInitOpenVR(initProps: GameInitProperties, logger: Logger): VrManager {
 
 class OpenVrManager: VrManager {
 
+    private var requestedStop = false
     private lateinit var graphicsState: StaticGraphicsState
 
     init {
@@ -169,10 +170,6 @@ class OpenVrManager: VrManager {
             vrMatrix.m(2), vrMatrix.m(6), vrMatrix.m(10), 0f,
             vrMatrix.m(3), vrMatrix.m(7), vrMatrix.m(11), 1f
         )
-    }
-
-    private fun vrToJomlMatrix(vrMatrix: HmdMatrix44): Matrix4f {
-        return Matrix4f(vrMatrix.m()).transpose()
     }
 
     private fun createEyeMatrix(stack: MemoryStack, pose: TrackedDevicePose, leftOrRight: Int): Pair<Matrix4f, Vector3f> {
@@ -291,4 +288,10 @@ class OpenVrManager: VrManager {
         vkDeviceWaitIdle(graphicsState.vkDevice)
         VR_ShutdownInternal()
     }
+
+    override fun requestStop() {
+        this.requestedStop = true
+    }
+
+    override fun shouldStop() = requestedStop
 }

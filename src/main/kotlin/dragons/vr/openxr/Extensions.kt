@@ -1,10 +1,8 @@
 package dragons.vr.openxr
 
-import org.lwjgl.openxr.XR10.XR_TYPE_EXTENSION_PROPERTIES
 import org.lwjgl.openxr.XR10.xrEnumerateInstanceExtensionProperties
 import org.lwjgl.openxr.XrExtensionProperties
 import org.lwjgl.system.MemoryStack.stackPush
-import org.lwjgl.system.MemoryUtil.memPutInt
 import org.slf4j.Logger
 import java.nio.ByteBuffer
 
@@ -19,10 +17,7 @@ internal fun getAvailableOpenXrExtensions(logger: Logger): Set<String> {
 
         val pExtensions = XrExtensionProperties.calloc(numExtensions, stack)
         for (index in 0 until numExtensions) {
-            memPutInt(
-                pExtensions[index].address() + XrExtensionProperties.TYPE,
-                XR_TYPE_EXTENSION_PROPERTIES
-            )
+            pExtensions[index].`type$Default`()
         }
         assertXrSuccess(
             xrEnumerateInstanceExtensionProperties(null as ByteBuffer?, pNumExtensions, pExtensions),

@@ -3,16 +3,17 @@ package dragons.vr.openxr
 import dragons.init.GameInitProperties
 import dragons.init.trouble.ExtensionStartupException
 import org.lwjgl.openxr.*
-import org.lwjgl.openxr.EXTDebugUtils.XR_EXT_DEBUG_UTILS_EXTENSION_NAME
+import org.lwjgl.openxr.EXTDebugUtils.*
 import org.lwjgl.openxr.KHRVulkanEnable2.XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME
-import org.lwjgl.openxr.XR10.XR_MAKE_VERSION
-import org.lwjgl.openxr.XR10.xrCreateInstance
+import org.lwjgl.openxr.XR10.*
 import org.lwjgl.system.MemoryStack.stackPush
 import org.slf4j.Logger
 
 private const val XR_VALIDATION_LAYER_NAME = "XR_APILAYER_LUNARG_core_validation"
 
-internal fun createOpenXrInstance(initProps: GameInitProperties, logger: Logger): XrInstance? {
+internal fun createOpenXrInstance(
+    initProps: GameInitProperties, logger: Logger
+): Pair<XrInstance?, XrDebugUtilsMessengerEXT?> {
     return stackPush().use { stack ->
 
         val availableExtensions = getAvailableOpenXrExtensions(logger)
@@ -26,7 +27,7 @@ internal fun createOpenXrInstance(initProps: GameInitProperties, logger: Logger)
                     requiredExtensions = setOf(XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME)
                 )
             }
-            return null
+            return Pair(null, null)
         }
 
         val extensionsToEnable = mutableSetOf(XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME)
@@ -67,6 +68,48 @@ internal fun createOpenXrInstance(initProps: GameInitProperties, logger: Logger)
 
         val pInstance = stack.callocPointer(1)
         assertXrSuccess(xrCreateInstance(ciInstance, pInstance), "CreateInstance")
-        XrInstance(pInstance[0], ciInstance)
+        val xrInstance = XrInstance(pInstance[0], ciInstance)
+
+        var xrDebugMessenger: XrDebugUtilsMessengerEXT? = null
+        if (extensionsToEnable.contains(XR_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
+            val ciDebugMessenger = XrDebugUtilsMessengerCreateInfoEXT.calloc(stack)
+            ciDebugMessenger.`type$Default`()
+            ciDebugMessenger.messageSeverities(
+                XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT.toLong() or
+                        XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT.toLong() or
+                        XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT.toLong()
+            )
+            ciDebugMessenger.messageTypes(
+                XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT.toLong() or
+                        XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT.toLong() or
+                        XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT.toLong()
+            )
+            ciDebugMessenger.userCallback {
+                    messageSeverity, _, pCallbackData, _ ->
+
+                val callbackData = XrDebugUtilsMessengerCallbackDataEXT.create(pCallbackData)
+
+                val messageEnd = "${callbackData.functionNameString()} [${callbackData.messageIdString()}]: ${callbackData.messageString()}"
+
+                if ((messageSeverity and XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT.toLong()) != 0L) {
+                    logger.error("Debug error: $messageEnd")
+                } else if ((messageSeverity and XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT.toLong()) != 0L) {
+                    logger.info("Debug warning: $messageEnd")
+                } else {
+                    logger.info("Debug info: $messageEnd")
+                }
+
+                XR_FALSE
+            }
+
+            val pDebugMessenger = stack.callocPointer(1)
+            assertXrSuccess(
+                xrCreateDebugUtilsMessengerEXT(xrInstance, ciDebugMessenger, pDebugMessenger),
+                "CreateDebugUtilsMessengerEXT"
+            )
+            xrDebugMessenger = XrDebugUtilsMessengerEXT(pDebugMessenger[0], xrInstance)
+        }
+
+        Pair(xrInstance, xrDebugMessenger)
     }
 }

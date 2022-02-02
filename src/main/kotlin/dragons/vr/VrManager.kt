@@ -121,4 +121,11 @@ interface VrManager {
     fun submitFrames()
 
     fun destroy()
+
+    /**
+     * This should cause `shouldStop()` to return `true` soon
+     */
+    fun requestStop()
+
+    fun shouldStop(): Boolean
 }

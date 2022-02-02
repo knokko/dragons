@@ -12,6 +12,9 @@ class DummyVrManager(
     val instanceExtensions: Set<String> = setOf(),
     val deviceExtensions: Set<String> = setOf()
 ): VrManager {
+
+    private var requestedStop = false
+
     override fun getVulkanInstanceExtensions(availableExtensions: Set<String>): Set<String> {
         return instanceExtensions
     }
@@ -71,4 +74,10 @@ class DummyVrManager(
     }
 
     override fun destroy() {}
+
+    override fun requestStop() {
+        this.requestedStop = true
+    }
+
+    override fun shouldStop() = requestedStop
 }

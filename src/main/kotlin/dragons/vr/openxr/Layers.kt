@@ -1,10 +1,8 @@
 package dragons.vr.openxr
 
-import org.lwjgl.openxr.XR10.XR_TYPE_API_LAYER_PROPERTIES
 import org.lwjgl.openxr.XR10.xrEnumerateApiLayerProperties
 import org.lwjgl.openxr.XrApiLayerProperties
 import org.lwjgl.system.MemoryStack.stackPush
-import org.lwjgl.system.MemoryUtil.memPutInt
 import org.slf4j.Logger
 
 internal fun getAvailableOpenXrLayers(logger: Logger): Set<String> {
@@ -19,7 +17,7 @@ internal fun getAvailableOpenXrLayers(logger: Logger): Set<String> {
 
         val pLayers = XrApiLayerProperties.calloc(numLayers, stack)
         for (index in 0 until numLayers) {
-            memPutInt(pLayers[index].address() + XrApiLayerProperties.TYPE, XR_TYPE_API_LAYER_PROPERTIES)
+            pLayers[index].`type$Default`()
         }
         assertXrSuccess(
             xrEnumerateApiLayerProperties(pNumLayers, pLayers),

@@ -39,9 +39,9 @@ class StandardMainMenu: MainMenuManager {
         }
 
         // TODO Add more iterations (and eventually loop indefinitely)
-        var numIterationsLeft = 1
+        var numIterationsLeft = 10
 
-        while (numIterationsLeft > 0) {
+        while (!gameState.vrManager.shouldStop()) {
             val eyeMatrices = gameState.vrManager.prepareRender()
             if (eyeMatrices != null) {
 
@@ -70,6 +70,9 @@ class StandardMainMenu: MainMenuManager {
             gameState.vrManager.submitFrames()
 
             numIterationsLeft--
+            if (numIterationsLeft == 0) {
+                gameState.vrManager.requestStop()
+            }
         }
 
         vkDestroySemaphore(gameState.graphics.vkDevice, renderFinishedSemaphore, null)

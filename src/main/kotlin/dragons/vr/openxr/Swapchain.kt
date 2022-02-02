@@ -51,6 +51,9 @@ internal fun determineOpenXrSwapchainSize(
         }
 
         val pViews = XrViewConfigurationView.calloc(numViews, stack)
+        for (viewIndex in 0 until numViews) {
+            pViews[viewIndex].`type$Default`()
+        }
         assertXrSuccess(
             xrEnumerateViewConfigurationViews(xrInstance, xrSystemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, pNumViews, pViews),
             "EnumerateViewConfigurationViews", "views"
@@ -95,79 +98,80 @@ private fun chooseSwapchainFormat(xrSession: XrSession, graphicsState: StaticGra
     }
 }
 
-internal fun createOpenXrSwapchain(
+internal fun createOpenXrSwapchains(
     xrSession: XrSession, graphicsState: StaticGraphicsState, width: Int, height: Int
-): OpenXrSwapchain {
+): List<OpenXrSwapchain> {
     return stackPush().use { stack ->
 
         val swapchainColorFormat = chooseSwapchainFormat(xrSession, graphicsState)
+        (0 until 2).map {
+            val ciSwapchain = XrSwapchainCreateInfo.calloc(stack)
+            ciSwapchain.`type$Default`()
+            // TODO I think it should be transfer dst since the final images will be copied to the swapchain images each frame
+            ciSwapchain.usageFlags(XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT.toLong())
+            ciSwapchain.format(swapchainColorFormat.toLong())
+            ciSwapchain.sampleCount(1)
+            ciSwapchain.width(width)
+            ciSwapchain.height(height)
+            ciSwapchain.faceCount(1)
+            ciSwapchain.arraySize(1)
+            ciSwapchain.mipCount(1)
 
-        val ciSwapchain = XrSwapchainCreateInfo.calloc(stack)
-        ciSwapchain.`type$Default`()
-        // TODO I think it should be transfer dst since it will be used as resolve image
-        ciSwapchain.usageFlags(XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT.toLong())
-        ciSwapchain.format(swapchainColorFormat.toLong())
-        ciSwapchain.sampleCount(1)
-        ciSwapchain.width(width)
-        ciSwapchain.height(height)
-        ciSwapchain.faceCount(1)
-        ciSwapchain.arraySize(1)
-        ciSwapchain.mipCount(1)
+            val pSwapchain = stack.callocPointer(1)
+            assertXrSuccess(xrCreateSwapchain(xrSession, ciSwapchain, pSwapchain), "CreateSwapchain")
+            val xrSwapchain = XrSwapchain(pSwapchain[0], xrSession)
 
-        val pSwapchain = stack.callocPointer(1)
-        assertXrSuccess(xrCreateSwapchain(xrSession, ciSwapchain, pSwapchain), "CreateSwapchain")
-        val xrSwapchain = XrSwapchain(pSwapchain[0], xrSession)
-
-        val pNumImages = stack.callocInt(1)
-        assertXrSuccess(
-            xrEnumerateSwapchainImages(xrSwapchain, pNumImages, null),
-            "EnumerateSwapchainImages", "count"
-        )
-        val numImages = pNumImages[0]
-
-        val pImages = XrSwapchainImageVulkan2KHR.calloc(numImages, stack)
-        for (index in 0 until numImages) {
-            pImages[index].`type$Default`()
-        }
-        val rawImages = XrSwapchainImageBaseHeader.create(pImages.address(), numImages)
-        assertXrSuccess(
-            xrEnumerateSwapchainImages(xrSwapchain, pNumImages, rawImages),
-            "EnumerateSwapchainImages", "images"
-        )
-
-        val ciImageView = VkImageViewCreateInfo.calloc(stack)
-        ciImageView.`sType$Default`()
-        // The `image` will be changed in each iteration of the next loop
-        ciImageView.viewType(VK_IMAGE_VIEW_TYPE_2D)
-        ciImageView.format(swapchainColorFormat)
-        ciImageView.components { components ->
-            components.r(VK_COMPONENT_SWIZZLE_IDENTITY)
-            components.g(VK_COMPONENT_SWIZZLE_IDENTITY)
-            components.b(VK_COMPONENT_SWIZZLE_IDENTITY)
-            components.a(VK_COMPONENT_SWIZZLE_IDENTITY)
-        }
-        ciImageView.subresourceRange { subresourceRange ->
-            subresourceRange.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-            subresourceRange.baseMipLevel(0)
-            subresourceRange.levelCount(1)
-            subresourceRange.baseArrayLayer(0)
-            subresourceRange.layerCount(1)
-        }
-
-        val pImageView = stack.callocLong(1)
-        val images = (0 until numImages).map { imageIndex ->
-            val vulkanImage = VulkanImage(pImages[imageIndex].image(), width, height)
-
-            ciImageView.image(vulkanImage.handle)
-            assertVkSuccess(
-                vkCreateImageView(graphicsState.vkDevice, ciImageView, null, pImageView),
-                "CreateImageView", "OpenXR swapchain image"
+            val pNumImages = stack.callocInt(1)
+            assertXrSuccess(
+                xrEnumerateSwapchainImages(xrSwapchain, pNumImages, null),
+                "EnumerateSwapchainImages", "count"
             )
-            vulkanImage.fullView = pImageView[0]
-            vulkanImage
-        }
+            val numImages = pNumImages[0]
 
-        OpenXrSwapchain(xrSwapchain, images)
+            val pImages = XrSwapchainImageVulkan2KHR.calloc(numImages, stack)
+            for (index in 0 until numImages) {
+                pImages[index].`type$Default`()
+            }
+            val rawImages = XrSwapchainImageBaseHeader.create(pImages.address(), numImages)
+            assertXrSuccess(
+                xrEnumerateSwapchainImages(xrSwapchain, pNumImages, rawImages),
+                "EnumerateSwapchainImages", "images"
+            )
+
+            val ciImageView = VkImageViewCreateInfo.calloc(stack)
+            ciImageView.`sType$Default`()
+            // The `image` will be changed in each iteration of the next loop
+            ciImageView.viewType(VK_IMAGE_VIEW_TYPE_2D)
+            ciImageView.format(swapchainColorFormat)
+            ciImageView.components { components ->
+                components.r(VK_COMPONENT_SWIZZLE_IDENTITY)
+                components.g(VK_COMPONENT_SWIZZLE_IDENTITY)
+                components.b(VK_COMPONENT_SWIZZLE_IDENTITY)
+                components.a(VK_COMPONENT_SWIZZLE_IDENTITY)
+            }
+            ciImageView.subresourceRange { subresourceRange ->
+                subresourceRange.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+                subresourceRange.baseMipLevel(0)
+                subresourceRange.levelCount(1)
+                subresourceRange.baseArrayLayer(0)
+                subresourceRange.layerCount(1)
+            }
+
+            val pImageView = stack.callocLong(1)
+            val images = (0 until numImages).map { imageIndex ->
+                val vulkanImage = VulkanImage(pImages[imageIndex].image(), width, height)
+
+                ciImageView.image(vulkanImage.handle)
+                assertVkSuccess(
+                    vkCreateImageView(graphicsState.vkDevice, ciImageView, null, pImageView),
+                    "CreateImageView", "OpenXR swapchain image"
+                )
+                vulkanImage.fullView = pImageView[0]
+                vulkanImage
+            }
+
+            OpenXrSwapchain(xrSwapchain, images)
+        }
     }
 }
 
