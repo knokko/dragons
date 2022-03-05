@@ -196,6 +196,9 @@ internal class OpenXrManager(
                     xrBeginFrame(xrSession, null), "BeginFrame"
                 )
 
+                val displayTime = frameState.predictedDisplayTime()
+                this.nextDisplayTime = displayTime
+
                 val result = if (frameState.shouldRender()) {
 
                     this.acquiredSwapchainImageIndices = this.swapchains.map { swapchain ->
@@ -207,8 +210,6 @@ internal class OpenXrManager(
                         pSwapchainImageIndex[0]
                     }
 
-                    val displayTime = frameState.predictedDisplayTime()
-                    this.nextDisplayTime = displayTime
                     getCameraMatrices(xrSession, renderSpace, lastViews, displayTime)
                 } else {
                     logger.info("Shouldn't render")
