@@ -7,11 +7,8 @@ class GraviksInstance(
     val instance: VkInstance,
     val physicalDevice: VkPhysicalDevice,
     val device: VkDevice,
-    /**
-     * All render target image (view)s passed to `GraviksContext`s of this
-     * `GraviksInstance` must have this Vulkan color format.
-     */
-    val imageColorFormat: Int,
+    val vmaAllocator: Long,
+    val queueFamilyIndex: Int,
     /**
      * This instance will use `queueSubmit` instead of `vkQueueSubmit`. This method is expected to call `vkQueueSubmit`,
      * but possibly in a synchronized manner. This method has 2 purposes:
@@ -23,8 +20,6 @@ class GraviksInstance(
      */
     private val queueSubmit: (VkSubmitInfo.Buffer, Long) -> Int
 ) {
-
-    internal val memory = GraviksMemory(this)
 
     internal val pipeline = GraviksPipeline(this)
 
@@ -38,7 +33,6 @@ class GraviksInstance(
      * Note: you must destroy all contexts **before** destroying this instance.
      */
     fun destroy() {
-        memory.destroy()
         pipeline.destroy()
     }
 }

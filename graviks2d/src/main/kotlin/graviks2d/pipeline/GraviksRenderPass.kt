@@ -7,7 +7,7 @@ import org.lwjgl.vulkan.VK10.*
 
 internal fun createGraviksRenderPass(
     physicalDevice: VkPhysicalDevice, vkDevice: VkDevice, colorFormat: Int, stack: MemoryStack
-): Long {
+): Pair<Long, Int> {
 
     val attachments = VkAttachmentDescription.calloc(2, stack)
     val colorAttachment = attachments[0]
@@ -21,7 +21,8 @@ internal fun createGraviksRenderPass(
     colorAttachment.finalLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
     val depthAttachment = attachments[1]
-    depthAttachment.format(determineDepthFormat(physicalDevice, stack))
+    val depthStencilFormat = determineDepthFormat(physicalDevice, stack)
+    depthAttachment.format(depthStencilFormat)
     depthAttachment.samples(VK_SAMPLE_COUNT_1_BIT)
     depthAttachment.loadOp(VK_ATTACHMENT_LOAD_OP_LOAD)
     depthAttachment.storeOp(VK_ATTACHMENT_STORE_OP_STORE)
@@ -56,7 +57,7 @@ internal fun createGraviksRenderPass(
         vkCreateRenderPass(vkDevice, ciRenderPass, null, pRenderPass),
         "vkCreateRenderPass"
     )
-    return pRenderPass[0]
+    return Pair(pRenderPass[0], depthStencilFormat)
 }
 
 private fun determineDepthFormat(

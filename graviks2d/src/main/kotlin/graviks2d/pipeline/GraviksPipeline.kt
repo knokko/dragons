@@ -1,10 +1,12 @@
 package graviks2d.pipeline
 
+import graviks2d.context.TARGET_COLOR_FORMAT
 import graviks2d.core.GraviksInstance
 import graviks2d.util.assertSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkGraphicsPipelineCreateInfo
+
 
 internal class GraviksPipeline(
     val instance: GraviksInstance
@@ -15,15 +17,19 @@ internal class GraviksPipeline(
     val vkDescriptorSetLayout: Long
     val vkRenderPass: Long
 
+    val depthStencilFormat: Int
+
     init {
         stackPush().use { stack ->
 
             val (pipelineLayout, descriptorSetLayout) = createGraviksPipelineLayout(instance.device, stack)
             this.vkPipelineLayout = pipelineLayout
             this.vkDescriptorSetLayout = descriptorSetLayout
-            this.vkRenderPass = createGraviksRenderPass(
-                instance.physicalDevice, instance.device, instance.imageColorFormat, stack
+            val (renderPass, depthFormat) = createGraviksRenderPass(
+                instance.physicalDevice, instance.device, TARGET_COLOR_FORMAT, stack
             )
+            this.vkRenderPass = renderPass
+            this.depthStencilFormat = depthFormat
 
             val ciPipelines = VkGraphicsPipelineCreateInfo.calloc(1, stack)
             val ciPipeline = ciPipelines[0]

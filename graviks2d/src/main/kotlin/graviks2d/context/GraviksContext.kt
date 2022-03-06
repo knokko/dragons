@@ -2,37 +2,43 @@ package graviks2d.context
 
 import graviks2d.core.GraviksInstance
 import graviks2d.util.Color
+import org.lwjgl.vulkan.VK10.*
 
 class GraviksContext(
     val instance: GraviksInstance,
-    val targetImageView: Long,
     val width: Int,
     val height: Int,
     val depthMode: DepthMode,
 
+    initialBackgroundColor: Color,
+
     /**
-     * The initial maximum number of vertices that fit in the vertex buffer. Adding
-     * more vertices will cause a reallocation.
+     * The maximum number of **vertices** that can fit in the vertex buffer
      */
-    private var vertexBufferSize: Int = 5000,
+    vertexBufferSize: Int = 5000,
+
     /**
-     * The size of the operation buffer, in **bytes**
+     * The maximum number of **int**s that can fit in the operation buffer
      */
-    private var operationBufferSize: Int = 25000
+    operationBufferSize: Int = 25000
 ) {
 
-    private var vertexBuffer = instance.memory.createVertexBuffer(vertexBufferSize)
+    internal val targetImages = ContextTargetImages(this)
+    internal val buffers = ContextBuffers(this, vertexBufferSize, operationBufferSize)
 
     private var currentDepth = -1
     private var maxDepth = -1
 
-    init {
-        // TODO Determine background color
-        clear()
 
+    private val commands: ContextCommands
+
+    init {
         if (depthMode == DepthMode.AutomaticSlow) {
             throw UnsupportedOperationException("AutomaticSlow still needs to be implemented")
         }
+
+        this.commands = ContextCommands(this)
+        clear(initialBackgroundColor)
     }
 
     fun fillRect(minX: Float, minY: Float, maxX: Float, maxY: Float, color: Color) {
@@ -45,21 +51,37 @@ class GraviksContext(
         }
         currentDepth = newDepth
         if (currentDepth > maxDepth) {
-            maxDepth = currentDepth
+            throw IllegalArgumentException("Can't set depth to $newDepth because maxDepth is $maxDepth. Call setMaxDepth first")
         }
     }
 
-    fun flush() {
-
+    fun setMaxDepth(newMaxDepth: Int) {
+        if (depthMode != DepthMode.Manual) {
+            throw UnsupportedOperationException("setDepth is only allowed when depthMode is Manual")
+        }
+        this.maxDepth = newMaxDepth
     }
 
-    fun clear() {
-        // TODO Actually clear the target image view
+    fun flush() {
+        commands.draw(ehm, maxDepth)
+        // TODO What to do with the depth?
+    }
+
+    fun clear(clearColor: Color) {
+        commands.clearDepthImage()
+        // TODO Clear the color target image
         currentDepth = 1
         maxDepth = currentDepth
     }
 
+    fun copyColorImageTo(destImage: Long?, destBuffer: Long?) {
+        flush()
+        commands.copyColorImageTo(destImage = destImage, destBuffer = destBuffer)
+    }
+
     fun destroy() {
-        vertexBuffer.destroy(instance.memory.vmaAllocator)
+        commands.destroy()
+        targetImages.destroy()
+        buffers.destroy()
     }
 }
