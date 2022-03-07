@@ -40,6 +40,7 @@ internal class GraviksPipeline(
             ciPipeline.pViewportState(createGraviksPipelineViewport(stack))
             ciPipeline.pDynamicState(createGraviksPipelineDynamics(stack))
             ciPipeline.pRasterizationState(createGraviksPipelineRasterization(stack))
+            ciPipeline.pMultisampleState(createGraviksPipelineMultisampleState(stack))
             ciPipeline.pDepthStencilState(createGraviksPipelineDepthState(stack))
             ciPipeline.pColorBlendState(createGraviksPipelineColorBlend(stack))
             ciPipeline.layout(pipelineLayout)
@@ -52,6 +53,9 @@ internal class GraviksPipeline(
                 "vkCreateGraphicsPipeline"
             )
             this.vkPipeline = pPipeline[0]
+
+            vkDestroyShaderModule(instance.device, ciPipeline.pStages()[0].module(), null)
+            vkDestroyShaderModule(instance.device, ciPipeline.pStages()[1].module(), null)
         }
     }
 

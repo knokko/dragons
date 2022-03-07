@@ -75,7 +75,7 @@ internal class ContextBuffers(
             ciOperationBuffer.`sType$Default`()
             ciOperationBuffer.size(this.operationBufferSize * 4L)
             ciOperationBuffer.usage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
-            ciOperationBuffer.sharingMode(VK_SHARING_MODE_CONCURRENT)
+            ciOperationBuffer.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
 
             if (ciOperationBuffer.size() > Int.MAX_VALUE) {
                 throw IllegalArgumentException("Operation buffer is too big ($operationBufferSize)")

@@ -15,6 +15,7 @@ internal class ContextCommands(
     private val fence: Long
 
     private var shouldClearDepthImage = false
+    private var hasDrawnBefore = false
 
     init {
         stackPush().use { stack ->
@@ -110,16 +111,14 @@ internal class ContextCommands(
 
             transitionColorImageLayout(
                 stack, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 0, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
             )
             transitionDepthImageLayout(
                 stack, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
                 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
             )
-
-            endSubmitWaitCommandBuffer(stack)
         }
     }
 
@@ -211,7 +210,7 @@ internal class ContextCommands(
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
             VK_ACCESS_TRANSFER_READ_BIT,
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
         )
@@ -269,7 +268,7 @@ internal class ContextCommands(
 
             transitionColorImageLayout(
                 stack, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
             )
 
@@ -280,7 +279,10 @@ internal class ContextCommands(
     fun draw(numVertices: Int, maxDepth: Int) {
         stackPush().use { stack ->
 
-            resetBeginCommandBuffer(stack)
+            if (hasDrawnBefore) {
+                resetBeginCommandBuffer(stack)
+            }
+            hasDrawnBefore = true
 
             if (this.shouldClearDepthImage) {
                 this.clearDepthImageNow(stack, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
@@ -340,7 +342,7 @@ internal class ContextCommands(
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                 this.context.instance.pipeline.vkPipelineLayout,
                 0,
-                stack.longs(this.context.descriptorSet),
+                stack.longs(this.context.descriptors.descriptorSet),
                 null
             )
 

@@ -9,7 +9,7 @@ import org.lwjgl.vulkan.VkFramebufferCreateInfo
 import org.lwjgl.vulkan.VkImageCreateInfo
 import org.lwjgl.vulkan.VkImageViewCreateInfo
 
-internal const val TARGET_COLOR_FORMAT = VK_FORMAT_R8G8B8A8_SRGB
+internal const val TARGET_COLOR_FORMAT = VK_FORMAT_R8G8B8A8_UNORM
 
 internal class ContextTargetImages(
     val context: GraviksContext

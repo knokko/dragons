@@ -16,13 +16,13 @@ internal fun createGraviksShaderStages(
 
     val ciVertexStage = ciStages[0]
     ciVertexStage.`sType$Default`()
-    ciVertexStage.stage(VK_PIPELINE_STAGE_VERTEX_SHADER_BIT)
+    ciVertexStage.stage(VK_SHADER_STAGE_VERTEX_BIT)
     ciVertexStage.module(createGraviksShaderModule(vkDevice, stack, "graviks2d/shaders/basic.vert.spv"))
     ciVertexStage.pName(stack.UTF8("main"))
 
     val ciFragmentStage = ciStages[1]
     ciFragmentStage.`sType$Default`()
-    ciFragmentStage.stage(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
+    ciFragmentStage.stage(VK_SHADER_STAGE_FRAGMENT_BIT)
     ciFragmentStage.module(createGraviksShaderModule(vkDevice, stack, "graviks2d/shaders/basic.frag.spv"))
     ciFragmentStage.pName(stack.UTF8("main"))
 

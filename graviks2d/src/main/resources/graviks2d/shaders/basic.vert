@@ -11,8 +11,8 @@ layout(push_constant) uniform PushConstants {
 } pushConstants;
 
 void main() {
-    float z = 0.1 + 0.8 * (float(inDepth) / float(pushConstants.maxDepth));
-    gl_Position = vec4(inPosition.x * 2.0 - 1.0, inPosition.y * 2.0 - 1.0, z, 1.0);
+    float z = 0.9 - 0.8 * (float(inDepth) / float(pushConstants.maxDepth));
+    gl_Position = vec4(inPosition.x * 2.0 - 1.0, inPosition.y * -2.0 + 1.0, z, 1.0);
 
     outOperationIndex = inOperationIndex;
 }

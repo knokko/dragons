@@ -64,3 +64,14 @@ internal fun createGraviksPipelineColorBlend(
 
     return ciColorBlend
 }
+
+internal fun createGraviksPipelineMultisampleState(
+    stack: MemoryStack
+): VkPipelineMultisampleStateCreateInfo {
+    val ciMultisample = VkPipelineMultisampleStateCreateInfo.calloc(stack)
+    ciMultisample.`sType$Default`()
+    ciMultisample.rasterizationSamples(VK_SAMPLE_COUNT_1_BIT)
+    ciMultisample.sampleShadingEnable(false)
+
+    return ciMultisample
+}

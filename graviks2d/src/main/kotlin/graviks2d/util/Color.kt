@@ -1,7 +1,7 @@
 package graviks2d.util
 
 @JvmInline
-value class Color private constructor(private val rawValue: Int) {
+value class Color private constructor(val rawValue: Int) {
 
     val red: Int
     get() = rawValue and 255
