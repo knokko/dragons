@@ -5,6 +5,7 @@ import graviks2d.context.GraviksContext
 import graviks2d.context.TranslucentPolicy
 import graviks2d.core.GraviksInstance
 import graviks2d.util.Color
+import graviks2d.util.HostImage
 import graviks2d.util.assertSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memByteBuffer
@@ -16,11 +17,7 @@ import org.lwjgl.util.vma.VmaVulkanFunctions
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME
 import org.lwjgl.vulkan.VK10.*
-import java.awt.image.BufferedImage
-import java.awt.image.BufferedImage.TYPE_INT_ARGB
-import java.awt.image.BufferedImage.TYPE_INT_RGB
 import java.io.File
-import javax.imageio.ImageIO
 
 fun main() {
     stackPush().use { stack ->
@@ -126,23 +123,7 @@ fun main() {
         val testBuffer = pTestBuffer[0]
         val testAllocation = pTestAllocation[0]
         val testHostBuffer = memByteBuffer(testAllocationInfo.pMappedData(), width * height * 4)
-        val testHostImage = BufferedImage(width, height, TYPE_INT_RGB)
-
-        fun saveTestImage(name: String) {
-            for (x in 0 until width) {
-                for (y in 0 until height) {
-                    val bufferIndex = 4 * (x + y * width)
-                    val color = java.awt.Color(
-                        testHostBuffer[bufferIndex].toUByte().toInt(),
-                        testHostBuffer[bufferIndex + 1].toUByte().toInt(),
-                        testHostBuffer[bufferIndex + 2].toUByte().toInt(),
-                        testHostBuffer[bufferIndex + 3].toUByte().toInt()
-                    )
-                    testHostImage.setRGB(x, y, color.rgb)
-                }
-            }
-            ImageIO.write(testHostImage, "PNG", File("$name.png"))
-        }
+        val testHostImage = HostImage(width, height, testHostBuffer, true)
 
         val graviksInstance = GraviksInstance(
             vkInstance, vkPhysicalDevice, vkDevice, vmaAllocator,
@@ -160,10 +141,10 @@ fun main() {
         graviks.fillRect(0.5f, 0.3f, 0.8f, 0.5f, Color.rgbInt(0, 200, 0))
         graviks.fillRect(0.6f, 0.7f, 0.8f, 0.9f, Color.rgbInt(0, 0, 200))
         graviks.copyColorImageTo(destImage = null, destBuffer = testBuffer)
-        saveTestImage("test1")
+        testHostImage.saveToDisk(File("test1.png"))
         graviks.fillRect(0.4f, 0.4f, 0.6f, 0.6f, Color.rgbInt(200, 50, 150))
         graviks.copyColorImageTo(destImage = null, destBuffer = testBuffer)
-        saveTestImage("test2")
+        testHostImage.saveToDisk(File("test2.png"))
 
         graviks.destroy()
         graviksInstance.destroy()
