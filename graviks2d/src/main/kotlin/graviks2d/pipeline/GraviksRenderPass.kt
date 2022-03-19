@@ -65,7 +65,7 @@ private fun determineDepthFormat(
 ): Int {
 
     // The more bytes are spent on the depth, the more accurate the results, but the
-    // more expensive rendering becomes. 3 bytes should be enough and are therefor
+    // more expensive rendering becomes. 3 bytes should be enough and are therefore
     // preferred over 4-byte formats.
     val preferredFormats = intArrayOf(
         VK_FORMAT_X8_D24_UNORM_PACK32,

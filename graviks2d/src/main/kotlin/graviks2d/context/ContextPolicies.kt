@@ -1,10 +1,8 @@
 package graviks2d.context
 
 enum class DepthPolicy {
-    Manual,
-    AlwaysIncrement,
-    QuickCheck,
-    PreciseCheck
+    Automatic,
+    Manual
 }
 
 enum class TranslucentPolicy {

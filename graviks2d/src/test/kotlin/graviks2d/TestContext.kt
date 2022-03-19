@@ -20,9 +20,7 @@ import org.lwjgl.util.vma.VmaAllocatorCreateInfo
 import org.lwjgl.util.vma.VmaVulkanFunctions
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
-import java.awt.image.BufferedImage
-import java.io.File
-import javax.imageio.ImageIO
+import java.util.*
 import kotlin.math.absoluteValue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -121,7 +119,7 @@ class TestContext {
         }
     }
 
-    private fun withTestImage(context: GraviksContext, flipY: Boolean, test: (Long, HostImage) -> Unit) {
+    private fun withTestImage(context: GraviksContext, flipY: Boolean, test: (() -> Unit, HostImage) -> Unit) {
         stackPush().use { stack ->
 
             val ciTestBuffer = VkBufferCreateInfo.calloc(stack)
@@ -148,7 +146,7 @@ class TestContext {
             val testAllocation = pTestAllocation[0]
             val testHostBuffer = MemoryUtil.memByteBuffer(testAllocationInfo.pMappedData(), context.width * context.height * 4)
 
-            test(testBuffer, HostImage(context.width, context.height, testHostBuffer, flipY))
+            test({ context.copyColorImageTo(destImage = null, destBuffer = testBuffer)}, HostImage(context.width, context.height, testHostBuffer, flipY))
 
             vmaDestroyBuffer(vmaAllocator, testBuffer, testAllocation)
         }
@@ -170,17 +168,99 @@ class TestContext {
         val rectColor = Color.rgbInt(0, 100, 0)
         val graviks = GraviksContext(
             this.graviksInstance, 8, 8,
-            DepthPolicy.AlwaysIncrement, TranslucentPolicy.Manual, backgroundColor
+            TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
         )
 
-        withTestImage(graviks, true) { destBuffer, hostImage ->
+        withTestImage(graviks, true) { update, hostImage ->
             graviks.fillRect(0f, 0f, 0.75f, 0.5f, rectColor)
-            graviks.copyColorImageTo(destImage = null, destBuffer = destBuffer)
+            update()
             assertColorEquals(rectColor, hostImage.getPixel(0, 0))
             assertColorEquals(rectColor, hostImage.getPixel(2, 1))
             assertColorEquals(rectColor, hostImage.getPixel(5, 3))
             assertColorEquals(backgroundColor, hostImage.getPixel(6, 0))
             assertColorEquals(backgroundColor, hostImage.getPixel(0, 4))
+        }
+
+        graviks.destroy()
+    }
+
+    @Test
+    fun testAutomaticDepth() {
+        val colors = (0 until 10).map { Color.rgbInt(10 * it, 10 * it, 10 * it) }
+        val graviks = GraviksContext(
+            this.graviksInstance, 1, 1, TranslucentPolicy.Manual, maxDepth = 2
+        )
+
+        withTestImage(graviks, true) { update, hostImage ->
+            for (color in colors) {
+                graviks.fillRect(0f, 0f, 1f, 1f, color)
+                update()
+                assertColorEquals(color, hostImage.getPixel(0, 0))
+            }
+
+            for (color in colors) {
+                graviks.fillRect(0f, 0f, 1f, 1f, color)
+            }
+            update()
+            assertColorEquals(colors[colors.size - 1], hostImage.getPixel(0, 0))
+        }
+
+        graviks.destroy()
+    }
+
+    @Test
+    fun testDefaultDepthPrecision() {
+        val rng = Random(12345)
+        val size = 3000
+        val invSize = 1f / size
+        val numSquaresPerRow = (size - 2) / 2
+        var totalNumSquares = numSquaresPerRow * numSquaresPerRow
+
+        val graviks = GraviksContext(
+            this.graviksInstance, size, size,
+            TranslucentPolicy.Manual, depthPolicy = DepthPolicy.Manual,
+            vertexBufferSize = 6 * totalNumSquares + 100,
+            operationBufferSize = 2 * totalNumSquares + 100
+        )
+
+        if (totalNumSquares > graviks.maxDepth) {
+            totalNumSquares = graviks.maxDepth
+        }
+
+        val depthFactor = graviks.maxDepth / totalNumSquares
+
+        val colors = (0 until totalNumSquares).map { Color.rgbInt(rng.nextInt(255), rng.nextInt(255), rng.nextInt(255)) }
+
+        withTestImage(graviks, true) { update, hostImage ->
+            for (y in 0 until numSquaresPerRow) {
+                for (x in (0 until numSquaresPerRow).reversed()) {
+                    val colorIndex = x + numSquaresPerRow * y
+                    if (colorIndex < colors.size) {
+                        val factor = 2f * invSize
+                        graviks.setManualDepth(1 + x + y * depthFactor * numSquaresPerRow)
+                        graviks.fillRect(
+                            factor * x,
+                            factor * y,
+                            factor * (x + 2),
+                            factor * (y + 2),
+                            colors[colorIndex]
+                        )
+                    }
+                }
+            }
+            update()
+            for (x in 0 until numSquaresPerRow) {
+                for (y in 0 until numSquaresPerRow) {
+                    val colorIndex = x + numSquaresPerRow * y
+                    if (colorIndex < colors.size) {
+                        val expectedColor = colors[colorIndex]
+                        assertColorEquals(expectedColor, hostImage.getPixel(2 * x, 2 * y))
+                        assertColorEquals(expectedColor, hostImage.getPixel(2 * x + 1, 2 * y))
+                        assertColorEquals(expectedColor, hostImage.getPixel(2 * x, 2 * y + 1))
+                        assertColorEquals(expectedColor, hostImage.getPixel(2 * x + 1, 2 * y + 1))
+                    }
+                }
+            }
         }
 
         graviks.destroy()

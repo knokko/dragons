@@ -134,8 +134,8 @@ fun main() {
 
         val graviks = GraviksContext(
             graviksInstance, width, height,
-            DepthPolicy.AlwaysIncrement, TranslucentPolicy.Manual,
-            Color.rgbInt(200, 100, 150)
+            TranslucentPolicy.Manual,
+            initialBackgroundColor = Color.rgbInt(200, 100, 150)
         )
         graviks.fillRect(0.1f, 0.1f, 0.2f, 0.4f, Color.rgbInt(200, 0, 0))
         graviks.fillRect(0.5f, 0.3f, 0.8f, 0.5f, Color.rgbInt(0, 200, 0))

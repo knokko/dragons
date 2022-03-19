@@ -14,7 +14,6 @@ internal class ContextCommands(
     private val commandBuffer: VkCommandBuffer
     private val fence: Long
 
-    private var shouldClearDepthImage = false
     private var hasDrawnBefore = false
 
     init {
@@ -174,10 +173,6 @@ internal class ContextCommands(
         )
     }
 
-    fun clearDepthImage() {
-        this.shouldClearDepthImage = true
-    }
-
     private fun clearDepthImageNow(stack: MemoryStack, currentDepthImageLayout: Int) {
         transitionDepthImageLayout(
             stack,
@@ -276,18 +271,13 @@ internal class ContextCommands(
         }
     }
 
-    fun draw(numVertices: Int, maxDepth: Int) {
+    fun draw(drawCommands: List<DrawCommand>) {
         stackPush().use { stack ->
 
             if (hasDrawnBefore) {
                 resetBeginCommandBuffer(stack)
             }
             hasDrawnBefore = true
-
-            if (this.shouldClearDepthImage) {
-                this.clearDepthImageNow(stack, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-                this.shouldClearDepthImage = false
-            }
 
             val biRenderPass = VkRenderPassBeginInfo.calloc(stack)
             biRenderPass.`sType$Default`()
@@ -297,14 +287,6 @@ internal class ContextCommands(
                 it.offset { offset -> offset.set(0, 0) }
                 it.extent { extent -> extent.set(this.context.width, this.context.height) }
             }
-
-            vkCmdBeginRenderPass(this.commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
-
-            vkCmdBindPipeline(
-                this.commandBuffer,
-                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                this.context.instance.pipeline.vkPipeline
-            )
 
             val viewports = VkViewport.calloc(1, stack)
             val viewport = viewports[0]
@@ -320,37 +302,64 @@ internal class ContextCommands(
             scissor.offset { it.set(0, 0) }
             scissor.extent { it.set(this.context.width, this.context.height) }
 
-            vkCmdSetViewport(this.commandBuffer, 0, viewports)
-            vkCmdSetScissor(this.commandBuffer, 0, scissors)
+            var isInsideRenderPass = false
 
-            vkCmdPushConstants(
-                this.commandBuffer,
-                this.context.instance.pipeline.vkPipelineLayout,
-                VK_SHADER_STAGE_VERTEX_BIT,
-                0,
-                stack.ints(maxDepth)
-            )
+            for (drawCommand in drawCommands) {
+                if (drawCommand.preDepthClear) {
+                    if (isInsideRenderPass) {
+                        vkCmdEndRenderPass(this.commandBuffer)
+                        isInsideRenderPass = false
+                    }
+                    this.clearDepthImageNow(stack, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+                }
+                if (drawCommand.numVertices > 0) {
+                    if (!isInsideRenderPass) {
+                        vkCmdBeginRenderPass(this.commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
 
-            vkCmdBindVertexBuffers(
-                this.commandBuffer,
-                0,
-                stack.longs(this.context.buffers.vertexVkBuffer),
-                stack.longs(0L)
-            )
-            vkCmdBindDescriptorSets(
-                this.commandBuffer,
-                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                this.context.instance.pipeline.vkPipelineLayout,
-                0,
-                stack.longs(this.context.descriptors.descriptorSet),
-                null
-            )
+                        vkCmdBindPipeline(
+                            this.commandBuffer,
+                            VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            this.context.instance.pipeline.vkPipeline
+                        )
 
-            vkCmdDraw(
-                this.commandBuffer, numVertices, 1, 0,0
-            )
+                        vkCmdSetViewport(this.commandBuffer, 0, viewports)
+                        vkCmdSetScissor(this.commandBuffer, 0, scissors)
 
-            vkCmdEndRenderPass(this.commandBuffer)
+                        vkCmdPushConstants(
+                            this.commandBuffer,
+                            this.context.instance.pipeline.vkPipelineLayout,
+                            VK_SHADER_STAGE_VERTEX_BIT,
+                            0,
+                            stack.ints(this.context.maxDepth)
+                        )
+
+                        vkCmdBindVertexBuffers(
+                            this.commandBuffer,
+                            0,
+                            stack.longs(this.context.buffers.vertexVkBuffer),
+                            stack.longs(0L)
+                        )
+                        vkCmdBindDescriptorSets(
+                            this.commandBuffer,
+                            VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            this.context.instance.pipeline.vkPipelineLayout,
+                            0,
+                            stack.longs(this.context.descriptors.descriptorSet),
+                            null
+                        )
+                        isInsideRenderPass = true
+                    }
+
+                    vkCmdDraw(
+                        this.commandBuffer, drawCommand.numVertices, 1, drawCommand.vertexIndex,0
+                    )
+                }
+            }
+
+            if (isInsideRenderPass) {
+                vkCmdEndRenderPass(this.commandBuffer)
+            }
+
             endSubmitWaitCommandBuffer(stack)
         }
     }
