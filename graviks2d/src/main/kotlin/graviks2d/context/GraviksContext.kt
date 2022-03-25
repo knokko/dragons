@@ -1,7 +1,15 @@
 package graviks2d.context
 
 import graviks2d.core.GraviksInstance
+import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_BOTTOM_LEFT
+import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_BOTTOM_RIGHT
+import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_TOP_LEFT
+import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_TOP_RIGHT
+import graviks2d.pipeline.OP_CODE_FILL_RECT
+import graviks2d.resource.BorrowedImage
+import graviks2d.resource.ImageReference
 import graviks2d.util.Color
+import kotlinx.coroutines.runBlocking
 import java.lang.IllegalStateException
 
 class GraviksContext(
@@ -82,6 +90,7 @@ class GraviksContext(
     private var currentOperationIndex = -1
 
     private val commands: ContextCommands
+    private val currentImages = mutableMapOf<BorrowedImage, Int>()
     internal val descriptors = ContextDescriptors(this.instance, this.buffers.operationVkBuffer)
 
     private val queuedDrawCommands: MutableList<DrawCommand> = mutableListOf()
@@ -184,7 +193,18 @@ class GraviksContext(
 
         // If no draw commands are queued, we can skip it and spare the synchronization overhead
         if (queuedDrawCommands.isNotEmpty()) {
+            runBlocking {
+                val imageViewsArray = Array<Long>(currentImages.size) { 0 }
+                for ((borrowedImage, index) in currentImages) {
+                    imageViewsArray[index] = borrowedImage.imagePair.await().vkImageView
+                }
+                descriptors.updateDescriptors(imageViewsArray)
+            }
             commands.draw(queuedDrawCommands)
+            for (borrowedImage in currentImages.keys) {
+                instance.imageCache.returnImage(borrowedImage)
+            }
+            currentImages.clear()
             queuedDrawCommands.clear()
         }
 
@@ -192,41 +212,50 @@ class GraviksContext(
         currentOperationIndex = 0
     }
 
-    private fun pushRect(x1: Float, y1: Float, x2: Float, y2: Float, vertexIndex: Int, depth: Int, operationIndex: Int) {
+    private fun pushRect(
+        x1: Float, y1: Float, x2: Float, y2: Float, vertexIndex: Int, depth: Int, operationIndex: Int
+    ) {
+        this.pushRect(x1, y1, x2, y2, vertexIndex, depth, operationIndex, operationIndex, operationIndex, operationIndex)
+    }
+
+    private fun pushRect(
+        x1: Float, y1: Float, x2: Float, y2: Float, vertexIndex: Int, depth: Int,
+        operationIndex1: Int, operationIndex2: Int, operationIndex3: Int, operationIndex4: Int
+    ) {
         this.buffers.vertexCpuBuffer.run {
             this[vertexIndex].x = x1
             this[vertexIndex].y = y1
             this[vertexIndex].depth = depth
-            this[vertexIndex].operationIndex = operationIndex
+            this[vertexIndex].operationIndex = operationIndex1
 
             this[vertexIndex + 1].x = x2
             this[vertexIndex + 1].y = y1
             this[vertexIndex + 1].depth = depth
-            this[vertexIndex + 1].operationIndex = operationIndex
+            this[vertexIndex + 1].operationIndex = operationIndex2
 
             this[vertexIndex + 2].x = x2
             this[vertexIndex + 2].y = y2
             this[vertexIndex + 2].depth = depth
-            this[vertexIndex + 2].operationIndex = operationIndex
+            this[vertexIndex + 2].operationIndex = operationIndex3
 
             this[vertexIndex + 3].x = x2
             this[vertexIndex + 3].y = y2
             this[vertexIndex + 3].depth = depth
-            this[vertexIndex + 3].operationIndex = operationIndex
+            this[vertexIndex + 3].operationIndex = operationIndex3
 
             this[vertexIndex + 4].x = x1
             this[vertexIndex + 4].y = y2
             this[vertexIndex + 4].depth = depth
-            this[vertexIndex + 4].operationIndex = operationIndex
+            this[vertexIndex + 4].operationIndex = operationIndex4
 
             this[vertexIndex + 5].x = x1
             this[vertexIndex + 5].y = y1
             this[vertexIndex + 5].depth = depth
-            this[vertexIndex + 5].operationIndex = operationIndex
+            this[vertexIndex + 5].operationIndex = operationIndex1
         }
     }
 
-    fun fillRect(minX: Float, minY: Float, maxX: Float, maxY: Float, color: Color) {
+    fun fillRect(x1: Float, y1: Float, x2: Float, y2: Float, color: Color) {
 
         val operationIndex = this.claimNextOperationIndex(2)
         val depth = this.claimNextDepth()
@@ -235,11 +264,41 @@ class GraviksContext(
         // the vertices are actually populated.
         val vertexIndex = this.claimNextVertexIndex(6)
 
-        this.pushRect(minX, minY, maxX, maxY, vertexIndex = vertexIndex, depth = depth, operationIndex = operationIndex)
+        this.pushRect(x1, y1, x2, y2, vertexIndex = vertexIndex, depth = depth, operationIndex = operationIndex)
 
         this.buffers.operationCpuBuffer.run {
-            this.put(operationIndex, 1)
+            this.put(operationIndex, OP_CODE_FILL_RECT)
             this.put(operationIndex + 1, color.rawValue)
+        }
+    }
+
+    fun drawImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImageReference) {
+        val borrowedImage = this.instance.imageCache.borrowImage(image)
+        var imageIndex = this.currentImages[borrowedImage]
+        if (imageIndex == null) {
+            if (this.currentImages.size >= this.instance.maxNumDescriptorImages) {
+                this.hardFlush()
+            }
+            imageIndex = this.currentImages.size
+            this.currentImages[borrowedImage] = imageIndex
+        }
+
+        val operationIndex = this.claimNextOperationIndex(5)
+        val depth = this.claimNextDepth()
+        val vertexIndex = this.claimNextVertexIndex(6)
+
+        this.pushRect(
+            xLeft, yBottom, xRight, yTop, vertexIndex = vertexIndex, depth = depth,
+            operationIndex1 = operationIndex, operationIndex2 = operationIndex + 2,
+            operationIndex3 = operationIndex + 3, operationIndex4 = operationIndex + 4
+        )
+
+        this.buffers.operationCpuBuffer.run {
+            this.put(operationIndex, OP_CODE_DRAW_IMAGE_BOTTOM_LEFT)
+            this.put(operationIndex + 1, imageIndex)
+            this.put(operationIndex + 2, OP_CODE_DRAW_IMAGE_BOTTOM_RIGHT)
+            this.put(operationIndex + 3, OP_CODE_DRAW_IMAGE_TOP_RIGHT)
+            this.put(operationIndex + 4, OP_CODE_DRAW_IMAGE_TOP_LEFT)
         }
     }
 

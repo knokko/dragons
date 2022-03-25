@@ -1,7 +1,16 @@
 package graviks2d.core
 
 import graviks2d.pipeline.GraviksPipeline
+import graviks2d.resource.ImageCache
+import graviks2d.resource.createDummyImage
+import graviks2d.util.assertSuccess
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import org.lwjgl.system.MemoryStack.stackPush
+import org.lwjgl.util.vma.Vma.vmaDestroyImage
 import org.lwjgl.vulkan.*
+import org.lwjgl.vulkan.VK10.*
 
 class GraviksInstance(
     val instance: VkInstance,
@@ -18,10 +27,17 @@ class GraviksInstance(
      * `Graviks2dInstance` will synchronize all calls to `queueSubmit`, so user synchronization is only needed if the
      * used `VkQueue` is also used for other purposes.
      */
-    private val queueSubmit: (VkSubmitInfo.Buffer, Long) -> Int
+    private val queueSubmit: (VkSubmitInfo.Buffer, Long) -> Int,
+
+    val maxNumDescriptorImages: Int = 100,
+    softImageLimit: Int = 1000
 ) {
 
+    internal val textureSampler = createTextureSampler(this.device)
     internal val pipeline = GraviksPipeline(this)
+    internal val coroutineScope = CoroutineScope(Dispatchers.IO)
+    internal val imageCache = ImageCache(this, softImageLimit)
+    internal var dummyImage = createDummyImage(this)
 
     fun synchronizedQueueSubmit(pSubmitInfo: VkSubmitInfo.Buffer, fence: Long): Int {
         return synchronized(queueSubmit) {
@@ -33,6 +49,39 @@ class GraviksInstance(
      * Note: you must destroy all contexts **before** destroying this instance.
      */
     fun destroy() {
+        vkDestroyImageView(device, dummyImage.vkImageView, null)
+        vmaDestroyImage(vmaAllocator, dummyImage.vkImage, dummyImage.vmaAllocation)
+        imageCache.destroy()
+        coroutineScope.cancel()
         pipeline.destroy()
+        vkDestroySampler(device, textureSampler, null)
+    }
+}
+
+private fun createTextureSampler(vkDevice: VkDevice): Long {
+    return stackPush().use { stack ->
+        val ciSampler = VkSamplerCreateInfo.calloc(stack)
+        ciSampler.`sType$Default`()
+        ciSampler.magFilter(VK_FILTER_NEAREST)
+        ciSampler.minFilter(VK_FILTER_NEAREST)
+        ciSampler.mipmapMode(VK_SAMPLER_MIPMAP_MODE_NEAREST)
+        ciSampler.addressModeU(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
+        ciSampler.addressModeV(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
+        ciSampler.addressModeW(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
+        ciSampler.mipLodBias(0f)
+        ciSampler.anisotropyEnable(false)
+        ciSampler.compareEnable(false)
+        ciSampler.compareOp(VK_COMPARE_OP_ALWAYS)
+        ciSampler.minLod(0f)
+        ciSampler.maxLod(0f)
+        ciSampler.borderColor(VK_BORDER_COLOR_INT_OPAQUE_BLACK)
+        ciSampler.unnormalizedCoordinates(false)
+
+        val pSampler = stack.callocLong(1)
+        assertSuccess(
+            vkCreateSampler(vkDevice, ciSampler, null, pSampler),
+            "vkCreateSampler"
+        )
+        pSampler[0]
     }
 }

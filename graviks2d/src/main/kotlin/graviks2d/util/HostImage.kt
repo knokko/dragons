@@ -15,9 +15,13 @@ class HostImage(val width: Int, val height: Int, val hostBuffer: ByteBuffer, val
         if (y >= height) throw IllegalArgumentException("y ($y) must be smaller than $height")
     }
 
-    fun getPixel(x: Int, y: Int): Color {
+    private fun indexFor(x: Int, y: Int): Int {
         checkBounds(x, y)
-        val index = 4 * (x + if (flipY) { height - y - 1} else { y } * width)
+        return 4 * (x + if (flipY) { height - y - 1} else { y } * width)
+    }
+
+    fun getPixel(x: Int, y: Int): Color {
+        val index = indexFor(x, y)
         fun toComponent(byteValue: Byte) = byteValue.toUByte().toInt()
         return Color.rgbaInt(
             toComponent(hostBuffer[index]),
@@ -25,6 +29,14 @@ class HostImage(val width: Int, val height: Int, val hostBuffer: ByteBuffer, val
             toComponent(hostBuffer[index + 2]),
             toComponent(hostBuffer[index + 3])
         )
+    }
+
+    fun setPixel(x: Int, y: Int, color: Color) {
+        val index = indexFor(x, y)
+        hostBuffer.put(index, color.red.toByte())
+        hostBuffer.put(index + 1, color.green.toByte())
+        hostBuffer.put(index + 2, color.blue.toByte())
+        hostBuffer.put(index + 3, color.alpha.toByte())
     }
 
     fun saveToDisk(dest: File) {

@@ -127,10 +127,10 @@ fun main() {
 
         val graviksInstance = GraviksInstance(
             vkInstance, vkPhysicalDevice, vkDevice, vmaAllocator,
-            graphicsQueueIndex
-        ) { pSubmitInfo, fence ->
-            vkQueueSubmit(queue, pSubmitInfo, fence)
-        }
+            graphicsQueueIndex, { pSubmitInfo, fence ->
+                vkQueueSubmit(queue, pSubmitInfo, fence)
+            }
+        )
 
         val graviks = GraviksContext(
             graviksInstance, width, height,

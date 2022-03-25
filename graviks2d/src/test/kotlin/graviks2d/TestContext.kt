@@ -4,6 +4,7 @@ import graviks2d.context.DepthPolicy
 import graviks2d.context.GraviksContext
 import graviks2d.context.TranslucentPolicy
 import graviks2d.core.GraviksInstance
+import graviks2d.resource.ImageReference
 import graviks2d.util.Color
 import graviks2d.util.HostImage
 import graviks2d.util.assertSuccess
@@ -112,10 +113,10 @@ class TestContext {
 
             this.graviksInstance = GraviksInstance(
                 vkInstance, vkPhysicalDevice, vkDevice, vmaAllocator,
-                graphicsQueueIndex
-            ) { pSubmitInfo, fence ->
-                vkQueueSubmit(queue, pSubmitInfo, fence)
-            }
+                graphicsQueueIndex, queueSubmit = { pSubmitInfo, fence ->
+                    vkQueueSubmit(queue, pSubmitInfo, fence)
+                }
+            )
         }
     }
 
@@ -153,13 +154,17 @@ class TestContext {
     }
 
     private fun assertColorEquals(expected: Color, actual: Color) {
-        fun assertComponentEquals(expected: Int, actual: Int, description: String) {
-            assertTrue((expected - actual).absoluteValue <= 2, "$description not equal: expected $expected, but got $actual")
+        fun assertComponentEquals(expectedValue: Int, actualValue: Int) {
+            assertTrue(
+                (expectedValue - actualValue).absoluteValue <= 2,
+                "expected (${expected.red},${expected.green},${expected.blue},${expected.alpha}) " +
+                        "but got (${actual.red},${actual.green},${actual.blue},${actual.alpha})"
+            )
         }
-        assertComponentEquals(expected.red, actual.red, "red")
-        assertComponentEquals(expected.green, actual.green, "green")
-        assertComponentEquals(expected.blue, actual.blue, "blue")
-        assertComponentEquals(expected.alpha, actual.alpha, "alpha")
+        assertComponentEquals(expected.red, actual.red)
+        assertComponentEquals(expected.green, actual.green)
+        assertComponentEquals(expected.blue, actual.blue)
+        assertComponentEquals(expected.alpha, actual.alpha)
     }
 
     @Test
@@ -179,10 +184,49 @@ class TestContext {
             assertColorEquals(rectColor, hostImage.getPixel(5, 3))
             assertColorEquals(backgroundColor, hostImage.getPixel(6, 0))
             assertColorEquals(backgroundColor, hostImage.getPixel(0, 4))
+            // TODO Test with x1 > x2 and/or y1 > y2
         }
 
         graviks.destroy()
     }
+
+    @Test
+    fun testDrawImage() {
+        val backgroundColor = Color.rgbInt(100, 0, 0)
+        val graviks = GraviksContext(
+            this.graviksInstance, 4, 4,
+            TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
+        )
+
+        val image1 = ImageReference.classLoaderPath("graviks2d/images/test1.png", false)
+        val image2 = ImageReference.classLoaderPath("graviks2d/images/test2.png", false)
+
+        withTestImage(graviks, true) { update, hostImage ->
+            graviks.drawImage(0f, 0f, 0.5f, 0.5f, image1)
+            graviks.drawImage(0.5f, 0.5f, 1f, 1f, image2)
+            update()
+
+            // image1
+            assertColorEquals(Color.rgbInt(178, 0, 255), hostImage.getPixel(0, 0))
+            assertColorEquals(Color.rgbInt(255, 0, 0), hostImage.getPixel(1, 0))
+            assertColorEquals(Color.rgbInt(255, 216, 0), hostImage.getPixel(0, 1))
+            assertColorEquals(Color.rgbInt(0, 255, 255), hostImage.getPixel(1, 1))
+
+            assertColorEquals(backgroundColor, hostImage.getPixel(2, 1))
+
+            // image2
+            assertColorEquals(Color.rgbInt(128, 128, 128), hostImage.getPixel(2, 2))
+            assertColorEquals(Color.rgbInt(255, 255, 255), hostImage.getPixel(3, 2))
+            assertColorEquals(Color.rgbInt(0, 255, 33), hostImage.getPixel(2, 3))
+            assertColorEquals(Color.rgbInt(0, 38, 255), hostImage.getPixel(3, 3))
+        }
+
+        graviks.destroy()
+    }
+
+    // TODO Test the image cache
+
+    // TODO Test the image descriptor management
 
     @Test
     fun testAutomaticDepth() {

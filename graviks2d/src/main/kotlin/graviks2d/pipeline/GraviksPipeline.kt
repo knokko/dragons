@@ -22,7 +22,7 @@ internal class GraviksPipeline(
     init {
         stackPush().use { stack ->
 
-            val (pipelineLayout, descriptorSetLayout) = createGraviksPipelineLayout(instance.device, stack)
+            val (pipelineLayout, descriptorSetLayout) = createGraviksPipelineLayout(instance.device, stack, instance.maxNumDescriptorImages)
             this.vkPipelineLayout = pipelineLayout
             this.vkDescriptorSetLayout = descriptorSetLayout
             val (renderPass, depthFormat) = createGraviksRenderPass(
