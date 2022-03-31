@@ -4,16 +4,23 @@ import graviks2d.context.DepthPolicy
 import graviks2d.context.GraviksContext
 import graviks2d.context.TranslucentPolicy
 import graviks2d.core.GraviksInstance
+import graviks2d.resource.ImageCache
 import graviks2d.resource.ImageReference
 import graviks2d.util.Color
 import graviks2d.util.HostImage
 import graviks2d.util.assertSuccess
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.lwjgl.stb.STBImage.stbi_info_from_memory
+import org.lwjgl.stb.STBImage.stbi_load_from_memory
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil
+import org.lwjgl.system.MemoryUtil.memCalloc
+import org.lwjgl.system.MemoryUtil.memFree
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.util.vma.VmaAllocationCreateInfo
 import org.lwjgl.util.vma.VmaAllocationInfo
@@ -21,7 +28,13 @@ import org.lwjgl.util.vma.VmaAllocatorCreateInfo
 import org.lwjgl.util.vma.VmaVulkanFunctions
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
+import org.opentest4j.AssertionFailedError
+import java.awt.image.BufferedImage
+import java.awt.image.BufferedImage.TYPE_INT_ARGB
+import java.io.File
+import java.nio.file.Files
 import java.util.*
+import javax.imageio.ImageIO
 import kotlin.math.absoluteValue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -153,6 +166,50 @@ class TestContext {
         }
     }
 
+    private fun assertImageEquals(expectedFileName: String, actual: HostImage) {
+        val expectedInput = this::class.java.classLoader.getResourceAsStream("graviks2d/images/expected/$expectedFileName")!!
+        val expectedByteArray = expectedInput.readAllBytes()
+        expectedInput.close()
+
+        val expectedByteBuffer = memCalloc(expectedByteArray.size)
+        expectedByteBuffer.put(0, expectedByteArray)
+
+        stackPush().use { stack ->
+            val pWidth = stack.callocInt(1)
+            val pHeight = stack.callocInt(1)
+            val pChannels = stack.callocInt(1)
+
+            assertTrue(stbi_info_from_memory(expectedByteBuffer, pWidth, pHeight, pChannels))
+            val expectedHostBuffer = stbi_load_from_memory(expectedByteBuffer, pWidth, pHeight, pChannels, 4)!!
+
+            val expectedHostImage = HostImage(pWidth[0], pHeight[0], expectedHostBuffer, true)
+            assertImageEquals(expectedHostImage, actual)
+            memFree(expectedHostBuffer)
+        }
+        memFree(expectedByteBuffer)
+    }
+
+    private fun assertImageEquals(expected: HostImage, actual: HostImage) {
+        assertEquals(expected.width, actual.width)
+        assertEquals(expected.height, actual.height)
+
+        try {
+            for (x in 0 until expected.width) {
+                for (y in 0 until expected.height) {
+                    assertColorEquals(expected.getPixel(x, y), actual.getPixel(x, y))
+                }
+            }
+        } catch (failed: AssertionFailedError) {
+
+            // This should make debugging a lot easier
+            val time = System.nanoTime()
+            expected.saveToDisk(File("expected-$time.png"))
+            actual.saveToDisk(File("actual-$time.png"))
+
+            throw failed
+        }
+    }
+
     private fun assertColorEquals(expected: Color, actual: Color) {
         fun assertComponentEquals(expectedValue: Int, actualValue: Int) {
             assertTrue(
@@ -170,21 +227,20 @@ class TestContext {
     @Test
     fun testFillRectangle() {
         val backgroundColor = Color.rgbInt(100, 0, 0)
-        val rectColor = Color.rgbInt(0, 100, 0)
         val graviks = GraviksContext(
-            this.graviksInstance, 8, 8,
+            this.graviksInstance, 20, 20,
             TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
         )
 
-        withTestImage(graviks, true) { update, hostImage ->
-            graviks.fillRect(0f, 0f, 0.75f, 0.5f, rectColor)
+        withTestImage(graviks, false) { update, hostImage ->
+            graviks.fillRect(0.15f, 0.35f, 0.35f, 0.8f, Color.rgbInt(50, 100, 0))
+            graviks.fillRect(0.7f, 0.4f, 0.25f, 0.2f, Color.rgbInt(0, 100, 50))
+            graviks.fillRect(0.8f, 0.3f, 0.85f, 0.9f, Color.rgbInt(0, 150, 250))
+            graviks.fillRect(0f, 0.85f, 0.5f, 0.7f, Color.rgbInt(200, 200, 0))
+            graviks.fillRect(0.95f, 0.85f, 0.3f, 0.9f, Color.rgbInt(0, 0, 0))
+            graviks.fillRect(0.4f, 0.55f, 0.45f, 0.6f, Color.rgbInt(200, 0, 200))
             update()
-            assertColorEquals(rectColor, hostImage.getPixel(0, 0))
-            assertColorEquals(rectColor, hostImage.getPixel(2, 1))
-            assertColorEquals(rectColor, hostImage.getPixel(5, 3))
-            assertColorEquals(backgroundColor, hostImage.getPixel(6, 0))
-            assertColorEquals(backgroundColor, hostImage.getPixel(0, 4))
-            // TODO Test with x1 > x2 and/or y1 > y2
+            assertImageEquals("fillRectangle.png", hostImage)
         }
 
         graviks.destroy()
@@ -192,9 +248,9 @@ class TestContext {
 
     @Test
     fun testDrawImage() {
-        val backgroundColor = Color.rgbInt(100, 0, 0)
+        val backgroundColor = Color.rgbInt(255, 255, 255)
         val graviks = GraviksContext(
-            this.graviksInstance, 4, 4,
+            this.graviksInstance, 50, 50,
             TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
         )
 
@@ -202,29 +258,95 @@ class TestContext {
         val image2 = ImageReference.classLoaderPath("graviks2d/images/test2.png", false)
 
         withTestImage(graviks, true) { update, hostImage ->
-            graviks.drawImage(0f, 0f, 0.5f, 0.5f, image1)
-            graviks.drawImage(0.5f, 0.5f, 1f, 1f, image2)
+            fun drawFlippedImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImageReference) {
+                graviks.drawImage(xLeft, 1f - yTop, xRight, 1f - yBottom, image)
+            }
+
+            drawFlippedImage(0.04f, 0.06f, 0.46f, 0.48f, image2)
+            drawFlippedImage(0.14f, 0.34f, 0.56f, 0.76f, image2)
+            drawFlippedImage(0.6f, 0.58f, 0.88f, 0.86f, image1)
+            drawFlippedImage(0.32f, 0.22f, 0.6f, 0.5f, image1)
+            drawFlippedImage(0.54f, 0.22f, 0.96f, 0.64f, image2)
             update()
-
-            // image1
-            assertColorEquals(Color.rgbInt(178, 0, 255), hostImage.getPixel(0, 0))
-            assertColorEquals(Color.rgbInt(255, 0, 0), hostImage.getPixel(1, 0))
-            assertColorEquals(Color.rgbInt(255, 216, 0), hostImage.getPixel(0, 1))
-            assertColorEquals(Color.rgbInt(0, 255, 255), hostImage.getPixel(1, 1))
-
-            assertColorEquals(backgroundColor, hostImage.getPixel(2, 1))
-
-            // image2
-            assertColorEquals(Color.rgbInt(128, 128, 128), hostImage.getPixel(2, 2))
-            assertColorEquals(Color.rgbInt(255, 255, 255), hostImage.getPixel(3, 2))
-            assertColorEquals(Color.rgbInt(0, 255, 33), hostImage.getPixel(2, 3))
-            assertColorEquals(Color.rgbInt(0, 38, 255), hostImage.getPixel(3, 3))
+            assertImageEquals("drawImage.png", hostImage)
         }
 
         graviks.destroy()
     }
 
-    // TODO Test the image cache
+    @Test
+    fun testImageCache() {
+        runBlocking {
+            val cache = ImageCache(graviksInstance, softImageLimit = 2)
+
+            val testImageFile = Files.createTempFile(null, null).toFile()
+            ImageIO.write(BufferedImage(4, 6, TYPE_INT_ARGB), "PNG", testImageFile)
+            val image10 = ImageReference.file(testImageFile)
+            val image11 = ImageReference.file(testImageFile)
+
+            val image20 = ImageReference.classLoaderPath("graviks2d/images/test1.png", false)
+            val image21 = ImageReference.classLoaderPath("graviks2d/images/test1.png", false)
+
+            val image30 = ImageReference.classLoaderPath("graviks2d/images/test2.png", false)
+
+            // Initially, the cache should be empty
+            assertEquals(0, cache.getCurrentCacheSize())
+
+            // After borrowing 1 image, the cache should have size 1
+            val borrowed10 = cache.borrowImage(image10)
+            assertEquals(1, cache.getCurrentCacheSize())
+
+            // Borrowing the same image again should not increase the cache size
+            val borrowed11 = cache.borrowImage(image11)
+            assertEquals(1, cache.getCurrentCacheSize())
+
+            // Awaiting should not increase the cache size either
+            borrowed10.imagePair.await()
+            borrowed11.imagePair.await()
+            assertEquals(1, cache.getCurrentCacheSize())
+
+            // Borrowing another image should increase the cache size
+            val borrowed20 = cache.borrowImage(image20)
+            val borrowed21 = cache.borrowImage(image21)
+            assertEquals(2, cache.getCurrentCacheSize())
+
+            // Returning the other images should not decrease the cache size
+            // when the image limit is not reached
+            cache.returnImage(borrowed20)
+
+            // Awaiting the image before returning is optional
+            borrowed21.imagePair.await()
+            cache.returnImage(borrowed21)
+            assertEquals(2, cache.getCurrentCacheSize())
+
+            // The second image should be removed from the cache when adding
+            // a third image to the cache
+            val borrowed30 = cache.borrowImage(image30)
+            assertEquals(2, cache.getCurrentCacheSize())
+
+            // When borrowing the second image again, the cache limit must be
+            // exceeded because all images are still in use
+            val borrowed22 = cache.borrowImage(image21)
+            assertEquals(3, cache.getCurrentCacheSize())
+
+            // But the third image should be removed as soon as it is returned
+            // since the cache limit is already exceeded
+            cache.returnImage(borrowed30)
+            assertEquals(2, cache.getCurrentCacheSize())
+
+            // Let's return all borrowed images
+            cache.returnImage(borrowed10)
+            cache.returnImage(borrowed11)
+            cache.returnImage(borrowed22)
+
+            // Since the cache limit is no longer exceeded, the size should remain 2
+            assertEquals(2, cache.getCurrentCacheSize())
+
+            // But destroying the cache should set the size to 0
+            cache.destroy()
+            assertEquals(0, cache.getCurrentCacheSize())
+        }
+    }
 
     // TODO Test the image descriptor management
 
@@ -276,6 +398,7 @@ class TestContext {
         val colors = (0 until totalNumSquares).map { Color.rgbInt(rng.nextInt(255), rng.nextInt(255), rng.nextInt(255)) }
 
         withTestImage(graviks, true) { update, hostImage ->
+            val time1 = System.currentTimeMillis()
             for (y in 0 until numSquaresPerRow) {
                 for (x in (0 until numSquaresPerRow).reversed()) {
                     val colorIndex = x + numSquaresPerRow * y
@@ -292,7 +415,9 @@ class TestContext {
                     }
                 }
             }
+            val time2 = System.currentTimeMillis()
             update()
+            val time3 = System.currentTimeMillis()
             for (x in 0 until numSquaresPerRow) {
                 for (y in 0 until numSquaresPerRow) {
                     val colorIndex = x + numSquaresPerRow * y
@@ -305,6 +430,9 @@ class TestContext {
                     }
                 }
             }
+            val time4 = System.currentTimeMillis()
+
+            println("Performance of depth precision test: ${time2 - time1}, ${time3 - time2}, ${time4 - time3}")
         }
 
         graviks.destroy()
