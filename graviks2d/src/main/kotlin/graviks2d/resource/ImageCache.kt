@@ -43,6 +43,25 @@ internal class ImageCache(
                 )
             }
 
+            // If the image is not cached and the cache is full, we try to remove
+            // a cached item that is no longer used. If multiple cached items are no
+            // longer used, we remove the oldest one.
+            if (this.cache.size >= this.softImageLimit) {
+                var entryToRemove: CachedImage? = null
+                for (cachedEntry in this.cache.values) {
+                    if (cachedEntry.numberOfBorrows == 0 && (entryToRemove == null || cachedEntry.lastReturnTime < entryToRemove.lastReturnTime)) {
+                        entryToRemove = cachedEntry
+                    }
+                }
+
+                if (entryToRemove != null) {
+                    this.cache.remove(entryToRemove.imageReference.id)
+                    this.instance.coroutineScope.launch {
+                        entryToRemove.destroy(instance)
+                    }
+                }
+            }
+
             val imageInputStream = if (image.file != null) {
                 Files.newInputStream(image.file.toPath())
             } else {
@@ -70,8 +89,10 @@ internal class ImageCache(
                 cachedImage.numberOfBorrows -= 1
                 cachedImage.lastReturnTime = System.nanoTime()
                 if (cachedImage.numberOfBorrows == 0 && this.cache.size > this.softImageLimit) {
-                    this.cache.remove(borrowedImage.imageReference.path)
-                    runBlocking { cachedImage.destroy(instance) }
+                    this.cache.remove(borrowedImage.imageReference.id)
+                    this.instance.coroutineScope.launch {
+                        cachedImage.destroy(instance)
+                    }
                 }
             }
         }
@@ -84,15 +105,18 @@ internal class ImageCache(
                     cachedImage.destroy(instance)
                 }
             }
+            this.cache.clear()
         }
     }
+
+    fun getCurrentCacheSize() = this.cache.size
 }
 
 internal class BorrowedImage(
     val imageReference: ImageReference,
     val imagePair: Deferred<ImagePair>
 ) {
-    internal var wasReturned = true
+    internal var wasReturned = false
 
     override fun equals(other: Any?): Boolean {
         return other is BorrowedImage && this.imageReference.id == other.imageReference.id
@@ -108,7 +132,6 @@ private class CachedImage(
     val imageReference: ImageReference,
     val imagePair: Deferred<ImagePair>
 ) {
-    // TODO Actually use the lastReturnTime
     var lastReturnTime = 0L
 
     suspend fun destroy(instance: GraviksInstance) {
