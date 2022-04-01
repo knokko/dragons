@@ -1,6 +1,7 @@
 package graviks2d.core
 
 import graviks2d.pipeline.GraviksPipeline
+import graviks2d.pipeline.text.TextPipeline
 import graviks2d.resource.ImageCache
 import graviks2d.resource.createDummyImage
 import graviks2d.util.assertSuccess
@@ -35,6 +36,7 @@ class GraviksInstance(
 
     internal val textureSampler = createTextureSampler(this.device)
     internal val pipeline = GraviksPipeline(this)
+    internal val textPipeline = TextPipeline(this.device)
     internal val coroutineScope = CoroutineScope(Dispatchers.IO)
     internal val imageCache = ImageCache(this, softImageLimit)
     internal var dummyImage = createDummyImage(this)
@@ -53,6 +55,7 @@ class GraviksInstance(
         vmaDestroyImage(vmaAllocator, dummyImage.vkImage, dummyImage.vmaAllocation)
         imageCache.destroy()
         coroutineScope.cancel()
+        textPipeline.destroy()
         pipeline.destroy()
         vkDestroySampler(device, textureSampler, null)
     }

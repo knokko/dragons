@@ -29,7 +29,7 @@ internal fun createGraviksShaderStages(
     return ciStages
 }
 
-private fun createGraviksShaderModule(
+internal fun createGraviksShaderModule(
     vkDevice: VkDevice, stack: MemoryStack, path: String
 ): Long {
 

@@ -60,7 +60,6 @@ internal fun createGraviksPipelineColorBlend(
     ciColorBlend.`sType$Default`()
     ciColorBlend.logicOpEnable(false)
     ciColorBlend.pAttachments(attachments)
-    // TODO Maybe do something with the blend constants?
 
     return ciColorBlend
 }
