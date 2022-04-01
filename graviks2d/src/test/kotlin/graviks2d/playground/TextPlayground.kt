@@ -1,7 +1,12 @@
 package graviks2d.playground
 
+import graviks2d.font.TrueTypeFont
 import graviks2d.pipeline.text.*
 import graviks2d.util.assertSuccess
+import org.lwjgl.BufferUtils
+import org.lwjgl.stb.STBTTFontinfo
+import org.lwjgl.stb.STBTruetype
+import org.lwjgl.stb.STBTruetype.*
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memByteBuffer
 import org.lwjgl.util.vma.*
@@ -9,9 +14,13 @@ import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME
 import org.lwjgl.vulkan.VK10.*
+import java.awt.BasicStroke
+import java.awt.Stroke
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_INT_ARGB
+import java.io.DataInputStream
 import java.io.File
+import java.lang.Integer.max
 import java.lang.Integer.min
 import javax.imageio.ImageIO
 
@@ -78,17 +87,83 @@ private val shapeE = VectorShape(
 )
 
 fun main() {
-    val width = 1000
-    val height = 1000
+    val ttfInput = DataInputStream(TrueTypeFont::class.java.classLoader.getResourceAsStream("graviks2d/fonts/MainFont.ttf")!!)
+    val ttfArray = ttfInput.readAllBytes()
+    val ttfBuffer = BufferUtils.createByteBuffer(ttfArray.size)
+    ttfBuffer.put(0, ttfArray)
+
+    val fontInfo = STBTTFontinfo.create()
+    if (!stbtt_InitFont(fontInfo, ttfBuffer)) {
+        throw RuntimeException("Uh ooh")
+    }
+
+    val (ascent, descent, lineGap) = stackPush().use { stack ->
+        val pAscent = stack.callocInt(1)
+        val pDescent = stack.callocInt(1)
+        val pLineGap = stack.callocInt(1)
+
+        stbtt_GetFontVMetrics(fontInfo, pAscent, pDescent, pLineGap)
+
+        Triple(pAscent[0], pDescent[0], pLineGap[0])
+    }
+
+    println("Ascent is $ascent and descent is $descent and lineGap is $lineGap")
+
+    var width = 1
+    val height = 1 + ascent - descent
+
+    var numVertices = 0
+
+    val charToDraw = "b".codePointAt(0)
+    val shapeToDraw = stbtt_GetCodepointShape(fontInfo, charToDraw)!!
+    for (ttfVertex in shapeToDraw) {
+        width = max(width, ttfVertex.x() + 1)
+        if (ttfVertex.type() == STBTT_vline) {
+            numVertices += 3
+        }
+        if (ttfVertex.type() == STBTT_vcurve) {
+            numVertices += 6
+            width = max(width, ttfVertex.cx() + 1)
+        }
+    }
 
 //    val testImage = BufferedImage(width, height, TYPE_INT_ARGB)
 //    val graphics = testImage.createGraphics()
+//    graphics.color = java.awt.Color.BLUE
+//    graphics.stroke = BasicStroke(10f)
 //
-//    fun transformX(x: Float) = (x * 1000f).toInt()
-//    fun transformY(y: Float) = ((1 - y) * 1000f).toInt()
+//    var prevX = 0.toShort()
+//    var prevY = 0.toShort()
 //
-//    fun transformInvertX(x: Int) = x * 0.001f
-//    fun transformInvertY(y: Int) = 1f - y * 0.001f
+//    for (ttfVertex in shapeToDraw) {
+//        ttfVertex.run {
+//            val type = type()
+//
+//            if (type == STBTT_vmove) {
+//
+//            } else if (type == STBTT_vline) {
+//                graphics.drawLine(prevX.toInt(), prevY.toInt() - descent, x().toInt(), y().toInt() - descent)
+//            } else if (type == STBTT_vcurve) {
+//                graphics.drawLine(prevX.toInt(), prevY.toInt() - descent, x().toInt(), y().toInt() - descent)
+//            } else {
+//                throw UnsupportedOperationException("No cubics please")
+//            }
+//            prevX = x()
+//            prevY = y()
+//        }
+//        STBTT_vmove
+//    }
+
+    ttfInput.close()
+
+//    graphics.dispose()
+//    ImageIO.write(testImage, "PNG", File("test.png"))
+
+    fun transformX(x: Float) = (x * 1000f).toInt()
+    fun transformY(y: Float) = ((1 - y) * 1000f).toInt()
+
+    fun transformInvertX(x: Int) = x * 0.001f
+    fun transformInvertY(y: Int) = 1f - y * 0.001f
 
 //    for (curve in shapeE.curves) {
 //        graphics.color = java.awt.Color.BLUE
@@ -107,6 +182,8 @@ fun main() {
 //            drawPoint(segment.controlPoint.x, segment.controlPoint.y)
 //        }
 //    }
+
+
 //
 //    fun triangleArea(p1: Point, p2: Point, p3: Point): Float {
 //        val dx2 = p2.x - p1.x
@@ -326,8 +403,6 @@ fun main() {
         )
         val imageView = pImageView[0]
 
-        val numVertices = 6 * shapeE.curveSegments.size
-
         val ciVertexBuffer = VkBufferCreateInfo.calloc(stack)
         ciVertexBuffer.`sType$Default`()
         ciVertexBuffer.size((numVertices * TextVertex.BYTE_SIZE).toLong())
@@ -356,40 +431,92 @@ fun main() {
         val hostVertexBuffer = TextVertexBuffer.createAtBuffer(hostVertexByteBuffer, numVertices)
 
         var vertexIndex = 0
-        for (segment in shapeE.curveSegments) {
-            // Increment
-            hostVertexBuffer[vertexIndex].run {
-                this.x = segment.startPoint.x
-                this.y = segment.startPoint.y
-                this.operation = OPERATION_INCREMENT
+        var prevX = 0f
+        var prevY = 0f
+
+        for (ttfVertex in shapeToDraw) {
+            ttfVertex.run {
+                fun transformPoint(x: Short, y: Short) = Pair(
+                    (x.toFloat() + 0.5f) / width.toFloat(),
+                    (y.toFloat() + 0.5f - descent.toFloat()) / height.toFloat()
+                )
+                val (currentX, currentY) = transformPoint(x(), y())
+
+                if (type() == STBTT_vline || type() == STBTT_vcurve) {
+                    hostVertexBuffer[vertexIndex].run {
+                        this.x = prevX
+                        this.y = prevY
+                        this.operation = OPERATION_INCREMENT
+                    }
+                    hostVertexBuffer[vertexIndex + 1].run {
+                        this.x = currentX
+                        this.y = currentY
+                        this.operation = OPERATION_INCREMENT
+                    }
+                    hostVertexBuffer[vertexIndex + 2].run {
+                        this.x = 0f
+                        this.y = 0f
+                        this.operation = OPERATION_INCREMENT
+                    }
+                    vertexIndex += 3
+                }
+                if (type() == STBTT_vcurve) {
+                    val (controlX, controlY) = transformPoint(cx(), cy())
+                    hostVertexBuffer[vertexIndex].run {
+                        this.x = prevX
+                        this.y = prevY
+                        this.operation = OPERATION_CORRECT_START
+                    }
+                    hostVertexBuffer[vertexIndex + 1].run {
+                        this.x = controlX
+                        this.y = controlY
+                        this.operation = OPERATION_CORRECT_CONTROL
+                    }
+                    hostVertexBuffer[vertexIndex + 2].run {
+                        this.x = currentX
+                        this.y = currentY
+                        this.operation = OPERATION_CORRECT_END
+                    }
+                    vertexIndex += 3
+                }
+                prevX = currentX
+                prevY = currentY
             }
-            hostVertexBuffer[vertexIndex + 1].run {
-                this.x = segment.endPoint.x
-                this.y = segment.endPoint.y
-                this.operation = OPERATION_INCREMENT
-            }
-            hostVertexBuffer[vertexIndex + 2].run {
-                this.x = 0f
-                this.y = 0f
-                this.operation = OPERATION_INCREMENT
-            }
-            hostVertexBuffer[vertexIndex + 3].run {
-                this.x = segment.startPoint.x
-                this.y = segment.startPoint.y
-                this.operation = OPERATION_CORRECT_START
-            }
-            hostVertexBuffer[vertexIndex + 4].run {
-                this.x = segment.controlPoint.x
-                this.y = segment.controlPoint.y
-                this.operation = OPERATION_CORRECT_CONTROL
-            }
-            hostVertexBuffer[vertexIndex + 5].run {
-                this.x = segment.endPoint.x
-                this.y = segment.endPoint.y
-                this.operation = OPERATION_CORRECT_END
-            }
-            vertexIndex += 6
         }
+//        for (segment in shapeE.curveSegments) {
+//            // Increment
+//            hostVertexBuffer[vertexIndex].run {
+//                this.x = segment.startPoint.x
+//                this.y = segment.startPoint.y
+//                this.operation = OPERATION_INCREMENT
+//            }
+//            hostVertexBuffer[vertexIndex + 1].run {
+//                this.x = segment.endPoint.x
+//                this.y = segment.endPoint.y
+//                this.operation = OPERATION_INCREMENT
+//            }
+//            hostVertexBuffer[vertexIndex + 2].run {
+//                this.x = 0f
+//                this.y = 0f
+//                this.operation = OPERATION_INCREMENT
+//            }
+//            hostVertexBuffer[vertexIndex + 3].run {
+//                this.x = segment.startPoint.x
+//                this.y = segment.startPoint.y
+//                this.operation = OPERATION_CORRECT_START
+//            }
+//            hostVertexBuffer[vertexIndex + 4].run {
+//                this.x = segment.controlPoint.x
+//                this.y = segment.controlPoint.y
+//                this.operation = OPERATION_CORRECT_CONTROL
+//            }
+//            hostVertexBuffer[vertexIndex + 5].run {
+//                this.x = segment.endPoint.x
+//                this.y = segment.endPoint.y
+//                this.operation = OPERATION_CORRECT_END
+//            }
+//            vertexIndex += 6
+//        }
 
         val textPipeline = TextPipeline(vkDevice)
 
