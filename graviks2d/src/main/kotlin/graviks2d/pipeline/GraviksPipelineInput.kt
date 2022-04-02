@@ -58,7 +58,7 @@ internal fun createGraviksPipelineLayout(
     vkDevice: VkDevice, stack: MemoryStack, maxNumDescriptorImages: Int
 ): Pair<Long, Long> {
 
-    val setLayoutBindings = VkDescriptorSetLayoutBinding.calloc(3, stack)
+    val setLayoutBindings = VkDescriptorSetLayoutBinding.calloc(4, stack)
     val shaderStorageBinding = setLayoutBindings[0]
     shaderStorageBinding.binding(0)
     shaderStorageBinding.descriptorType(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
@@ -74,6 +74,11 @@ internal fun createGraviksPipelineLayout(
     texturesBinding.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
     texturesBinding.descriptorCount(maxNumDescriptorImages)
     texturesBinding.stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT)
+    val textTextureBinding = setLayoutBindings[3]
+    textTextureBinding.binding(3)
+    textTextureBinding.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+    textTextureBinding.descriptorCount(1)
+    textTextureBinding.stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT)
 
     val ciSetLayout = VkDescriptorSetLayoutCreateInfo.calloc(stack)
     ciSetLayout.`sType$Default`()

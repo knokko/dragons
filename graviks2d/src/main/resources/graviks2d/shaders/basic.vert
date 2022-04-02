@@ -5,7 +5,9 @@ layout(location = 1) in int inDepth;
 layout(location = 2) in int inOperationIndex;
 
 layout(location = 0) out int outOperationIndex;
-layout(location = 1) out vec2 quadCoordinates;
+layout(location = 1) out vec2 outQuadCoordinates;
+layout(location = 2) out vec4 outTextColor;
+layout(location = 3) out vec4 outBackgroundColor;
 
 layout(set = 0, binding = 0) readonly buffer ShaderStorage {
     int operations[];
@@ -20,6 +22,22 @@ const int OP_CODE_DRAW_IMAGE_BOTTOM_LEFT = 2;
 const int OP_CODE_DRAW_IMAGE_BOTTOM_RIGHT = 3;
 const int OP_CODE_DRAW_IMAGE_TOP_RIGHT = 4;
 const int OP_CODE_DRAW_IMAGE_TOP_LEFT = 5;
+const int OP_CODE_DRAW_TEXT = 6;
+
+float decodeColorComponent(int rawValue) {
+    return float(rawValue & 255) / 255.0;
+}
+
+vec4 decodeColor(int rawColor) {
+    return vec4(
+        decodeColorComponent(rawColor),
+        decodeColorComponent(rawColor >> 8),
+        decodeColorComponent(rawColor >> 16),
+        decodeColorComponent(rawColor >> 24)
+    );
+}
+
+const vec4 ERROR_TEXT_COLOR = vec4(0.8, 0.6, 0.4, 1.0);
 
 void main() {
     float z = 0.99 - 0.98 * (float(inDepth) / float(pushConstants.maxDepth));
@@ -30,15 +48,30 @@ void main() {
     // Some operation codes exist only in the vertex shader and need special treatment
     if (operationCode == OP_CODE_DRAW_IMAGE_BOTTOM_RIGHT) {
         outOperationIndex = inOperationIndex - 2;
-        quadCoordinates = vec2(1.0, 0.0);
+        outQuadCoordinates = vec2(1.0, 0.0);
     } else if (operationCode == OP_CODE_DRAW_IMAGE_TOP_RIGHT) {
         outOperationIndex = inOperationIndex - 3;
-        quadCoordinates = vec2(1.0, 1.0);
+        outQuadCoordinates = vec2(1.0, 1.0);
     } else if (operationCode == OP_CODE_DRAW_IMAGE_TOP_LEFT) {
         outOperationIndex = inOperationIndex - 4;
-        quadCoordinates = vec2(0.0, 1.0);
+        outQuadCoordinates = vec2(0.0, 1.0);
+    } else if (operationCode == OP_CODE_DRAW_TEXT) {
+        outOperationIndex = inOperationIndex;
+        int rawX = shaderStorage.operations[inOperationIndex + 1];
+        int rawY = shaderStorage.operations[inOperationIndex + 2];
+        outQuadCoordinates = vec2(float(rawX) * 0.000001, float(rawY) * 0.000001);
     } else {
         outOperationIndex = inOperationIndex;
-        quadCoordinates = vec2(0.0, 0.0);
+        outQuadCoordinates = vec2(0.0, 0.0);
+    }
+
+    if (operationCode == OP_CODE_DRAW_TEXT) {
+        outTextColor = decodeColor(shaderStorage.operations[inOperationIndex + 3]);
+        outBackgroundColor = decodeColor(shaderStorage.operations[inOperationIndex + 4]);
+    } else {
+        // The error text color will be displayed when the fragment shader tries to
+        // use the text color outside a text drawing operation.
+        outTextColor = ERROR_TEXT_COLOR;
+        outBackgroundColor = ERROR_TEXT_COLOR;
     }
 }

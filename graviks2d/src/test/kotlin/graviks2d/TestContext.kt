@@ -4,8 +4,8 @@ import graviks2d.context.DepthPolicy
 import graviks2d.context.GraviksContext
 import graviks2d.context.TranslucentPolicy
 import graviks2d.core.GraviksInstance
-import graviks2d.resource.ImageCache
-import graviks2d.resource.ImageReference
+import graviks2d.resource.image.ImageCache
+import graviks2d.resource.image.ImageReference
 import graviks2d.util.Color
 import graviks2d.util.HostImage
 import graviks2d.util.assertSuccess

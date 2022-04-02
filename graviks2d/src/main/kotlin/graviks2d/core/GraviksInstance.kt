@@ -2,8 +2,9 @@ package graviks2d.core
 
 import graviks2d.pipeline.GraviksPipeline
 import graviks2d.pipeline.text.TextPipeline
-import graviks2d.resource.ImageCache
-import graviks2d.resource.createDummyImage
+import graviks2d.resource.image.ImageCache
+import graviks2d.resource.image.createDummyImage
+import graviks2d.resource.text.StbTrueTypeFont
 import graviks2d.util.assertSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +30,10 @@ class GraviksInstance(
      * used `VkQueue` is also used for other purposes.
      */
     private val queueSubmit: (VkSubmitInfo.Buffer, Long) -> Int,
+
+    val defaultFont: StbTrueTypeFont = StbTrueTypeFont(
+        GraviksInstance::class.java.classLoader.getResourceAsStream("graviks2d/fonts/default.ttf")!!, true
+    ),
 
     val maxNumDescriptorImages: Int = 100,
     softImageLimit: Int = 1000

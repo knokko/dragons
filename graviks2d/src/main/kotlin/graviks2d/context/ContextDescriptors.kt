@@ -8,7 +8,8 @@ import org.lwjgl.vulkan.VK10.*
 
 internal class ContextDescriptors(
     private val instance: GraviksInstance,
-    private val operationBuffer: Long
+    private val operationBuffer: Long,
+    private val textAtlasImageView: Long
 ) {
 
     private val descriptorPool: Long
@@ -17,7 +18,7 @@ internal class ContextDescriptors(
     init {
         stackPush().use { stack ->
 
-            val poolSizes = VkDescriptorPoolSize.calloc(3, stack)
+            val poolSizes = VkDescriptorPoolSize.calloc(4, stack)
             val sizeShaderStorage = poolSizes[0]
             sizeShaderStorage.type(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
             sizeShaderStorage.descriptorCount(1)
@@ -27,6 +28,9 @@ internal class ContextDescriptors(
             val sizeTextures = poolSizes[2]
             sizeTextures.type(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
             sizeTextures.descriptorCount(instance.maxNumDescriptorImages)
+            val sizeTextTexture = poolSizes[3]
+            sizeTextTexture.type(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+            sizeTextTexture.descriptorCount(1)
 
             val ciPool = VkDescriptorPoolCreateInfo.calloc(stack)
             ciPool.`sType$Default`()
@@ -78,7 +82,11 @@ internal class ContextDescriptors(
                 textureDescriptor.imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
             }
 
-            val writes = VkWriteDescriptorSet.calloc(3, stack)
+            val textTextureDescriptors = VkDescriptorImageInfo.calloc(1, stack)
+            textTextureDescriptors.imageView(textAtlasImageView)
+            textTextureDescriptors.imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+
+            val writes = VkWriteDescriptorSet.calloc(4, stack)
             val operationWrite = writes[0]
             operationWrite.`sType$Default`()
             operationWrite.dstSet(this.descriptorSet)
@@ -103,6 +111,14 @@ internal class ContextDescriptors(
             texturesWrite.descriptorCount(instance.maxNumDescriptorImages)
             texturesWrite.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
             texturesWrite.pImageInfo(texturesDescriptors)
+            val textTextureWrite = writes[3]
+            textTextureWrite.`sType$Default`()
+            textTextureWrite.dstSet(this.descriptorSet)
+            textTextureWrite.dstBinding(3)
+            textTextureWrite.dstArrayElement(0)
+            textTextureWrite.descriptorCount(1)
+            textTextureWrite.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+            textTextureWrite.pImageInfo(textTextureDescriptors)
 
             vkUpdateDescriptorSets(this.instance.device, writes, null)
         }

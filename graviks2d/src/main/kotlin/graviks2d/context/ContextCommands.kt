@@ -1,5 +1,6 @@
 package graviks2d.context
 
+import graviks2d.resource.text.rasterizeTextAtlas
 import graviks2d.util.assertSuccess
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
@@ -277,6 +278,9 @@ internal class ContextCommands(
             if (hasDrawnBefore) {
                 resetBeginCommandBuffer(stack)
             }
+
+            rasterizeTextAtlas(commandBuffer, this.context.textShapeCache, !hasDrawnBefore)
+
             hasDrawnBefore = true
 
             val biRenderPass = VkRenderPassBeginInfo.calloc(stack)

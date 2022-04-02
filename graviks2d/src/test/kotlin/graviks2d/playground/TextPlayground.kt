@@ -1,11 +1,10 @@
 package graviks2d.playground
 
-import graviks2d.font.TrueTypeFont
 import graviks2d.pipeline.text.*
+import graviks2d.resource.text.StbTrueTypeFont
 import graviks2d.util.assertSuccess
 import org.lwjgl.BufferUtils
 import org.lwjgl.stb.STBTTFontinfo
-import org.lwjgl.stb.STBTruetype
 import org.lwjgl.stb.STBTruetype.*
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memByteBuffer
@@ -14,14 +13,11 @@ import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME
 import org.lwjgl.vulkan.VK10.*
-import java.awt.BasicStroke
-import java.awt.Stroke
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_INT_ARGB
 import java.io.DataInputStream
 import java.io.File
 import java.lang.Integer.max
-import java.lang.Integer.min
 import javax.imageio.ImageIO
 
 private class Point(
@@ -87,7 +83,7 @@ private val shapeE = VectorShape(
 )
 
 fun main() {
-    val ttfInput = DataInputStream(TrueTypeFont::class.java.classLoader.getResourceAsStream("graviks2d/fonts/MainFont.ttf")!!)
+    val ttfInput = DataInputStream(StbTrueTypeFont::class.java.classLoader.getResourceAsStream("graviks2d/fonts/MainFont.ttf")!!)
     val ttfArray = ttfInput.readAllBytes()
     val ttfBuffer = BufferUtils.createByteBuffer(ttfArray.size)
     ttfBuffer.put(0, ttfArray)
@@ -109,21 +105,28 @@ fun main() {
 
     println("Ascent is $ascent and descent is $descent and lineGap is $lineGap")
 
-    var width = 1
+
+    val charToDraw = "b".codePointAt(0)
+
+    val advanceWidth = stackPush().use { stack ->
+        val pAdvanceWidth = stack.callocInt(1)
+        val pLeftSideBearing = stack.callocInt(1)
+        stbtt_GetCodepointHMetrics(fontInfo, charToDraw, pAdvanceWidth, pLeftSideBearing)
+        pAdvanceWidth[0]
+    }
+    val width = advanceWidth
     val height = 1 + ascent - descent
 
     var numVertices = 0
 
-    val charToDraw = "b".codePointAt(0)
     val shapeToDraw = stbtt_GetCodepointShape(fontInfo, charToDraw)!!
+
     for (ttfVertex in shapeToDraw) {
-        width = max(width, ttfVertex.x() + 1)
         if (ttfVertex.type() == STBTT_vline) {
             numVertices += 3
         }
         if (ttfVertex.type() == STBTT_vcurve) {
             numVertices += 6
-            width = max(width, ttfVertex.cx() + 1)
         }
     }
 
@@ -253,6 +256,8 @@ fun main() {
 //    ImageIO.write(testImage, "PNG", File("test.png"))
 
     stackPush().use { stack ->
+
+
         val ciInstance = VkInstanceCreateInfo.calloc(stack)
         ciInstance.`sType$Default`()
         ciInstance.ppEnabledLayerNames(stack.pointers(stack.UTF8("VK_LAYER_KHRONOS_validation")))

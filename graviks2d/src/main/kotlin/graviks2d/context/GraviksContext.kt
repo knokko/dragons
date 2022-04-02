@@ -1,16 +1,19 @@
 package graviks2d.context
 
 import graviks2d.core.GraviksInstance
+import graviks2d.pipeline.*
 import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_BOTTOM_LEFT
 import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_BOTTOM_RIGHT
 import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_TOP_LEFT
 import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_TOP_RIGHT
 import graviks2d.pipeline.OP_CODE_FILL_RECT
-import graviks2d.resource.BorrowedImage
-import graviks2d.resource.ImageReference
+import graviks2d.resource.image.BorrowedImage
+import graviks2d.resource.image.ImageReference
+import graviks2d.resource.text.TextShapeCache
 import graviks2d.util.Color
 import kotlinx.coroutines.runBlocking
 import java.lang.IllegalStateException
+import kotlin.math.roundToInt
 
 class GraviksContext(
     val instance: GraviksInstance,
@@ -91,7 +94,12 @@ class GraviksContext(
 
     private val commands: ContextCommands
     private val currentImages = mutableMapOf<BorrowedImage, Int>()
-    internal val descriptors = ContextDescriptors(this.instance, this.buffers.operationVkBuffer)
+    internal val textShapeCache = TextShapeCache(
+        this // TODO Configure the other parameters
+    )
+    internal val descriptors = ContextDescriptors(
+        this.instance, this.buffers.operationVkBuffer, this.textShapeCache.textAtlasView
+    )
 
     private val queuedDrawCommands: MutableList<DrawCommand> = mutableListOf()
     private var clearDepthBeforeNextDrawCommand = false
@@ -210,6 +218,7 @@ class GraviksContext(
 
         currentVertexIndex = 0
         currentOperationIndex = 0
+        textShapeCache.clear()
     }
 
     private fun pushRect(
@@ -302,6 +311,79 @@ class GraviksContext(
         }
     }
 
+    fun drawString(
+        minX: Float, yBottom: Float, maxX: Float, yTop: Float,
+        string: String, textColor: Color, backgroundColor: Color, // TODO Allow choosing a font
+    // TODO Allow choosing horizontal text alignment
+    ) {
+        val font = this.instance.defaultFont
+        // TODO Draw the entire string
+        val codepoint = string.codePointAt(0)
+        val glyphShape = font.getGlyphShape(codepoint)
+
+        // Good text rendering requires exact placement on pixels
+        val pixelMinY = (yBottom * this.height.toFloat()).roundToInt()
+        val pixelBoundY = (yTop * this.height.toFloat()).roundToInt()
+        val finalMinY = pixelMinY.toFloat() / this.height.toFloat()
+        val finalMaxY = pixelBoundY.toFloat() / this.height.toFloat()
+
+        val charHeight = pixelBoundY - pixelMinY
+        val shapeAspectRatio = glyphShape.advanceWidth.toFloat() / (font.ascent - font.descent).toFloat()
+        val charWidth = (charHeight.toFloat() * shapeAspectRatio).roundToInt()
+
+        val pixelMinX = (minX * this.width.toFloat()).roundToInt()
+        val pixelBoundX = pixelMinX + charWidth
+
+        val finalMinX = pixelMinX.toFloat() / this.width.toFloat()
+        val finalMaxX = pixelBoundX.toFloat() / this.width.toFloat()
+
+        if (glyphShape.ttfVertices != null) {
+
+            var textCacheArea = this.textShapeCache.prepareCharacter(
+                codepoint, font.ascent, font.descent, glyphShape, charWidth, charHeight
+            )
+            if (textCacheArea == null) {
+                this.hardFlush()
+                textCacheArea = this.textShapeCache.prepareCharacter(
+                    string.codePointAt(0), font.ascent, font.descent, glyphShape, charWidth, charHeight
+                )
+                if (textCacheArea == null) {
+                    throw IllegalArgumentException("Can't draw this string, not even after a hard flush")
+                }
+            }
+
+            val operationIndex = this.claimNextOperationIndex(5)
+            val depth = this.claimNextDepth()
+            val vertexIndex = this.claimNextVertexIndex(6)
+
+            val operationSize = 5
+            this.pushRect(
+                finalMinX, finalMinY, finalMaxX, finalMaxY,
+                vertexIndex, depth,
+                operationIndex, operationIndex + operationSize,
+                operationIndex + 2 * operationSize,
+                operationIndex + 3 * operationSize
+            )
+
+            fun encodeFloat(value: Float) = (1_000_000.toFloat() * value).roundToInt()
+
+            this.buffers.operationCpuBuffer.run {
+                for ((startOperationIndex, texX, texY) in arrayOf(
+                    Triple(operationIndex, textCacheArea.minX, textCacheArea.maxY),
+                    Triple(operationIndex + operationSize, textCacheArea.maxX, textCacheArea.maxY),
+                    Triple(operationIndex + 2 * operationSize, textCacheArea.maxX, textCacheArea.minY),
+                    Triple(operationIndex + 3 * operationSize, textCacheArea.minX, textCacheArea.minY)
+                )) {
+                    this.put(startOperationIndex, OP_CODE_DRAW_TEXT)
+                    this.put(startOperationIndex + 1, encodeFloat(texX))
+                    this.put(startOperationIndex + 2, encodeFloat(texY))
+                    this.put(startOperationIndex + 3, textColor.rawValue)
+                    this.put(startOperationIndex + 4, backgroundColor.rawValue)
+                }
+            }
+        }
+    }
+
     fun setManualDepth(newDepth: Int) {
         if (depthPolicy != DepthPolicy.Manual) {
             throw UnsupportedOperationException("setManualDepth is only allowed when depthMode is Manual")
@@ -319,6 +401,7 @@ class GraviksContext(
 
     fun destroy() {
         commands.destroy()
+        textShapeCache.destroy()
         targetImages.destroy()
         descriptors.destroy()
         buffers.destroy()
