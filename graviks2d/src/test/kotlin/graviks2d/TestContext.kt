@@ -43,6 +43,8 @@ class TestContext {
     private val vkInstance: VkInstance
     private val vkPhysicalDevice: VkPhysicalDevice
     private val vkDevice: VkDevice
+    private val graphicsQueueIndex: Int
+    private val queue: VkQueue
     private val vmaAllocator: Long
     private val graviksInstance: GraviksInstance
 
@@ -85,11 +87,12 @@ class TestContext {
                     break
                 }
             }
+            this.graphicsQueueIndex = graphicsQueueIndex!!
 
             val ciQueues = VkDeviceQueueCreateInfo.calloc(1, stack)
             val ciQueue = ciQueues[0]
             ciQueue.`sType$Default`()
-            ciQueue.queueFamilyIndex(graphicsQueueIndex!!)
+            ciQueue.queueFamilyIndex(this.graphicsQueueIndex)
             ciQueue.pQueuePriorities(stack.floats(1f))
 
             val ciDevice = VkDeviceCreateInfo.calloc(stack)
@@ -104,8 +107,8 @@ class TestContext {
             this.vkDevice = VkDevice(pDevice[0], vkPhysicalDevice, ciDevice)
 
             val pQueue = stack.callocPointer(1)
-            vkGetDeviceQueue(vkDevice, graphicsQueueIndex, 0, pQueue)
-            val queue = VkQueue(pQueue[0], vkDevice)
+            vkGetDeviceQueue(vkDevice, this.graphicsQueueIndex, 0, pQueue)
+            this.queue = VkQueue(pQueue[0], vkDevice)
 
             val vmaVulkanFunctions = VmaVulkanFunctions.calloc(stack)
             vmaVulkanFunctions.set(vkInstance, vkDevice)
@@ -126,8 +129,10 @@ class TestContext {
 
             this.graviksInstance = GraviksInstance(
                 vkInstance, vkPhysicalDevice, vkDevice, vmaAllocator,
-                graphicsQueueIndex, queueSubmit = { pSubmitInfo, fence ->
-                    vkQueueSubmit(queue, pSubmitInfo, fence)
+                this.graphicsQueueIndex, queueSubmit = { pSubmitInfo, fence ->
+                    synchronized(this.queue) {
+                        vkQueueSubmit(queue, pSubmitInfo, fence)
+                    }
                 }
             )
         }
@@ -348,7 +353,51 @@ class TestContext {
         }
     }
 
-    // TODO Test the image descriptor management
+    @Test
+    fun testDrawImageDescriptorManagement() {
+        val backgroundColor = Color.rgbInt(255, 255, 255)
+
+        val graviksInstance = GraviksInstance(
+            vkInstance, vkPhysicalDevice, vkDevice, vmaAllocator,
+            graphicsQueueIndex, maxNumDescriptorImages = 2, queueSubmit = { pSubmitInfo, fence ->
+                vkQueueSubmit(queue, pSubmitInfo, fence)
+            }
+        )
+
+        val graviks = GraviksContext(
+            graviksInstance, 20, 20,
+            TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
+        )
+
+        val colors = (0 until 20).map { Color.rgbInt(10 * it, 5 * it, it) }
+        val images = colors.map { color ->
+            val bufferedImage = BufferedImage(1, 1, TYPE_INT_ARGB)
+            bufferedImage.setRGB(0, 0, java.awt.Color(color.red, color.green, color.blue).rgb)
+
+            val file = Files.createTempFile(null, ".png").toFile()
+            ImageIO.write(bufferedImage, "PNG", file)
+
+            ImageReference.file(file)
+        }
+
+        withTestImage(graviks, true) { update, hostImage ->
+            for ((index, image) in images.withIndex()) {
+                graviks.drawImage(index / 20f, index / 20f, 1f, 1f, image)
+            }
+            update()
+            for ((index, color) in colors.withIndex()) {
+                for (x in index until 20) {
+                    assertColorEquals(color, hostImage.getPixel(x, index))
+                }
+                for (y in index until 20) {
+                    assertColorEquals(color, hostImage.getPixel(index, y))
+                }
+            }
+        }
+
+        graviks.destroy()
+        graviksInstance.destroy()
+    }
 
     @Test
     fun testAutomaticDepth() {
