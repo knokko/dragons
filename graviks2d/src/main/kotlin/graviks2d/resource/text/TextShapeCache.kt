@@ -9,10 +9,17 @@ import graviks2d.pipeline.text.OPERATION_INCREMENT
 import graviks2d.pipeline.text.TextVertex
 import graviks2d.pipeline.text.TextVertexBuffer
 import graviks2d.util.assertSuccess
+import org.lwjgl.stb.STBRPContext
+import org.lwjgl.stb.STBRPNode
+import org.lwjgl.stb.STBRPRect
+import org.lwjgl.stb.STBRectPack
+import org.lwjgl.stb.STBRectPack.stbrp_init_target
+import org.lwjgl.stb.STBRectPack.stbrp_pack_rects
 import org.lwjgl.stb.STBTruetype.STBTT_vcurve
 import org.lwjgl.stb.STBTruetype.STBTT_vline
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memByteBuffer
+import org.lwjgl.system.MemoryUtil.memFree
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.util.vma.VmaAllocationCreateInfo
 import org.lwjgl.util.vma.VmaAllocationInfo
@@ -33,6 +40,17 @@ internal class TextShapeCache(
      * The maximum number of **vertices** that can fit in the text vertex buffer
      */
     private val vertexBufferSize: Int = 60_000,
+
+    /**
+     * The maximum number of **rectangles** that can fit in the rectangle packing buffer. This is also an upperbound
+     * on the number of characters that can be drawn in parallel.
+     */
+    rectanglePackingBufferSize: Int = 5_000,
+
+    /**
+     * The number of **nodes** of the rectangle packing context.
+     */
+    rectanglePackingNodeBufferSize: Int = 2 * width
 ) {
 
     val textAtlas: Long
@@ -44,6 +62,11 @@ internal class TextShapeCache(
     private val vertexBufferAllocation: Long
     private val hostVertexByteBuffer: ByteBuffer
     private val hostVertexBuffer: TextVertexBuffer
+
+    private val rectanglePackingContext: STBRPContext
+    private val rectanglePackingBuffer: STBRPRect.Buffer
+    private val rectanglePackingNodes: STBRPNode.Buffer
+    private var currentRectanglePackingIndex = 0
 
     private val cachedCharacters = mutableMapOf<TextCacheKey, TextCacheArea>()
     var currentVertexIndex = 0
@@ -61,6 +84,12 @@ internal class TextShapeCache(
             throw IllegalArgumentException("Height ($height) can't be smaller than context height ${this.context.height}")
         }
 
+        this.rectanglePackingNodes = STBRPNode.calloc(rectanglePackingNodeBufferSize)
+
+        this.rectanglePackingContext = STBRPContext.calloc()
+        stbrp_init_target(this.rectanglePackingContext, width, height, this.rectanglePackingNodes)
+        this.rectanglePackingBuffer = STBRPRect.calloc(rectanglePackingBufferSize)
+
         stackPush().use { stack ->
             val vmaAllocator = this.context.instance.vmaAllocator
             val vkDevice = this.context.instance.device
@@ -75,11 +104,7 @@ internal class TextShapeCache(
             // TODO Add support for multisampling
             ciTextAtlas.samples(VK_SAMPLE_COUNT_1_BIT)
             ciTextAtlas.tiling(VK_IMAGE_TILING_OPTIMAL)
-            ciTextAtlas.usage(
-                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-                        or VK_IMAGE_USAGE_SAMPLED_BIT
-                        or VK_IMAGE_USAGE_TRANSFER_SRC_BIT // TODO Remove this usage after testing
-            )
+            ciTextAtlas.usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT or VK_IMAGE_USAGE_SAMPLED_BIT)
             ciTextAtlas.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
             ciTextAtlas.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
 
@@ -171,8 +196,34 @@ internal class TextShapeCache(
     }
 
     private fun claimCacheArea(width: Int, height: Int): TextCacheArea? {
-        // TODO Do some kind of rectangle packing
-        return TextCacheArea(0f, 0f, width.toFloat() / this.width.toFloat(), height.toFloat() / this.height.toFloat())
+        if (this.currentRectanglePackingIndex == this.rectanglePackingBuffer.capacity()) {
+            return null
+        }
+
+        val claimedRectangleIndex = this.currentRectanglePackingIndex
+        this.currentRectanglePackingIndex += 1
+        this.rectanglePackingBuffer.position(claimedRectangleIndex)
+        this.rectanglePackingBuffer.limit(this.currentRectanglePackingIndex)
+
+        this.rectanglePackingBuffer[claimedRectangleIndex].w(width)
+        this.rectanglePackingBuffer[claimedRectangleIndex].h(height)
+
+        val succeeded = stbrp_pack_rects(this.rectanglePackingContext, this.rectanglePackingBuffer)
+
+        if (succeeded == 0) return null
+        if (!this.rectanglePackingBuffer[claimedRectangleIndex].was_packed()) {
+            throw RuntimeException("Rectangle should have been packed")
+        }
+
+        val x = this.rectanglePackingBuffer[claimedRectangleIndex].x()
+        val y = this.rectanglePackingBuffer[claimedRectangleIndex].y()
+
+        return TextCacheArea(
+            x.toFloat() / this.width.toFloat(),
+            y.toFloat() / this.height.toFloat(),
+            (x + width).toFloat() / this.width.toFloat(),
+            (y + height).toFloat() / this.height.toFloat()
+        )
     }
 
     /**
@@ -183,9 +234,10 @@ internal class TextShapeCache(
     fun prepareCharacter(codepoint: Int, fontAscent: Int, fontDescent: Int, glyphShape: GlyphShape, width: Int, height: Int): TextCacheArea? {
         if (glyphShape.ttfVertices == null) throw IllegalArgumentException("Don't use this method on empty glyphs")
 
-        val cachedResult = this.cachedCharacters[TextCacheKey(
+        val cacheKey = TextCacheKey(
             codepoint, width, height
-        )]
+        )
+        val cachedResult = this.cachedCharacters[cacheKey]
         if (cachedResult != null) return cachedResult
 
         var numVertices = 0
@@ -197,6 +249,8 @@ internal class TextShapeCache(
         if (this.currentVertexIndex + numVertices > this.vertexBufferSize) return null
 
         val cacheArea: TextCacheArea = this.claimCacheArea(width, height) ?: return null
+
+        this.cachedCharacters[cacheKey] = cacheArea
 
         var prevX = 0f
         var prevY = 0f
@@ -263,7 +317,8 @@ internal class TextShapeCache(
     fun clear() {
         this.currentVertexIndex = 0
         this.cachedCharacters.clear()
-        // TODO Clear the rectangle packing state
+        this.currentRectanglePackingIndex = 0
+        stbrp_init_target(this.rectanglePackingContext, this.width, this.height, this.rectanglePackingNodes)
     }
 
     fun destroy() {
@@ -274,5 +329,9 @@ internal class TextShapeCache(
         vmaDestroyBuffer(vmaAllocator, this.vertexBuffer, this.vertexBufferAllocation)
         vkDestroyImageView(vkDevice, this.textAtlasView, null)
         vmaDestroyImage(vmaAllocator, this.textAtlas, this.textAtlasAllocation)
+
+        this.rectanglePackingBuffer.free()
+        this.rectanglePackingNodes.free()
+        this.rectanglePackingContext.free()
     }
 }

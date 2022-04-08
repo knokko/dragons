@@ -9,6 +9,7 @@ import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_TOP_RIGHT
 import graviks2d.pipeline.OP_CODE_FILL_RECT
 import graviks2d.resource.image.BorrowedImage
 import graviks2d.resource.image.ImageReference
+import graviks2d.resource.text.TextCacheArea
 import graviks2d.resource.text.TextShapeCache
 import graviks2d.util.Color
 import kotlinx.coroutines.runBlocking
@@ -314,12 +315,9 @@ class GraviksContext(
     fun drawString(
         minX: Float, yBottom: Float, maxX: Float, yTop: Float,
         string: String, textColor: Color, backgroundColor: Color, // TODO Allow choosing a font
-    // TODO Allow choosing horizontal text alignment
+    // TODO Allow choosing horizontal text alignment and respect maxX
     ) {
         val font = this.instance.defaultFont
-        // TODO Draw the entire string
-        val codepoint = string.codePointAt(0)
-        val glyphShape = font.getGlyphShape(codepoint)
 
         // Good text rendering requires exact placement on pixels
         val pixelMinY = (yBottom * this.height.toFloat()).roundToInt()
@@ -327,60 +325,66 @@ class GraviksContext(
         val finalMinY = pixelMinY.toFloat() / this.height.toFloat()
         val finalMaxY = pixelBoundY.toFloat() / this.height.toFloat()
 
-        val charHeight = pixelBoundY - pixelMinY
-        val shapeAspectRatio = glyphShape.advanceWidth.toFloat() / (font.ascent - font.descent).toFloat()
-        val charWidth = (charHeight.toFloat() * shapeAspectRatio).roundToInt()
+        var currentPixelMinX = (minX * this.width.toFloat()).roundToInt()
 
-        val pixelMinX = (minX * this.width.toFloat()).roundToInt()
-        val pixelBoundX = pixelMinX + charWidth
+        for (codepoint in string.codePoints()) {
+            val glyphShape = font.getGlyphShape(codepoint)
 
-        val finalMinX = pixelMinX.toFloat() / this.width.toFloat()
-        val finalMaxX = pixelBoundX.toFloat() / this.width.toFloat()
+            val charHeight = pixelBoundY - pixelMinY
+            val shapeAspectRatio = glyphShape.advanceWidth.toFloat() / (font.ascent - font.descent).toFloat()
+            val charWidth = (charHeight.toFloat() * shapeAspectRatio).roundToInt()
 
-        if (glyphShape.ttfVertices != null) {
+            val currentPixelBoundX = currentPixelMinX + charWidth
 
-            var textCacheArea = this.textShapeCache.prepareCharacter(
-                codepoint, font.ascent, font.descent, glyphShape, charWidth, charHeight
-            )
-            if (textCacheArea == null) {
-                this.hardFlush()
-                textCacheArea = this.textShapeCache.prepareCharacter(
-                    string.codePointAt(0), font.ascent, font.descent, glyphShape, charWidth, charHeight
+            val currentDrawMinX = currentPixelMinX.toFloat() / this.width.toFloat()
+            val currentDrawMaxX = currentPixelBoundX.toFloat() / this.width.toFloat()
+
+            if (glyphShape.ttfVertices != null) {
+
+                var textCacheArea = this.textShapeCache.prepareCharacter(
+                    codepoint, font.ascent, font.descent, glyphShape, charWidth, charHeight
                 )
                 if (textCacheArea == null) {
-                    throw IllegalArgumentException("Can't draw this string, not even after a hard flush")
+                    this.hardFlush()
+                    textCacheArea = this.textShapeCache.prepareCharacter(
+                        codepoint, font.ascent, font.descent, glyphShape, charWidth, charHeight
+                    )
+                    if (textCacheArea == null) {
+                        throw IllegalArgumentException("Can't draw character with codepoint $codepoint, not even after a hard flush")
+                    }
+                }
+
+                val operationSize = 5
+                val operationIndex = this.claimNextOperationIndex(4 * operationSize)
+                val depth = this.claimNextDepth()
+                val vertexIndex = this.claimNextVertexIndex(6)
+
+                this.pushRect(
+                    currentDrawMinX, finalMinY, currentDrawMaxX, finalMaxY,
+                    vertexIndex, depth,
+                    operationIndex, operationIndex + operationSize,
+                    operationIndex + 2 * operationSize,
+                    operationIndex + 3 * operationSize
+                )
+
+                fun encodeFloat(value: Float) = (1_000_000.toFloat() * value).roundToInt()
+
+                this.buffers.operationCpuBuffer.run {
+                    for ((startOperationIndex, texX, texY) in arrayOf(
+                        Triple(operationIndex, textCacheArea.minX, textCacheArea.maxY),
+                        Triple(operationIndex + operationSize, textCacheArea.maxX, textCacheArea.maxY),
+                        Triple(operationIndex + 2 * operationSize, textCacheArea.maxX, textCacheArea.minY),
+                        Triple(operationIndex + 3 * operationSize, textCacheArea.minX, textCacheArea.minY)
+                    )) {
+                        this.put(startOperationIndex, OP_CODE_DRAW_TEXT)
+                        this.put(startOperationIndex + 1, encodeFloat(texX))
+                        this.put(startOperationIndex + 2, encodeFloat(texY))
+                        this.put(startOperationIndex + 3, textColor.rawValue)
+                        this.put(startOperationIndex + 4, backgroundColor.rawValue)
+                    }
                 }
             }
-
-            val operationIndex = this.claimNextOperationIndex(5)
-            val depth = this.claimNextDepth()
-            val vertexIndex = this.claimNextVertexIndex(6)
-
-            val operationSize = 5
-            this.pushRect(
-                finalMinX, finalMinY, finalMaxX, finalMaxY,
-                vertexIndex, depth,
-                operationIndex, operationIndex + operationSize,
-                operationIndex + 2 * operationSize,
-                operationIndex + 3 * operationSize
-            )
-
-            fun encodeFloat(value: Float) = (1_000_000.toFloat() * value).roundToInt()
-
-            this.buffers.operationCpuBuffer.run {
-                for ((startOperationIndex, texX, texY) in arrayOf(
-                    Triple(operationIndex, textCacheArea.minX, textCacheArea.maxY),
-                    Triple(operationIndex + operationSize, textCacheArea.maxX, textCacheArea.maxY),
-                    Triple(operationIndex + 2 * operationSize, textCacheArea.maxX, textCacheArea.minY),
-                    Triple(operationIndex + 3 * operationSize, textCacheArea.minX, textCacheArea.minY)
-                )) {
-                    this.put(startOperationIndex, OP_CODE_DRAW_TEXT)
-                    this.put(startOperationIndex + 1, encodeFloat(texX))
-                    this.put(startOperationIndex + 2, encodeFloat(texY))
-                    this.put(startOperationIndex + 3, textColor.rawValue)
-                    this.put(startOperationIndex + 4, backgroundColor.rawValue)
-                }
-            }
+            currentPixelMinX = currentPixelBoundX
         }
     }
 

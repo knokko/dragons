@@ -18,6 +18,7 @@ import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME
 import org.lwjgl.vulkan.VK10.*
 import java.io.File
+import java.nio.file.Files
 
 fun main() {
     stackPush().use { stack ->
@@ -135,14 +136,23 @@ fun main() {
         val graviks = GraviksContext(
             graviksInstance, width, height,
             TranslucentPolicy.Manual,
-            initialBackgroundColor = Color.rgbInt(200, 100, 150)
+            initialBackgroundColor = Color.rgbInt(200, 100, 150),
         )
 //        graviks.fillRect(0.1f, 0.1f, 0.2f, 0.4f, Color.rgbInt(200, 0, 0))
 //        graviks.fillRect(0.5f, 0.3f, 0.8f, 0.5f, Color.rgbInt(0, 200, 0))
 //        graviks.fillRect(0.6f, 0.7f, 0.8f, 0.9f, Color.rgbInt(0, 0, 200))
-        graviks.drawString(0.1f, 0.1f, 0.5f, 0.13f, "B", Color.rgbInt(0, 0, 200), Color.rgbInt(200, 0, 0))
+
+        val stringInput = Files.readAllLines(File("stringInput.txt").toPath())
+        val time1 = System.currentTimeMillis()
+        for ((index, line) in stringInput.withIndex()) {
+            graviks.drawString(0f, 1f - (index + 1) * 0.05f, 1f, 1f - index * 0.05f, line, Color.rgbInt(0, 200, 0), Color.rgbInt(200, 0, 200))
+        }
+        val time2 = System.currentTimeMillis()
         graviks.copyColorImageTo(destImage = null, destBuffer = testBuffer)
+        val time3 = System.currentTimeMillis()
+        println("Took ${time2 - time1} ms and ${time3 - time2} ms")
         testHostImage.saveToDisk(File("test1.png"))
+
 //        graviks.fillRect(0.4f, 0.4f, 0.6f, 0.6f, Color.rgbInt(200, 50, 150))
 //        graviks.copyColorImageTo(destImage = null, destBuffer = testBuffer)
 //        testHostImage.saveToDisk(File("test2.png"))
