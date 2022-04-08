@@ -1,5 +1,7 @@
 #version 450
 
+layout(constant_id = 0) const int NUM_TEXTURES = 100;
+
 layout(location = 0) in flat int operationIndex;
 layout(location = 1) in vec2 quadCoordinates;
 layout(location = 2) in vec4 textColor;
@@ -11,7 +13,7 @@ layout(set = 0, binding = 0) readonly buffer ShaderStorage {
     int operations[];
 } shaderStorage;
 layout(set = 0, binding = 1) uniform sampler textureSampler;
-layout(set = 0, binding = 2) uniform texture2D textures[100]; // TODO Avoid hardcoding this
+layout(set = 0, binding = 2) uniform texture2D textures[NUM_TEXTURES];
 layout(set = 0, binding = 3) uniform texture2D textAtlasTexture;
 
 float decodeColorComponent(int rawValue) {

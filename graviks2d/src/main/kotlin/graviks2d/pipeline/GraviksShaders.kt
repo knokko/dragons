@@ -4,13 +4,11 @@ import graviks2d.util.assertSuccess
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil.memCalloc
 import org.lwjgl.system.MemoryUtil.memFree
+import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
-import org.lwjgl.vulkan.VkDevice
-import org.lwjgl.vulkan.VkPipelineShaderStageCreateInfo
-import org.lwjgl.vulkan.VkShaderModuleCreateInfo
 
 internal fun createGraviksShaderStages(
-    vkDevice: VkDevice, stack: MemoryStack
+    vkDevice: VkDevice, maxNumDescriptorImages: Int, stack: MemoryStack
 ): VkPipelineShaderStageCreateInfo.Buffer {
     val ciStages = VkPipelineShaderStageCreateInfo.calloc(2)
 
@@ -20,11 +18,24 @@ internal fun createGraviksShaderStages(
     ciVertexStage.module(createGraviksShaderModule(vkDevice, stack, "graviks2d/shaders/basic.vert.spv"))
     ciVertexStage.pName(stack.UTF8("main"))
 
+    val specializationData = stack.calloc(4)
+    specializationData.putInt(0, maxNumDescriptorImages)
+
+    val specializationMapping = VkSpecializationMapEntry.calloc(1, stack)
+    specializationMapping.constantID(0)
+    specializationMapping.offset(0)
+    specializationMapping.size(4)
+
+    val fragmentSpecializationInfo = VkSpecializationInfo.calloc(stack)
+    fragmentSpecializationInfo.pMapEntries(specializationMapping)
+    fragmentSpecializationInfo.pData(specializationData)
+
     val ciFragmentStage = ciStages[1]
     ciFragmentStage.`sType$Default`()
     ciFragmentStage.stage(VK_SHADER_STAGE_FRAGMENT_BIT)
     ciFragmentStage.module(createGraviksShaderModule(vkDevice, stack, "graviks2d/shaders/basic.frag.spv"))
     ciFragmentStage.pName(stack.UTF8("main"))
+    ciFragmentStage.pSpecializationInfo(fragmentSpecializationInfo)
 
     return ciStages
 }
