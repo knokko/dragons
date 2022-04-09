@@ -9,8 +9,10 @@ import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_TOP_RIGHT
 import graviks2d.pipeline.OP_CODE_FILL_RECT
 import graviks2d.resource.image.BorrowedImage
 import graviks2d.resource.image.ImageReference
+import graviks2d.resource.text.TextAlignment
 import graviks2d.resource.text.TextCacheArea
 import graviks2d.resource.text.TextShapeCache
+import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
 import kotlinx.coroutines.runBlocking
 import java.lang.IllegalStateException
@@ -314,10 +316,29 @@ class GraviksContext(
 
     fun drawString(
         minX: Float, yBottom: Float, maxX: Float, yTop: Float,
-        string: String, textColor: Color, backgroundColor: Color, // TODO Allow choosing a font
-    // TODO Allow choosing horizontal text alignment and respect maxX
+        string: String, style: TextStyle, backgroundColor: Color,
     ) {
-        val font = this.instance.defaultFont
+        val chars = string.codePoints().toArray()
+
+        val isLeftToRight = run {
+            var numLeftToRightChars = 0
+            var numRightToLeftChars = 0
+
+            for (codepoint in chars) {
+                val directionality = Character.getDirectionality(codepoint)
+                if (directionality == Character.DIRECTIONALITY_LEFT_TO_RIGHT) {
+                    numLeftToRightChars += 1
+                }
+                if (directionality == Character.DIRECTIONALITY_RIGHT_TO_LEFT) {
+                    numRightToLeftChars += 1
+                }
+            }
+
+            numLeftToRightChars >= numRightToLeftChars
+        }
+        val font = this.instance.fontManager.getFont(style.font)
+
+        // TODO Respect strokeColor, alignment and overflow
 
         // Good text rendering requires exact placement on pixels
         val pixelMinY = (yBottom * this.height.toFloat()).roundToInt()
@@ -325,14 +346,65 @@ class GraviksContext(
         val finalMinY = pixelMinY.toFloat() / this.height.toFloat()
         val finalMaxY = pixelBoundY.toFloat() / this.height.toFloat()
 
-        var currentPixelMinX = (minX * this.width.toFloat()).roundToInt()
-
-        for (codepoint in string.codePoints()) {
+        val charWidths = chars.map { codepoint ->
             val glyphShape = font.getGlyphShape(codepoint)
 
             val charHeight = pixelBoundY - pixelMinY
             val shapeAspectRatio = glyphShape.advanceWidth.toFloat() / (font.ascent - font.descent).toFloat()
-            val charWidth = (charHeight.toFloat() * shapeAspectRatio).roundToInt()
+            (charHeight.toFloat() * shapeAspectRatio).roundToInt()
+        }
+
+        val totalWidth = charWidths.sum()
+
+        val pixelAvailableMinX = (minX * this.width.toFloat()).roundToInt()
+        val pixelAvailableBoundX = (maxX * this.width.toFloat()).roundToInt()
+        val availableWidth = pixelAvailableBoundX - pixelAvailableMinX
+
+        val startAtLeft = if (style.alignment == TextAlignment.Left) {
+            true
+        } else if (style.alignment == TextAlignment.Right) {
+            false
+        } else if (style.alignment == TextAlignment.Natural) {
+            isLeftToRight
+        } else if (style.alignment == TextAlignment.ReversedNatural) {
+            !isLeftToRight
+        } else {
+            throw UnsupportedOperationException("Unsupported text alignment: ${style.alignment}")
+        }
+
+        val (pixelUsedMinX, pixelUsedBoundX, numCharsToDraw) = if (totalWidth <= availableWidth) {
+            if (startAtLeft) {
+                Triple(pixelAvailableMinX, pixelAvailableMinX + totalWidth, chars.size)
+            } else {
+                Triple(pixelAvailableBoundX - totalWidth, pixelAvailableBoundX, chars.size)
+            }
+        } else {
+            var remainingWidth = availableWidth
+            var numCharsToDraw = 0
+            for (charWidth in charWidths) {
+                remainingWidth -= charWidth
+                if (remainingWidth >= 0) {
+                    numCharsToDraw += 1
+                }
+            }
+
+            val reducedWidth = (0 until numCharsToDraw).sumOf { charWidths[it] }
+            if (startAtLeft) {
+                Triple(pixelAvailableMinX, pixelAvailableMinX + reducedWidth, numCharsToDraw)
+            } else {
+                Triple(pixelAvailableBoundX - reducedWidth, pixelAvailableBoundX, numCharsToDraw)
+            }
+        }
+
+        // TODO Handle right-to-left text
+
+        var currentPixelMinX = pixelUsedMinX
+
+        for ((index, codepoint) in chars.withIndex()) {
+            val glyphShape = font.getGlyphShape(codepoint)
+
+            val charHeight = pixelBoundY - pixelMinY
+            val charWidth = charWidths[index]
 
             val currentPixelBoundX = currentPixelMinX + charWidth
 
@@ -379,7 +451,7 @@ class GraviksContext(
                         this.put(startOperationIndex, OP_CODE_DRAW_TEXT)
                         this.put(startOperationIndex + 1, encodeFloat(texX))
                         this.put(startOperationIndex + 2, encodeFloat(texY))
-                        this.put(startOperationIndex + 3, textColor.rawValue)
+                        this.put(startOperationIndex + 3, style.fillColor.rawValue)
                         this.put(startOperationIndex + 4, backgroundColor.rawValue)
                     }
                 }

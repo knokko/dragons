@@ -4,6 +4,9 @@ import graviks2d.context.DepthPolicy
 import graviks2d.context.GraviksContext
 import graviks2d.context.TranslucentPolicy
 import graviks2d.core.GraviksInstance
+import graviks2d.resource.text.TextAlignment
+import graviks2d.resource.text.TextOverflowPolicy
+import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
 import graviks2d.util.HostImage
 import graviks2d.util.assertSuccess
@@ -142,10 +145,16 @@ fun main() {
 //        graviks.fillRect(0.5f, 0.3f, 0.8f, 0.5f, Color.rgbInt(0, 200, 0))
 //        graviks.fillRect(0.6f, 0.7f, 0.8f, 0.9f, Color.rgbInt(0, 0, 200))
 
+        val textStyle = TextStyle(
+            fillColor = Color.rgbInt(0, 200, 0),
+            font = null,
+            alignment = TextAlignment.Natural,
+            overflowPolicy = TextOverflowPolicy.DiscardEnd
+        )
         val stringInput = Files.readAllLines(File("stringInput.txt").toPath())
         val time1 = System.currentTimeMillis()
         for ((index, line) in stringInput.withIndex()) {
-            graviks.drawString(0f, 1f - (index + 1) * 0.05f, 1f, 1f - index * 0.05f, line, Color.rgbInt(0, 200, 0), Color.rgbInt(200, 0, 200))
+            graviks.drawString(0f, 1f - (index + 1) * 0.05f, 1f, 1f - index * 0.05f, line, textStyle, Color.rgbInt(200, 0, 200))
         }
         val time2 = System.currentTimeMillis()
         graviks.copyColorImageTo(destImage = null, destBuffer = testBuffer)

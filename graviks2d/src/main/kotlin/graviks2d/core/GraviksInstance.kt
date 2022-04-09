@@ -4,6 +4,8 @@ import graviks2d.pipeline.GraviksPipeline
 import graviks2d.pipeline.text.TextPipeline
 import graviks2d.resource.image.ImageCache
 import graviks2d.resource.image.createDummyImage
+import graviks2d.resource.text.FontManager
+import graviks2d.resource.text.FontReference
 import graviks2d.resource.text.StbTrueTypeFont
 import graviks2d.util.assertSuccess
 import kotlinx.coroutines.CoroutineScope
@@ -31,14 +33,13 @@ class GraviksInstance(
      */
     private val queueSubmit: (VkSubmitInfo.Buffer, Long) -> Int,
 
-    val defaultFont: StbTrueTypeFont = StbTrueTypeFont(
-        GraviksInstance::class.java.classLoader.getResourceAsStream("graviks2d/fonts/default.ttf")!!, true
-    ),
+    defaultFont: FontReference = FontReference.fromClassLoaderPath("graviks2d/fonts/default.ttf"),
 
     val maxNumDescriptorImages: Int = 100,
     softImageLimit: Int = 1000
 ) {
 
+    internal val fontManager = FontManager(defaultFont)
     internal val textureSampler = createTextureSampler(this.device)
     internal val pipeline = GraviksPipeline(this)
     internal val textPipeline = TextPipeline(this.device)
