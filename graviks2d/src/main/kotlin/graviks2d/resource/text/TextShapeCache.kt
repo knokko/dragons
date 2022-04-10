@@ -12,14 +12,12 @@ import graviks2d.util.assertSuccess
 import org.lwjgl.stb.STBRPContext
 import org.lwjgl.stb.STBRPNode
 import org.lwjgl.stb.STBRPRect
-import org.lwjgl.stb.STBRectPack
 import org.lwjgl.stb.STBRectPack.stbrp_init_target
 import org.lwjgl.stb.STBRectPack.stbrp_pack_rects
 import org.lwjgl.stb.STBTruetype.STBTT_vcurve
 import org.lwjgl.stb.STBTruetype.STBTT_vline
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memByteBuffer
-import org.lwjgl.system.MemoryUtil.memFree
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.util.vma.VmaAllocationCreateInfo
 import org.lwjgl.util.vma.VmaAllocationInfo
@@ -32,25 +30,11 @@ import java.nio.ByteBuffer
 
 internal class TextShapeCache(
     val context: GraviksContext,
-
-    val width: Int = context.width,
-    val height: Int = context.height,
-
-    /**
-     * The maximum number of **vertices** that can fit in the text vertex buffer
-     */
-    private val vertexBufferSize: Int = 60_000,
-
-    /**
-     * The maximum number of **rectangles** that can fit in the rectangle packing buffer. This is also an upperbound
-     * on the number of characters that can be drawn in parallel.
-     */
-    rectanglePackingBufferSize: Int = 5_000,
-
-    /**
-     * The number of **nodes** of the rectangle packing context.
-     */
-    rectanglePackingNodeBufferSize: Int = 2 * width
+    val width: Int,
+    val height: Int,
+    private val vertexBufferSize: Int,
+    rectanglePackingBufferSize: Int,
+    rectanglePackingNodeBufferSize: Int
 ) {
 
     val textAtlas: Long

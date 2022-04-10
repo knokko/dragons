@@ -13,7 +13,7 @@ class FontReference private constructor(
     }
 
     init {
-        if ((file == null) != (classLoaderPath == null)) {
+        if ((file == null) == (classLoaderPath == null)) {
             throw UnsupportedOperationException("Exactly 1 of file and classLoaderPath must be non-null")
         }
     }

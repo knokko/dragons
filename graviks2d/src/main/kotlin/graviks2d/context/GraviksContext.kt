@@ -9,10 +9,9 @@ import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_TOP_RIGHT
 import graviks2d.pipeline.OP_CODE_FILL_RECT
 import graviks2d.resource.image.BorrowedImage
 import graviks2d.resource.image.ImageReference
-import graviks2d.resource.text.TextAlignment
-import graviks2d.resource.text.TextCacheArea
+import graviks2d.resource.text.*
 import graviks2d.resource.text.TextShapeCache
-import graviks2d.resource.text.TextStyle
+import graviks2d.resource.text.placeText
 import graviks2d.util.Color
 import kotlinx.coroutines.runBlocking
 import java.lang.IllegalStateException
@@ -84,7 +83,33 @@ class GraviksContext(
     /**
      * The maximum number of **int**s that can fit in the operation buffer
      */
-    operationBufferSize: Int = 25000
+    operationBufferSize: Int = 25000,
+
+    /**
+     * The width of the text cache, in **pixels**
+     */
+    textCacheWidth: Int = width,
+
+    /**
+     * The height of the text cache, in **pixels**
+     */
+    textCacheHeight: Int = height,
+
+    /**
+     * The maximum number of **vertices** that can fit in the text vertex buffer
+     */
+    textVertexBufferSize: Int = 60_000,
+
+    /**
+     * The maximum number of **rectangles** that can fit in the rectangle packing buffer of the text renderer. This is
+     * also an upperbound on the number of characters that can be drawn in parallel.
+     */
+    textRectanglePackingBufferSize: Int = 5_000,
+
+    /**
+     * The number of **nodes** of the rectangle packing context of the text renderer.
+     */
+    textRectanglePackingNodeBufferSize: Int = 2 * width
 ) {
 
     internal val targetImages = ContextTargetImages(this)
@@ -98,7 +123,9 @@ class GraviksContext(
     private val commands: ContextCommands
     private val currentImages = mutableMapOf<BorrowedImage, Int>()
     internal val textShapeCache = TextShapeCache(
-        this // TODO Configure the other parameters
+        context = this, width = textCacheWidth, height = textCacheHeight,
+        vertexBufferSize = textVertexBufferSize, rectanglePackingBufferSize = textRectanglePackingBufferSize,
+        rectanglePackingNodeBufferSize = textRectanglePackingNodeBufferSize
     )
     internal val descriptors = ContextDescriptors(
         this.instance, this.buffers.operationVkBuffer, this.textShapeCache.textAtlasView
@@ -126,7 +153,31 @@ class GraviksContext(
         }
     }
 
-    private fun claimNextVertexIndex(numVertices: Int): Int {
+    private fun claimSpace(numVertices: Int, numOperationValues: Int): ContextSpaceClaim {
+        var (operationIndex, didOperationFlush) = this.claimNextOperationIndex(numOperationValues)
+        var depth = this.claimNextDepth()
+
+        // Note: claimNextVertexIndex MUST be called as last to avoid weird situations when a flush() occurs BEFORE
+        // the vertices are actually populated.
+        val (vertexIndex, didVertexFlush) = this.claimNextVertexIndex(numVertices)
+
+        // If a vertex flush occurred, the operation index and depth will be invalid and need to be recomputed
+        if (didVertexFlush) {
+            // Note: claiming this operation index can NOT cause another hard flush because the operation buffer is empty
+            operationIndex = this.claimNextOperationIndex(numOperationValues).first
+            depth = this.claimNextDepth()
+        }
+
+        return ContextSpaceClaim(
+            vertexIndex = vertexIndex,
+            operationIndex = operationIndex,
+            depth = depth,
+            didHardFlush = didOperationFlush || didVertexFlush
+        )
+    }
+
+    private fun claimNextVertexIndex(numVertices: Int): Pair<Int, Boolean> {
+        var didHardFlush = false
         if (numVertices > this.buffers.vertexBufferSize) {
             throw IllegalArgumentException(
                 "Too many vertices ($numVertices): at most ${this.buffers.vertexBufferSize} are allowed. " +
@@ -135,14 +186,16 @@ class GraviksContext(
         }
         if (this.currentVertexIndex + numVertices > this.buffers.vertexBufferSize) {
             this.hardFlush()
+            didHardFlush = true
             // hardFlush() should set currentVertexIndex to 0
         }
         val result = this.currentVertexIndex
         this.currentVertexIndex += numVertices
-        return result
+        return Pair(result, didHardFlush)
     }
 
-    private fun claimNextOperationIndex(numIntValues: Int): Int {
+    private fun claimNextOperationIndex(numIntValues: Int): Pair<Int, Boolean> {
+        var didHardFlush = false
         if (numIntValues > this.buffers.operationBufferSize) {
             throw IllegalArgumentException(
                 "Too many operation integers ($numIntValues): at most ${this.buffers.operationBufferSize} are allowed. " +
@@ -151,11 +204,12 @@ class GraviksContext(
         }
         if (this.currentOperationIndex + numIntValues > this.buffers.operationBufferSize) {
             this.hardFlush()
+            didHardFlush = true
             // hardFlush() should set currentOperationIndex to 0
         }
         val result = this.currentOperationIndex
         this.currentOperationIndex += numIntValues
-        return result
+        return Pair(result, didHardFlush)
     }
 
     private fun claimNextDepth(): Int {
@@ -268,19 +322,13 @@ class GraviksContext(
     }
 
     fun fillRect(x1: Float, y1: Float, x2: Float, y2: Float, color: Color) {
+        val claimedSpace = this.claimSpace(numVertices = 6, numOperationValues = 2)
 
-        val operationIndex = this.claimNextOperationIndex(2)
-        val depth = this.claimNextDepth()
-
-        // Note: claimNextVertexIndex MUST be called as last to avoid weird situations when a flush() occurs BEFORE
-        // the vertices are actually populated.
-        val vertexIndex = this.claimNextVertexIndex(6)
-
-        this.pushRect(x1, y1, x2, y2, vertexIndex = vertexIndex, depth = depth, operationIndex = operationIndex)
+        this.pushRect(x1, y1, x2, y2, vertexIndex = claimedSpace.vertexIndex, depth = claimedSpace.depth, operationIndex = claimedSpace.operationIndex)
 
         this.buffers.operationCpuBuffer.run {
-            this.put(operationIndex, OP_CODE_FILL_RECT)
-            this.put(operationIndex + 1, color.rawValue)
+            this.put(claimedSpace.operationIndex, OP_CODE_FILL_RECT)
+            this.put(claimedSpace.operationIndex + 1, color.rawValue)
         }
     }
 
@@ -295,22 +343,20 @@ class GraviksContext(
             this.currentImages[borrowedImage] = imageIndex
         }
 
-        val operationIndex = this.claimNextOperationIndex(5)
-        val depth = this.claimNextDepth()
-        val vertexIndex = this.claimNextVertexIndex(6)
+        val claimedSpace = this.claimSpace(numVertices = 6, numOperationValues = 5)
 
         this.pushRect(
-            xLeft, yBottom, xRight, yTop, vertexIndex = vertexIndex, depth = depth,
-            operationIndex1 = operationIndex, operationIndex2 = operationIndex + 2,
-            operationIndex3 = operationIndex + 3, operationIndex4 = operationIndex + 4
+            xLeft, yBottom, xRight, yTop, vertexIndex = claimedSpace.vertexIndex, depth = claimedSpace.depth,
+            operationIndex1 = claimedSpace.operationIndex, operationIndex2 = claimedSpace.operationIndex + 2,
+            operationIndex3 = claimedSpace.operationIndex + 3, operationIndex4 = claimedSpace.operationIndex + 4
         )
 
         this.buffers.operationCpuBuffer.run {
-            this.put(operationIndex, OP_CODE_DRAW_IMAGE_BOTTOM_LEFT)
-            this.put(operationIndex + 1, imageIndex)
-            this.put(operationIndex + 2, OP_CODE_DRAW_IMAGE_BOTTOM_RIGHT)
-            this.put(operationIndex + 3, OP_CODE_DRAW_IMAGE_TOP_RIGHT)
-            this.put(operationIndex + 4, OP_CODE_DRAW_IMAGE_TOP_LEFT)
+            this.put(claimedSpace.operationIndex, OP_CODE_DRAW_IMAGE_BOTTOM_LEFT)
+            this.put(claimedSpace.operationIndex + 1, imageIndex)
+            this.put(claimedSpace.operationIndex + 2, OP_CODE_DRAW_IMAGE_BOTTOM_RIGHT)
+            this.put(claimedSpace.operationIndex + 3, OP_CODE_DRAW_IMAGE_TOP_RIGHT)
+            this.put(claimedSpace.operationIndex + 4, OP_CODE_DRAW_IMAGE_TOP_LEFT)
         }
     }
 
@@ -318,135 +364,63 @@ class GraviksContext(
         minX: Float, yBottom: Float, maxX: Float, yTop: Float,
         string: String, style: TextStyle, backgroundColor: Color,
     ) {
-        val chars = string.codePoints().toArray()
-
-        val isLeftToRight = run {
-            var numLeftToRightChars = 0
-            var numRightToLeftChars = 0
-
-            for (codepoint in chars) {
-                val directionality = Character.getDirectionality(codepoint)
-                if (directionality == Character.DIRECTIONALITY_LEFT_TO_RIGHT) {
-                    numLeftToRightChars += 1
-                }
-                if (directionality == Character.DIRECTIONALITY_RIGHT_TO_LEFT) {
-                    numRightToLeftChars += 1
-                }
-            }
-
-            numLeftToRightChars >= numRightToLeftChars
-        }
         val font = this.instance.fontManager.getFont(style.font)
-
-        // TODO Respect strokeColor, alignment and overflow
-
-        // Good text rendering requires exact placement on pixels
-        val pixelMinY = (yBottom * this.height.toFloat()).roundToInt()
-        val pixelBoundY = (yTop * this.height.toFloat()).roundToInt()
-        val finalMinY = pixelMinY.toFloat() / this.height.toFloat()
-        val finalMaxY = pixelBoundY.toFloat() / this.height.toFloat()
-
-        val charWidths = chars.map { codepoint ->
-            val glyphShape = font.getGlyphShape(codepoint)
-
-            val charHeight = pixelBoundY - pixelMinY
-            val shapeAspectRatio = glyphShape.advanceWidth.toFloat() / (font.ascent - font.descent).toFloat()
-            (charHeight.toFloat() * shapeAspectRatio).roundToInt()
-        }
-
-        val totalWidth = charWidths.sum()
-
-        val pixelAvailableMinX = (minX * this.width.toFloat()).roundToInt()
-        val pixelAvailableBoundX = (maxX * this.width.toFloat()).roundToInt()
-        val availableWidth = pixelAvailableBoundX - pixelAvailableMinX
-
-        val startAtLeft = if (style.alignment == TextAlignment.Left) {
-            true
-        } else if (style.alignment == TextAlignment.Right) {
-            false
-        } else if (style.alignment == TextAlignment.Natural) {
-            isLeftToRight
-        } else if (style.alignment == TextAlignment.ReversedNatural) {
-            !isLeftToRight
-        } else {
-            throw UnsupportedOperationException("Unsupported text alignment: ${style.alignment}")
-        }
-
-        val (pixelUsedMinX, pixelUsedBoundX, numCharsToDraw) = if (totalWidth <= availableWidth) {
-            if (startAtLeft) {
-                Triple(pixelAvailableMinX, pixelAvailableMinX + totalWidth, chars.size)
-            } else {
-                Triple(pixelAvailableBoundX - totalWidth, pixelAvailableBoundX, chars.size)
-            }
-        } else {
-            var remainingWidth = availableWidth
-            var numCharsToDraw = 0
-            for (charWidth in charWidths) {
-                remainingWidth -= charWidth
-                if (remainingWidth >= 0) {
-                    numCharsToDraw += 1
-                }
-            }
-
-            val reducedWidth = (0 until numCharsToDraw).sumOf { charWidths[it] }
-            if (startAtLeft) {
-                Triple(pixelAvailableMinX, pixelAvailableMinX + reducedWidth, numCharsToDraw)
-            } else {
-                Triple(pixelAvailableBoundX - reducedWidth, pixelAvailableBoundX, numCharsToDraw)
-            }
-        }
-
-        // TODO Handle right-to-left text
-
-        var currentPixelMinX = pixelUsedMinX
-
-        for ((index, codepoint) in chars.withIndex()) {
-            val glyphShape = font.getGlyphShape(codepoint)
-
-            val charHeight = pixelBoundY - pixelMinY
-            val charWidth = charWidths[index]
-
-            val currentPixelBoundX = currentPixelMinX + charWidth
-
-            val currentDrawMinX = currentPixelMinX.toFloat() / this.width.toFloat()
-            val currentDrawMaxX = currentPixelBoundX.toFloat() / this.width.toFloat()
+        // TODO Respect strokeColor
+        val placedChars = placeText(minX, yBottom, maxX, yTop, string, style, font, this.width, this.height)
+        for (placedChar in placedChars) {
+            val glyphShape = font.getGlyphShape(placedChar.codepoint)
 
             if (glyphShape.ttfVertices != null) {
 
                 var textCacheArea = this.textShapeCache.prepareCharacter(
-                    codepoint, font.ascent, font.descent, glyphShape, charWidth, charHeight
+                    placedChar.codepoint, font.ascent, font.descent, glyphShape, placedChar.pixelWidth, placedChar.pixelHeight
                 )
                 if (textCacheArea == null) {
                     this.hardFlush()
                     textCacheArea = this.textShapeCache.prepareCharacter(
-                        codepoint, font.ascent, font.descent, glyphShape, charWidth, charHeight
+                        placedChar.codepoint, font.ascent, font.descent, glyphShape, placedChar.pixelWidth, placedChar.pixelHeight
                     )
                     if (textCacheArea == null) {
-                        throw IllegalArgumentException("Can't draw character with codepoint $codepoint, not even after a hard flush")
+                        throw IllegalArgumentException("Can't draw character with codepoint ${placedChar.codepoint}, not even after a hard flush")
                     }
                 }
 
+                if (placedChar.shouldMirror) {
+                    textCacheArea = TextCacheArea(
+                        minX = textCacheArea.maxX,
+                        minY = textCacheArea.minY,
+                        maxX = textCacheArea.minX,
+                        maxY = textCacheArea.maxY
+                    )
+                }
+
                 val operationSize = 5
-                val operationIndex = this.claimNextOperationIndex(4 * operationSize)
-                val depth = this.claimNextDepth()
-                val vertexIndex = this.claimNextVertexIndex(6)
+                val claimedBufferSpace = this.claimSpace(numVertices = 6, numOperationValues = 4 * operationSize)
+                if (claimedBufferSpace.didHardFlush) {
+                    textCacheArea = this.textShapeCache.prepareCharacter(
+                        placedChar.codepoint, font.ascent, font.descent, glyphShape, placedChar.pixelWidth, placedChar.pixelHeight
+                    )
+                    if (textCacheArea == null) {
+                        throw IllegalArgumentException("Can't draw character with codepoint ${placedChar.codepoint} after a hard flush")
+                    }
+                }
 
                 this.pushRect(
-                    currentDrawMinX, finalMinY, currentDrawMaxX, finalMaxY,
-                    vertexIndex, depth,
-                    operationIndex, operationIndex + operationSize,
-                    operationIndex + 2 * operationSize,
-                    operationIndex + 3 * operationSize
+                    placedChar.minX, placedChar.minY, placedChar.maxX, placedChar.maxY,
+                    claimedBufferSpace.vertexIndex, claimedBufferSpace.depth,
+                    claimedBufferSpace.operationIndex, claimedBufferSpace.operationIndex + operationSize,
+                    claimedBufferSpace.operationIndex + 2 * operationSize,
+                    claimedBufferSpace.operationIndex + 3 * operationSize
                 )
 
                 fun encodeFloat(value: Float) = (1_000_000.toFloat() * value).roundToInt()
 
                 this.buffers.operationCpuBuffer.run {
                     for ((startOperationIndex, texX, texY) in arrayOf(
-                        Triple(operationIndex, textCacheArea.minX, textCacheArea.maxY),
-                        Triple(operationIndex + operationSize, textCacheArea.maxX, textCacheArea.maxY),
-                        Triple(operationIndex + 2 * operationSize, textCacheArea.maxX, textCacheArea.minY),
-                        Triple(operationIndex + 3 * operationSize, textCacheArea.minX, textCacheArea.minY)
+                        Triple(claimedBufferSpace.operationIndex, textCacheArea.minX, textCacheArea.maxY),
+                        Triple(claimedBufferSpace.operationIndex + operationSize, textCacheArea.maxX, textCacheArea.maxY),
+                        Triple(claimedBufferSpace.operationIndex + 2 * operationSize, textCacheArea.maxX, textCacheArea.minY),
+                        Triple(claimedBufferSpace.operationIndex + 3 * operationSize, textCacheArea.minX, textCacheArea.minY)
                     )) {
                         this.put(startOperationIndex, OP_CODE_DRAW_TEXT)
                         this.put(startOperationIndex + 1, encodeFloat(texX))
@@ -456,7 +430,6 @@ class GraviksContext(
                     }
                 }
             }
-            currentPixelMinX = currentPixelBoundX
         }
     }
 

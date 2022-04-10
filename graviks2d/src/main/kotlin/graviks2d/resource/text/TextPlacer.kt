@@ -1,9 +1,12 @@
 package graviks2d.resource.text
 
+import kotlin.math.roundToInt
+
 internal class PlacedCharacter(
     val codepoint: Int,
     val pixelWidth: Int,
     val pixelHeight: Int,
+    val shouldMirror: Boolean,
     val minX: Float,
     val minY: Float,
     val maxX: Float,
@@ -12,10 +15,149 @@ internal class PlacedCharacter(
 
 internal fun placeText(
     minX: Float, yBottom: Float, maxX: Float, yTop: Float,
-    string: String, style: TextStyle
-): Array<PlacedCharacter> {
-    val codepoints = string.codePoints().toArray()
-    TODO()
+    string: String, style: TextStyle, font: StbTrueTypeFont, viewportWidth: Int, viewportHeight: Int
+): List<PlacedCharacter> {
+    val (orderedChars, shouldMirror, isPrimarilyLeftToRight) = orderChars(string.codePoints().toArray())
+
+    // Good text rendering requires exact placement on pixels
+    var pixelMinY = (yBottom * viewportHeight.toFloat()).roundToInt()
+    var pixelBoundY = (yTop * viewportHeight.toFloat()).roundToInt()
+    var finalMinY = pixelMinY.toFloat() / viewportHeight.toFloat()
+    var finalMaxY = pixelBoundY.toFloat() / viewportHeight.toFloat()
+
+    fun determineCharWidths(roundDown: Boolean) = (0 until orderedChars.size).map { index ->
+        val codepoint = orderedChars[index]
+        val glyphShape = font.getGlyphShape(codepoint)
+
+        val charHeight = pixelBoundY - pixelMinY
+        val shapeAspectRatio = glyphShape.advanceWidth.toFloat() / (font.ascent - font.descent).toFloat()
+        val unroundedWidth = (charHeight.toFloat() * shapeAspectRatio)
+        val unroundedExtra = if (index > 0) {
+            val rawExtra = font.getExtraAdvance(orderedChars[index - 1], codepoint)
+            unroundedWidth * (rawExtra.toFloat() / glyphShape.advanceWidth.toFloat())
+        } else {
+            0f
+        }
+        if (roundDown) {
+            Pair(unroundedWidth.toInt(), unroundedExtra.toInt())
+        } else {
+            Pair(unroundedWidth.roundToInt(), unroundedExtra.roundToInt())
+        }
+    }
+
+    var charWidths = determineCharWidths(false)
+
+    var totalWidth = charWidths.sumOf { it.first + it.second }
+
+    val pixelAvailableMinX = (minX * viewportWidth.toFloat()).roundToInt()
+    val pixelAvailableBoundX = (maxX * viewportWidth.toFloat()).roundToInt()
+    val availableWidth = pixelAvailableBoundX - pixelAvailableMinX
+
+    val startAtLeft = if (style.alignment == TextAlignment.Left) {
+        true
+    } else if (style.alignment == TextAlignment.Right) {
+        false
+    } else if (style.alignment == TextAlignment.Natural) {
+        isPrimarilyLeftToRight
+    } else if (style.alignment == TextAlignment.ReversedNatural) {
+        !isPrimarilyLeftToRight
+    } else {
+        throw UnsupportedOperationException("Unsupported text alignment: ${style.alignment}")
+    }
+
+    val (pixelUsedMinX, charsToDraw) = if (totalWidth <= availableWidth) {
+        if (startAtLeft) {
+            Pair(pixelAvailableMinX, orderedChars.indices)
+        } else {
+            Pair(pixelAvailableBoundX - totalWidth, orderedChars.indices)
+        }
+    } else {
+        if (style.overflowPolicy == TextOverflowPolicy.Downscale) {
+
+            val downscaleFactor = availableWidth.toFloat() / totalWidth.toFloat()
+            val deltaY = yTop - yBottom
+            pixelMinY = ((yBottom + 0.5f * (1f - downscaleFactor) * deltaY) * viewportHeight.toFloat()).roundToInt()
+            pixelBoundY = ((yTop - 0.5f * (1f - downscaleFactor) * deltaY) * viewportHeight.toFloat()).roundToInt()
+            finalMinY = pixelMinY.toFloat() / viewportHeight.toFloat()
+            finalMaxY = pixelBoundY.toFloat() / viewportHeight.toFloat()
+
+            charWidths = determineCharWidths(true)
+            totalWidth = charWidths.sumOf { it.first + it.second }
+
+            val pixelMinX = if (startAtLeft) { pixelAvailableMinX } else { pixelAvailableBoundX - totalWidth }
+            Pair(pixelMinX, orderedChars.indices)
+        } else {
+            val discardRight = if (style.overflowPolicy == TextOverflowPolicy.DiscardRight) {
+                true
+            } else if (style.overflowPolicy == TextOverflowPolicy.DiscardLeft) {
+                false
+            } else if (style.overflowPolicy == TextOverflowPolicy.DiscardEnd) {
+                isPrimarilyLeftToRight
+            } else if (style.overflowPolicy == TextOverflowPolicy.DiscardStart) {
+                !isPrimarilyLeftToRight
+            } else {
+                throw UnsupportedOperationException("Unsupported overflow policy: ${style.overflowPolicy}")
+            }
+
+            var remainingWidth = availableWidth
+            var numCharsToDraw = 0
+            for ((charWidth, extraAdvance) in if (discardRight) { charWidths } else { charWidths.reversed() }) {
+                val effectiveWidth = charWidth + extraAdvance
+                if (remainingWidth >= effectiveWidth) {
+                    remainingWidth -= effectiveWidth
+                    numCharsToDraw += 1
+                } else {
+                    break
+                }
+            }
+
+            val charsToDraw = if (discardRight) {
+                0 until numCharsToDraw
+            } else {
+                orderedChars.size - numCharsToDraw until orderedChars.size
+            }
+            val reducedWidth = availableWidth - remainingWidth
+            if (startAtLeft) {
+                Pair(pixelAvailableMinX, charsToDraw)
+            } else {
+                Pair(pixelAvailableBoundX - reducedWidth, charsToDraw)
+            }
+        }
+    }
+
+    val placedCharacters = mutableListOf<PlacedCharacter>()
+    var currentPixelMinX = pixelUsedMinX
+
+    for (charIndex in charsToDraw) {
+        val codepoint = orderedChars[charIndex]
+        val glyphShape = font.getGlyphShape(codepoint)
+
+        val charHeight = pixelBoundY - pixelMinY
+        val (charWidth, extraAdvance) = charWidths[charIndex]
+
+        currentPixelMinX += extraAdvance
+
+        val currentPixelBoundX = currentPixelMinX + charWidth
+
+        val currentDrawMinX = currentPixelMinX.toFloat() / viewportWidth.toFloat()
+        val currentDrawMaxX = currentPixelBoundX.toFloat() / viewportWidth.toFloat()
+
+        if (glyphShape.ttfVertices != null) {
+            placedCharacters.add(PlacedCharacter(
+                codepoint = codepoint,
+                pixelWidth = charWidth,
+                pixelHeight = charHeight,
+                shouldMirror = shouldMirror[charIndex],
+                minX = currentDrawMinX,
+                minY = finalMinY,
+                maxX = currentDrawMaxX,
+                maxY = finalMaxY
+            ))
+        }
+        currentPixelMinX = currentPixelBoundX
+    }
+
+    return placedCharacters
 }
 
 internal enum class TextDirection {
@@ -82,6 +224,13 @@ internal class DirectionGroup(
     override fun equals(other: Any?): Boolean {
         return other is DirectionGroup && this.startIndex == other.startIndex
                 && this.boundIndex == other.boundIndex && this.direction == other.direction
+    }
+
+    override fun hashCode(): Int {
+        var result = startIndex
+        result = 31 * result + boundIndex
+        result = 31 * result + direction.hashCode()
+        return result
     }
 }
 
@@ -170,12 +319,14 @@ internal fun groupText(
     return groups
 }
 
-internal fun orderChars(original: IntArray): IntArray {
+internal fun orderChars(original: IntArray): Triple<IntArray, BooleanArray, Boolean> {
     val primaryDirection = getPrimaryDirection(original)
 
     val directionGroups = groupText(original, primaryDirection)
 
     val result = IntArray(original.size)
+    val shouldMirror = BooleanArray(original.size)
+
     if (primaryDirection != TextDirection.RightToLeft) {
         var currentIndex = 0
 
@@ -187,6 +338,7 @@ internal fun orderChars(original: IntArray): IntArray {
 
             for (index in range) {
                 result[currentIndex] = original[index]
+                shouldMirror[currentIndex] = group.direction == TextDirection.RightToLeft && Character.isMirrored(original[index])
                 currentIndex += 1
             }
         }
@@ -201,12 +353,11 @@ internal fun orderChars(original: IntArray): IntArray {
 
             for (index in range) {
                 result[currentIndex] = original[index]
+                shouldMirror[currentIndex] = group.direction == TextDirection.RightToLeft && Character.isMirrored(original[index])
                 currentIndex -= 1
             }
         }
     }
 
-    // TODO Also let the result indicate which characters should be mirrored
-
-    return result
+    return Triple(result, shouldMirror, primaryDirection != TextDirection.RightToLeft)
 }

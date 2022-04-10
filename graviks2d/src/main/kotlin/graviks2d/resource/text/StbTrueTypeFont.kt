@@ -48,7 +48,10 @@ class StbTrueTypeFont(ttfInput: InputStream, closeTtfInput: Boolean) {
         if (closeTtfInput) {
             ttfInput.close()
         }
-        // TODO Use stbtt_GetGlyphKernAdvance()
+    }
+
+    internal fun getExtraAdvance(previousCodepoint: Int, nextCodepoint: Int): Int {
+        return stbtt_GetGlyphKernAdvance(this.fontInfo, this.getGlyph(previousCodepoint), this.getGlyph(nextCodepoint))
     }
 
     private fun getGlyph(codepoint: Int): Int {

@@ -1,6 +1,5 @@
 package graviks2d.playground
 
-import graviks2d.context.DepthPolicy
 import graviks2d.context.GraviksContext
 import graviks2d.context.TranslucentPolicy
 import graviks2d.core.GraviksInstance
@@ -21,7 +20,6 @@ import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME
 import org.lwjgl.vulkan.VK10.*
 import java.io.File
-import java.nio.file.Files
 
 fun main() {
     stackPush().use { stack ->
@@ -102,7 +100,7 @@ fun main() {
         val vmaAllocator = pAllocator[0]
 
         val width = 1000
-        val height = 700
+        val height = 4700
 
         val ciTestBuffer = VkBufferCreateInfo.calloc(stack)
         ciTestBuffer.`sType$Default`()
@@ -141,30 +139,45 @@ fun main() {
             TranslucentPolicy.Manual,
             initialBackgroundColor = Color.rgbInt(200, 100, 150),
         )
-//        graviks.fillRect(0.1f, 0.1f, 0.2f, 0.4f, Color.rgbInt(200, 0, 0))
-//        graviks.fillRect(0.5f, 0.3f, 0.8f, 0.5f, Color.rgbInt(0, 200, 0))
-//        graviks.fillRect(0.6f, 0.7f, 0.8f, 0.9f, Color.rgbInt(0, 0, 200))
 
-        val textStyle = TextStyle(
-            fillColor = Color.rgbInt(0, 200, 0),
-            font = null,
-            alignment = TextAlignment.Natural,
-            overflowPolicy = TextOverflowPolicy.DiscardEnd
-        )
-        val stringInput = Files.readAllLines(File("stringInput.txt").toPath())
+        val fillColor = Color.rgbInt(0, 200, 0)
+        val backgroundColor = Color.rgbInt(200, 0, 0)
         val time1 = System.currentTimeMillis()
-        for ((index, line) in stringInput.withIndex()) {
-            graviks.drawString(0f, 1f - (index + 1) * 0.05f, 1f, 1f - index * 0.05f, line, textStyle, Color.rgbInt(200, 0, 200))
+        val minX = 0.05f
+        graviks.fillRect(0f, 0f, minX, 1f, Color.rgbInt(0, 0, 0))
+        graviks.fillRect(0.8f, 0f, 1f, 1f, Color.rgbInt(0, 0, 0))
+
+        val infoStyle = TextStyle(
+            font = null, fillColor = fillColor, alignment = TextAlignment.Natural, overflowPolicy = TextOverflowPolicy.DiscardEnd
+        )
+        val dummyTextEnglishShort = "Hello, world!"
+        val dummyTextEnglishLong = "The quick brown fox jumps over the lazy dog"
+        val dummyTextHebrewShort = "יוליאניש"
+        val dummyTextHebrewLong = "געהייסן די Lord Chamberlain's Men ((לארד ט(שעמבע)רליינס מען)))"
+        val styleVariations = TextAlignment.values().flatMap {
+                alignment -> TextOverflowPolicy.values().map { overflow -> Pair(alignment, overflow) }
+        }
+        for ((index, styleVariation) in styleVariations.withIndex()) {
+            val deltaY = 0.04f
+            val minY = index * deltaY
+            val maxY = (index + 1) * deltaY
+
+            val infoString = "${styleVariation.first} - ${styleVariation.second}"
+            graviks.drawString(
+                minX, minY + 0.42f * deltaY, 0.4f, maxY - 0.42f * deltaY,
+                infoString, infoStyle, backgroundColor
+            )
+            val currentStyle = infoStyle.createChild(alignment = styleVariation.first, overflowPolicy = styleVariation.second)
+            graviks.drawString(0.4f, minY, 0.8f, minY + 0.25f * deltaY, dummyTextEnglishShort, currentStyle, backgroundColor)
+            graviks.drawString(0.4f, minY + 0.25f * deltaY, 0.8f, minY + 0.5f * deltaY, dummyTextEnglishLong, currentStyle, backgroundColor)
+            graviks.drawString(0.4f, minY + 0.5f * deltaY, 0.8f, minY + 0.75f * deltaY, dummyTextHebrewShort, currentStyle, backgroundColor)
+            graviks.drawString(0.4f, minY + 0.75f * deltaY, 0.8f, maxY, dummyTextHebrewLong, currentStyle, backgroundColor)
         }
         val time2 = System.currentTimeMillis()
         graviks.copyColorImageTo(destImage = null, destBuffer = testBuffer)
         val time3 = System.currentTimeMillis()
         println("Took ${time2 - time1} ms and ${time3 - time2} ms")
         testHostImage.saveToDisk(File("test1.png"))
-
-//        graviks.fillRect(0.4f, 0.4f, 0.6f, 0.6f, Color.rgbInt(200, 50, 150))
-//        graviks.copyColorImageTo(destImage = null, destBuffer = testBuffer)
-//        testHostImage.saveToDisk(File("test2.png"))
 
         graviks.destroy()
         graviksInstance.destroy()
