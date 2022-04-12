@@ -17,7 +17,6 @@ import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_INT_ARGB
 import java.io.DataInputStream
 import java.io.File
-import java.lang.Integer.max
 import javax.imageio.ImageIO
 
 private class Point(
@@ -410,7 +409,7 @@ fun main() {
 
         val ciVertexBuffer = VkBufferCreateInfo.calloc(stack)
         ciVertexBuffer.`sType$Default`()
-        ciVertexBuffer.size((numVertices * TextVertex.BYTE_SIZE).toLong())
+        ciVertexBuffer.size((numVertices * TextCountVertex.BYTE_SIZE).toLong())
         ciVertexBuffer.usage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
         ciVertexBuffer.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
 
@@ -603,7 +602,7 @@ fun main() {
         scissor.extent().set(width, height)
 
         vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, textPipeline.vkPipeline)
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, textPipeline.countPipeline)
         vkCmdSetViewport(commandBuffer, 0, viewports)
         vkCmdSetScissor(commandBuffer, 0, scissors)
         vkCmdBindVertexBuffers(commandBuffer, 0, stack.longs(vertexBuffer), stack.longs(0))

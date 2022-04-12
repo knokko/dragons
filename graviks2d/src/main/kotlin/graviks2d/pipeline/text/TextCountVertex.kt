@@ -11,7 +11,7 @@ internal const val OPERATION_CORRECT_CONTROL = 3
 internal const val OPERATION_CORRECT_END = 4
 
 @JvmInline
-internal value class TextVertex(val address: Long) {
+internal value class TextCountVertex(val address: Long) {
 
     var x: Float
         get() = writeOnly()
@@ -38,16 +38,16 @@ internal class TextVertexBuffer private constructor(
     val baseAddress: Long,
     val numVertices: Int
 ) {
-    operator fun get(index: Int): TextVertex {
+    operator fun get(index: Int): TextCountVertex {
         if (index < 0) throw IllegalArgumentException("Index ($index) can't be negative")
         if (index >= numVertices) throw IllegalArgumentException("Index ($index) must be smaller than $numVertices")
-        return TextVertex(baseAddress + TextVertex.BYTE_SIZE * index)
+        return TextCountVertex(baseAddress + TextCountVertex.BYTE_SIZE * index)
     }
 
     companion object {
         fun createAtBuffer(buffer: ByteBuffer, numVertices: Int): TextVertexBuffer {
-            val numBytes = TextVertex.BYTE_SIZE * numVertices
-            if (TextVertex.BYTE_SIZE * numVertices > buffer.remaining()) {
+            val numBytes = TextCountVertex.BYTE_SIZE * numVertices
+            if (TextCountVertex.BYTE_SIZE * numVertices > buffer.remaining()) {
                 throw IllegalArgumentException("Buffer has ${buffer.remaining()} remaining bytes, but $numBytes are needed")
             }
 

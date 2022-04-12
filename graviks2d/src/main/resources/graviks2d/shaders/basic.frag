@@ -47,13 +47,8 @@ void main() {
         vec2 textureCoordinates = vec2(quadCoordinates.x, 1.0 - quadCoordinates.y);
 
         // TODO This needs rework if I decide to implement anti-aliasing!
-        float rawDensity = texture(sampler2D(textAtlasTexture, textureSampler), textureCoordinates).r;
-        int numFlips = int(rawDensity * 255.0 + 0.5);
-        if (numFlips % 2 == 0) {
-            outColor = backgroundColor;
-        } else {
-            outColor = textColor;
-        }
+        float intensity = texture(sampler2D(textAtlasTexture, textureSampler), textureCoordinates).r;
+        outColor = (1.0 - intensity) * backgroundColor + intensity * textColor;
     } else {
         // This is the 'unknown operation code' color, for the sake of debugging
         outColor = vec4(1.0, 0.2, 0.6, 1.0);

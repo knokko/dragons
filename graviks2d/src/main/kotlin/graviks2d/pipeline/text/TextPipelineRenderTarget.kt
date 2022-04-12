@@ -21,7 +21,7 @@ internal fun createTextPipelineDepthState(
     return ciDepth
 }
 
-internal fun createTextPipelineColorBlend(
+internal fun createTextCountPipelineColorBlend(
     stack: MemoryStack
 ): VkPipelineColorBlendStateCreateInfo {
 
@@ -32,6 +32,22 @@ internal fun createTextPipelineColorBlend(
     attachment.dstColorBlendFactor(VK_BLEND_FACTOR_ONE)
     attachment.colorBlendOp(VK_BLEND_OP_ADD)
     attachment.colorWriteMask(VK_COLOR_COMPONENT_R_BIT)
+
+    val ciColorBlend = VkPipelineColorBlendStateCreateInfo.calloc(stack)
+    ciColorBlend.`sType$Default`()
+    ciColorBlend.logicOpEnable(false)
+    ciColorBlend.pAttachments(attachments)
+
+    return ciColorBlend
+}
+
+internal fun createTextOddPipelineColorBlend(
+    stack: MemoryStack
+): VkPipelineColorBlendStateCreateInfo {
+
+    val attachments = VkPipelineColorBlendAttachmentState.calloc(1, stack)
+    attachments[0].blendEnable(false)
+    attachments[0].colorWriteMask(VK_COLOR_COMPONENT_R_BIT)
 
     val ciColorBlend = VkPipelineColorBlendStateCreateInfo.calloc(stack)
     ciColorBlend.`sType$Default`()

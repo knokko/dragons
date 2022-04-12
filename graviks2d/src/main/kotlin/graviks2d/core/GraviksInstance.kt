@@ -6,7 +6,6 @@ import graviks2d.resource.image.ImageCache
 import graviks2d.resource.image.createDummyImage
 import graviks2d.resource.text.FontManager
 import graviks2d.resource.text.FontReference
-import graviks2d.resource.text.StbTrueTypeFont
 import graviks2d.util.assertSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,7 +41,7 @@ class GraviksInstance(
     internal val fontManager = FontManager(defaultFont)
     internal val textureSampler = createTextureSampler(this.device)
     internal val pipeline = GraviksPipeline(this)
-    internal val textPipeline = TextPipeline(this.device)
+    internal val textPipelines = TextPipeline(this.device)
     internal val coroutineScope = CoroutineScope(Dispatchers.IO)
     internal val imageCache = ImageCache(this, softImageLimit)
     internal var dummyImage = createDummyImage(this)
@@ -61,7 +60,7 @@ class GraviksInstance(
         vmaDestroyImage(vmaAllocator, dummyImage.vkImage, dummyImage.vmaAllocation)
         imageCache.destroy()
         coroutineScope.cancel()
-        textPipeline.destroy()
+        textPipelines.destroy()
         pipeline.destroy()
         vkDestroySampler(device, textureSampler, null)
     }

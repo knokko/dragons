@@ -16,7 +16,7 @@ internal fun rasterizeTextAtlas(
 
             val biRenderPass = VkRenderPassBeginInfo.calloc(stack)
             biRenderPass.`sType$Default`()
-            biRenderPass.renderPass(textCache.context.instance.textPipeline.vkRenderPass)
+            biRenderPass.renderPass(textCache.context.instance.textPipelines.vkRenderPass)
             biRenderPass.framebuffer(textCache.textAtlasFramebuffer)
             biRenderPass.renderArea {
                 it.offset().set(0, 0)
@@ -42,13 +42,27 @@ internal fun rasterizeTextAtlas(
             vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
             vkCmdBindPipeline(
                 commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                textCache.context.instance.textPipeline.vkPipeline
+                textCache.context.instance.textPipelines.countPipeline
             )
             vkCmdSetViewport(commandBuffer, 0, viewports)
             vkCmdSetScissor(commandBuffer, 0, scissors)
             if (textCache.currentVertexIndex > 0) {
-                vkCmdBindVertexBuffers(commandBuffer, 0, stack.longs(textCache.vertexBuffer), stack.longs(0))
+                vkCmdBindVertexBuffers(commandBuffer, 0, stack.longs(textCache.countVertexBuffer), stack.longs(0))
                 vkCmdDraw(commandBuffer, textCache.currentVertexIndex, 1, 0, 0)
+            }
+            vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE)
+            vkCmdBindPipeline(
+                commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                textCache.context.instance.textPipelines.oddPipeline
+            )
+            vkCmdBindDescriptorSets(
+                commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                textCache.context.instance.textPipelines.oddPipelineLayout,
+                0, stack.longs(textCache.descriptorSet), null
+            )
+            if (textCache.currentVertexIndex > 0) {
+                vkCmdBindVertexBuffers(commandBuffer, 0, stack.longs(textCache.oddVertexBuffer), stack.longs(0))
+                vkCmdDraw(commandBuffer, 6, 1, 0, 0)
             }
             vkCmdEndRenderPass(commandBuffer)
 
@@ -61,7 +75,7 @@ internal fun rasterizeTextAtlas(
             imageBarrier.newLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
             imageBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
             imageBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-            imageBarrier.image(textCache.textAtlas)
+            imageBarrier.image(textCache.textOddAtlas)
             imageBarrier.subresourceRange {
                 it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
                 it.baseMipLevel(0)

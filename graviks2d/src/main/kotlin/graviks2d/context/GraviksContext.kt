@@ -128,7 +128,7 @@ class GraviksContext(
         rectanglePackingNodeBufferSize = textRectanglePackingNodeBufferSize
     )
     internal val descriptors = ContextDescriptors(
-        this.instance, this.buffers.operationVkBuffer, this.textShapeCache.textAtlasView
+        this.instance, this.buffers.operationVkBuffer, this.textShapeCache.textOddAtlasView
     )
 
     private val queuedDrawCommands: MutableList<DrawCommand> = mutableListOf()
