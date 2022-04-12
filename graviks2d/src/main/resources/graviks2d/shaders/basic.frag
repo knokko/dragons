@@ -6,6 +6,8 @@ layout(location = 0) in flat int operationIndex;
 layout(location = 1) in vec2 quadCoordinates;
 layout(location = 2) in vec4 textColor;
 layout(location = 3) in vec4 backgroundColor;
+layout(location = 4) in vec4 strokeColor;
+layout(location = 5) in vec2 strokeDelta;
 
 layout(location = 0) out vec4 outColor;
 
@@ -45,8 +47,29 @@ void main() {
         outColor = texture(sampler2D(textures[imageIndex], textureSampler[0]), textureCoordinates);
     } else if (operationCode == OP_CODE_DRAW_TEXT) {
         vec2 textureCoordinates = vec2(quadCoordinates.x, 1.0 - quadCoordinates.y);
-        float intensity = texture(sampler2D(textAtlasTexture, textureSampler[1]), textureCoordinates).r;
-        outColor = (1.0 - intensity) * backgroundColor + intensity * textColor;
+        float rawIntensity = texture(sampler2D(textAtlasTexture, textureSampler[1]), textureCoordinates).r;
+
+        rawIntensity += texture(sampler2D(textAtlasTexture, textureSampler[1]), textureCoordinates + vec2(strokeDelta.x, strokeDelta.y)).r;
+        rawIntensity += texture(sampler2D(textAtlasTexture, textureSampler[1]), textureCoordinates + vec2(-strokeDelta.x, strokeDelta.y)).r;
+        rawIntensity += texture(sampler2D(textAtlasTexture, textureSampler[1]), textureCoordinates + vec2(strokeDelta.x, -strokeDelta.y)).r;
+        rawIntensity += texture(sampler2D(textAtlasTexture, textureSampler[1]), textureCoordinates + vec2(-strokeDelta.x, -strokeDelta.y)).r;
+        rawIntensity /= 5.0;
+
+        float strokeIntensity;
+        float fillIntensity;
+        float backgroundIntensity;
+
+        float strokeThreshold = 0.7;
+        if (rawIntensity <= strokeThreshold) {
+            strokeIntensity = rawIntensity / strokeThreshold;
+            fillIntensity = 0.0;
+            backgroundIntensity = 1.0 - strokeIntensity;
+        } else {
+            strokeIntensity = (1.0 - rawIntensity) / (1.0 - strokeThreshold);
+            fillIntensity = 1.0 - strokeIntensity;
+            backgroundIntensity = 0.0;
+        }
+        outColor = backgroundIntensity * backgroundColor + strokeIntensity * strokeColor + fillIntensity * textColor;
     } else {
         // This is the 'unknown operation code' color, for the sake of debugging
         outColor = vec4(1.0, 0.2, 0.6, 1.0);

@@ -366,15 +366,17 @@ class GraviksContext(
         string: String, style: TextStyle, backgroundColor: Color,
     ) {
         val font = this.instance.fontManager.getFont(style.font)
-        // TODO Respect strokeColor
         val placedChars = placeText(minX, yBottom, maxX, yTop, string, style, font, this.width, this.height)
         for (placedChar in placedChars) {
             val glyphShape = font.getGlyphShape(placedChar.codepoint)
 
-            val maxAntiAliasFactor = min(this.width / placedChar.pixelWidth, this.height / placedChar.pixelHeight)
+            val maxAntiAliasFactor = min(
+                this.textShapeCache.width / placedChar.pixelWidth,
+                this.textShapeCache.height / placedChar.pixelHeight
+            )
             val antiAliasFactor = min(if (placedChar.pixelHeight < 15) {
                 4
-            } else if (placedChar.pixelHeight < 100) {
+            } else if (placedChar.pixelHeight < 200) {
                 2
             } else {
                 1
@@ -399,6 +401,9 @@ class GraviksContext(
                     }
                 }
 
+                val strokeDeltaY = (yTop - yBottom) * style.strokeHeightFraction
+                val strokeDeltaX = strokeDeltaY * this.textShapeCache.height.toFloat() / this.textShapeCache.width.toFloat()
+
                 if (placedChar.shouldMirror) {
                     textCacheArea = TextCacheArea(
                         minX = textCacheArea.maxX,
@@ -408,7 +413,7 @@ class GraviksContext(
                     )
                 }
 
-                val operationSize = 5
+                val operationSize = 8
                 val claimedBufferSpace = this.claimSpace(numVertices = 6, numOperationValues = 4 * operationSize)
                 if (claimedBufferSpace.didHardFlush) {
                     textCacheArea = this.textShapeCache.prepareCharacter(
@@ -442,6 +447,9 @@ class GraviksContext(
                         this.put(startOperationIndex + 2, encodeFloat(texY))
                         this.put(startOperationIndex + 3, style.fillColor.rawValue)
                         this.put(startOperationIndex + 4, backgroundColor.rawValue)
+                        this.put(startOperationIndex + 5, style.strokeColor.rawValue)
+                        this.put(startOperationIndex + 6, encodeFloat(strokeDeltaX))
+                        this.put(startOperationIndex + 7, encodeFloat(strokeDeltaY))
                     }
                 }
             }

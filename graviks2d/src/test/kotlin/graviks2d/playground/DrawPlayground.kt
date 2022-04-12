@@ -141,6 +141,7 @@ fun main() {
         )
 
         val fillColor = Color.rgbInt(0, 200, 0)
+        val strokeColor = Color.rgbInt(0, 0, 0)
         val backgroundColor = Color.rgbInt(200, 0, 0)
         val time1 = System.currentTimeMillis()
         val minX = 0.05f
@@ -148,7 +149,8 @@ fun main() {
         graviks.fillRect(0.8f, 0f, 1f, 1f, Color.rgbInt(0, 0, 0))
 
         val infoStyle = TextStyle(
-            font = null, fillColor = fillColor, alignment = TextAlignment.Natural, overflowPolicy = TextOverflowPolicy.DiscardEnd
+            font = null, fillColor = fillColor, strokeColor = strokeColor,
+            alignment = TextAlignment.Natural, overflowPolicy = TextOverflowPolicy.DiscardEnd
         )
         val dummyTextEnglishShort = "Hello, world!"
         val dummyTextEnglishLong = "The quick brown fox jumps over the lazy dog"
@@ -173,7 +175,15 @@ fun main() {
             graviks.drawString(0.4f, minY + 0.5f * deltaY, 0.8f, minY + 0.75f * deltaY, dummyTextHebrewShort, currentStyle, backgroundColor)
             graviks.drawString(0.4f, minY + 0.75f * deltaY, 0.8f, maxY, dummyTextHebrewLong, currentStyle, backgroundColor)
         }
-        graviks.drawString(0.4f, 0.98f, 0.8f, 0.983f, "test1234", infoStyle, backgroundColor)
+        graviks.drawString(0.4f, 0.95f, 0.8f, 0.983f, "test1234", infoStyle, backgroundColor)
+        graviks.drawString(
+            0.4f, 0.86f, 0.8f, 0.9f, "Without",
+            infoStyle.createChild(strokeColor = infoStyle.fillColor), backgroundColor
+        )
+        graviks.drawString(
+            0.4f, 0.84f, 0.8f, 0.843f, "Without",
+            infoStyle.createChild(strokeColor = infoStyle.fillColor), backgroundColor
+        )
         val time2 = System.currentTimeMillis()
         graviks.copyColorImageTo(destImage = null, destBuffer = testBuffer)
         val time3 = System.currentTimeMillis()

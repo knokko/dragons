@@ -8,6 +8,8 @@ layout(location = 0) out int outOperationIndex;
 layout(location = 1) out vec2 outQuadCoordinates;
 layout(location = 2) out vec4 outTextColor;
 layout(location = 3) out vec4 outBackgroundColor;
+layout(location = 4) out vec4 outStrokeColor;
+layout(location = 5) out vec2 outStrokeDelta;
 
 layout(set = 0, binding = 0) readonly buffer ShaderStorage {
     int operations[];
@@ -39,6 +41,10 @@ vec4 decodeColor(int rawColor) {
 
 const vec4 ERROR_TEXT_COLOR = vec4(0.8, 0.6, 0.4, 1.0);
 
+float decodeFloat(int rawValue) {
+    return float(rawValue) * 0.000001;
+}
+
 void main() {
     float z = 0.99 - 0.98 * (float(inDepth) / float(pushConstants.maxDepth));
     gl_Position = vec4(inPosition.x * 2.0 - 1.0, inPosition.y * -2.0 + 1.0, z, 1.0);
@@ -57,9 +63,10 @@ void main() {
         outQuadCoordinates = vec2(0.0, 1.0);
     } else if (operationCode == OP_CODE_DRAW_TEXT) {
         outOperationIndex = inOperationIndex;
-        int rawX = shaderStorage.operations[inOperationIndex + 1];
-        int rawY = shaderStorage.operations[inOperationIndex + 2];
-        outQuadCoordinates = vec2(float(rawX) * 0.000001, float(rawY) * 0.000001);
+        outQuadCoordinates = vec2(
+            decodeFloat(shaderStorage.operations[inOperationIndex + 1]),
+            decodeFloat(shaderStorage.operations[inOperationIndex + 2])
+        );
     } else {
         outOperationIndex = inOperationIndex;
         outQuadCoordinates = vec2(0.0, 0.0);
@@ -68,6 +75,11 @@ void main() {
     if (operationCode == OP_CODE_DRAW_TEXT) {
         outTextColor = decodeColor(shaderStorage.operations[inOperationIndex + 3]);
         outBackgroundColor = decodeColor(shaderStorage.operations[inOperationIndex + 4]);
+        outStrokeColor = decodeColor(shaderStorage.operations[inOperationIndex + 5]);
+        outStrokeDelta = vec2(
+            decodeFloat(shaderStorage.operations[inOperationIndex + 6]),
+            decodeFloat(shaderStorage.operations[inOperationIndex + 7])
+        );
     } else {
         // The error text color will be displayed when the fragment shader tries to
         // use the text color outside a text drawing operation.

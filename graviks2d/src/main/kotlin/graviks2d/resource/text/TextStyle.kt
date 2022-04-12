@@ -3,18 +3,32 @@ package graviks2d.resource.text
 import graviks2d.util.Color
 
 class TextStyle(
+    /**
+     * The primary color that will be used to draw the characters.
+     */
     val fillColor: Color,
+    /**
+     * The color of the strokes around the characters that will be drawn.
+     * I wouldn't recommend using this on small text.
+     */
     val strokeColor: Color = fillColor,
+    /**
+     * This parameter can be used to determine how fat the strokes around the
+     * characters will be. The default value is 0.01. Increasing this value will
+     * make the strokes thicker.
+     */
+    val strokeHeightFraction: Float = 0.01f,
     /**
      * Choose `null` to use the default font
      */
     val font: FontReference?,
-    val alignment: TextAlignment,
-    val overflowPolicy: TextOverflowPolicy
+    val alignment: TextAlignment = TextAlignment.Natural,
+    val overflowPolicy: TextOverflowPolicy = TextOverflowPolicy.DiscardEnd
 ) {
     fun createChild(
         fillColor: Color = this.fillColor,
-        strokeColor: Color = fillColor,
+        strokeColor: Color = if (this.fillColor == this.strokeColor) { fillColor } else { this.strokeColor },
+
         font: FontReference? = this.font,
         alignment: TextAlignment = this.alignment,
         overflowPolicy: TextOverflowPolicy = this.overflowPolicy
