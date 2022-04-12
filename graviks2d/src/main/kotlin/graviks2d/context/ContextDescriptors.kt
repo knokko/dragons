@@ -24,7 +24,7 @@ internal class ContextDescriptors(
             sizeShaderStorage.descriptorCount(1)
             val sizeTextureSampler = poolSizes[1]
             sizeTextureSampler.type(VK_DESCRIPTOR_TYPE_SAMPLER)
-            sizeTextureSampler.descriptorCount(1)
+            sizeTextureSampler.descriptorCount(2)
             val sizeTextures = poolSizes[2]
             sizeTextures.type(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
             sizeTextures.descriptorCount(instance.maxNumDescriptorImages)
@@ -67,9 +67,9 @@ internal class ContextDescriptors(
             operationBufferDescriptor.offset(0)
             operationBufferDescriptor.range(VK_WHOLE_SIZE)
 
-            val textureSamplerDescriptors = VkDescriptorImageInfo.calloc(1, stack)
-            val textureSamplerDescriptor = textureSamplerDescriptors[0]
-            textureSamplerDescriptor.sampler(instance.textureSampler)
+            val textureSamplerDescriptors = VkDescriptorImageInfo.calloc(2, stack)
+            textureSamplerDescriptors[0].sampler(instance.textureSampler)
+            textureSamplerDescriptors[1].sampler(instance.smoothTextureSampler)
 
             val texturesDescriptors = VkDescriptorImageInfo.calloc(instance.maxNumDescriptorImages, stack)
             for (textureIndex in 0 until instance.maxNumDescriptorImages) {
@@ -100,7 +100,7 @@ internal class ContextDescriptors(
             textureSamplerWrite.dstSet(this.descriptorSet)
             textureSamplerWrite.dstBinding(1)
             textureSamplerWrite.dstArrayElement(0)
-            textureSamplerWrite.descriptorCount(1)
+            textureSamplerWrite.descriptorCount(2)
             textureSamplerWrite.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLER)
             textureSamplerWrite.pImageInfo(textureSamplerDescriptors)
             val texturesWrite = writes[2]

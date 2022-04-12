@@ -12,7 +12,7 @@ layout(location = 0) out vec4 outColor;
 layout(set = 0, binding = 0) readonly buffer ShaderStorage {
     int operations[];
 } shaderStorage;
-layout(set = 0, binding = 1) uniform sampler textureSampler;
+layout(set = 0, binding = 1) uniform sampler textureSampler[2];
 layout(set = 0, binding = 2) uniform texture2D textures[NUM_TEXTURES];
 layout(set = 0, binding = 3) uniform texture2D textAtlasTexture;
 
@@ -42,12 +42,10 @@ void main() {
     } else if (operationCode == OP_CODE_DRAW_IMAGE) {
         int imageIndex = shaderStorage.operations[operationIndex + 1];
         vec2 textureCoordinates = vec2(quadCoordinates.x, 1.0 - quadCoordinates.y);
-        outColor = texture(sampler2D(textures[imageIndex], textureSampler), textureCoordinates);
+        outColor = texture(sampler2D(textures[imageIndex], textureSampler[0]), textureCoordinates);
     } else if (operationCode == OP_CODE_DRAW_TEXT) {
         vec2 textureCoordinates = vec2(quadCoordinates.x, 1.0 - quadCoordinates.y);
-
-        // TODO This needs rework if I decide to implement anti-aliasing!
-        float intensity = texture(sampler2D(textAtlasTexture, textureSampler), textureCoordinates).r;
+        float intensity = texture(sampler2D(textAtlasTexture, textureSampler[1]), textureCoordinates).r;
         outColor = (1.0 - intensity) * backgroundColor + intensity * textColor;
     } else {
         // This is the 'unknown operation code' color, for the sake of debugging

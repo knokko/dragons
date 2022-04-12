@@ -67,7 +67,7 @@ internal fun createGraviksPipelineLayout(
     val textureSamplerBinding = setLayoutBindings[1]
     textureSamplerBinding.binding(1)
     textureSamplerBinding.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLER)
-    textureSamplerBinding.descriptorCount(1)
+    textureSamplerBinding.descriptorCount(2)
     textureSamplerBinding.stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT)
     val texturesBinding = setLayoutBindings[2]
     texturesBinding.binding(2)

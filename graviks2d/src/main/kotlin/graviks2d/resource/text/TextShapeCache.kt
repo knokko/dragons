@@ -270,7 +270,10 @@ internal class TextShapeCache(
      * In this case, the context will need to perform a hard flush, clear the cache,
      * and try again.
      */
-    fun prepareCharacter(codepoint: Int, fontAscent: Int, fontDescent: Int, glyphShape: GlyphShape, width: Int, height: Int): TextCacheArea? {
+    fun prepareCharacter(
+        codepoint: Int, fontAscent: Int, fontDescent: Int,
+        glyphShape: GlyphShape, width: Int, height: Int
+    ): TextCacheArea? {
         if (glyphShape.ttfVertices == null) throw IllegalArgumentException("Don't use this method on empty glyphs")
 
         val cacheKey = TextCacheKey(

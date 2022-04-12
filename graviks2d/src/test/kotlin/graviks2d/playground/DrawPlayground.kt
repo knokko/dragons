@@ -173,6 +173,7 @@ fun main() {
             graviks.drawString(0.4f, minY + 0.5f * deltaY, 0.8f, minY + 0.75f * deltaY, dummyTextHebrewShort, currentStyle, backgroundColor)
             graviks.drawString(0.4f, minY + 0.75f * deltaY, 0.8f, maxY, dummyTextHebrewLong, currentStyle, backgroundColor)
         }
+        graviks.drawString(0.4f, 0.98f, 0.8f, 0.983f, "test1234", infoStyle, backgroundColor)
         val time2 = System.currentTimeMillis()
         graviks.copyColorImageTo(destImage = null, destBuffer = testBuffer)
         val time3 = System.currentTimeMillis()

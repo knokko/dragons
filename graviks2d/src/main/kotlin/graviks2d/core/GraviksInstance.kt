@@ -39,7 +39,8 @@ class GraviksInstance(
 ) {
 
     internal val fontManager = FontManager(defaultFont)
-    internal val textureSampler = createTextureSampler(this.device)
+    internal val textureSampler = createTextureSampler(this.device, VK_FILTER_NEAREST)
+    internal val smoothTextureSampler = createTextureSampler(this.device, VK_FILTER_LINEAR)
     internal val pipeline = GraviksPipeline(this)
     internal val textPipelines = TextPipeline(this.device)
     internal val coroutineScope = CoroutineScope(Dispatchers.IO)
@@ -63,15 +64,16 @@ class GraviksInstance(
         textPipelines.destroy()
         pipeline.destroy()
         vkDestroySampler(device, textureSampler, null)
+        vkDestroySampler(device, smoothTextureSampler, null)
     }
 }
 
-private fun createTextureSampler(vkDevice: VkDevice): Long {
+private fun createTextureSampler(vkDevice: VkDevice, magMinFilter: Int): Long {
     return stackPush().use { stack ->
         val ciSampler = VkSamplerCreateInfo.calloc(stack)
         ciSampler.`sType$Default`()
-        ciSampler.magFilter(VK_FILTER_NEAREST)
-        ciSampler.minFilter(VK_FILTER_NEAREST)
+        ciSampler.magFilter(magMinFilter)
+        ciSampler.minFilter(magMinFilter)
         ciSampler.mipmapMode(VK_SAMPLER_MIPMAP_MODE_NEAREST)
         ciSampler.addressModeU(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
         ciSampler.addressModeV(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)

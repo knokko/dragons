@@ -15,6 +15,7 @@ import graviks2d.resource.text.placeText
 import graviks2d.util.Color
 import kotlinx.coroutines.runBlocking
 import java.lang.IllegalStateException
+import java.lang.Integer.min
 import kotlin.math.roundToInt
 
 class GraviksContext(
@@ -370,15 +371,28 @@ class GraviksContext(
         for (placedChar in placedChars) {
             val glyphShape = font.getGlyphShape(placedChar.codepoint)
 
+            val maxAntiAliasFactor = min(this.width / placedChar.pixelWidth, this.height / placedChar.pixelHeight)
+            val antiAliasFactor = min(if (placedChar.pixelHeight < 15) {
+                4
+            } else if (placedChar.pixelHeight < 100) {
+                2
+            } else {
+                1
+            }, maxAntiAliasFactor)
+
+            val cachedWidth = placedChar.pixelWidth * antiAliasFactor
+            val cachedHeight = placedChar.pixelHeight * antiAliasFactor
             if (glyphShape.ttfVertices != null) {
 
                 var textCacheArea = this.textShapeCache.prepareCharacter(
-                    placedChar.codepoint, font.ascent, font.descent, glyphShape, placedChar.pixelWidth, placedChar.pixelHeight
+                    placedChar.codepoint, font.ascent, font.descent,
+                    glyphShape, cachedWidth, cachedHeight
                 )
                 if (textCacheArea == null) {
                     this.hardFlush()
                     textCacheArea = this.textShapeCache.prepareCharacter(
-                        placedChar.codepoint, font.ascent, font.descent, glyphShape, placedChar.pixelWidth, placedChar.pixelHeight
+                        placedChar.codepoint, font.ascent, font.descent,
+                        glyphShape, cachedWidth, cachedHeight
                     )
                     if (textCacheArea == null) {
                         throw IllegalArgumentException("Can't draw character with codepoint ${placedChar.codepoint}, not even after a hard flush")
@@ -398,7 +412,8 @@ class GraviksContext(
                 val claimedBufferSpace = this.claimSpace(numVertices = 6, numOperationValues = 4 * operationSize)
                 if (claimedBufferSpace.didHardFlush) {
                     textCacheArea = this.textShapeCache.prepareCharacter(
-                        placedChar.codepoint, font.ascent, font.descent, glyphShape, placedChar.pixelWidth, placedChar.pixelHeight
+                        placedChar.codepoint, font.ascent, font.descent,
+                        glyphShape, cachedWidth, cachedHeight
                     )
                     if (textCacheArea == null) {
                         throw IllegalArgumentException("Can't draw character with codepoint ${placedChar.codepoint} after a hard flush")
