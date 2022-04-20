@@ -12,7 +12,6 @@ import dragons.plugin.loading.PluginClassLoader
 import dragons.plugin.loading.scanDefaultPluginLocations
 import dragons.state.StaticGameState
 import dragons.state.StaticGraphicsState
-import dragons.vr.ResolveHelper
 import dragons.vr.initVr
 import dragons.vulkan.destroy.destroyVulkanDevice
 import dragons.vulkan.destroy.destroyVulkanInstance
@@ -104,7 +103,6 @@ fun main(args: Array<String>) {
         staticGameState.vrManager.destroy()
         val staticGraphics = staticGameState.graphics
         staticGraphics.memoryScope.destroy(staticGraphics.vkDevice)
-        staticGraphics.resolveHelper.destroy(staticGraphics.vkDevice)
         destroyVulkanDevice(
             staticGraphics.vkInstance, staticGraphics.vkPhysicalDevice, staticGraphics.vkDevice,
             staticGameState.pluginManager
@@ -218,20 +216,6 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
 
         val (staticMemoryScope, coreStaticMemory) = staticMemoryJob.await()
 
-        val resolveHelper = ResolveHelper(
-            leftSourceImage = coreStaticMemory.leftColorImage,
-            rightSourceImage = coreStaticMemory.rightColorImage,
-            leftResolvedImage = coreStaticMemory.leftResolveImage,
-            rightResolvedImage = coreStaticMemory.rightResolveImage,
-            leftScreenshotStagingBuffer = coreStaticMemory.leftScreenshotBuffer.second,
-            leftScreenshotHostBuffer = coreStaticMemory.leftScreenshotBuffer.first,
-            rightScreenshotStagingBuffer = coreStaticMemory.rightScreenshotBuffer.second,
-            rightScreenshotHostBuffer = coreStaticMemory.rightScreenshotBuffer.first,
-            vkDevice = vulkanDevice,
-            queueManager = queueManager,
-            renderImageInfo = renderImageInfo
-        )
-
         val staticGameState = StaticGameState(
             graphics = StaticGraphicsState(
                 vulkanInstance,
@@ -239,7 +223,6 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
                 vulkanDevice,
                 queueManager,
                 renderImageInfo,
-                resolveHelper,
                 staticMemoryScope,
                 coreStaticMemory
             ),

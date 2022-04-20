@@ -47,7 +47,14 @@ private suspend fun getFinishedStaticMemoryAgents(
     )
     val pendingCoreMemory = claimStaticCoreMemory(customAgent, vrManager, queueManager, renderImageInfo)
 
-    return Pair(finishedClaims + listOf(customAgent.claims), pendingCoreMemory)
+    // And the VrManager may also need some static resources...
+    val vrAgent = VulkanStaticMemoryUser.Agent(
+        vkPhysicalDevice, vkPhysicalDeviceLimits, vkDevice,
+        queueManager, scope, MemoryScopeClaims(), pluginClassLoader
+    )
+    vrManager.claimStaticMemory(vrAgent, queueManager, renderImageInfo)
+
+    return Pair(finishedClaims + listOf(customAgent.claims, vrAgent.claims), pendingCoreMemory)
 }
 
 @Throws(SimpleStartupException::class)

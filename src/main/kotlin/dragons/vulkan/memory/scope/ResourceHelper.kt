@@ -12,6 +12,8 @@ import dragons.vulkan.queue.QueueManager
 import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.*
+import org.lwjgl.vulkan.EXTFragmentDensityMap.VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT
+import org.lwjgl.vulkan.KHRFragmentShadingRate.VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
@@ -305,8 +307,22 @@ internal fun bindAndAllocateImageMemory(
         )
     }
 
+    // Creating an image view is only allowed when the image has at least 1 of these usage bits:
+    val requiredImageViewUsages = VK_IMAGE_USAGE_SAMPLED_BIT or
+            VK_IMAGE_USAGE_STORAGE_BIT or
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT or
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT or
+            VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT or
+            VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT or
+            VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR or
+            VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT
+
     for ((claim, image) in allDeviceImages) {
-        createFullImageView(stack, vkDevice, claim, image)
+        if ((claim.imageUsage and requiredImageViewUsages) != 0) {
+            createFullImageView(stack, vkDevice, claim, image)
+        }
+        // Images that do not have any of these usages simply won't get a full image view
+        // (and they shouldn't need a full image view)
     }
 
     val claimsToImageMap = mutableMapOf<ImageMemoryClaim, VulkanImage>()

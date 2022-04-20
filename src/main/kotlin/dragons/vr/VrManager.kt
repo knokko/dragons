@@ -1,12 +1,14 @@
 package dragons.vr
 
+import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.state.StaticGraphicsState
+import dragons.vulkan.RenderImageInfo
+import dragons.vulkan.queue.QueueManager
 import dragons.vulkan.util.assertVkSuccess
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.lwjgl.PointerBuffer
 import org.lwjgl.system.MemoryStack
-import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
 import org.slf4j.Logger
@@ -68,6 +70,13 @@ interface VrManager {
         return vkCreateDevice(physicalDevice, ciDevice, null, pDevice)
     }
 
+    /**
+     * Gives the VrManager the opportunity to claim some static GPU resources.
+     */
+    fun claimStaticMemory(agent: VulkanStaticMemoryUser.Agent, queueManager: QueueManager, renderImageInfo: RenderImageInfo) {
+        // Not all VR managers need this
+    }
+
     fun getWidth(): Int
 
     fun getHeight(): Int
@@ -118,7 +127,7 @@ interface VrManager {
      */
     fun markFirstFrameQueueSubmit()
 
-    fun submitFrames()
+    fun resolveAndSubmitFrames(waitSemaphore: Long?, takeScreenshot: Boolean)
 
     fun destroy()
 

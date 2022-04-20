@@ -1,5 +1,6 @@
 package dragons.vr
 
+import dragons.state.StaticGraphicsState
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
@@ -18,21 +19,53 @@ import javax.imageio.ImageIO
 class ResolveHelper(
     private val leftSourceImage: VulkanImage,
     private val rightSourceImage: VulkanImage,
-    val leftResolvedImage: VulkanImage,
-    val rightResolvedImage: VulkanImage,
-    val leftScreenshotStagingBuffer: VulkanBufferRange,
-    val rightScreenshotStagingBuffer: VulkanBufferRange,
-    val leftScreenshotHostBuffer: ByteBuffer,
-    val rightScreenshotHostBuffer: ByteBuffer,
+    private val leftResolveImages: Array<VulkanImage>,
+    private val rightResolveImages: Array<VulkanImage>,
+    private val defaultResolveImageLayout: Int,
+    private val leftScreenshotStagingBuffer: VulkanBufferRange,
+    private val rightScreenshotStagingBuffer: VulkanBufferRange,
+    private val leftScreenshotHostBuffer: ByteBuffer,
+    private val rightScreenshotHostBuffer: ByteBuffer,
     vkDevice: VkDevice, queueManager: QueueManager, renderImageInfo: RenderImageInfo
 ) {
 
+    constructor(
+        graphicsState: StaticGraphicsState, defaultResolveImageLayout: Int,
+        leftResolveImages: Array<VulkanImage>, rightResolveImages: Array<VulkanImage>
+    ) : this(
+        leftSourceImage = graphicsState.coreMemory.leftColorImage, rightSourceImage = graphicsState.coreMemory.rightColorImage,
+        leftResolveImages = leftResolveImages, rightResolveImages = rightResolveImages,
+        defaultResolveImageLayout = defaultResolveImageLayout,
+        leftScreenshotStagingBuffer = graphicsState.coreMemory.leftScreenshotBuffer.second,
+        leftScreenshotHostBuffer = graphicsState.coreMemory.leftScreenshotBuffer.first,
+        rightScreenshotStagingBuffer = graphicsState.coreMemory.rightScreenshotBuffer.second,
+        rightScreenshotHostBuffer = graphicsState.coreMemory.rightScreenshotBuffer.first,
+        vkDevice = graphicsState.vkDevice, queueManager = graphicsState.queueManager, renderImageInfo = graphicsState.renderImageInfo
+    )
+
     private val resolveCommandPool: Long
-    private val resolveCommandBuffer: VkCommandBuffer
-    private val screenshotCommandBuffer: VkCommandBuffer
+    private val resolveCommandBuffers: List<VkCommandBuffer>
+    private val screenshotCommandBuffers: List<VkCommandBuffer>
     private val fence: Long
 
+    private fun determineResolveIndex(
+        leftResolveIndex: Int, rightResolveIndex: Int
+    ) = leftResolveIndex + this.leftResolveImages.size * rightResolveIndex
+
+    private fun determineLeftRightResolveIndex(rawResolveIndex: Int) = Pair(
+        rawResolveIndex % this.leftResolveImages.size,
+        rawResolveIndex / this.leftResolveImages.size
+    )
+
     init {
+
+        if (this.leftResolveImages.size != this.rightResolveImages.size) {
+            throw IllegalArgumentException("The number of left resolve images (${this.leftResolveImages.size}) is not " +
+                    "equal to the number of right resolve images (${this.rightResolveImages.size})")
+        }
+        val numResolveImages = this.leftResolveImages.size
+        val numResolveCommandBuffers = numResolveImages * numResolveImages
+
         stackPush().use { stack ->
             val ciPool = VkCommandPoolCreateInfo.calloc(stack)
             ciPool.`sType$Default`()
@@ -50,174 +83,184 @@ class ResolveHelper(
             aiBuffer.`sType$Default`()
             aiBuffer.commandPool(resolveCommandPool)
             aiBuffer.level(VK_COMMAND_BUFFER_LEVEL_PRIMARY)
-            aiBuffer.commandBufferCount(2)
+            aiBuffer.commandBufferCount(2 * numResolveCommandBuffers)
 
-            val pBuffer = stack.callocPointer(2)
+            val pBuffer = stack.callocPointer(2 * numResolveCommandBuffers)
             assertVkSuccess(
                 vkAllocateCommandBuffers(vkDevice, aiBuffer, pBuffer),
                 "AllocateCommandBuffers", "resolve eye images"
             )
-            this.resolveCommandBuffer = VkCommandBuffer(pBuffer[0], vkDevice)
-            this.screenshotCommandBuffer = VkCommandBuffer(pBuffer[1], vkDevice)
+            this.resolveCommandBuffers = (0 until numResolveCommandBuffers).map { VkCommandBuffer(pBuffer[2 * it], vkDevice) }
+            this.screenshotCommandBuffers = (0 until numResolveCommandBuffers).map { VkCommandBuffer(pBuffer[2 * it + 1], vkDevice) }
 
-            val biCommand = VkCommandBufferBeginInfo.calloc(stack)
-            biCommand.`sType$Default`()
-            biCommand.flags(0)
+            for (rawResolveIndex in 0 until numResolveCommandBuffers) {
+                val (leftResolveIndex, rightResolveIndex) = this.determineLeftRightResolveIndex(rawResolveIndex)
+                val resolveCommandBuffer = this.resolveCommandBuffers[rawResolveIndex]
+                val screenshotCommandBuffer = this.screenshotCommandBuffers[rawResolveIndex]
 
-            assertVkSuccess(
-                vkBeginCommandBuffer(this.resolveCommandBuffer, biCommand),
-                "BeginCommandBuffer", "resolve eye images"
-            )
+                val leftResolveImage = this.leftResolveImages[leftResolveIndex]
+                val rightResolveImage = this.rightResolveImages[rightResolveIndex]
 
-            fun fillSrr(srr: VkImageSubresourceRange) {
-                srr.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                srr.baseMipLevel(0)
-                srr.baseArrayLayer(0)
-                srr.levelCount(1)
-                srr.layerCount(1)
-            }
+                val biCommand = VkCommandBufferBeginInfo.calloc(stack)
+                biCommand.`sType$Default`()
+                biCommand.flags(0)
 
-            val pImageSourceBarriers = VkImageMemoryBarrier.calloc(2, stack)
-            for ((index, image) in arrayOf(this.leftSourceImage, this.rightSourceImage).withIndex()) {
-                val imageSourceBarrier = pImageSourceBarriers[index]
-                imageSourceBarrier.`sType$Default`()
-                imageSourceBarrier.srcAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-                imageSourceBarrier.dstAccessMask(VK_ACCESS_TRANSFER_READ_BIT)
-                imageSourceBarrier.oldLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-                imageSourceBarrier.newLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-                imageSourceBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                imageSourceBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                imageSourceBarrier.image(image.handle)
-                imageSourceBarrier.subresourceRange(::fillSrr)
-            }
-
-            val pImageResolveBarriers = VkImageMemoryBarrier.calloc(2, stack)
-            for ((index, image) in arrayOf(this.leftResolvedImage, this.rightResolvedImage).withIndex()) {
-                val imageResolveBarrier = pImageResolveBarriers[index]
-                imageResolveBarrier.`sType$Default`()
-                imageResolveBarrier.srcAccessMask(0)
-                imageResolveBarrier.dstAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
-                imageResolveBarrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-                imageResolveBarrier.newLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-                imageResolveBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                imageResolveBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                imageResolveBarrier.image(image.handle)
-                imageResolveBarrier.subresourceRange(::fillSrr)
-            }
-
-            vkCmdPipelineBarrier(
-                this.resolveCommandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                0, null, null, pImageSourceBarriers
-            )
-            vkCmdPipelineBarrier(
-                this.resolveCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                0, null, null, pImageResolveBarriers
-            )
-
-            fun fillSrl(srl: VkImageSubresourceLayers) {
-                srl.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                srl.mipLevel(0)
-                srl.baseArrayLayer(0)
-                srl.layerCount(1)
-            }
-
-            val width = this.leftSourceImage.width
-            val height = this.rightSourceImage.height
-
-            if (renderImageInfo.sampleCountBit != VK_SAMPLE_COUNT_1_BIT) {
-                val pResolve = VkImageResolve.calloc(stack)
-                pResolve.srcSubresource(::fillSrl)
-                pResolve.srcOffset { offset -> offset.set(0, 0, 0) }
-                pResolve.dstSubresource(::fillSrl)
-                pResolve.dstOffset { offset -> offset.set(0, 0, 0) }
-                pResolve.extent { extent -> extent.set(width, height, 1) }
-
-                vkCmdResolveImage(
-                    this.resolveCommandBuffer,
-                    this.leftSourceImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    this.leftResolvedImage.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    pResolve
+                assertVkSuccess(
+                    vkBeginCommandBuffer(resolveCommandBuffer, biCommand),
+                    "BeginCommandBuffer", "resolve eye images"
                 )
-                vkCmdResolveImage(
-                    this.resolveCommandBuffer,
-                    this.rightSourceImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    this.rightResolvedImage.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    pResolve
-                )
-            } else {
-                val pCopies = VkImageCopy.calloc(1, stack)
-                val pCopy = pCopies[0]
-                pCopy.srcSubresource(::fillSrl)
-                pCopy.srcOffset { offset -> offset.set(0, 0, 0) }
-                pCopy.dstSubresource(::fillSrl)
-                pCopy.dstOffset { offset -> offset.set(0, 0, 0) }
-                pCopy.extent { extent -> extent.set(width, height, 1) }
 
-                vkCmdCopyImage(
-                    this.resolveCommandBuffer,
-                    this.leftSourceImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    this.leftResolvedImage.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    pCopies
+                fun fillSrr(srr: VkImageSubresourceRange) {
+                    srr.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+                    srr.baseMipLevel(0)
+                    srr.baseArrayLayer(0)
+                    srr.levelCount(1)
+                    srr.layerCount(1)
+                }
+
+                val pImageSourceBarriers = VkImageMemoryBarrier.calloc(2, stack)
+                for ((index, image) in arrayOf(this.leftSourceImage, this.rightSourceImage).withIndex()) {
+                    val imageSourceBarrier = pImageSourceBarriers[index]
+                    imageSourceBarrier.`sType$Default`()
+                    imageSourceBarrier.srcAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+                    imageSourceBarrier.dstAccessMask(VK_ACCESS_TRANSFER_READ_BIT)
+                    imageSourceBarrier.oldLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+                    imageSourceBarrier.newLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+                    imageSourceBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+                    imageSourceBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+                    imageSourceBarrier.image(image.handle)
+                    imageSourceBarrier.subresourceRange(::fillSrr)
+                }
+
+                val pImageResolveBarriers = VkImageMemoryBarrier.calloc(2, stack)
+                for ((index, image) in arrayOf(leftResolveImage, rightResolveImage).withIndex()) {
+                    val imageResolveBarrier = pImageResolveBarriers[index]
+                    imageResolveBarrier.`sType$Default`()
+                    imageResolveBarrier.srcAccessMask(0)
+                    imageResolveBarrier.dstAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+                    imageResolveBarrier.oldLayout(this.defaultResolveImageLayout)
+                    imageResolveBarrier.newLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+                    imageResolveBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+                    imageResolveBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+                    imageResolveBarrier.image(image.handle)
+                    imageResolveBarrier.subresourceRange(::fillSrr)
+                }
+
+                vkCmdPipelineBarrier(
+                    resolveCommandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    0, null, null, pImageSourceBarriers
                 )
-                vkCmdCopyImage(
-                    this.resolveCommandBuffer,
-                    this.rightSourceImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    this.rightResolvedImage.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    pCopies
+                vkCmdPipelineBarrier(
+                    resolveCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    0, null, null, pImageResolveBarriers
+                )
+
+                fun fillSrl(srl: VkImageSubresourceLayers) {
+                    srl.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+                    srl.mipLevel(0)
+                    srl.baseArrayLayer(0)
+                    srl.layerCount(1)
+                }
+
+                val width = this.leftSourceImage.width
+                val height = this.rightSourceImage.height
+
+                if (renderImageInfo.sampleCountBit != VK_SAMPLE_COUNT_1_BIT) {
+                    val pResolve = VkImageResolve.calloc(stack)
+                    pResolve.srcSubresource(::fillSrl)
+                    pResolve.srcOffset { offset -> offset.set(0, 0, 0) }
+                    pResolve.dstSubresource(::fillSrl)
+                    pResolve.dstOffset { offset -> offset.set(0, 0, 0) }
+                    pResolve.extent { extent -> extent.set(width, height, 1) }
+
+                    vkCmdResolveImage(
+                        resolveCommandBuffer,
+                        this.leftSourceImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        leftResolveImage.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        pResolve
+                    )
+                    vkCmdResolveImage(
+                        resolveCommandBuffer,
+                        this.rightSourceImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        rightResolveImage.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        pResolve
+                    )
+                } else {
+                    val pCopies = VkImageCopy.calloc(1, stack)
+                    val pCopy = pCopies[0]
+                    pCopy.srcSubresource(::fillSrl)
+                    pCopy.srcOffset { offset -> offset.set(0, 0, 0) }
+                    pCopy.dstSubresource(::fillSrl)
+                    pCopy.dstOffset { offset -> offset.set(0, 0, 0) }
+                    pCopy.extent { extent -> extent.set(width, height, 1) }
+
+                    vkCmdCopyImage(
+                        resolveCommandBuffer,
+                        this.leftSourceImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        leftResolveImage.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        pCopies
+                    )
+                    vkCmdCopyImage(
+                        resolveCommandBuffer,
+                        this.rightSourceImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        rightResolveImage.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        pCopies
+                    )
+                }
+
+                for ((index, image) in arrayOf(leftResolveImage, rightResolveImage).withIndex()) {
+                    val imageResolveBarrier = pImageResolveBarriers[index]
+                    imageResolveBarrier.`sType$Default`()
+                    imageResolveBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+                    imageResolveBarrier.dstAccessMask(VK_ACCESS_TRANSFER_READ_BIT)
+                    imageResolveBarrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+                    imageResolveBarrier.newLayout(this.defaultResolveImageLayout)
+                    imageResolveBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+                    imageResolveBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+                    imageResolveBarrier.image(image.handle)
+                    imageResolveBarrier.subresourceRange(::fillSrr)
+                }
+                vkCmdPipelineBarrier(
+                    resolveCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    0, null, null, pImageResolveBarriers
+                )
+
+                assertVkSuccess(
+                    vkEndCommandBuffer(resolveCommandBuffer),
+                    "EndCommandBuffer", "resolve eye images"
+                )
+
+                assertVkSuccess(
+                    vkBeginCommandBuffer(screenshotCommandBuffer, biCommand),
+                    "BeginCommandBuffer", "screenshot"
+                )
+
+                val screenshotRegions = VkBufferImageCopy.calloc(1, stack)
+                val screenshotRegion = screenshotRegions[0]
+                // bufferOffset will be set later
+                screenshotRegion.bufferRowLength(0)
+                screenshotRegion.bufferImageHeight(0)
+                screenshotRegion.imageSubresource(::fillSrl)
+                screenshotRegions.imageOffset { it.set(0, 0, 0) }
+                screenshotRegion.imageExtent { it.set(leftResolveImage.width, leftResolveImage.height, 1) }
+
+                screenshotRegion.bufferOffset(leftScreenshotStagingBuffer.offset)
+                vkCmdCopyImageToBuffer(
+                    screenshotCommandBuffer, leftResolveImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    leftScreenshotStagingBuffer.buffer.handle, screenshotRegions
+                )
+
+                screenshotRegion.bufferOffset(rightScreenshotStagingBuffer.offset)
+                vkCmdCopyImageToBuffer(
+                    screenshotCommandBuffer, rightResolveImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    rightScreenshotStagingBuffer.buffer.handle, screenshotRegions
+                )
+
+                assertVkSuccess(
+                    vkEndCommandBuffer(screenshotCommandBuffer), "EndCommandBuffer", "screenshot"
                 )
             }
 
-            for ((index, image) in arrayOf(this.leftResolvedImage, this.rightResolvedImage).withIndex()) {
-                val imageResolveBarrier = pImageResolveBarriers[index]
-                imageResolveBarrier.`sType$Default`()
-                imageResolveBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
-                imageResolveBarrier.dstAccessMask(VK_ACCESS_TRANSFER_READ_BIT)
-                imageResolveBarrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-                imageResolveBarrier.newLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-                imageResolveBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                imageResolveBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                imageResolveBarrier.image(image.handle)
-                imageResolveBarrier.subresourceRange(::fillSrr)
-            }
-            vkCmdPipelineBarrier(
-                this.resolveCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                0, null, null, pImageResolveBarriers
-            )
-
-            assertVkSuccess(
-                vkEndCommandBuffer(this.resolveCommandBuffer),
-                "EndCommandBuffer", "resolve eye images"
-            )
-
-            assertVkSuccess(
-                vkBeginCommandBuffer(this.screenshotCommandBuffer, biCommand),
-                "BeginCommandBuffer", "screenshot"
-            )
-
-            val screenshotRegions = VkBufferImageCopy.calloc(1, stack)
-            val screenshotRegion = screenshotRegions[0]
-            // bufferOffset will be set later
-            screenshotRegion.bufferRowLength(0)
-            screenshotRegion.bufferImageHeight(0)
-            screenshotRegion.imageSubresource(::fillSrl)
-            screenshotRegions.imageOffset { it.set(0, 0, 0) }
-            screenshotRegion.imageExtent { it.set(leftResolvedImage.width, leftResolvedImage.height, 1) }
-
-            screenshotRegion.bufferOffset(leftScreenshotStagingBuffer.offset)
-            vkCmdCopyImageToBuffer(
-                screenshotCommandBuffer, leftResolvedImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                leftScreenshotStagingBuffer.buffer.handle, screenshotRegions
-            )
-
-            screenshotRegion.bufferOffset(rightScreenshotStagingBuffer.offset)
-            vkCmdCopyImageToBuffer(
-                screenshotCommandBuffer, rightResolvedImage.handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                rightScreenshotStagingBuffer.buffer.handle, screenshotRegions
-            )
-
-            assertVkSuccess(
-                vkEndCommandBuffer(screenshotCommandBuffer), "EndCommandBuffer", "screenshot"
-            )
 
             val ciFence = VkFenceCreateInfo.calloc(stack)
             ciFence.`sType$Default`()
@@ -231,15 +274,21 @@ class ResolveHelper(
         }
     }
 
-    fun resolve(vkDevice: VkDevice, queueManager: QueueManager, waitSemaphore: Long, takeScreenshot: Boolean) {
+    fun resolve(
+        vkDevice: VkDevice, leftResolveIndex: Int, rightResolveIndex: Int,
+        queueManager: QueueManager, waitSemaphore: Long, takeScreenshot: Boolean
+    ) {
+        val rawResolveIndex = this.determineResolveIndex(leftResolveIndex, rightResolveIndex)
         stackPush().use { stack ->
             val pSubmitInfo = VkSubmitInfo.calloc(1, stack)
             pSubmitInfo.`sType$Default`()
             pSubmitInfo.waitSemaphoreCount(1)
             pSubmitInfo.pWaitSemaphores(stack.longs(waitSemaphore))
             pSubmitInfo.pWaitDstStageMask(stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT))
-            pSubmitInfo.pCommandBuffers(stack.pointers(this.resolveCommandBuffer.address()))
+            pSubmitInfo.pCommandBuffers(stack.pointers(this.resolveCommandBuffers[rawResolveIndex].address()))
             // No signal semaphores because we use a fence instead
+            // TODO Return a semaphore rather than waiting on a fence
+            // But note that this would only be useful once I implement a multithreaded rendering pipeline...
 
             queueManager.generalQueueFamily.getRandomPriorityQueue().submit(pSubmitInfo, this.fence)
             assertVkSuccess(
@@ -252,7 +301,7 @@ class ResolveHelper(
 
             if (takeScreenshot) {
                 pSubmitInfo.waitSemaphoreCount(0)
-                pSubmitInfo.pCommandBuffers(stack.pointers(screenshotCommandBuffer.address()))
+                pSubmitInfo.pCommandBuffers(stack.pointers(this.screenshotCommandBuffers[rawResolveIndex].address()))
 
                 queueManager.generalQueueFamily.getRandomPriorityQueue().submit(pSubmitInfo, this.fence)
                 assertVkSuccess(
@@ -264,10 +313,9 @@ class ResolveHelper(
                 )
 
                 for ((resolvedImage, screenshotHostBuffer, suffix) in arrayOf(
-                    Triple(leftResolvedImage, leftScreenshotHostBuffer, "Left"),
-                    Triple(rightResolvedImage, rightScreenshotHostBuffer, "Right")
-                )
-                ) {
+                    Triple(this.leftResolveImages[leftResolveIndex], leftScreenshotHostBuffer, "Left"),
+                    Triple(this.rightResolveImages[rightResolveIndex], rightScreenshotHostBuffer, "Right")
+                )) {
                     val screenshot = BufferedImage(resolvedImage.width, resolvedImage.height, TYPE_INT_ARGB)
                     for (x in 0 until resolvedImage.width) {
                         for (y in 0 until resolvedImage.height) {

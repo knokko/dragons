@@ -42,7 +42,9 @@ class MemoryScope(
             vkFreeMemory(vkDevice, persistentStagingMemory, null)
         }
         for (deviceImage in deviceImages) {
-            vkDestroyImageView(vkDevice, deviceImage.fullView!!, null)
+            if (deviceImage.fullView != null) {
+                vkDestroyImageView(vkDevice, deviceImage.fullView!!, null)
+            }
             vkDestroyImage(vkDevice, deviceImage.handle, null)
         }
         if (deviceImageMemory != null) {

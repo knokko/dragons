@@ -107,7 +107,7 @@ internal fun createOpenXrSwapchains(
         (0 until 2).map {
             val ciSwapchain = XrSwapchainCreateInfo.calloc(stack)
             ciSwapchain.`type$Default`()
-            // TODO I think it should be transfer dst since the final images will be copied to the swapchain images each frame
+            // The transfer destination usage is required because it will be used as destination for vkCmdResolveImage
             ciSwapchain.usageFlags(XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT.toLong())
             ciSwapchain.format(swapchainColorFormat.toLong())
             ciSwapchain.sampleCount(1)

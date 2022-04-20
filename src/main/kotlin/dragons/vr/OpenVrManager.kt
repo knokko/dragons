@@ -2,7 +2,14 @@ package dragons.vr
 
 import dragons.init.GameInitProperties
 import dragons.init.trouble.SimpleStartupException
+import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.state.StaticGraphicsState
+import dragons.vulkan.RenderImageInfo
+import dragons.vulkan.memory.VulkanImage
+import dragons.vulkan.memory.claim.ImageMemoryClaim
+import dragons.vulkan.queue.QueueManager
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.lwjgl.openvr.*
@@ -87,6 +94,10 @@ class OpenVrManager: VrManager {
 
     private var requestedStop = false
     private lateinit var graphicsState: StaticGraphicsState
+    private lateinit var resolveHelper: ResolveHelper
+
+    private val leftResolveImage = CompletableDeferred<VulkanImage>()
+    private val rightResolveImage = CompletableDeferred<VulkanImage>()
 
     init {
         VRCompositor_SetExplicitTimingMode(
@@ -140,6 +151,27 @@ class OpenVrManager: VrManager {
         return result
     }
 
+    override fun claimStaticMemory(
+        agent: VulkanStaticMemoryUser.Agent, queueManager: QueueManager, renderImageInfo: RenderImageInfo
+    ) {
+        val width = this.getWidth()
+        val height = this.getHeight()
+
+        for (resolveImage in arrayOf(this.leftResolveImage, this.rightResolveImage)) {
+            agent.claims.images.add(ImageMemoryClaim(
+                width = width, height = height,
+                queueFamily = queueManager.generalQueueFamily,
+                imageFormat = renderImageInfo.colorFormat,
+                tiling = VK_IMAGE_TILING_OPTIMAL, samples = VK_SAMPLE_COUNT_1_BIT,
+                // Note: transfer_src and sampled are required by OpenVR; transfer_dst is required for resolving itself
+                imageUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT or VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
+                initialLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, accessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                dstPipelineStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT, prefill = null, storeResult = resolveImage
+            ))
+        }
+    }
+
     // I might want to cache this
     override fun getWidth(): Int {
         return stackPush().use { stack ->
@@ -161,6 +193,16 @@ class OpenVrManager: VrManager {
 
     override fun setGraphicsState(graphicsState: StaticGraphicsState) {
         this.graphicsState = graphicsState
+
+        // Note: the resolve images should be finished by now, so this shouldn't block for long
+        val (leftResolveImage, rightResolveImage) = runBlocking { Pair(leftResolveImage.await(), rightResolveImage.await()) }
+
+        this.resolveHelper = ResolveHelper(
+            graphicsState = graphicsState,
+            defaultResolveImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            leftResolveImages = arrayOf(leftResolveImage),
+            rightResolveImages = arrayOf(rightResolveImage),
+        )
     }
 
     private fun vrToJomlMatrix(vrMatrix: HmdMatrix34): Matrix4f {
@@ -248,7 +290,7 @@ class OpenVrManager: VrManager {
         if (result != 0) println("VRCompositor_SubmitExplicitTimingData() returned $result")
     }
 
-    override fun submitFrames() {
+    override fun resolveAndSubmitFrames(waitSemaphore: Long?, takeScreenshot: Boolean) {
         stackPush().use { stack ->
             val queue = graphicsState.queueManager.generalQueueFamily.getRandomPriorityQueue()
 
@@ -269,11 +311,21 @@ class OpenVrManager: VrManager {
             vrTexture.eType(ETextureType_TextureType_Vulkan)
             vrTexture.eColorSpace(EColorSpace_ColorSpace_Auto)
 
+            // Note: the resolve images should be finished by now, so this shouldn't block for long
+            val (leftResolveImage, rightResolveImage) = runBlocking { Pair(leftResolveImage.await(), rightResolveImage.await()) }
+
+            if (waitSemaphore != null) {
+                this.resolveHelper.resolve(
+                    graphicsState.vkDevice, 0, 0,
+                    graphicsState.queueManager, waitSemaphore, takeScreenshot
+                )
+            }
+
             synchronized(queue) {
-                vulkanTexture.m_nImage(graphicsState.coreMemory.leftResolveImage.handle)
+                vulkanTexture.m_nImage(leftResolveImage.handle)
                 val leftResult = VRCompositor_Submit(EVREye_Eye_Left, vrTexture, null, EVRSubmitFlags_Submit_Default)
 
-                vulkanTexture.m_nImage(graphicsState.coreMemory.rightResolveImage.handle)
+                vulkanTexture.m_nImage(rightResolveImage.handle)
                 val rightResult = VRCompositor_Submit(EVREye_Eye_Right, vrTexture, null, EVRSubmitFlags_Submit_Default)
 
                 if (leftResult != 0 || rightResult != 0) {
@@ -286,6 +338,7 @@ class OpenVrManager: VrManager {
     override fun destroy() {
         getLogger("VR").info("Shutting down OpenVR")
         vkDeviceWaitIdle(graphicsState.vkDevice)
+        this.resolveHelper.destroy(graphicsState.vkDevice)
         VR_ShutdownInternal()
     }
 

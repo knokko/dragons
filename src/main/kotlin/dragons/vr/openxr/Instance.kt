@@ -67,7 +67,12 @@ internal fun createOpenXrInstance(
         ciInstance.enabledApiLayerNames(pLayersToEnable)
 
         val pInstance = stack.callocPointer(1)
-        assertXrSuccess(xrCreateInstance(ciInstance, pInstance), "CreateInstance")
+        val xrCreateInstanceResult = xrCreateInstance(ciInstance, pInstance)
+        if (xrCreateInstanceResult == XR_ERROR_INITIALIZATION_FAILED) {
+            // Some OpenXR runtimes will return this when no HMD is connected
+            return Pair(null, null)
+        }
+        assertXrSuccess(xrCreateInstanceResult, "CreateInstance")
         val xrInstance = XrInstance(pInstance[0], ciInstance)
 
         var xrDebugMessenger: XrDebugUtilsMessengerEXT? = null

@@ -16,7 +16,6 @@ class StaticGraphicsState(
     val queueManager: QueueManager,
 
     val renderImageInfo: RenderImageInfo,
-    val resolveHelper: ResolveHelper,
 
     val memoryScope: MemoryScope,
     val coreMemory: CoreStaticMemory,

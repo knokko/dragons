@@ -15,8 +15,7 @@ import org.lwjgl.openxr.XR10.*
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
-import org.lwjgl.vulkan.VK10.vkDestroyImageView
-import org.lwjgl.vulkan.VK10.vkGetPhysicalDeviceProperties
+import org.lwjgl.vulkan.VK10.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
 import java.lang.Thread.sleep
@@ -55,15 +54,14 @@ internal class OpenXrManager(
     private lateinit var xrSession: XrSession
     private lateinit var sessionState: SessionState
     private lateinit var renderSpace: XrSpace
-    private lateinit var swapchainCopyHelper: SwapchainCopyHelper
     private lateinit var swapchains: List<OpenXrSwapchain>
+    private lateinit var resolveHelper: ResolveHelper
 
     private lateinit var acquiredSwapchainImageIndices: List<Int>
 
     private var didRender = false
     private var nextDisplayTime = 0L
 
-    // TODO Ensure queue synchronization in xrBeginFrame, xrEndFrame, xrAcquireSwapchainImage, and xrReleaseSwapchainImage
     override fun createVulkanInstance(
         ciInstance: VkInstanceCreateInfo,
         pInstance: PointerBuffer
@@ -175,9 +173,14 @@ internal class OpenXrManager(
 
         this.sessionState = SessionState(xrInstance, xrSession)
         this.renderSpace = createRenderSpace(xrSession)
-        this.swapchainCopyHelper = SwapchainCopyHelper(graphicsState)
 
         this.swapchains = createOpenXrSwapchains(xrSession, graphicsState, width, height)
+        this.resolveHelper = ResolveHelper(
+            graphicsState = graphicsState,
+            defaultResolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            leftResolveImages = this.swapchains[0].images.toTypedArray(),
+            rightResolveImages = this.swapchains[1].images.toTypedArray()
+        )
     }
 
     override fun prepareRender(): Triple<Vector3f, Matrix4f, Matrix4f>? {
@@ -192,9 +195,11 @@ internal class OpenXrManager(
                     xrWaitFrame(xrSession, null, frameState), "WaitFrame"
                 )
 
-                assertXrSuccess(
-                    xrBeginFrame(xrSession, null), "BeginFrame"
-                )
+                synchronized(this.vkQueue.handle) {
+                    assertXrSuccess(
+                        xrBeginFrame(xrSession, null), "BeginFrame"
+                    )
+                }
 
                 val displayTime = frameState.predictedDisplayTime()
                 this.nextDisplayTime = displayTime
@@ -203,10 +208,12 @@ internal class OpenXrManager(
 
                     this.acquiredSwapchainImageIndices = this.swapchains.map { swapchain ->
                         val pSwapchainImageIndex = stack.callocInt(1)
-                        assertXrSuccess(
-                            xrAcquireSwapchainImage(swapchain.handle, null, pSwapchainImageIndex),
-                            "AcquireSwapchainImage"
-                        )
+                        synchronized(this.vkQueue.handle) {
+                            assertXrSuccess(
+                                xrAcquireSwapchainImage(swapchain.handle, null, pSwapchainImageIndex),
+                                "AcquireSwapchainImage"
+                            )
+                        }
                         pSwapchainImageIndex[0]
                     }
 
@@ -232,7 +239,7 @@ internal class OpenXrManager(
         // This is not needed in OpenXR
     }
 
-    override fun submitFrames() {
+    override fun resolveAndSubmitFrames(waitSemaphore: Long?, takeScreenshot: Boolean) {
         if (sessionState.shouldTryRender()) {
             stackPush().use { stack ->
                 val layers = if (didRender) {
@@ -246,16 +253,22 @@ internal class OpenXrManager(
                             xrWaitSwapchainImage(swapchain.handle, wiImage), "WaitSwapchainImage"
                         )
                     }
-                    swapchainCopyHelper.copyToSwapchainImages(
-                        swapchains[0].images[acquiredSwapchainImageIndices[0]],
-                        swapchains[1].images[acquiredSwapchainImageIndices[1]]
-                    )
+                    if (waitSemaphore != null) {
+                        resolveHelper.resolve(
+                            graphicsState.vkDevice,
+                            this.acquiredSwapchainImageIndices[0],
+                            this.acquiredSwapchainImageIndices[1],
+                            graphicsState.queueManager, waitSemaphore, takeScreenshot
+                        )
+                    }
 
                     for (swapchain in swapchains) {
-                        assertXrSuccess(
-                            xrReleaseSwapchainImage(swapchain.handle, null),
-                            "ReleaseSwapchainImage"
-                        )
+                        synchronized(this.vkQueue.handle) {
+                            assertXrSuccess(
+                                xrReleaseSwapchainImage(swapchain.handle, null),
+                                "ReleaseSwapchainImage"
+                            )
+                        }
                     }
 
                     val projectionViews = XrCompositionLayerProjectionView.calloc(2, stack)
@@ -294,15 +307,17 @@ internal class OpenXrManager(
                 eiFrame.environmentBlendMode(XR_ENVIRONMENT_BLEND_MODE_OPAQUE)
                 eiFrame.layers(layers)
 
-                assertXrSuccess(
-                    xrEndFrame(xrSession, eiFrame), "EndFrame"
-                )
+                synchronized(this.vkQueue.handle) {
+                    assertXrSuccess(
+                        xrEndFrame(xrSession, eiFrame), "EndFrame"
+                    )
+                }
             }
         }
     }
 
     override fun destroy() {
-        swapchainCopyHelper.destroy()
+        this.resolveHelper.destroy(graphicsState.vkDevice)
         lastViews.free()
         xrDestroySpace(renderSpace)
         for (swapchain in swapchains) {
