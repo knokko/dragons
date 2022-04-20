@@ -26,11 +26,7 @@ interface VulkanDeviceCreationListener: PluginInterface {
         /** The set of device extensions that were enabled */
         val enabledExtensions: Set<String>,
         /** The Vulkan 1.0 device features that were enabled */
-        val enabledFeatures10: VkPhysicalDeviceFeatures,
-        /** The Vulkan 1.1 device features that were enabled */
-        val enabledFeatures11: VkPhysicalDeviceVulkan11Features,
-        /** The Vulkan 1.2 device features that were enabled */
-        val enabledFeatures12: VkPhysicalDeviceVulkan12Features,
+        val enabledFeatures: VkPhysicalDeviceFeatures,
         /** The `QueueManager` of the game. Plug-ins can use this to retrieve the device queues they want. */
         val queueManager: QueueManager,
         /** The `VrManager` of the game. */

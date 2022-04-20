@@ -13,6 +13,7 @@ import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memAddress
 import org.lwjgl.vulkan.*
+import org.lwjgl.vulkan.KHRDrawIndirectCount.vkCmdDrawIndexedIndirectCountKHR
 import org.lwjgl.vulkan.VK12.*
 import java.util.*
 
@@ -168,7 +169,7 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
                 pluginState.graphics.basicGraphicsPipeline.pipelineLayout,
                 0, stack.longs(pluginGraphics.basicStaticDescriptorSet, pluginGraphics.basicDynamicDescriptorSet), null
             )
-            vkCmdDrawIndexedIndirectCount(
+            vkCmdDrawIndexedIndirectCountKHR(
                 commandBuffer,
                 pluginGraphics.buffers.indirectDrawDevice.buffer.handle, pluginGraphics.buffers.indirectDrawDevice.offset,
                 pluginGraphics.buffers.indirectDrawCountDevice.buffer.handle, pluginGraphics.buffers.indirectDrawCountDevice.offset,

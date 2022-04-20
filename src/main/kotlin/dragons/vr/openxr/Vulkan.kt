@@ -21,25 +21,13 @@ fun checkOpenXrVulkanVersion(xrInstance: XrInstance, xrSystemId: Long) {
 
         val minMajorVersion = XR_VERSION_MAJOR(xrRequirements.minApiVersionSupported()).toInt()
         val minMinorVersion = XR_VERSION_MINOR(xrRequirements.minApiVersionSupported()).toInt()
-        val maxMajorVersion = XR_VERSION_MAJOR(xrRequirements.maxApiVersionSupported()).toInt()
-        val maxMinorVersion = XR_VERSION_MINOR(xrRequirements.maxApiVersionSupported()).toInt()
 
         if (minMajorVersion > 1 || (minMajorVersion == 1 && minMinorVersion > 2)) {
             throw SimpleStartupException(
                 "Can't agree on Vulkan version",
                 listOf(
                     "The OpenXR runtime only supports Vulkan $minMajorVersion.$minMinorVersion and later,",
-                    "but this game only supports Vulkan 1.2"
-                )
-            )
-        }
-
-        if (maxMajorVersion < 1 || (maxMajorVersion == 1 && maxMinorVersion < 2)) {
-            throw SimpleStartupException(
-                "Can't agree on Vulkan version",
-                listOf(
-                    "The OpenXR runtime only supports Vulkan $maxMajorVersion.$maxMinorVersion and earlier,",
-                    "but this game only supports Vulkan 1.2"
+                    "but this game only supports Vulkan 1.0"
                 )
             )
         }

@@ -49,15 +49,9 @@ interface VulkanDeviceRater: PluginInterface {
          * A set containing all device extensions supported by *vulkanDevice*
          */
         val availableExtensions: Set<String>,
-        val properties10: VkPhysicalDeviceProperties,
-        val properties11: VkPhysicalDeviceVulkan11Properties,
-        val properties12: VkPhysicalDeviceVulkan12Properties,
+        val properties: VkPhysicalDeviceProperties,
         /** The supported Vulkan 1.0 features */
-        val availableFeatures10: VkPhysicalDeviceFeatures,
-        /** The supported Vulkan 1.1 features */
-        val availableFeatures11: VkPhysicalDeviceVulkan11Features,
-        /** The supported Vulkan 1.2 features */
-        val availableFeatures12: VkPhysicalDeviceVulkan12Features,
+        val availableFeatures: VkPhysicalDeviceFeatures,
         val memoryProperties: VkPhysicalDeviceMemoryProperties,
         /** The queue family properties of each queue of the physical device */
         val queueFamilyProperties: VkQueueFamilyProperties.Buffer,

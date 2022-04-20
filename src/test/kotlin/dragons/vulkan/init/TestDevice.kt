@@ -1,6 +1,5 @@
 package dragons.vulkan.init
 
-import dragons.plugin.PluginInfo
 import dragons.plugin.PluginInstance
 import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.vulkan.VulkanDeviceActor
@@ -13,7 +12,6 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memPutInt
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
-import java.util.jar.JarInputStream
 
 class TestDevice {
 
@@ -21,7 +19,7 @@ class TestDevice {
     fun testGetEnabledFeatures10() {
         stackPush().use { stack ->
             val features = VkPhysicalDeviceFeatures.calloc(stack)
-            assertTrue(getEnabledFeatures(features).isEmpty());
+            assertTrue(getEnabledFeatures(features).isEmpty())
 
             features.drawIndirectFirstInstance(true)
             assertEquals(setOf("DRAWINDIRECTFIRSTINSTANCE"), getEnabledFeatures(features))
@@ -124,45 +122,17 @@ class TestDevice {
             "extension1", "hello?", "extension2", "extension3", "extension4", "extension5", "extension6", "extension7"
         )
 
-        val availableFeaturesSet10 = setOf(
+        val availableFeaturesSet = setOf(
             "DRAWINDIRECTFIRSTINSTANCE", "DEPTHCLAMP", "FILLMODENONSOLID", "DEPTHBOUNDS", "FRAGMENTSTORESANDATOMICS"
-        )
-        val availableFeaturesSet11 = setOf(
-            "MULTIVIEW", "SHADERDRAWPARAMETERS", "VARIABLEPOINTERS", "PROTECTEDMEMORY", "SAMPLERYCBCRCONVERSION"
-        )
-        val availableFeaturesSet12 = setOf(
-            "DRAWINDIRECTCOUNT", "BUFFERDEVICEADDRESS", "HOSTQUERYRESET", "SHADERFLOAT16", "DESCRIPTORBINDINGPARTIALLYBOUND"
         )
 
         fun testShared(agent: VulkanDeviceActor.Agent) {
             // The available features should be correct
-            assertEquals(availableFeaturesSet10, getEnabledFeatures(agent.availableFeatures10))
-            assertEquals(availableFeaturesSet11, getEnabledFeatures(agent.availableFeatures11))
-            assertEquals(availableFeaturesSet12, getEnabledFeatures(agent.availableFeatures12))
+            assertEquals(availableFeaturesSet, getEnabledFeatures(agent.availableFeatures))
 
             // The requested and required features should be initially empty
-            assertTrue(getEnabledFeatures(agent.requestedFeatures10).isEmpty())
-            assertTrue(getEnabledFeatures(agent.requestedFeatures11).isEmpty())
-            assertTrue(getEnabledFeatures(agent.requestedFeatures12).isEmpty())
-            assertTrue(getEnabledFeatures(agent.requiredFeatures10).isEmpty())
-            assertTrue(getEnabledFeatures(agent.requiredFeatures11).isEmpty())
-            assertTrue(getEnabledFeatures(agent.requiredFeatures12).isEmpty())
-
-            // And their sTypes should be correct (also the available features)
-            assertEquals(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES, agent.availableFeatures11.sType())
-            assertEquals(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES, agent.requestedFeatures11.sType())
-            assertEquals(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES, agent.requiredFeatures11.sType())
-            assertEquals(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, agent.availableFeatures12.sType())
-            assertEquals(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, agent.requestedFeatures12.sType())
-            assertEquals(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, agent.requiredFeatures12.sType())
-
-            // And each pNext should be 0
-            assertEquals(0, agent.availableFeatures11.pNext())
-            assertEquals(0, agent.availableFeatures12.pNext())
-            assertEquals(0, agent.requestedFeatures11.pNext())
-            assertEquals(0, agent.requestedFeatures12.pNext())
-            assertEquals(0, agent.requiredFeatures11.pNext())
-            assertEquals(0, agent.requiredFeatures12.pNext())
+            assertTrue(getEnabledFeatures(agent.requestedFeatures).isEmpty())
+            assertTrue(getEnabledFeatures(agent.requiredFeatures).isEmpty())
 
             assertNull(agent.extendNextChain)
         }
@@ -179,17 +149,9 @@ class TestDevice {
                 agent.requestedExtensions.add("extension7")
                 agent.requiredExtensions.add("extension4")
 
-                agent.requestedFeatures10.drawIndirectFirstInstance(true)
-                agent.requestedFeatures10.sparseResidency16Samples(true)
-                agent.requiredFeatures10.depthClamp(true)
-
-                agent.requestedFeatures11.multiview(true)
-                agent.requestedFeatures11.multiviewTessellationShader(true)
-                agent.requiredFeatures11.shaderDrawParameters(true)
-
-                agent.requestedFeatures12.drawIndirectCount(true)
-                agent.requestedFeatures12.bufferDeviceAddressCaptureReplay(true)
-                agent.requiredFeatures12.bufferDeviceAddress(true)
+                agent.requestedFeatures.drawIndirectFirstInstance(true)
+                agent.requestedFeatures.sparseResidency16Samples(true)
+                agent.requiredFeatures.depthClamp(true)
             }
         }
 
@@ -205,17 +167,9 @@ class TestDevice {
                 agent.requestedExtensions.add("extension7")
                 agent.requiredExtensions.add("extension6")
 
-                agent.requestedFeatures10.fillModeNonSolid(true)
-                agent.requestedFeatures10.inheritedQueries(true)
-                agent.requiredFeatures10.depthBounds(true)
-
-                agent.requestedFeatures11.variablePointers(true)
-                agent.requestedFeatures11.multiviewGeometryShader(true)
-                agent.requiredFeatures11.protectedMemory(true)
-
-                agent.requestedFeatures12.hostQueryReset(true)
-                agent.requestedFeatures12.descriptorBindingSampledImageUpdateAfterBind(true)
-                agent.requiredFeatures12.shaderFloat16(true)
+                agent.requestedFeatures.fillModeNonSolid(true)
+                agent.requestedFeatures.inheritedQueries(true)
+                agent.requiredFeatures.depthBounds(true)
             }
         }
 
@@ -233,16 +187,8 @@ class TestDevice {
 
             val ciDevice = VkDeviceCreateInfo.calloc(stack)
 
-            val availableFeatures10 = VkPhysicalDeviceFeatures.calloc(stack)
-            enableFeatures(availableFeatures10, availableFeaturesSet10)
-
-            val availableFeatures11 = VkPhysicalDeviceVulkan11Features.calloc(stack)
-            availableFeatures11.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES)
-            enableFeatures(availableFeatures11, availableFeaturesSet11)
-
-            val availableFeatures12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
-            availableFeatures12.sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)
-            enableFeatures(availableFeatures12, availableFeaturesSet12)
+            val availableFeatures = VkPhysicalDeviceFeatures.calloc(stack)
+            enableFeatures(availableFeatures, availableFeaturesSet)
 
             val queueFamilies = VkQueueFamilyProperties.calloc(3, stack)
             run {
@@ -272,7 +218,7 @@ class TestDevice {
 
             val populateResult = populateDeviceCreateInfo(
                 ciDevice, vkInstance, vkPhysicalDevice, stack, pluginManager, vrManager, availableExtensions,
-                queueFamilies, availableFeatures10, availableFeatures11, availableFeatures12
+                queueFamilies, availableFeatures
             )
 
             assertEquals(VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, ciDevice.sType())
@@ -303,25 +249,13 @@ class TestDevice {
             assertEquals(0, ciDevice.enabledLayerCount())
 
             val expectedExtensions = setOf("extension1", "extension2", "extension3", "extension4", "extension5", "extension6", "extension7")
-            val expectedFeatures10 = setOf("DRAWINDIRECTFIRSTINSTANCE", "DEPTHCLAMP", "FILLMODENONSOLID", "DEPTHBOUNDS")
-            val expectedFeatures11 = setOf("MULTIVIEW", "SHADERDRAWPARAMETERS", "VARIABLEPOINTERS", "PROTECTEDMEMORY")
-            val expectedFeatures12 = setOf("DRAWINDIRECTCOUNT", "BUFFERDEVICEADDRESS", "HOSTQUERYRESET", "SHADERFLOAT16")
+            val expectedFeatures = setOf("DRAWINDIRECTFIRSTINSTANCE", "DEPTHCLAMP", "FILLMODENONSOLID", "DEPTHBOUNDS")
             assertEquals(expectedExtensions.size, ciDevice.enabledExtensionCount())
             assertEquals(expectedExtensions, decodeStringsToSet(ciDevice.ppEnabledExtensionNames()!!))
             assertEquals(expectedExtensions, populateResult.enabledExtensions)
 
-            assertEquals(expectedFeatures10, getEnabledFeatures(ciDevice.pEnabledFeatures()!!))
-            assertEquals(expectedFeatures10, getEnabledFeatures(populateResult.enabledFeatures10))
-            run {
-                val pFeatures11 = findInNextChain(ciDevice, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES)!!
-                assertEquals(expectedFeatures11, getEnabledFeatures(VkPhysicalDeviceVulkan11Features.create(pFeatures11.address())))
-                assertEquals(expectedFeatures11, getEnabledFeatures(populateResult.enabledFeatures11))
-            }
-            run {
-                val pFeatures12 = findInNextChain(ciDevice, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)!!
-                assertEquals(expectedFeatures12, getEnabledFeatures(VkPhysicalDeviceVulkan12Features.create(pFeatures12.address())))
-                assertEquals(expectedFeatures12, getEnabledFeatures(populateResult.enabledFeatures12))
-            }
+            assertEquals(expectedFeatures, getEnabledFeatures(ciDevice.pEnabledFeatures()!!))
+            assertEquals(expectedFeatures, getEnabledFeatures(populateResult.enabledFeatures))
 
             vkDestroyInstance(vkInstance, null)
         }

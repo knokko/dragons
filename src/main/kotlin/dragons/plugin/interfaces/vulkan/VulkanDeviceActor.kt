@@ -53,87 +53,33 @@ interface VulkanDeviceActor: PluginInterface {
 
         /**
          * The Vulkan 1.0 device features that are supported by `physicalDevice`. This will be queried using
-         * `vkGetPhysicalDeviceFeatures2`.
+         * `vkGetPhysicalDeviceFeatures`.
          */
-        val availableFeatures10: VkPhysicalDeviceFeatures,
-        /**
-         * The Vulkan 1.1 device features that are supported by `physicalDevice`. This will be queried using
-         * `vkGetPhysicalDeviceFeatures2`.
-         */
-        val availableFeatures11: VkPhysicalDeviceVulkan11Features,
-        /**
-         * The Vulkan 1.2 device features that are supported by `physicalDevice`. This will be queried using
-         * `vkGetPhysicalDeviceFeatures2`.
-         */
-        val availableFeatures12: VkPhysicalDeviceVulkan12Features,
+        val availableFeatures: VkPhysicalDeviceFeatures,
 
         /**
          * The Vulkan 1.0 device features that this plug-in would like to enable, but are not *required*. The plug-in
-         * can request device features by calling their corresponding methods on `requestedFeatures10` with `true` as
-         * only parameter. (Something like `agent.requestedFeatures10.featureName(true)`)
+         * can request device features by calling their corresponding methods on `requestedFeatures` with `true` as
+         * only parameter. (Something like `agent.requestedFeatures.featureName(true)`)
          *
          * Adding an available feature will guarantee that the feature will be enabled. Adding an unavailable feature
          * has no effect.
          *
          * All features will be false at the start of the call to `manipulateVulkanDevice`.
          */
-        val requestedFeatures10: VkPhysicalDeviceFeatures,
-        /**
-         * The Vulkan 1.1 device features that this plug-in would like to enable, but are not *required*. The plug-in
-         * can request device features by calling their corresponding methods on `requestedFeatures10` with `true` as
-         * only parameter. (Something like `agent.requestedFeatures11.featureName(true)`)
-         *
-         * Adding an available feature will guarantee that the feature will be enabled. Adding an unavailable feature
-         * has no effect.
-         *
-         * All features will be false at the start of the call to `manipulateVulkanDevice`.
-         */
-        val requestedFeatures11: VkPhysicalDeviceVulkan11Features,
-        /**
-         * The Vulkan 1.2 device features that this plug-in would like to enable, but are not *required*. The plug-in
-         * can request device features by calling their corresponding methods on `requestedFeatures10` with `true` as
-         * only parameter. (Something like `agent.requestedFeatures12.featureName(true)`)
-         *
-         * Adding an available feature will guarantee that the feature will be enabled. Adding an unavailable feature
-         * has no effect.
-         *
-         * All features will be false at the start of the call to `manipulateVulkanDevice`.
-         */
-        val requestedFeatures12: VkPhysicalDeviceVulkan12Features,
+        val requestedFeatures: VkPhysicalDeviceFeatures,
 
         /**
          * The Vulkan 1.0 device features that this plug-in **requires** to work. The plug-in can require device
-         * features by calling their corresponding methods on `requiredFeatures10` with `true` as only parameter.
-         * (Something like `agent.requiredFeatures10.featureName(true)`)
+         * features by calling their corresponding methods on `requiredFeatures` with `true` as only parameter.
+         * (Something like `agent.requiredFeatures.featureName(true)`)
          *
          * Adding an available feature will guarantee that the feature will be enabled. Adding an unavailable feature
          * will abort the game.
          *
          * All features will be false at the start of the call to `manipulateVulkanDevice`.
          */
-        val requiredFeatures10: VkPhysicalDeviceFeatures,
-        /**
-         * The Vulkan 1.1 device features that this plug-in **requires** to work. The plug-in can require device
-         * features by calling their corresponding methods on `requiredFeatures11` with `true` as only parameter.
-         * (Something like `agent.requiredFeatures11.featureName(true)`)
-         *
-         * Adding an available feature will guarantee that the feature will be enabled. Adding an unavailable feature
-         * will abort the game.
-         *
-         * All features will be false at the start of the call to `manipulateVulkanDevice`.
-         */
-        val requiredFeatures11: VkPhysicalDeviceVulkan11Features,
-        /**
-         * The Vulkan 1.2 device features that this plug-in **requires** to work. The plug-in can require device
-         * features by calling their corresponding methods on `requiredFeatures12` with `true` as only parameter.
-         * (Something like `agent.requiredFeatures12.featureName(true)`)
-         *
-         * Adding an available feature will guarantee that the feature will be enabled. Adding an unavailable feature
-         * will abort the game.
-         *
-         * All features will be false at the start of the call to `manipulateVulkanDevice`.
-         */
-        val requiredFeatures12: VkPhysicalDeviceVulkan12Features,
+        val requiredFeatures: VkPhysicalDeviceFeatures,
 
         /**
          * The current `pNext` chain. This chain will contain all the structures added by the plug-ins whose

@@ -2,6 +2,8 @@ package dragons.plugins.standard.vulkan
 
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanDeviceRater
+import org.lwjgl.vulkan.KHRDrawIndirectCount.VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME
+import org.lwjgl.vulkan.KHRShaderDrawParameters.VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME
 import org.lwjgl.vulkan.VK12.*
 
 class StandardVulkanDeviceRater: VulkanDeviceRater {
@@ -11,34 +13,38 @@ class StandardVulkanDeviceRater: VulkanDeviceRater {
             VulkanDeviceRater.InsufficientReason.missesRequiredFeature(feature)
         )
 
-        if (!agent.availableFeatures12.drawIndirectCount()) {
-            agent.rating = missingFeatureRating("drawIndirectCount")
+        fun missingExtensionRating(extension: String) = VulkanDeviceRater.Rating.insufficient(
+            VulkanDeviceRater.InsufficientReason.missesRequiredExtension(extension)
+        )
+
+        if (!agent.availableExtensions.contains(VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME)) {
+            agent.rating = missingExtensionRating(VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME)
             return
         }
 
-        if (!agent.availableFeatures11.shaderDrawParameters()) {
-            agent.rating = missingFeatureRating("shaderDrawParameters")
+        if (!agent.availableExtensions.contains(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME)) {
+            agent.rating = missingExtensionRating(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME)
             return
         }
 
-        if (!agent.availableFeatures10.drawIndirectFirstInstance()) {
+        if (!agent.availableFeatures.drawIndirectFirstInstance()) {
             agent.rating = missingFeatureRating("drawIndirectFirstInstance")
             return
         }
-        if (!agent.availableFeatures10.tessellationShader()) {
+        if (!agent.availableFeatures.tessellationShader()) {
             agent.rating = missingFeatureRating("tessellationShader")
             return
         }
-        if (!agent.availableFeatures10.samplerAnisotropy()) {
+        if (!agent.availableFeatures.samplerAnisotropy()) {
             agent.rating = missingFeatureRating("samplerAnisotropy")
             return
         }
 
         var score = 0u
-        if (agent.properties10.deviceType() == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+        if (agent.properties.deviceType() == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
             score += 2000u
         }
-        if (agent.properties10.deviceType() == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
+        if (agent.properties.deviceType() == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
             score += 1000u
         }
 
