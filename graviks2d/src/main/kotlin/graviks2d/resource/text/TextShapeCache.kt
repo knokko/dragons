@@ -95,7 +95,6 @@ internal class TextShapeCache(
             ciTextAtlas.extent().set(this.width, this.height, 1)
             ciTextAtlas.mipLevels(1)
             ciTextAtlas.arrayLayers(1)
-            // TODO Add support for multisampling
             ciTextAtlas.samples(VK_SAMPLE_COUNT_1_BIT)
             ciTextAtlas.tiling(VK_IMAGE_TILING_OPTIMAL)
             ciTextAtlas.sharingMode(VK_SHARING_MODE_EXCLUSIVE)

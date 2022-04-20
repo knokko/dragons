@@ -60,9 +60,10 @@ internal fun createTextOddPipelineColorBlend(
 internal fun createTextPipelineMultisampleState(
     stack: MemoryStack
 ): VkPipelineMultisampleStateCreateInfo {
+    // Note: instead of using multisampling, the text renderer simply claims bigger space for some characters and
+    // downscales them when drawing
     val ciMultisample = VkPipelineMultisampleStateCreateInfo.calloc(stack)
     ciMultisample.`sType$Default`()
-    // TODO Use more samples
     ciMultisample.rasterizationSamples(VK_SAMPLE_COUNT_1_BIT)
     ciMultisample.sampleShadingEnable(false)
 

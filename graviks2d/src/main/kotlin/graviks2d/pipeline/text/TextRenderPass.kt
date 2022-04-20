@@ -9,7 +9,6 @@ internal fun createTextRenderPass(
     vkDevice: VkDevice, stack: MemoryStack
 ): Long {
 
-    // TODO Handle multisampling
     val attachments = VkAttachmentDescription.calloc(2, stack)
     val countAttachment = attachments[0]
     countAttachment.format(TEXT_COLOR_FORMAT)
