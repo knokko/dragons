@@ -54,6 +54,10 @@ class DebugVulkanInstance: VulkanInstanceActor, VulkanInstanceCreationListener, 
                         messageTypesString += "[General]"
                     }
                     if ((messageTypes and VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0) {
+                        // This warning occurs every frame because SteamVR likes VK_IMAGE_LAYOUT_GENERAL
+                        if (callbackData.messageIdNumber() == 1303270965) {
+                            return@pfnUserCallback VK_FALSE
+                        }
                         messageTypesString += "[Performance]"
                     }
 
