@@ -108,7 +108,7 @@ internal fun createOpenXrSwapchains(
             val ciSwapchain = XrSwapchainCreateInfo.calloc(stack)
             ciSwapchain.`type$Default`()
             // The transfer destination usage is required because it will be used as destination for vkCmdResolveImage
-            ciSwapchain.usageFlags(XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT.toLong())
+            ciSwapchain.usageFlags((XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT or XR_SWAPCHAIN_USAGE_TRANSFER_SRC_BIT).toLong())
             ciSwapchain.format(swapchainColorFormat.toLong())
             ciSwapchain.sampleCount(1)
             ciSwapchain.width(width)
