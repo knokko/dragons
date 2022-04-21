@@ -77,6 +77,8 @@ class DummyVrManager(
         this.resolveHelper = ResolveHelper(
             graphicsState = graphicsState,
             defaultResolveImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            defaultResolveImageStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
+            defaultResolveImageDstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
             leftResolveImages = arrayOf(leftResolveImage),
             rightResolveImages = arrayOf(rightResolveImage),
         )

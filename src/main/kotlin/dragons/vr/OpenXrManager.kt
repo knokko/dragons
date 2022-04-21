@@ -178,6 +178,8 @@ internal class OpenXrManager(
         this.resolveHelper = ResolveHelper(
             graphicsState = graphicsState,
             defaultResolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            defaultResolveImageStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            defaultResolveImageDstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
             leftResolveImages = this.swapchains[0].images.toTypedArray(),
             rightResolveImages = this.swapchains[1].images.toTypedArray()
         )
