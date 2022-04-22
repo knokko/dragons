@@ -6,6 +6,7 @@ import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.queue.QueueManager
 import dragons.vulkan.util.assertVkSuccess
 import org.joml.Matrix4f
+import org.joml.Vector2f
 import org.joml.Vector3f
 import org.lwjgl.PointerBuffer
 import org.lwjgl.system.MemoryStack
@@ -128,6 +129,10 @@ interface VrManager {
     fun markFirstFrameQueueSubmit()
 
     fun resolveAndSubmitFrames(waitSemaphore: Long?, takeScreenshot: Boolean)
+
+    fun getMovementInputDirection(): Vector2f {
+        TODO()
+    }
 
     fun destroy()
 

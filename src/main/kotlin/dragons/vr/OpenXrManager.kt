@@ -6,6 +6,7 @@ import dragons.vr.openxr.*
 import dragons.vr.openxr.createOpenXrInstance
 import dragons.vulkan.queue.DeviceQueue
 import org.joml.Matrix4f
+import org.joml.Vector2f
 import org.joml.Vector3f
 import org.lwjgl.PointerBuffer
 import org.lwjgl.openxr.*
@@ -316,6 +317,10 @@ internal class OpenXrManager(
                 }
             }
         }
+    }
+
+    override fun getMovementInputDirection(): Vector2f {
+
     }
 
     override fun destroy() {
