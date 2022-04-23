@@ -2,6 +2,7 @@ package dragons.vr
 
 import dragons.init.GameInitProperties
 import dragons.state.StaticGraphicsState
+import dragons.vr.controls.DragonControls
 import dragons.vr.openxr.*
 import dragons.vr.openxr.createOpenXrInstance
 import dragons.vulkan.queue.DeviceQueue
@@ -15,6 +16,8 @@ import org.lwjgl.openxr.KHRVulkanEnable2.*
 import org.lwjgl.openxr.XR10.*
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
+import org.lwjgl.system.MemoryUtil.memAddress
+import org.lwjgl.system.MemoryUtil.memUTF8
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
 import org.slf4j.Logger
@@ -57,6 +60,7 @@ internal class OpenXrManager(
     private lateinit var renderSpace: XrSpace
     private lateinit var swapchains: List<OpenXrSwapchain>
     private lateinit var resolveHelper: ResolveHelper
+    private lateinit var input: XrInput
 
     private lateinit var acquiredSwapchainImageIndices: List<Int>
 
@@ -184,6 +188,8 @@ internal class OpenXrManager(
             leftResolveImages = this.swapchains[0].images.toTypedArray(),
             rightResolveImages = this.swapchains[1].images.toTypedArray()
         )
+
+        this.input = XrInput(this.xrInstance, this.xrSession)
     }
 
     override fun prepareRender(): Triple<Vector3f, Matrix4f, Matrix4f>? {
@@ -319,8 +325,8 @@ internal class OpenXrManager(
         }
     }
 
-    override fun getMovementInputDirection(): Vector2f {
-
+    override fun getDragonControls(): DragonControls {
+        return this.input.getDragonControls()
     }
 
     override fun destroy() {

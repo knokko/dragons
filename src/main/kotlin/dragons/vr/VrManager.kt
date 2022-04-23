@@ -2,6 +2,7 @@ package dragons.vr
 
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.state.StaticGraphicsState
+import dragons.vr.controls.DragonControls
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.queue.QueueManager
 import dragons.vulkan.util.assertVkSuccess
@@ -130,7 +131,7 @@ interface VrManager {
 
     fun resolveAndSubmitFrames(waitSemaphore: Long?, takeScreenshot: Boolean)
 
-    fun getMovementInputDirection(): Vector2f {
+    fun getDragonControls(): DragonControls {
         TODO()
     }
 

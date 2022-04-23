@@ -6,6 +6,7 @@ import dragons.plugins.standard.vulkan.command.createMainMenuRenderCommands
 import dragons.plugins.standard.vulkan.command.fillDrawingBuffers
 import dragons.state.StaticGameState
 import dragons.vulkan.util.assertVkSuccess
+import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
@@ -41,11 +42,42 @@ class StandardMainMenu: MainMenuManager {
         // TODO Add more iterations (and eventually loop indefinitely)
         var numIterationsLeft = 1000
 
+        val currentPosition = Vector3f()
+        var currentRotation = 0f
+
         while (!gameState.vrManager.shouldStop()) {
+            val currentInput = gameState.vrManager.getDragonControls()
+
             val eyeMatrices = gameState.vrManager.prepareRender()
             if (eyeMatrices != null) {
 
                 val (averageEyePosition, leftEyeMatrix, rightEyeMatrix) = eyeMatrices
+                val currentMovement = currentInput.walkDirection
+
+                currentPosition.x += currentMovement.x * 0.1f
+                currentPosition.z -= currentMovement.y * 0.1f
+
+                currentRotation += currentInput.cameraTurnDirection * 2f
+
+                if (currentInput.isGrabbingLeft) {
+                    currentPosition.y -= 0.1f
+                }
+                if (currentInput.isGrabbingRight) {
+                    currentPosition.y += 0.1f
+                }
+
+                // Work around to let the user choose to end the game
+                if (currentMovement.length() > 0f) {
+                    numIterationsLeft = -1
+                }
+                if (currentInput.isSpitting) {
+                    numIterationsLeft = 1
+                }
+
+                averageEyePosition.add(currentPosition)
+                leftEyeMatrix.translate(currentPosition)
+                rightEyeMatrix.translate(currentPosition)
+
                 fillDrawingBuffers(pluginInstance, gameState, averageEyePosition, leftEyeMatrix, rightEyeMatrix)
 
                 stackPush().use { stack ->
@@ -68,7 +100,7 @@ class StandardMainMenu: MainMenuManager {
                 )
             }
 
-            numIterationsLeft--
+            numIterationsLeft -= 1
             if (numIterationsLeft == 0) {
                 gameState.vrManager.requestStop()
             }
