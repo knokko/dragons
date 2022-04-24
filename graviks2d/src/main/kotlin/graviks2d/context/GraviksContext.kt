@@ -13,6 +13,7 @@ import graviks2d.resource.text.*
 import graviks2d.resource.text.TextShapeCache
 import graviks2d.resource.text.placeText
 import graviks2d.util.Color
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import java.lang.IllegalStateException
 import java.lang.Integer.min
@@ -466,9 +467,21 @@ class GraviksContext(
         currentDepth = newDepth
     }
 
-    fun copyColorImageTo(destImage: Long?, destBuffer: Long?) {
+    fun copyColorImageTo(
+        destImage: Long?, destBuffer: Long?,
+        signalSemaphore: Long? = null, submissionMarker: CompletableDeferred<Unit>? = null,
+        originalImageLayout: Int? = null, finalImageLayout: Int? = null,
+        imageSrcAccessMask: Int? = null, imageSrcStageMask: Int? = null,
+        imageDstAccessMask: Int? = null, imageDstStageMask: Int? = null
+    ) {
         hardFlush()
-        commands.copyColorImageTo(destImage = destImage, destBuffer = destBuffer)
+        commands.copyColorImageTo(
+            destImage = destImage, destBuffer = destBuffer,
+            signalSemaphore = signalSemaphore, submissionMarker = submissionMarker,
+            originalImageLayout = originalImageLayout, finalImageLayout = finalImageLayout,
+            imageSrcAccessMask = imageSrcAccessMask, imageSrcStageMask = imageSrcStageMask,
+            imageDstAccessMask = imageDstAccessMask, imageDstStageMask = imageDstStageMask
+        )
     }
 
     fun destroy() {

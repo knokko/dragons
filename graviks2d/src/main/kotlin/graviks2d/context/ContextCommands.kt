@@ -2,6 +2,7 @@ package graviks2d.context
 
 import graviks2d.resource.text.rasterizeTextAtlas
 import graviks2d.util.assertSuccess
+import kotlinx.coroutines.CompletableDeferred
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
@@ -76,7 +77,7 @@ internal class ContextCommands(
         )
     }
 
-    private fun endSubmitWaitCommandBuffer(stack: MemoryStack) {
+    private fun endSubmitWaitCommandBuffer(stack: MemoryStack, signalSemaphore: Long?, submissionMarker: CompletableDeferred<Unit>?) {
         assertSuccess(
             vkEndCommandBuffer(this.commandBuffer), "vkEndCommandBuffer"
         )
@@ -85,12 +86,19 @@ internal class ContextCommands(
         val submitInfo = pSubmitInfo[0]
         submitInfo.`sType$Default`()
         submitInfo.waitSemaphoreCount(0)
+        if (signalSemaphore != null) {
+            submitInfo.pSignalSemaphores(stack.longs(signalSemaphore))
+        } else {
+            submitInfo.pSignalSemaphores(null)
+        }
         submitInfo.pCommandBuffers(stack.pointers(this.commandBuffer.address()))
 
         assertSuccess(
             this.context.instance.synchronizedQueueSubmit(pSubmitInfo, this.fence),
             "synchronizedQueueSubmit"
         )
+
+        submissionMarker?.complete(Unit)
 
         // If this simple command can't complete within this timeout, something is wrong
         val timeout = 1_000_000_000L
@@ -212,7 +220,12 @@ internal class ContextCommands(
         )
     }
 
-    fun copyColorImageTo(destImage: Long?, destBuffer: Long?) {
+    fun copyColorImageTo(
+        destImage: Long?, destBuffer: Long?, signalSemaphore: Long?, submissionMarker: CompletableDeferred<Unit>?,
+        originalImageLayout: Int?, imageSrcAccessMask: Int?, imageSrcStageMask: Int?,
+        finalImageLayout: Int?, imageDstAccessMask: Int?, imageDstStageMask: Int?
+    ) {
+
         stackPush().use { stack ->
             resetBeginCommandBuffer(stack)
 
@@ -230,6 +243,19 @@ internal class ContextCommands(
             }
 
             if (destImage != null) {
+                fun checkPresent(value: Int?, name: String) {
+                    if (value == null) {
+                        throw IllegalArgumentException("When destImage is not null, $name must not be null")
+                    }
+                }
+
+                checkPresent(originalImageLayout, "originalImageLayout")
+                checkPresent(imageSrcAccessMask, "imageSrcAccessMask")
+                checkPresent(imageSrcStageMask, "imageSrcStageMask")
+                checkPresent(finalImageLayout, "finalImageLayout")
+                checkPresent(imageDstAccessMask, "imageDstAccessMask")
+                checkPresent(imageDstStageMask, "imageDstStageMask")
+
                 val imageCopyRegions = VkImageCopy.calloc(1, stack)
                 val copyRegion = imageCopyRegions[0]
                 populateSubresource(copyRegion.srcSubresource())
@@ -238,13 +264,32 @@ internal class ContextCommands(
                 copyRegion.dstOffset { it.set(0, 0, 0) }
                 copyRegion.extent { it.set(this.context.width, this.context.height, 1) }
 
+                if (originalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+                    transitionImageLayout(
+                        stack, destImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                        currentLayout = originalImageLayout!!, desiredLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        srcStageMask = imageSrcStageMask!!, dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        srcAccessMask = imageSrcAccessMask!!, dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT
+                    )
+                }
+
                 vkCmdCopyImage(
                     this.commandBuffer,
                     this.context.targetImages.colorImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                     destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     imageCopyRegions
                 )
+
+                if (finalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+                    transitionImageLayout(
+                        stack, destImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                        currentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, desiredLayout = finalImageLayout!!,
+                        srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask = imageDstStageMask!!,
+                        srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT, dstAccessMask = imageDstAccessMask!!
+                    )
+                }
             }
+
             if (destBuffer != null) {
                 val bufferCopyRegions = VkBufferImageCopy.calloc(1, stack)
                 val copyRegion = bufferCopyRegions[0]
@@ -268,7 +313,7 @@ internal class ContextCommands(
                 VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
             )
 
-            endSubmitWaitCommandBuffer(stack)
+            endSubmitWaitCommandBuffer(stack, signalSemaphore, submissionMarker)
         }
     }
 
@@ -364,7 +409,7 @@ internal class ContextCommands(
                 vkCmdEndRenderPass(this.commandBuffer)
             }
 
-            endSubmitWaitCommandBuffer(stack)
+            endSubmitWaitCommandBuffer(stack, null, null)
         }
     }
 
