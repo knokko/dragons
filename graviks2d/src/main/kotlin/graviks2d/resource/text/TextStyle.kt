@@ -17,7 +17,7 @@ class TextStyle(
      * characters will be. The default value is 0.01. Increasing this value will
      * make the strokes thicker.
      */
-    val strokeHeightFraction: Float = 0.01f,
+    val strokeHeightFraction: Float = if (fillColor != strokeColor) { 0.01f } else { 0f },
     /**
      * Choose `null` to use the default font
      */
