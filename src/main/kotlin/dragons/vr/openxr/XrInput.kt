@@ -89,8 +89,6 @@ class XrInput(
                 this.dragonActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "dragon_grab_right", "Grab with right claw (dragon)"
             )
 
-            // Avoid code duplication by using the Khronos controller binding whenever possible
-            this.suggestKhronosSimpleControllerProfileBinding(stack)
             // TODO Also add suggested bindings for all other controllers
             this.suggestOculusTouchBindings(stack)
 
@@ -114,26 +112,8 @@ class XrInput(
         return pPath[0]
     }
 
-    private fun suggestKhronosSimpleControllerProfileBinding(stack: MemoryStack) {
-        // TODO Add hand pose actions
-        val suggestedBindings = XrActionSuggestedBinding.calloc(1, stack)
-
-        suggestedBindings[0].action(this.dragonToggleMenuAction)
-        suggestedBindings[0].binding(getPath(stack, "/user/hand/left/input/menu/click"))
-
-        val suggestedSimpleControllerBindings = XrInteractionProfileSuggestedBinding.calloc(stack)
-        suggestedSimpleControllerBindings.`type$Default`()
-        suggestedSimpleControllerBindings.interactionProfile(getPath(stack, "/interaction_profiles/khr/simple_controller"))
-        suggestedSimpleControllerBindings.suggestedBindings(suggestedBindings)
-
-        assertXrSuccess(
-            xrSuggestInteractionProfileBindings(xrInstance, suggestedSimpleControllerBindings),
-            "SuggestInteractionProfileBindings", "Khronos simple controller profile"
-        )
-    }
-
     private fun suggestOculusTouchBindings(stack: MemoryStack) {
-        val suggestedBindings = XrActionSuggestedBinding.calloc(9, stack)
+        val suggestedBindings = XrActionSuggestedBinding.calloc(10, stack)
 
         suggestedBindings[0].action(this.dragonWalkSideAction)
         suggestedBindings[0].binding(getPath(stack, "/user/hand/left/input/thumbstick/x"))
@@ -150,17 +130,20 @@ class XrInput(
         suggestedBindings[4].action(this.dragonUsePowerAction)
         suggestedBindings[4].binding(getPath(stack, "/user/hand/right/input/a/click"))
 
-        suggestedBindings[5].action(this.dragonToggleLeftWingAction)
-        suggestedBindings[5].binding(getPath(stack, "/user/hand/left/input/squeeze/value"))
+        suggestedBindings[5].action(this.dragonToggleMenuAction)
+        suggestedBindings[5].binding(getPath(stack, "/user/hand/left/input/menu/click"))
 
-        suggestedBindings[6].action(this.dragonToggleRightWingAction)
-        suggestedBindings[6].binding(getPath(stack, "/user/hand/right/input/squeeze/value"))
+        suggestedBindings[6].action(this.dragonToggleLeftWingAction)
+        suggestedBindings[6].binding(getPath(stack, "/user/hand/left/input/trigger/value"))
 
-        suggestedBindings[7].action(this.dragonGrabLeftAction)
-        suggestedBindings[7].binding(getPath(stack, "/user/hand/left/input/trigger/value"))
+        suggestedBindings[7].action(this.dragonToggleRightWingAction)
+        suggestedBindings[7].binding(getPath(stack, "/user/hand/right/input/trigger/value"))
 
-        suggestedBindings[8].action(this.dragonGrabRightAction)
-        suggestedBindings[8].binding(getPath(stack, "/user/hand/right/input/trigger/value"))
+        suggestedBindings[8].action(this.dragonGrabLeftAction)
+        suggestedBindings[8].binding(getPath(stack, "/user/hand/left/input/squeeze/value"))
+
+        suggestedBindings[9].action(this.dragonGrabRightAction)
+        suggestedBindings[9].binding(getPath(stack, "/user/hand/right/input/squeeze/value"))
 
         val suggestedOculusTouchBindings = XrInteractionProfileSuggestedBinding.calloc(stack)
         suggestedOculusTouchBindings.`type$Default`()
@@ -229,7 +212,6 @@ class XrInput(
             }
 
             DragonControls(
-                // TODO Take current head rotation into account
                 walkDirection = Vector2f(
                     getFloatValue(this.dragonWalkSideAction),
                     getFloatValue(this.dragonWalkForwardAction)

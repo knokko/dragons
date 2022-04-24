@@ -192,7 +192,7 @@ internal class OpenXrManager(
         this.input = XrInput(this.xrInstance, this.xrSession)
     }
 
-    override fun prepareRender(): Triple<Vector3f, Matrix4f, Matrix4f>? {
+    override fun prepareRender(extraRotationY: Float): Triple<Vector3f, Matrix4f, Matrix4f>? {
         val logger = getLogger("VR")
         this.sessionState.update()
         val result = if (this.sessionState.shouldTryRender()) {
@@ -226,7 +226,7 @@ internal class OpenXrManager(
                         pSwapchainImageIndex[0]
                     }
 
-                    getCameraMatrices(xrSession, renderSpace, lastViews, displayTime)
+                    getCameraMatrices(xrSession, renderSpace, lastViews, displayTime, extraRotationY)
                 } else {
                     logger.info("Shouldn't render")
                     null

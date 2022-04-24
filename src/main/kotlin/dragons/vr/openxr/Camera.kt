@@ -1,14 +1,14 @@
 package dragons.vr.openxr
 
-import org.joml.Math.tan
+import dragons.vr.leftViewMatrix
+import org.joml.Math.*
 import org.joml.Matrix4f
+import org.joml.Quaternionf
 import org.joml.Vector3f
 import org.lwjgl.openxr.*
 import org.lwjgl.openxr.XR10.*
-import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.slf4j.LoggerFactory.getLogger
-import java.nio.FloatBuffer
 
 internal fun createRenderSpace(xrSession: XrSession): XrSpace {
     return stackPush().use { stack ->
@@ -32,7 +32,14 @@ internal fun createRenderSpace(xrSession: XrSession): XrSpace {
     }
 }
 
-internal fun getCameraMatrices(xrSession: XrSession, renderSpace: XrSpace, pViews: XrView.Buffer, displayTime: Long): Triple<Vector3f, Matrix4f, Matrix4f>? {
+// TODO Don't use these global variables
+private var lastRealPosition = Vector3f()
+private var lastVirtualPosition = Vector3f()
+var lastExtraRotation = 0f
+
+internal fun getCameraMatrices(
+    xrSession: XrSession, renderSpace: XrSpace, pViews: XrView.Buffer, displayTime: Long, extraRotationY: Float
+): Triple<Vector3f, Matrix4f, Matrix4f>? {
     stackPush().use { stack ->
 
         val liView = XrViewLocateInfo.calloc(stack)
@@ -72,6 +79,23 @@ internal fun getCameraMatrices(xrSession: XrSession, renderSpace: XrSpace, pView
             return null
         }
 
+        val leftEyePosition = pViews[0].pose().`position$`()
+        val rightEyePosition = pViews[1].pose().`position$`()
+        val averageRealEyePosition = Vector3f(
+            leftEyePosition.x() + rightEyePosition.x(),
+            leftEyePosition.y() + rightEyePosition.y(),
+            leftEyePosition.z() + rightEyePosition.z()
+        ).mul(0.5f)
+
+        val realMovement = averageRealEyePosition.sub(lastRealPosition, Vector3f())
+        val virtualMovement = Vector3f(
+            cos(-lastExtraRotation) * realMovement.x + sin(-lastExtraRotation) * realMovement.z,
+            realMovement.y,
+            -sin(-lastExtraRotation) * realMovement.x + cos(-lastExtraRotation) * realMovement.z
+        )
+
+        val averageVirtualEyePosition = lastVirtualPosition.add(virtualMovement, Vector3f())
+
         val perEyeResults = (0 until 2).map { eyeIndex ->
             val fov = pViews[eyeIndex].fov()
 
@@ -86,23 +110,38 @@ internal fun getCameraMatrices(xrSession: XrSession, renderSpace: XrSpace, pView
 
             val position = pViews[eyeIndex].pose().`position$`()
             val orientation = pViews[eyeIndex].pose().orientation()
-            val viewMatrix = Matrix4f().translationRotateScaleInvert(
-                position.x(), position.y(), position.z(),
-                orientation.x(), orientation.y(), orientation.z(), orientation.w(),
-                1f, 1f, 1f
-            )
+            val viewMatrix = Matrix4f()
+                .rotateY(toRadians(extraRotationY))
+                //.rotateAround(Quaternionf().rotateY(toRadians(extraRotationY)), position.x(), position.y(), position.z())
+                .translate(
+                    position.x(), position.y(), position.z()
+                )
+                .translate(
+                    -averageRealEyePosition.x, -averageRealEyePosition.y, -averageRealEyePosition.z
+                )
+                .rotateAffine(
+                    Quaternionf(orientation.x(), orientation.y(), orientation.z(), orientation.w())
+                )
+
+                .invertAffine()
+
+            if (eyeIndex == 0) leftViewMatrix = Matrix4f(viewMatrix)
+
+//            val viewMatrix = Matrix4f().translationRotate(
+//                position.x() - averageEyePosition.x, position.y() - averageEyePosition.y, position.z() - averageEyePosition.z,
+//                orientation.x(), orientation.y(), orientation.z(), orientation.w()
+//            ).rotateY(toRadians(extraRotationY)).invertAffine()
 
             val eyeMatrix = projectionMatrix.mul(viewMatrix)
-            Pair(Vector3f(position.x(), position.y(), position.z()), eyeMatrix)
+            eyeMatrix
         }
 
-        val leftEyePosition = perEyeResults[0].first
-        val rightEyePosition = perEyeResults[1].first
-        val averageEyePosition = (leftEyePosition.add(rightEyePosition)).mul(0.5f)
+        val leftEyeMatrix = perEyeResults[0]
+        val rightEyeMatrix = perEyeResults[1]
 
-        val leftEyeMatrix = perEyeResults[0].second
-        val rightEyeMatrix = perEyeResults[1].second
+        lastRealPosition = averageRealEyePosition
+        lastVirtualPosition = Vector3f(averageVirtualEyePosition)
 
-        return Triple(averageEyePosition, leftEyeMatrix, rightEyeMatrix)
+        return Triple(averageVirtualEyePosition, leftEyeMatrix, rightEyeMatrix)
     }
 }

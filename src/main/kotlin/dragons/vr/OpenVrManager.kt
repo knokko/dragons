@@ -216,7 +216,9 @@ class OpenVrManager: VrManager {
         )
     }
 
-    private fun createEyeMatrix(stack: MemoryStack, pose: TrackedDevicePose, leftOrRight: Int): Pair<Matrix4f, Vector3f> {
+    private fun createEyeMatrix(
+        stack: MemoryStack, pose: TrackedDevicePose, leftOrRight: Int, extraRotationY: Float
+    ): Pair<Matrix4f, Vector3f> {
         val matrixBuffer = HmdMatrix34.calloc(stack)
 
         val pfLeft = stack.callocFloat(1)
@@ -226,7 +228,7 @@ class OpenVrManager: VrManager {
         VRSystem_GetProjectionRaw(leftOrRight, pfLeft, pfRight, pfTop, pfBottom)
         val projectionMatrix = composeProjection(pfLeft[0], pfRight[0], pfTop[0], pfBottom[0], 0.01f, 100f).scale(1f, -1f, 1f)
 
-        val transformToDeviceMatrix = vrToJomlMatrix(pose.mDeviceToAbsoluteTracking()).invert()
+        val transformToDeviceMatrix = vrToJomlMatrix(pose.mDeviceToAbsoluteTracking()).rotateY(extraRotationY).invert()
         val deviceToEyeMatrix = vrToJomlMatrix(VRSystem_GetEyeToHeadTransform(leftOrRight, matrixBuffer)).invert()
 
         val transformToEyeMatrix = deviceToEyeMatrix.mul(transformToDeviceMatrix)
@@ -261,7 +263,7 @@ class OpenVrManager: VrManager {
         return p
     }
 
-    override fun prepareRender(): Triple<Vector3f, Matrix4f, Matrix4f>? {
+    override fun prepareRender(extraRotationY: Float): Triple<Vector3f, Matrix4f, Matrix4f>? {
         var result: Triple<Vector3f, Matrix4f, Matrix4f>? = null
         stackPush().use { stack ->
             val renderPoses = TrackedDevicePose.calloc(k_unMaxTrackedDeviceCount, stack)
@@ -271,8 +273,8 @@ class OpenVrManager: VrManager {
             if (getPoseResult == 0) {
                 val renderPose = renderPoses[0]
                 if (renderPose.bPoseIsValid()) {
-                    val (leftEyeMatrix, leftEyePosition) = createEyeMatrix(stack, renderPose, EVREye_Eye_Left)
-                    val (rightEyeMatrix, rightEyePosition) = createEyeMatrix(stack, renderPose, EVREye_Eye_Right)
+                    val (leftEyeMatrix, leftEyePosition) = createEyeMatrix(stack, renderPose, EVREye_Eye_Left, extraRotationY)
+                    val (rightEyeMatrix, rightEyePosition) = createEyeMatrix(stack, renderPose, EVREye_Eye_Right, extraRotationY)
                     val averageEyePosition = leftEyePosition.add(rightEyePosition).mul(0.5f)
                     result = Triple(
                         averageEyePosition, leftEyeMatrix, rightEyeMatrix

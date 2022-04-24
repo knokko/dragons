@@ -203,6 +203,7 @@ fun fillDrawingBuffers(
     val firstTerrainIndex = (skyland.indices.offset / 4).toInt()
     val terrainVertexOffset = (skyland.vertices.offset / BasicVertex.SIZE).toInt()
 
+    val negativeEyePosition = averageEyePosition.negate(Vector3f())
 
     for (currentDrawCall in 0 until numTerrainDrawCalls) {
         val drawCall1 = VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + currentDrawCall * VkDrawIndexedIndirectCommand.SIZEOF)
@@ -212,7 +213,10 @@ fun fillDrawingBuffers(
         drawCall1.vertexOffset(terrainVertexOffset)
         drawCall1.firstInstance(currentDrawCall)
 
-        val transformationMatrix1 = Matrix4f().scale(10f).translate(-10f + 2f * ((currentDrawCall % 100) / 10), -4f + 4f * (currentDrawCall / 100), -10f + 2f * (currentDrawCall % 10))
+        val transformationMatrix1 = Matrix4f()
+            .translate(negativeEyePosition)
+            .scale(10f)
+            .translate(-10f + 2f * ((currentDrawCall % 100) / 10), -4f + 4f * (currentDrawCall / 100), -10f + 2f * (currentDrawCall % 10))
         transformationMatrix1.get(64 * currentDrawCall, buffers.transformationMatrixHost)
     }
 
@@ -237,7 +241,10 @@ fun fillDrawingBuffers(
 
                 for (flowerMatrixIndex in 0 until numFlowerMatrices) {
                     val transformationMatrix =
-                        Matrix4f().scale(1f).translate(6 * rng.nextFloat() - 3, 0f, 6 * rng.nextFloat() - 3)
+                        Matrix4f()
+                            .translate(6 * rng.nextFloat() - 3, 0f, 6 * rng.nextFloat() - 3)
+                            .translate(negativeEyePosition)
+                            .scale(1f)
                     transformationMatrix.get(64 * (baseMatrixIndex + flowerMatrixIndex), buffers.transformationMatrixHost)
                 }
             }
@@ -264,7 +271,10 @@ fun fillDrawingBuffers(
 
                 for (flowerMatrixIndex in 0 until numFlowerMatrices) {
                     val transformationMatrix =
-                        Matrix4f().scale(1f).translate(6 * rng.nextFloat() - 3, 0f, 6 * rng.nextFloat() - 3)
+                        Matrix4f()
+                            .translate(6 * rng.nextFloat() - 3, 0f, 6 * rng.nextFloat() - 3)
+                            .translate(negativeEyePosition)
+                            .scale(1f)
                     transformationMatrix.get(64 * (baseMatrixIndex + flowerMatrixIndex), buffers.transformationMatrixHost)
                 }
             }
@@ -272,7 +282,7 @@ fun fillDrawingBuffers(
 
     leftEyeMatrix.get(0, buffers.cameraHost)
     rightEyeMatrix.get(64, buffers.cameraHost)
-    buffers.cameraHost.putFloat(128, averageEyePosition.x)
-    buffers.cameraHost.putFloat(132, averageEyePosition.y)
-    buffers.cameraHost.putFloat(136, averageEyePosition.z)
+    buffers.cameraHost.putFloat(128, 0f)
+    buffers.cameraHost.putFloat(132, 0f)
+    buffers.cameraHost.putFloat(136, 0f)
 }

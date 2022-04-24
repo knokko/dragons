@@ -5,12 +5,19 @@ import dragons.plugin.interfaces.menu.MainMenuManager
 import dragons.plugins.standard.vulkan.command.createMainMenuRenderCommands
 import dragons.plugins.standard.vulkan.command.fillDrawingBuffers
 import dragons.state.StaticGameState
+import dragons.vr.leftViewMatrix
+import dragons.vr.openxr.lastExtraRotation
 import dragons.vulkan.util.assertVkSuccess
+import org.joml.AxisAngle4f
+import org.joml.Math.cos
+import org.joml.Math.sin
+import org.joml.Quaternionf
 import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
 import org.lwjgl.vulkan.VkSubmitInfo
+import kotlin.math.atan2
 
 class StandardMainMenu: MainMenuManager {
     override fun requestMainMenuControl(pluginInstance: PluginInstance, agent: MainMenuManager.Agent) {
@@ -43,21 +50,24 @@ class StandardMainMenu: MainMenuManager {
         var numIterationsLeft = 1000
 
         val currentPosition = Vector3f()
-        var currentRotation = 0f
+        var extraRotation = 0f
 
         while (!gameState.vrManager.shouldStop()) {
             val currentInput = gameState.vrManager.getDragonControls()
 
-            val eyeMatrices = gameState.vrManager.prepareRender()
+            val eyeMatrices = gameState.vrManager.prepareRender(extraRotation)
             if (eyeMatrices != null) {
 
                 val (averageEyePosition, leftEyeMatrix, rightEyeMatrix) = eyeMatrices
                 val currentMovement = currentInput.walkDirection
+                val currentDirection = leftViewMatrix.transformDirection(Vector3f(0f, 0f, 1f))
+                val currentRotation = atan2(currentDirection.x, currentDirection.z)
 
-                currentPosition.x += currentMovement.x * 0.1f
-                currentPosition.z -= currentMovement.y * 0.1f
+                currentPosition.x += 0.1f * (cos(currentRotation) * currentMovement.x + sin(currentRotation) * currentMovement.y)
+                currentPosition.z += 0.1f * (sin(currentRotation) * currentMovement.x - cos(currentRotation) * currentMovement.y)
 
-                currentRotation += currentInput.cameraTurnDirection * 2f
+                extraRotation += currentInput.cameraTurnDirection * 2f
+                lastExtraRotation = extraRotation
 
                 if (currentInput.isGrabbingLeft) {
                     currentPosition.y -= 0.1f
@@ -66,17 +76,15 @@ class StandardMainMenu: MainMenuManager {
                     currentPosition.y += 0.1f
                 }
 
-                // Work around to let the user choose to end the game
+                // Work around to let the user choose when to end the game
                 if (currentMovement.length() > 0f) {
                     numIterationsLeft = -1
                 }
-                if (currentInput.isSpitting) {
+                if (currentInput.shouldToggleMenu) {
                     numIterationsLeft = 1
                 }
 
                 averageEyePosition.add(currentPosition)
-                leftEyeMatrix.translate(currentPosition)
-                rightEyeMatrix.translate(currentPosition)
 
                 fillDrawingBuffers(pluginInstance, gameState, averageEyePosition, leftEyeMatrix, rightEyeMatrix)
 
