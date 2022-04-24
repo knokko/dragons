@@ -9,8 +9,12 @@ import dragons.plugins.standard.vulkan.texture.TextureType
 
 class MainMenuPreModels {
 
+    val zeroHeightTexture = PreTexture(type = TextureType.HEIGHT)
+
     val skylandColorTexture = PreTexture(type = TextureType.COLOR)
     val skylandHeightTexture = PreTexture(type = TextureType.HEIGHT)
+
+    val debugPanelTexture = PreTexture(type = TextureType.COLOR)
 
     val flowerStem1ColorTexture = PreTexture(type = TextureType.COLOR)
     val flowerStem1HeightTexture = PreTexture(type = TextureType.HEIGHT)
@@ -26,6 +30,7 @@ class MainMenuPreModels {
         listOf(
             skylandColorTexture,
             skylandHeightTexture,
+            debugPanelTexture,
             flowerStem1ColorTexture,
             flowerStem1HeightTexture,
             flowerTop1ColorTexture,
@@ -41,6 +46,12 @@ class MainMenuPreModels {
     val skyland = PreModel(
         colorTextures = listOf(skylandColorTexture.index),
         heightTextures = listOf(skylandHeightTexture.index),
+        numTransformationMatrices = 1
+    )
+
+    val debugPanel = PreModel(
+        colorTextures = listOf(debugPanelTexture.index),
+        heightTextures = listOf(zeroHeightTexture.index),
         numTransformationMatrices = 1
     )
 
@@ -60,6 +71,7 @@ class MainMenuPreModels {
         return MainMenuModels(
             textureSet = this.textureSet.await(),
             skyland = this.skyland.await(),
+            debugPanel = this.debugPanel.await(),
             flower1 = this.flower1.await(),
             flower2 = this.flower2.await()
         )

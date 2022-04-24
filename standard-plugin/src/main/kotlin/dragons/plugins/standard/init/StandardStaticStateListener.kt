@@ -5,6 +5,7 @@ import dragons.plugin.interfaces.general.StaticStateListener
 import dragons.plugins.standard.state.StandardGraphicsBuffers
 import dragons.plugins.standard.state.StandardGraphicsState
 import dragons.plugins.standard.state.StandardPluginState
+import dragons.plugins.standard.vulkan.panel.Panel
 import dragons.vulkan.util.assertVkSuccess
 import kotlinx.coroutines.runBlocking
 import org.lwjgl.system.MemoryStack.stackPush
@@ -72,6 +73,7 @@ class StandardStaticStateListener: StaticStateListener {
                 basicDynamicDescriptorPool = state.preGraphics.basicDynamicDescriptorPool.await(),
                 basicStaticDescriptorSet = state.preGraphics.basicStaticDescriptorSet.await(),
                 basicDynamicDescriptorSet = state.preGraphics.basicDynamicDescriptorSet.await(),
+                debugPanel = Panel(agent.gameState.graphics.graviksInstance, state.preGraphics.mainMenu.debugPanelTexture.image.await()),
                 basicSampler = state.preGraphics.basicSampler.await(),
 
                 buffers = StandardGraphicsBuffers(

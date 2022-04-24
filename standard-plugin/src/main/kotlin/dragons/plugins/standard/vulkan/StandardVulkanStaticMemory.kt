@@ -4,10 +4,7 @@ import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.model.PreModel
-import dragons.plugins.standard.vulkan.model.generator.FlowerGenerators
-import dragons.plugins.standard.vulkan.model.generator.ModelGenerator
-import dragons.plugins.standard.vulkan.model.generator.generateFlowerBushModel
-import dragons.plugins.standard.vulkan.model.generator.generateSkylandModel
+import dragons.plugins.standard.vulkan.model.generator.*
 import dragons.plugins.standard.vulkan.texture.PreTexture
 import dragons.plugins.standard.vulkan.vertex.BasicVertex
 import dragons.vulkan.memory.claim.BufferMemoryClaim
@@ -30,6 +27,10 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
     override fun claimStaticMemory(pluginInstance: PluginInstance, agent: VulkanStaticMemoryUser.Agent) {
         val preGraphics = (pluginInstance.state as StandardPluginState).preGraphics
 
+        claimHeightImage(
+            agent, 1, 1, preGraphics.mainMenu.zeroHeightTexture
+        ) { destBuffer -> destBuffer.putFloat(0, 0f) }
+
         val mainMenuSkyland = generateSkylandModel({
             0.5f
         }, preGraphics.mainMenu.skyland.colorTextures[0], preGraphics.mainMenu.skyland.heightTextures[0])
@@ -42,6 +43,24 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
             agent, 128, 128, preGraphics.mainMenu.skylandHeightTexture,
             "dragons/plugins/standard/images/testTerrainHeight.png", 0.001f
         )
+
+        agent.claims.images.add(
+            ImageMemoryClaim(
+                width = 1000, height = 5000,
+                queueFamily = agent.queueManager.generalQueueFamily,
+                bytesPerPixel = 4, imageFormat = VK_FORMAT_R8G8B8A8_UNORM, tiling = VK_IMAGE_TILING_OPTIMAL,
+                imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
+                initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                accessMask = VK_ACCESS_SHADER_READ_BIT, aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                dstPipelineStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                storeResult = preGraphics.mainMenu.debugPanelTexture.image, prefill = null
+            )
+        )
+        val debugPanel = generatePanelModel(
+            textureIndex = preGraphics.mainMenu.debugPanelTexture.index,
+            heightTextureIndex = preGraphics.mainMenu.zeroHeightTexture.index
+        )
+        claimVertexAndIndexBuffer(agent, preGraphics.mainMenu.debugPanel, debugPanel)
 
         val mainMenuFlower1 = generateFlowerBushModel(Array(8) { FlowerGenerators.modelProps1(
             stemColorTextureIndex = preGraphics.mainMenu.flowerStem1ColorTexture.index,

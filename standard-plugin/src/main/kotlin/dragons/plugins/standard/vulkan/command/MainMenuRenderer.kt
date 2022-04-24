@@ -8,6 +8,7 @@ import dragons.plugins.standard.vulkan.pipeline.updateBasicDynamicDescriptorSet
 import dragons.plugins.standard.vulkan.vertex.BasicVertex
 import dragons.state.StaticGameState
 import dragons.vulkan.util.assertVkSuccess
+import org.joml.Math.toRadians
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
@@ -191,7 +192,8 @@ fun fillDrawingBuffers(
     averageEyePosition: Vector3f, leftEyeMatrix: Matrix4f, rightEyeMatrix: Matrix4f
 ) {
     val numTerrainDrawCalls = 300
-    val numDrawCalls = numTerrainDrawCalls + 2
+    val numDebugPanels = 4
+    val numDrawCalls = numTerrainDrawCalls + numDebugPanels + 2
     val graphicsState = (pluginInstance.state as StandardPluginState).graphics
     val buffers = graphicsState.buffers
 
@@ -221,14 +223,48 @@ fun fillDrawingBuffers(
     }
 
     run {
+        val panel = graphicsState.mainMenu.debugPanel
+        val numPanelIndices = 6
+        val firstPanelIndex = (panel.indices.offset / 4).toInt()
+        val panelVertexOffset = (panel.vertices.offset / BasicVertex.SIZE).toInt()
+
+        val baseDrawIndex = numTerrainDrawCalls
+        val baseMatrixIndex = numTerrainDrawCalls
+        for (panelIndex in 0 until numDebugPanels) {
+            VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + (baseDrawIndex + panelIndex) * VkDrawIndexedIndirectCommand.SIZEOF)
+                .run {
+                    indexCount(numPanelIndices)
+                    instanceCount(1)
+                    firstIndex(firstPanelIndex)
+                    vertexOffset(panelVertexOffset)
+                    firstInstance(baseMatrixIndex + panelIndex)
+                }
+        }
+
+        val scaleX = 20f
+        val aspectRatio = graphicsState.debugPanel.width.toFloat() / graphicsState.debugPanel.height.toFloat()
+        val scaleY = scaleX / aspectRatio
+        val y = 5f
+
+        Matrix4f().translate(0f, y, -30f).translate(negativeEyePosition).rotateY(toRadians(0f)).scale(scaleX, scaleY, 1f)
+            .get(64 * (baseMatrixIndex + 0), buffers.transformationMatrixHost)
+        Matrix4f().translate(0f, y, 30f).translate(negativeEyePosition).rotateY(toRadians(180f)).scale(scaleX, scaleY, 1f)
+            .get(64 * (baseMatrixIndex + 1), buffers.transformationMatrixHost)
+        Matrix4f().translate(30f, y, 0f).translate(negativeEyePosition).rotateY(toRadians(270f)).scale(scaleX, scaleY, 1f)
+            .get(64 * (baseMatrixIndex + 2), buffers.transformationMatrixHost)
+        Matrix4f().translate(-30f, y, 0f).translate(negativeEyePosition).rotateY(toRadians(90f)).scale(scaleX, scaleY, 1f)
+            .get(64 * (baseMatrixIndex + 3), buffers.transformationMatrixHost)
+    }
+
+    run {
         val flower1 = graphicsState.mainMenu.flower1
         val numFlowerIndices = (flower1.indices.size / 4).toInt()
         val firstFlowerIndex = (flower1.indices.offset / 4).toInt()
         val flowerVertexOffset = (flower1.vertices.offset / BasicVertex.SIZE).toInt()
 
         val numFlowerMatrices = FlowerGenerators.BUSH_SIZE1
-        val baseDrawIndex = numTerrainDrawCalls
-        val baseMatrixIndex = numTerrainDrawCalls
+        val baseDrawIndex = numTerrainDrawCalls + numDebugPanels
+        val baseMatrixIndex = numTerrainDrawCalls + numDebugPanels
         VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + baseDrawIndex * VkDrawIndexedIndirectCommand.SIZEOF)
             .run {
                 indexCount(numFlowerIndices)
@@ -257,8 +293,8 @@ fun fillDrawingBuffers(
         val flowerVertexOffset = (flower2.vertices.offset / BasicVertex.SIZE).toInt()
 
         val numFlowerMatrices = FlowerGenerators.BUSH_SIZE1
-        val baseDrawIndex = numTerrainDrawCalls + 1
-        val baseMatrixIndex = numTerrainDrawCalls + FlowerGenerators.BUSH_SIZE1
+        val baseDrawIndex = numTerrainDrawCalls + numDebugPanels + 1
+        val baseMatrixIndex = numTerrainDrawCalls + numDebugPanels + FlowerGenerators.BUSH_SIZE1
         VkDrawIndexedIndirectCommand.create(memAddress(buffers.indirectDrawHost) + baseDrawIndex * VkDrawIndexedIndirectCommand.SIZEOF)
             .run {
                 indexCount(numFlowerIndices)

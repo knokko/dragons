@@ -2,12 +2,17 @@ package dragons.plugins.standard.menu
 
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.menu.MainMenuManager
+import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.command.createMainMenuRenderCommands
 import dragons.plugins.standard.vulkan.command.fillDrawingBuffers
 import dragons.state.StaticGameState
 import dragons.vr.leftViewMatrix
 import dragons.vr.openxr.lastExtraRotation
 import dragons.vulkan.util.assertVkSuccess
+import graviks2d.resource.text.TextStyle
+import graviks2d.util.Color
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
 import org.joml.AxisAngle4f
 import org.joml.Math.cos
 import org.joml.Math.sin
@@ -34,20 +39,26 @@ class StandardMainMenu: MainMenuManager {
     override suspend fun controlMainMenu(pluginInstance: PluginInstance, gameState: StaticGameState) {
 
         val (mainCommandPool, mainCommandBuffer) = createMainMenuRenderCommands(pluginInstance, gameState)
-        val renderFinishedSemaphore = stackPush().use { stack ->
-            val ciSemaphore = VkSemaphoreCreateInfo.calloc(stack)
-            ciSemaphore.`sType$Default`()
 
-            val pSemaphore = stack.callocLong(1)
-            assertVkSuccess(
-                vkCreateSemaphore(gameState.graphics.vkDevice, ciSemaphore, null, pSemaphore),
-                "CreateSemaphore", "standard plug-in: main menu rendering"
-            )
-            pSemaphore[0]
+        fun createSemaphore(description: String): Long {
+            return stackPush().use { stack ->
+                val ciSemaphore = VkSemaphoreCreateInfo.calloc(stack)
+                ciSemaphore.`sType$Default`()
+
+                val pSemaphore = stack.callocLong(1)
+                assertVkSuccess(
+                    vkCreateSemaphore(gameState.graphics.vkDevice, ciSemaphore, null, pSemaphore),
+                    "CreateSemaphore", "standard plug-in: $description"
+                )
+                pSemaphore[0]
+            }
         }
 
+        val renderFinishedSemaphore = createSemaphore("main menu rendering")
+        val debugPanelSemaphore = createSemaphore("main menu debug panel")
+
         // TODO Add more iterations (and eventually loop indefinitely)
-        var numIterationsLeft = 1000
+        var numIterationsLeft = 100
 
         val currentPosition = Vector3f()
         var extraRotation = 0f
@@ -86,15 +97,32 @@ class StandardMainMenu: MainMenuManager {
 
                 averageEyePosition.add(currentPosition)
 
+                val pluginState = pluginInstance.state as StandardPluginState
+                pluginState.graphics.debugPanel.execute {
+                    val backgroundColor = Color.rgbInt(200, 0, 0)
+                    it.fillRect(0.1f, 0.1f, 0.9f, 0.9f, backgroundColor)
+                    it.drawString(0.2f, 0.69f, 0.8f, 0.7f, "public static void main", TextStyle(
+                        fillColor = Color.rgbInt(0, 0, 0), font = null
+                    ), backgroundColor)
+                }
+                // TODO Find out why the vertical text position is sort of flipped...
+                val submissionMarker = CompletableDeferred<Unit>()
+                pluginState.graphics.debugPanel.updateImage(debugPanelSemaphore, submissionMarker)
                 fillDrawingBuffers(pluginInstance, gameState, averageEyePosition, leftEyeMatrix, rightEyeMatrix)
 
                 stackPush().use { stack ->
                     val pSubmits = VkSubmitInfo.calloc(1, stack)
                     val pSubmit = pSubmits[0]
                     pSubmit.`sType$Default`()
-                    pSubmit.waitSemaphoreCount(0)
+                    pSubmit.waitSemaphoreCount(1)
+                    pSubmit.pWaitSemaphores(stack.longs(debugPanelSemaphore))
+                    pSubmit.pWaitDstStageMask(stack.ints(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT))
                     pSubmit.pCommandBuffers(stack.pointers(mainCommandBuffer.address()))
                     pSubmit.pSignalSemaphores(stack.longs(renderFinishedSemaphore))
+
+                    // The debug panel queue submission must have ended before I can submit the frame queue submission
+                    runBlocking { submissionMarker.await() }
+
                     gameState.vrManager.markFirstFrameQueueSubmit()
                     gameState.graphics.queueManager.generalQueueFamily.getRandomPriorityQueue().submit(pSubmits, VK_NULL_HANDLE)
                 }
@@ -115,6 +143,7 @@ class StandardMainMenu: MainMenuManager {
         }
 
         vkDestroySemaphore(gameState.graphics.vkDevice, renderFinishedSemaphore, null)
+        vkDestroySemaphore(gameState.graphics.vkDevice, debugPanelSemaphore, null)
         vkDestroyCommandPool(gameState.graphics.vkDevice, mainCommandPool, null)
     }
 }

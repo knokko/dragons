@@ -38,6 +38,10 @@ class StandardVulkanDeviceCleanUp: VulkanDeviceDestructionListener {
                 vkDestroyDescriptorPool(agent.vulkanDevice, graphicsState.basicDynamicDescriptorPool, null)
                 logger.info("Destroyed basic descriptor pools")
 
+                logger.info("Destroying debug panel...")
+                graphicsState.debugPanel.destroy()
+                logger.info("Destroyed debug panel")
+
                 logger.info("Destroying basic sampler...")
                 vkDestroySampler(agent.vulkanDevice, graphicsState.basicSampler, null)
                 logger.info("Destroyed basic sampler")

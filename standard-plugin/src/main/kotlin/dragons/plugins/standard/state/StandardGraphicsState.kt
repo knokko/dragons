@@ -1,6 +1,7 @@
 package dragons.plugins.standard.state
 
 import dragons.plugins.standard.menu.MainMenuModels
+import dragons.plugins.standard.vulkan.panel.Panel
 import dragons.plugins.standard.vulkan.pipeline.BasicGraphicsPipeline
 import dragons.vulkan.memory.VulkanBufferRange
 import java.nio.ByteBuffer
@@ -15,6 +16,7 @@ class StandardGraphicsState(
     val basicStaticDescriptorSet: Long,
     val basicDynamicDescriptorSet: Long,
     val basicSampler: Long,
+    val debugPanel: Panel,
     val buffers: StandardGraphicsBuffers,
     val mainMenu: MainMenuModels,
 )

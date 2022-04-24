@@ -10,13 +10,17 @@ import dragons.plugins.standard.vulkan.texture.TextureSet
 class MainMenuModels(
     val textureSet: TextureSet,
     val skyland: Model,
+    val debugPanel: Model,
     val flower1: Model,
     val flower2: Model
-    ) {
+) {
 
     val modelSet: ModelSet = ModelSet(
         listOf(
-            skyland
+            skyland,
+            debugPanel,
+            flower1,
+            flower2
         )
     )
 }
