@@ -134,7 +134,11 @@ interface VrManager {
     fun resolveAndSubmitFrames(waitSemaphore: Long?, takeScreenshot: Boolean)
 
     fun getDragonControls(): DragonControls {
-        TODO()
+        return DragonControls(
+            walkDirection = Vector2f(), cameraTurnDirection = 0f, isSpitting = false, isUsingPower = false,
+            shouldToggleMenu = false, shouldToggleLeftWing = false, shouldToggleRightWing = false,
+            isGrabbingLeft = false, isGrabbingRight = false
+        )
     }
 
     fun destroy()
