@@ -8,9 +8,11 @@ import org.lwjgl.vulkan.VkSubmitInfo
 
 class DeviceQueue(val handle: VkQueue) {
     fun submit(pSubmitInfo: VkSubmitInfo.Buffer, fence: Long) {
-        synchronized(handle) {
-            assertVkSuccess(vkQueueSubmit(handle, pSubmitInfo, fence), "QueueSubmit")
-        }
+        assertVkSuccess(submitWithResult(pSubmitInfo, fence), "QueueSubmit")
+    }
+
+    fun submitWithResult(pSubmitInfo: VkSubmitInfo.Buffer, fence: Long) = synchronized(handle) {
+        vkQueueSubmit(handle, pSubmitInfo, fence)
     }
 
     fun waitIdle() {
