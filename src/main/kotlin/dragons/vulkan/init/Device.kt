@@ -176,10 +176,10 @@ private class DeviceRejectionReason(val rejectingEntity: String, val rejectionRe
 }
 
 @Throws(StartupException::class)
-fun createLogicalDevice(
+internal fun createLogicalDevice(
     vkInstance: VkInstance, physicalDevice: VkPhysicalDevice,
     pluginManager: PluginManager, vrManager: VrManager, scope: CoroutineScope
-): Triple<VkDevice, QueueManager, RenderImageInfo> {
+): InitDeviceResult {
     val logger = getLogger("Vulkan")
     return stackPush().use { stack ->
 
@@ -285,7 +285,7 @@ fun createLogicalDevice(
             pluginPair.first.afterVulkanDeviceCreation(pluginPair.second, eventAgent)
         }
 
-        Triple(device, queueManager, renderImageInfo)
+        InitDeviceResult(device, queueManager, renderImageInfo, populateResult.enabledExtensions)
     }
 }
 
@@ -541,3 +541,10 @@ internal class QueueFamilyInfo(val index: Int, val numPriorityQueues: Int, val n
         return result
     }
 }
+
+internal class InitDeviceResult(
+    val vkDevice: VkDevice,
+    val queueManager: QueueManager,
+    val renderImageInfo: RenderImageInfo,
+    val enabledExtensions: Set<String>
+)

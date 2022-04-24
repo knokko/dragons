@@ -17,11 +17,14 @@ import dragons.vulkan.destroy.destroyVulkanDevice
 import dragons.vulkan.destroy.destroyVulkanInstance
 import dragons.vulkan.init.choosePhysicalDevice
 import dragons.vulkan.init.createLogicalDevice
+import dragons.vulkan.init.initVma
 import dragons.vulkan.init.initVulkanInstance
 import dragons.vulkan.memory.MemoryInfo
 import dragons.vulkan.memory.allocateStaticMemory
+import graviks2d.core.GraviksInstance
 import kotlinx.coroutines.*
 import org.lwjgl.system.Platform
+import org.lwjgl.util.vma.Vma.vmaDestroyAllocator
 import org.slf4j.Logger
 import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory.getLogger
@@ -103,9 +106,11 @@ fun main(args: Array<String>) {
         staticGameState.vrManager.destroy()
         val staticGraphics = staticGameState.graphics
         staticGraphics.memoryScope.destroy(staticGraphics.vkDevice)
+
         destroyVulkanDevice(
             staticGraphics.vkInstance, staticGraphics.vkPhysicalDevice, staticGraphics.vkDevice,
-            staticGameState.pluginManager
+            staticGraphics.vmaAllocator, staticGraphics.graviksInstance,
+            staticGameState.pluginManager,
         )
         destroyVulkanInstance(staticGraphics.vkInstance, staticGameState.pluginManager)
         staticGameState.pluginManager.getImplementations(ExitListener::class).forEach {
@@ -204,7 +209,16 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
             )
         }
 
-        val (vulkanDevice, queueManager, renderImageInfo) = vkDeviceJob.await()
+        val initDeviceResult = vkDeviceJob.await()
+        val vulkanDevice = initDeviceResult.vkDevice
+        val queueManager = initDeviceResult.queueManager
+        val renderImageInfo = initDeviceResult.renderImageInfo
+        val enabledDeviceExtensions = initDeviceResult.enabledExtensions
+
+        val vmaJob = async {
+            initVma(vulkanInstance, vulkanPhysicalDevice, vulkanDevice, enabledDeviceExtensions)
+        }
+
         val memoryInfo = memoryInfoJob.await()
 
         val staticMemoryJob = async {
@@ -214,7 +228,19 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
             )
         }
 
+        val vmaAllocator = vmaJob.await()
+        val graviksJob = async {
+            GraviksInstance(
+                vulkanInstance, vulkanPhysicalDevice, vulkanDevice,
+                vmaAllocator = vmaAllocator, queueFamilyIndex = queueManager.generalQueueFamily.index,
+                queueSubmit = { submitInfo, fence ->
+                    queueManager.generalQueueFamily.getRandomPriorityQueue().submitWithResult(submitInfo, fence)
+                }
+            )
+        }
+
         val (staticMemoryScope, coreStaticMemory) = staticMemoryJob.await()
+        val graviksInstance = graviksJob.await()
 
         val staticGameState = StaticGameState(
             graphics = StaticGraphicsState(
@@ -222,9 +248,11 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
                 vulkanPhysicalDevice,
                 vulkanDevice,
                 queueManager,
+                vmaAllocator,
                 renderImageInfo,
                 staticMemoryScope,
-                coreStaticMemory
+                coreStaticMemory,
+                graviksInstance
             ),
             initProperties = initProps,
             pluginManager = pluginManager,
