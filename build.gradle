@@ -46,11 +46,16 @@ allprojects {
     dependencies {
         compileOnly 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
         testCompileOnly 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
+
+        testImplementation platform('org.junit:junit-bom:5.7.2')
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
+
         compileOnly 'org.slf4j:slf4j-api:1.7.32'
 
         compileOnly platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
         compileOnly "org.lwjgl:lwjgl"
         compileOnly "org.lwjgl:lwjgl-vulkan"
+        compileOnly "org.lwjgl:lwjgl-vma"
         compileOnly "org.joml:joml:${jomlVersion}"
     }
 }
@@ -58,6 +63,7 @@ allprojects {
 dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
     implementation 'org.slf4j:slf4j-api:1.7.32'
+    implementation project(':graviks2d')
     runtimeOnly 'ch.qos.logback:logback-classic:1.2.3'
     runtimeOnly 'ch.qos.logback:logback-core:1.2.3'
 
@@ -66,13 +72,12 @@ dependencies {
     implementation "org.lwjgl:lwjgl-openvr"
     implementation "org.lwjgl:lwjgl-openxr"
     implementation "org.lwjgl:lwjgl-vulkan"
+    implementation "org.lwjgl:lwjgl-vma"
     implementation "org.joml:joml:${jomlVersion}"
     runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
     runtimeOnly "org.lwjgl:lwjgl-openvr::$lwjglNatives"
     runtimeOnly "org.lwjgl:lwjgl-openxr::$lwjglNatives"
-
-    testImplementation platform('org.junit:junit-bom:5.7.2')
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
+    runtimeOnly "org.lwjgl:lwjgl-vma::$lwjglNatives"
 }
 
 test {
@@ -81,33 +86,33 @@ test {
 
 project(':standard-plugin') {
     dependencies {
-        implementation project(':')
-        testImplementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
-        testImplementation "org.lwjgl:lwjgl"
-        testImplementation platform('org.junit:junit-bom:5.7.2')
-        testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
+        compileOnly project(':')
+        compileOnly project(':graviks2d')
     }
 }
 
 project(':graviks2d') {
     dependencies {
-        implementation project(':')
+        implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
         implementation "org.lwjgl:lwjgl-stb"
-        implementation "org.lwjgl:lwjgl-vma"
+
+        compileOnly "org.lwjgl:lwjgl"
+        compileOnly "org.lwjgl:lwjgl-vma"
+        compileOnly "org.lwjgl:lwjgl-vulkan"
+
+        testImplementation "org.lwjgl:lwjgl-vma"
+        testImplementation "org.lwjgl:lwjgl-vulkan"
+
         runtimeOnly "org.lwjgl:lwjgl-stb::$lwjglNatives"
-        runtimeOnly "org.lwjgl:lwjgl-vma::$lwjglNatives"
-        testImplementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
-        testImplementation "org.lwjgl:lwjgl"
+
         testImplementation platform('org.junit:junit-bom:5.7.2')
         testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
-        testImplementation "org.lwjgl:lwjgl"
-        testImplementation "org.lwjgl:lwjgl-vulkan"
     }
 }
 
 project(':debug-plugin') {
     dependencies {
-        implementation project(':')
+        compileOnly project(':')
     }
 }
 
