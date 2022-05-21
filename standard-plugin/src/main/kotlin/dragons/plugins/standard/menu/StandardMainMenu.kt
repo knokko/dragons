@@ -99,13 +99,8 @@ class StandardMainMenu: MainMenuManager {
 
                 averageEyePosition.add(currentPosition)
 
-                if (Math.random() > 0.98) {
-                    println("test" + Random().nextInt(100))
-                }
-
                 val pluginState = pluginInstance.state as StandardPluginState
                 pluginState.graphics.debugPanel.execute {
-
 
                     val newStandardOutputHistory = getStandardOutputHistory(50)
                     if (newStandardOutputHistory !== lastStandardOutputHistory) {

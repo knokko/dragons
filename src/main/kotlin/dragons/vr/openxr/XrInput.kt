@@ -14,7 +14,9 @@ class XrInput(
 
     val dragonActionSet: XrActionSet
     val dragonWalkSideAction: XrAction
+    val dragonWalkSideThresholdAction: XrAction
     val dragonWalkForwardAction: XrAction
+    val dragonWalkForwardThresholdAction: XrAction
     val dragonTurnCameraAction: XrAction
     val dragonSpitAction: XrAction
     val dragonUsePowerAction: XrAction
@@ -61,8 +63,14 @@ class XrInput(
             this.dragonWalkSideAction = createAction(
                 this.dragonActionSet, XR_ACTION_TYPE_FLOAT_INPUT, "dragon_walk_side", "Walk left/right (dragon)"
             )
+            this.dragonWalkSideThresholdAction = createAction(
+                this.dragonActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "dragon_walk_side_threshold", "Threshold: walk left/right (dragon)"
+            )
             this.dragonWalkForwardAction = createAction(
                 this.dragonActionSet, XR_ACTION_TYPE_FLOAT_INPUT, "dragon_walk_forward", "Walk forward (dragon)"
+            )
+            this.dragonWalkForwardThresholdAction = createAction(
+                this.dragonActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "dragon_walk_forward_threshold", "Threshold: walk forward (dragon)"
             )
             this.dragonTurnCameraAction = createAction(
                 this.dragonActionSet, XR_ACTION_TYPE_FLOAT_INPUT, "dragon_turn_camera", "Turn camera left/right (dragon)"
@@ -113,37 +121,43 @@ class XrInput(
     }
 
     private fun suggestOculusTouchBindings(stack: MemoryStack) {
-        val suggestedBindings = XrActionSuggestedBinding.calloc(10, stack)
+        val suggestedBindings = XrActionSuggestedBinding.calloc(12, stack)
 
         suggestedBindings[0].action(this.dragonWalkSideAction)
         suggestedBindings[0].binding(getPath(stack, "/user/hand/left/input/thumbstick/x"))
 
-        suggestedBindings[1].action(this.dragonWalkForwardAction)
-        suggestedBindings[1].binding(getPath(stack, "/user/hand/left/input/thumbstick/y"))
+        suggestedBindings[1].action(this.dragonWalkSideThresholdAction)
+        suggestedBindings[1].binding(getPath(stack, "/user/hand/left/input/thumbstick/x"))
 
-        suggestedBindings[2].action(this.dragonTurnCameraAction)
-        suggestedBindings[2].binding(getPath(stack, "/user/hand/right/input/thumbstick/x"))
+        suggestedBindings[2].action(this.dragonWalkForwardAction)
+        suggestedBindings[2].binding(getPath(stack, "/user/hand/left/input/thumbstick/y"))
 
-        suggestedBindings[3].action(this.dragonSpitAction)
-        suggestedBindings[3].binding(getPath(stack, "/user/hand/left/input/x/click"))
+        suggestedBindings[3].action(this.dragonWalkForwardThresholdAction)
+        suggestedBindings[3].binding(getPath(stack, "/user/hand/left/input/thumbstick/y"))
 
-        suggestedBindings[4].action(this.dragonUsePowerAction)
-        suggestedBindings[4].binding(getPath(stack, "/user/hand/right/input/a/click"))
+        suggestedBindings[4].action(this.dragonTurnCameraAction)
+        suggestedBindings[4].binding(getPath(stack, "/user/hand/right/input/thumbstick/x"))
 
-        suggestedBindings[5].action(this.dragonToggleMenuAction)
-        suggestedBindings[5].binding(getPath(stack, "/user/hand/left/input/menu/click"))
+        suggestedBindings[5].action(this.dragonSpitAction)
+        suggestedBindings[5].binding(getPath(stack, "/user/hand/left/input/x/click"))
 
-        suggestedBindings[6].action(this.dragonToggleLeftWingAction)
-        suggestedBindings[6].binding(getPath(stack, "/user/hand/left/input/trigger/value"))
+        suggestedBindings[6].action(this.dragonUsePowerAction)
+        suggestedBindings[6].binding(getPath(stack, "/user/hand/right/input/a/click"))
 
-        suggestedBindings[7].action(this.dragonToggleRightWingAction)
-        suggestedBindings[7].binding(getPath(stack, "/user/hand/right/input/trigger/value"))
+        suggestedBindings[7].action(this.dragonToggleMenuAction)
+        suggestedBindings[7].binding(getPath(stack, "/user/hand/left/input/menu/click"))
 
-        suggestedBindings[8].action(this.dragonGrabLeftAction)
-        suggestedBindings[8].binding(getPath(stack, "/user/hand/left/input/squeeze/value"))
+        suggestedBindings[8].action(this.dragonToggleLeftWingAction)
+        suggestedBindings[8].binding(getPath(stack, "/user/hand/left/input/trigger/value"))
 
-        suggestedBindings[9].action(this.dragonGrabRightAction)
-        suggestedBindings[9].binding(getPath(stack, "/user/hand/right/input/squeeze/value"))
+        suggestedBindings[9].action(this.dragonToggleRightWingAction)
+        suggestedBindings[9].binding(getPath(stack, "/user/hand/right/input/trigger/value"))
+
+        suggestedBindings[10].action(this.dragonGrabLeftAction)
+        suggestedBindings[10].binding(getPath(stack, "/user/hand/left/input/squeeze/value"))
+
+        suggestedBindings[11].action(this.dragonGrabRightAction)
+        suggestedBindings[11].binding(getPath(stack, "/user/hand/right/input/squeeze/value"))
 
         val suggestedOculusTouchBindings = XrInteractionProfileSuggestedBinding.calloc(stack)
         suggestedOculusTouchBindings.`type$Default`()
@@ -211,10 +225,12 @@ class XrInput(
                 else 0f
             }
 
+            val isWalking = getPressValue(this.dragonWalkSideThresholdAction) || getPressValue(this.dragonWalkForwardThresholdAction)
+
             DragonControls(
                 walkDirection = Vector2f(
-                    getFloatValue(this.dragonWalkSideAction),
-                    getFloatValue(this.dragonWalkForwardAction)
+                    if (isWalking) getFloatValue(this.dragonWalkSideAction) else 0f,
+                    if (isWalking) getFloatValue(this.dragonWalkForwardAction) else 0f
                 ),
                 cameraTurnDirection = getFloatValue(this.dragonTurnCameraAction),
                 isSpitting = getPressValue(this.dragonSpitAction),
