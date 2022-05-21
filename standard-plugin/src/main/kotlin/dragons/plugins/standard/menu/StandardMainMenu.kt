@@ -6,6 +6,7 @@ import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.command.createMainMenuRenderCommands
 import dragons.plugins.standard.vulkan.command.fillDrawingBuffers
 import dragons.state.StaticGameState
+import dragons.util.getStandardOutputHistory
 import dragons.vr.leftViewMatrix
 import dragons.vr.openxr.lastExtraRotation
 import dragons.vulkan.util.assertVkSuccess
@@ -13,15 +14,14 @@ import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
-import org.joml.AxisAngle4f
 import org.joml.Math.cos
 import org.joml.Math.sin
-import org.joml.Quaternionf
 import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
 import org.lwjgl.vulkan.VkSubmitInfo
+import java.util.*
 import kotlin.math.atan2
 
 class StandardMainMenu: MainMenuManager {
@@ -63,6 +63,8 @@ class StandardMainMenu: MainMenuManager {
         val currentPosition = Vector3f()
         var extraRotation = 0f
 
+        var lastStandardOutputHistory = emptyList<String>()
+
         while (!gameState.vrManager.shouldStop()) {
             val currentInput = gameState.vrManager.getDragonControls()
 
@@ -97,17 +99,35 @@ class StandardMainMenu: MainMenuManager {
 
                 averageEyePosition.add(currentPosition)
 
+                if (Math.random() > 0.98) {
+                    println("test" + Random().nextInt(100))
+                }
+
                 val pluginState = pluginInstance.state as StandardPluginState
                 pluginState.graphics.debugPanel.execute {
-                    val backgroundColor = Color.rgbInt(200, 0, 0)
-                    it.fillRect(0.1f, 0.1f, 0.9f, 0.9f, backgroundColor)
-                    it.fillRect(0f, 0f, 1f, 0.1f, Color.rgbInt(0, 100, 0))
-                    it.fillRect(0f, 0.9f, 1f, 1f, Color.rgbInt(0, 255, 0))
-                    it.fillRect(0f, 0f, 0.1f, 1f, Color.rgbInt(0, 0, 100))
-                    it.fillRect(0.9f, 0f, 1f, 1f, Color.rgbInt(0, 0, 255))
-                    it.drawString(0.2f, 0.69f, 0.8f, 0.7f, "public static void main", TextStyle(
-                        fillColor = Color.rgbInt(0, 0, 0), font = null
-                    ), backgroundColor)
+
+
+                    val newStandardOutputHistory = getStandardOutputHistory(50)
+                    if (newStandardOutputHistory !== lastStandardOutputHistory) {
+
+                        val backgroundColor = Color.rgbInt(200, 0, 0)
+                        it.fillRect(0.1f, 0.1f, 0.9f, 0.9f, backgroundColor)
+                        it.fillRect(0f, 0f, 1f, 0.1f, Color.rgbInt(0, 100, 0))
+                        it.fillRect(0f, 0.9f, 1f, 1f, Color.rgbInt(0, 255, 0))
+                        it.fillRect(0f, 0f, 0.1f, 1f, Color.rgbInt(0, 0, 100))
+                        it.fillRect(0.9f, 0f, 1f, 1f, Color.rgbInt(0, 0, 255))
+
+                        val style = TextStyle(fillColor = Color.rgbInt(0, 0, 0), font = null)
+                        for ((index, line) in newStandardOutputHistory.withIndex()) {
+                            it.drawString(
+                                0.11f, 0.885f - index * 0.015f, 0.89f, 0.9f - index * 0.015f,
+                                line, style, backgroundColor
+                            )
+                        }
+
+                        lastStandardOutputHistory = newStandardOutputHistory
+                    }
+
                 }
 
                 val submissionMarker = CompletableDeferred<Unit>()
