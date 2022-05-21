@@ -103,6 +103,7 @@ project(':graviks2d') {
         testImplementation "org.lwjgl:lwjgl-vma"
         testImplementation "org.lwjgl:lwjgl-vulkan"
 
+        runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
         runtimeOnly "org.lwjgl:lwjgl-stb::$lwjglNatives"
 
         testImplementation platform('org.junit:junit-bom:5.7.2')
