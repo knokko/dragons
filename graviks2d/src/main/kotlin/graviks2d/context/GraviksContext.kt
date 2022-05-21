@@ -438,10 +438,10 @@ class GraviksContext(
 
                 this.buffers.operationCpuBuffer.run {
                     for ((startOperationIndex, texX, texY) in arrayOf(
-                        Triple(claimedBufferSpace.operationIndex, textCacheArea.minX, textCacheArea.maxY),
-                        Triple(claimedBufferSpace.operationIndex + operationSize, textCacheArea.maxX, textCacheArea.maxY),
-                        Triple(claimedBufferSpace.operationIndex + 2 * operationSize, textCacheArea.maxX, textCacheArea.minY),
-                        Triple(claimedBufferSpace.operationIndex + 3 * operationSize, textCacheArea.minX, textCacheArea.minY)
+                        Triple(claimedBufferSpace.operationIndex, textCacheArea.minX, textCacheArea.minY),
+                        Triple(claimedBufferSpace.operationIndex + operationSize, textCacheArea.maxX, textCacheArea.minY),
+                        Triple(claimedBufferSpace.operationIndex + 2 * operationSize, textCacheArea.maxX, textCacheArea.maxY),
+                        Triple(claimedBufferSpace.operationIndex + 3 * operationSize, textCacheArea.minX, textCacheArea.maxY)
                     )) {
                         this.put(startOperationIndex, OP_CODE_DRAW_TEXT)
                         this.put(startOperationIndex + 1, encodeFloat(texX))

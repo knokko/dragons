@@ -25,22 +25,22 @@ fun generatePanelModel(textureIndex: Int, heightTextureIndex: Int) = ModelGenera
         vertexBuffer[0].position.x = -0.5f
         vertexBuffer[0].position.y = -0.5f
         vertexBuffer[0].colorTextureCoordinates.x = 0f
-        vertexBuffer[0].colorTextureCoordinates.y = 0f
+        vertexBuffer[0].colorTextureCoordinates.y = 1f
 
         vertexBuffer[1].position.x = 0.5f
         vertexBuffer[1].position.y = -0.5f
         vertexBuffer[1].colorTextureCoordinates.x = 1f
-        vertexBuffer[1].colorTextureCoordinates.y = 0f
+        vertexBuffer[1].colorTextureCoordinates.y = 1f
 
         vertexBuffer[2].position.x = 0.5f
         vertexBuffer[2].position.y = 0.5f
         vertexBuffer[2].colorTextureCoordinates.x = 1f
-        vertexBuffer[2].colorTextureCoordinates.y = 1f
+        vertexBuffer[2].colorTextureCoordinates.y = 0f
 
         vertexBuffer[3].position.x = -0.5f
         vertexBuffer[3].position.y = 0.5f
         vertexBuffer[3].colorTextureCoordinates.x = 0f
-        vertexBuffer[3].colorTextureCoordinates.y = 1f
+        vertexBuffer[3].colorTextureCoordinates.y = 0f
     },
     fillIndexBuffer = { indexBuffer ->
         indexBuffer.put(0, 0)

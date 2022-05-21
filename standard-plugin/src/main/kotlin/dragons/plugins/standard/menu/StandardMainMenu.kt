@@ -101,11 +101,15 @@ class StandardMainMenu: MainMenuManager {
                 pluginState.graphics.debugPanel.execute {
                     val backgroundColor = Color.rgbInt(200, 0, 0)
                     it.fillRect(0.1f, 0.1f, 0.9f, 0.9f, backgroundColor)
+                    it.fillRect(0f, 0f, 1f, 0.1f, Color.rgbInt(0, 100, 0))
+                    it.fillRect(0f, 0.9f, 1f, 1f, Color.rgbInt(0, 255, 0))
+                    it.fillRect(0f, 0f, 0.1f, 1f, Color.rgbInt(0, 0, 100))
+                    it.fillRect(0.9f, 0f, 1f, 1f, Color.rgbInt(0, 0, 255))
                     it.drawString(0.2f, 0.69f, 0.8f, 0.7f, "public static void main", TextStyle(
                         fillColor = Color.rgbInt(0, 0, 0), font = null
                     ), backgroundColor)
                 }
-                // TODO Find out why the vertical text position is sort of flipped...
+
                 val submissionMarker = CompletableDeferred<Unit>()
                 pluginState.graphics.debugPanel.updateImage(debugPanelSemaphore, submissionMarker)
                 fillDrawingBuffers(pluginInstance, gameState, averageEyePosition, leftEyeMatrix, rightEyeMatrix)

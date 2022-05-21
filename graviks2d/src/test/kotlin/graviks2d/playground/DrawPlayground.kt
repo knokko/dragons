@@ -125,7 +125,7 @@ fun main() {
         val testBuffer = pTestBuffer[0]
         val testAllocation = pTestAllocation[0]
         val testHostBuffer = memByteBuffer(testAllocationInfo.pMappedData(), width * height * 4)
-        val testHostImage = HostImage(width, height, testHostBuffer, true)
+        val testHostImage = HostImage(width, height, testHostBuffer, false)
 
         val graviksInstance = GraviksInstance(
             vkInstance, vkPhysicalDevice, vkDevice, vmaAllocator,
@@ -147,6 +147,7 @@ fun main() {
         val minX = 0.05f
         graviks.fillRect(0f, 0f, minX, 1f, Color.rgbInt(0, 0, 0))
         graviks.fillRect(0.8f, 0f, 1f, 1f, Color.rgbInt(0, 0, 0))
+        graviks.fillRect(0f, 0.99f, 1f, 1f, Color.rgbInt(255, 255, 255))
 
         val infoStyle = TextStyle(
             font = null, fillColor = fillColor, strokeColor = strokeColor,
