@@ -46,7 +46,7 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
 
         agent.claims.images.add(
             ImageMemoryClaim(
-                width = 1000, height = 5000,
+                width = 4000, height = 5000,
                 queueFamily = agent.queueManager.generalQueueFamily,
                 bytesPerPixel = 4, imageFormat = VK_FORMAT_R8G8B8A8_UNORM, tiling = VK_IMAGE_TILING_OPTIMAL,
                 imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,

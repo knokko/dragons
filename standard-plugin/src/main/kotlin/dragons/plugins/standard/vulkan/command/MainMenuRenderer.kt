@@ -241,7 +241,7 @@ fun fillDrawingBuffers(
                 }
         }
 
-        val scaleX = 20f
+        val scaleX = 60f
         val aspectRatio = graphicsState.debugPanel.width.toFloat() / graphicsState.debugPanel.height.toFloat()
         val scaleY = scaleX / aspectRatio
         val y = 5f
