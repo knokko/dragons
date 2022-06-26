@@ -8,7 +8,7 @@ value class Angle private constructor(
      * The raw angle, in radians
      */
     private val raw: Float
-    ) {
+) {
 
     val radians: Float
     get() = raw
@@ -21,6 +21,8 @@ value class Angle private constructor(
 
     val cos: Float
     get() = cos(radians)
+
+    override fun toString() = "$degrees degrees"
 
     companion object {
         fun degrees(angle: Float) = Angle(toRadians(angle))
