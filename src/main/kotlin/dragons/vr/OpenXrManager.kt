@@ -2,12 +2,12 @@ package dragons.vr
 
 import dragons.init.GameInitProperties
 import dragons.state.StaticGraphicsState
+import dragons.util.Angle
 import dragons.vr.controls.DragonControls
 import dragons.vr.openxr.*
 import dragons.vr.openxr.createOpenXrInstance
 import dragons.vulkan.queue.DeviceQueue
 import org.joml.Matrix4f
-import org.joml.Vector2f
 import org.joml.Vector3f
 import org.lwjgl.PointerBuffer
 import org.lwjgl.openxr.*
@@ -16,8 +16,6 @@ import org.lwjgl.openxr.KHRVulkanEnable2.*
 import org.lwjgl.openxr.XR10.*
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
-import org.lwjgl.system.MemoryUtil.memAddress
-import org.lwjgl.system.MemoryUtil.memUTF8
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
 import org.slf4j.Logger
@@ -192,7 +190,7 @@ internal class OpenXrManager(
         this.input = XrInput(this.xrInstance, this.xrSession)
     }
 
-    override fun prepareRender(extraRotationY: Float): Triple<Vector3f, Matrix4f, Matrix4f>? {
+    override fun prepareRender(extraRotationY: Angle): Triple<Vector3f, Matrix4f, Matrix4f>? {
         val logger = getLogger("VR")
         this.sessionState.update()
         val result = if (this.sessionState.shouldTryRender()) {

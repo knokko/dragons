@@ -6,9 +6,9 @@ import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.command.createMainMenuRenderCommands
 import dragons.plugins.standard.vulkan.command.fillDrawingBuffers
 import dragons.state.StaticGameState
+import dragons.util.Angle
 import dragons.util.getStandardOutputHistory
 import dragons.vr.leftViewMatrix
-import dragons.vr.openxr.lastExtraRotation
 import dragons.vulkan.util.assertVkSuccess
 import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
@@ -68,7 +68,7 @@ class StandardMainMenu: MainMenuManager {
         while (!gameState.vrManager.shouldStop()) {
             val currentInput = gameState.vrManager.getDragonControls()
 
-            val eyeMatrices = gameState.vrManager.prepareRender(extraRotation)
+            val eyeMatrices = gameState.vrManager.prepareRender(Angle.degrees(extraRotation))
             if (eyeMatrices != null) {
 
                 val (averageEyePosition, leftEyeMatrix, rightEyeMatrix) = eyeMatrices
@@ -80,7 +80,6 @@ class StandardMainMenu: MainMenuManager {
                 currentPosition.z += 0.1f * (sin(currentRotation) * currentMovement.x - cos(currentRotation) * currentMovement.y)
 
                 extraRotation += currentInput.cameraTurnDirection * 2f
-                lastExtraRotation = extraRotation
 
                 if (currentInput.isGrabbingLeft) {
                     currentPosition.y -= 0.1f

@@ -4,6 +4,7 @@ import dragons.init.GameInitProperties
 import dragons.init.trouble.SimpleStartupException
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.state.StaticGraphicsState
+import dragons.util.Angle
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim
@@ -217,7 +218,7 @@ class OpenVrManager: VrManager {
     }
 
     private fun createEyeMatrix(
-        stack: MemoryStack, pose: TrackedDevicePose, leftOrRight: Int, extraRotationY: Float
+        stack: MemoryStack, pose: TrackedDevicePose, leftOrRight: Int, extraRotationY: Angle
     ): Pair<Matrix4f, Vector3f> {
         val matrixBuffer = HmdMatrix34.calloc(stack)
 
@@ -228,7 +229,7 @@ class OpenVrManager: VrManager {
         VRSystem_GetProjectionRaw(leftOrRight, pfLeft, pfRight, pfTop, pfBottom)
         val projectionMatrix = composeProjection(pfLeft[0], pfRight[0], pfTop[0], pfBottom[0], 0.01f, 100f).scale(1f, -1f, 1f)
 
-        val transformToDeviceMatrix = vrToJomlMatrix(pose.mDeviceToAbsoluteTracking()).rotateY(extraRotationY).invert()
+        val transformToDeviceMatrix = vrToJomlMatrix(pose.mDeviceToAbsoluteTracking()).rotateY(extraRotationY.radians).invert()
         val deviceToEyeMatrix = vrToJomlMatrix(VRSystem_GetEyeToHeadTransform(leftOrRight, matrixBuffer)).invert()
 
         val transformToEyeMatrix = deviceToEyeMatrix.mul(transformToDeviceMatrix)
@@ -263,7 +264,7 @@ class OpenVrManager: VrManager {
         return p
     }
 
-    override fun prepareRender(extraRotationY: Float): Triple<Vector3f, Matrix4f, Matrix4f>? {
+    override fun prepareRender(extraRotationY: Angle): Triple<Vector3f, Matrix4f, Matrix4f>? {
         var result: Triple<Vector3f, Matrix4f, Matrix4f>? = null
         stackPush().use { stack ->
             val renderPoses = TrackedDevicePose.calloc(k_unMaxTrackedDeviceCount, stack)

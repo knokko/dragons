@@ -2,6 +2,7 @@ package dragons.vr
 
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.state.StaticGraphicsState
+import dragons.util.Angle
 import dragons.vr.controls.DragonControls
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.queue.QueueManager
@@ -123,7 +124,7 @@ interface VrManager {
      *  ## Null
      *  When the orientation and position of the player can't be tracked for some reason, this method will return null.
      */
-    fun prepareRender(extraRotationY: Float): Triple<Vector3f, Matrix4f, Matrix4f>?
+    fun prepareRender(extraRotationY: Angle): Triple<Vector3f, Matrix4f, Matrix4f>?
 
     /**
      * This should be called right before the first `vkQueueSubmit` of each frame. This helps the VR manager with

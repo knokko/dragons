@@ -1,5 +1,6 @@
 package dragons.vr.openxr
 
+import dragons.util.Angle
 import dragons.vr.leftViewMatrix
 import org.joml.Math.*
 import org.joml.Matrix4f
@@ -35,10 +36,9 @@ internal fun createRenderSpace(xrSession: XrSession): XrSpace {
 // TODO Don't use these global variables
 private var lastRealPosition = Vector3f()
 private var lastVirtualPosition = Vector3f()
-var lastExtraRotation = 0f
 
 internal fun getCameraMatrices(
-    xrSession: XrSession, renderSpace: XrSpace, pViews: XrView.Buffer, displayTime: Long, extraRotationY: Float
+    xrSession: XrSession, renderSpace: XrSpace, pViews: XrView.Buffer, displayTime: Long, extraRotationY: Angle
 ): Triple<Vector3f, Matrix4f, Matrix4f>? {
     stackPush().use { stack ->
 
@@ -89,9 +89,9 @@ internal fun getCameraMatrices(
 
         val realMovement = averageRealEyePosition.sub(lastRealPosition, Vector3f())
         val virtualMovement = Vector3f(
-            cos(-lastExtraRotation) * realMovement.x + sin(-lastExtraRotation) * realMovement.z,
+            cos(-extraRotationY.radians) * realMovement.x + sin(-extraRotationY.radians) * realMovement.z,
             realMovement.y,
-            -sin(-lastExtraRotation) * realMovement.x + cos(-lastExtraRotation) * realMovement.z
+            -sin(-extraRotationY.radians) * realMovement.x + cos(-extraRotationY.radians) * realMovement.z
         )
 
         val averageVirtualEyePosition = lastVirtualPosition.add(virtualMovement, Vector3f())
@@ -111,8 +111,7 @@ internal fun getCameraMatrices(
             val position = pViews[eyeIndex].pose().`position$`()
             val orientation = pViews[eyeIndex].pose().orientation()
             val viewMatrix = Matrix4f()
-                .rotateY(toRadians(extraRotationY))
-                //.rotateAround(Quaternionf().rotateY(toRadians(extraRotationY)), position.x(), position.y(), position.z())
+                .rotateY(-extraRotationY.radians)
                 .translate(
                     position.x(), position.y(), position.z()
                 )
@@ -126,11 +125,6 @@ internal fun getCameraMatrices(
                 .invertAffine()
 
             if (eyeIndex == 0) leftViewMatrix = Matrix4f(viewMatrix)
-
-//            val viewMatrix = Matrix4f().translationRotate(
-//                position.x() - averageEyePosition.x, position.y() - averageEyePosition.y, position.z() - averageEyePosition.z,
-//                orientation.x(), orientation.y(), orientation.z(), orientation.w()
-//            ).rotateY(toRadians(extraRotationY)).invertAffine()
 
             val eyeMatrix = projectionMatrix.mul(viewMatrix)
             eyeMatrix
