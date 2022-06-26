@@ -87,7 +87,7 @@ class DummyVrManager(
 
     private var lastRenderTime: Long? = null
 
-    override fun prepareRender(extraRotationY: Angle): Triple<Vector3f, Matrix4f, Matrix4f> {
+    override fun prepareRender(extraRotationY: Angle): CameraMatrices {
         if (lastRenderTime != null) {
             // This should cause a framerate of ~90 fps
             val nextRenderTime = lastRenderTime!! + 1000 / 90
@@ -110,10 +110,11 @@ class DummyVrManager(
         val combinedMatrix = projectionMatrix.mul(viewMatrix)
 
         lastRenderTime = currentTimeMillis()
-        return Triple(
-            Vector3f(0f, 1.7f, 0f),
-            Matrix4f(combinedMatrix).translate(-0.04f, 0f, 0f),
-            Matrix4f(combinedMatrix).translate(0.04f, 0f, 0f)
+        return CameraMatrices(
+            averageVirtualEyePosition = Vector3f(0f, 1.7f, 0f),
+            averageViewMatrix = viewMatrix,
+            leftEyeMatrix = Matrix4f(combinedMatrix).translate(-0.04f, 0f, 0f),
+            rightEyeMatrix = Matrix4f(combinedMatrix).translate(0.04f, 0f, 0f)
         )
     }
 

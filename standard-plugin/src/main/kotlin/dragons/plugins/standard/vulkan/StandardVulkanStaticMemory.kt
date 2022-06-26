@@ -88,8 +88,8 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
 
         // Camera buffers
         agent.claims.buffers.add(BufferMemoryClaim(
-            // 2 4x4 float matrices and 1 vec3 float
-            size = 2 * 64 + 12,
+            // 2 4x4 float matrices
+            size = 2 * 64,
             usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT or VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             alignment = agent.vkPhysicalDeviceLimits.minUniformBufferOffsetAlignment().toInt(),
             queueFamily = agent.queueManager.generalQueueFamily,
@@ -97,7 +97,7 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
             prefill = null
         ))
         agent.claims.stagingBuffers.add(StagingBufferMemoryClaim(
-            size = 2 * 64 + 12,
+            size = 2 * 64,
             queueFamily = agent.queueManager.generalQueueFamily,
             storeResult = preGraphics.cameraStagingBuffer
         ))

@@ -219,7 +219,7 @@ class OpenVrManager: VrManager {
 
     private fun createEyeMatrix(
         stack: MemoryStack, pose: TrackedDevicePose, leftOrRight: Int, extraRotationY: Angle
-    ): Pair<Matrix4f, Vector3f> {
+    ): Triple<Matrix4f, Matrix4f, Vector3f> {
         val matrixBuffer = HmdMatrix34.calloc(stack)
 
         val pfLeft = stack.callocFloat(1)
@@ -235,7 +235,7 @@ class OpenVrManager: VrManager {
         val transformToEyeMatrix = deviceToEyeMatrix.mul(transformToDeviceMatrix)
         val eyePosition = transformToEyeMatrix.getTranslation(Vector3f()).mul(-1f)
 
-        return Pair(projectionMatrix.mul(transformToEyeMatrix), eyePosition)
+        return Triple(projectionMatrix.mul(transformToEyeMatrix), transformToEyeMatrix, eyePosition)
     }
 
     private fun composeProjection(
@@ -264,8 +264,8 @@ class OpenVrManager: VrManager {
         return p
     }
 
-    override fun prepareRender(extraRotationY: Angle): Triple<Vector3f, Matrix4f, Matrix4f>? {
-        var result: Triple<Vector3f, Matrix4f, Matrix4f>? = null
+    override fun prepareRender(extraRotationY: Angle): CameraMatrices? {
+        var result: CameraMatrices? = null
         stackPush().use { stack ->
             val renderPoses = TrackedDevicePose.calloc(k_unMaxTrackedDeviceCount, stack)
             val gamePoses = null
@@ -274,11 +274,14 @@ class OpenVrManager: VrManager {
             if (getPoseResult == 0) {
                 val renderPose = renderPoses[0]
                 if (renderPose.bPoseIsValid()) {
-                    val (leftEyeMatrix, leftEyePosition) = createEyeMatrix(stack, renderPose, EVREye_Eye_Left, extraRotationY)
-                    val (rightEyeMatrix, rightEyePosition) = createEyeMatrix(stack, renderPose, EVREye_Eye_Right, extraRotationY)
+                    val (leftEyeMatrix, leftViewMatrix, leftEyePosition) = createEyeMatrix(stack, renderPose, EVREye_Eye_Left, extraRotationY)
+                    val (rightEyeMatrix, rightViewMatrix, rightEyePosition) = createEyeMatrix(stack, renderPose, EVREye_Eye_Right, extraRotationY)
                     val averageEyePosition = leftEyePosition.add(rightEyePosition).mul(0.5f)
-                    result = Triple(
-                        averageEyePosition, leftEyeMatrix, rightEyeMatrix
+                    result = CameraMatrices(
+                        averageVirtualEyePosition = averageEyePosition,
+                        averageViewMatrix = leftViewMatrix.add(rightViewMatrix).mulComponentWise(Matrix4f().set(FloatArray(16) { 0.5f })),
+                        leftEyeMatrix = leftEyeMatrix,
+                        rightEyeMatrix = rightEyeMatrix
                     )
                 }
             } else {
@@ -339,6 +342,8 @@ class OpenVrManager: VrManager {
             }
         }
     }
+
+    // TODO Implement getDragonControls() and test the new joystick + physical controls
 
     override fun destroy() {
         getLogger("VR").info("Shutting down OpenVR")

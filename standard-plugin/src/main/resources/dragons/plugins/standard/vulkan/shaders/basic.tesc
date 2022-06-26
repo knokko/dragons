@@ -35,6 +35,9 @@ void main() {
     // This only needs to happen once per patch
     if (gl_InvocationID == 0) {
         // TODO Stop hardcoding this
+
+        // Future note: since the average eye position is used as the origin of the scene, the distance to the camera
+        // is just the 'length' of the world position.
         gl_TessLevelInner[0] = 10;
 
         gl_TessLevelOuter[0] = 10;

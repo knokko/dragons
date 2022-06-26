@@ -205,6 +205,7 @@ fun fillDrawingBuffers(
     val firstTerrainIndex = (skyland.indices.offset / 4).toInt()
     val terrainVertexOffset = (skyland.vertices.offset / BasicVertex.SIZE).toInt()
 
+    // Since we use the average eye position as the origin of the render scene, we translate every object by its negation
     val negativeEyePosition = averageEyePosition.negate(Vector3f())
 
     for (currentDrawCall in 0 until numTerrainDrawCalls) {
@@ -318,7 +319,4 @@ fun fillDrawingBuffers(
 
     leftEyeMatrix.get(0, buffers.cameraHost)
     rightEyeMatrix.get(64, buffers.cameraHost)
-    buffers.cameraHost.putFloat(128, 0f)
-    buffers.cameraHost.putFloat(132, 0f)
-    buffers.cameraHost.putFloat(136, 0f)
 }

@@ -8,7 +8,6 @@ import dragons.plugins.standard.vulkan.command.fillDrawingBuffers
 import dragons.state.StaticGameState
 import dragons.util.Angle
 import dragons.util.getStandardOutputHistory
-import dragons.vr.leftViewMatrix
 import dragons.vulkan.util.assertVkSuccess
 import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
@@ -21,7 +20,6 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
 import org.lwjgl.vulkan.VkSubmitInfo
-import java.util.*
 import kotlin.math.atan2
 
 class StandardMainMenu: MainMenuManager {
@@ -71,9 +69,8 @@ class StandardMainMenu: MainMenuManager {
             val eyeMatrices = gameState.vrManager.prepareRender(Angle.degrees(extraRotation))
             if (eyeMatrices != null) {
 
-                val (averageEyePosition, leftEyeMatrix, rightEyeMatrix) = eyeMatrices
                 val currentMovement = currentInput.walkDirection
-                val currentDirection = leftViewMatrix.transformDirection(Vector3f(0f, 0f, 1f))
+                val currentDirection = eyeMatrices.averageViewMatrix.transformDirection(Vector3f(0f, 0f, 1f))
                 val currentRotation = atan2(currentDirection.x, currentDirection.z)
 
                 currentPosition.x += 0.1f * (cos(currentRotation) * currentMovement.x + sin(currentRotation) * currentMovement.y)
@@ -96,7 +93,7 @@ class StandardMainMenu: MainMenuManager {
                     numIterationsLeft = 1
                 }
 
-                averageEyePosition.add(currentPosition)
+                val averageEyePosition = eyeMatrices.averageVirtualEyePosition.add(currentPosition, Vector3f())
 
                 val pluginState = pluginInstance.state as StandardPluginState
                 pluginState.graphics.debugPanel.execute {
@@ -126,7 +123,10 @@ class StandardMainMenu: MainMenuManager {
 
                 val submissionMarker = CompletableDeferred<Unit>()
                 pluginState.graphics.debugPanel.updateImage(debugPanelSemaphore, submissionMarker)
-                fillDrawingBuffers(pluginInstance, gameState, averageEyePosition, leftEyeMatrix, rightEyeMatrix)
+                fillDrawingBuffers(
+                    pluginInstance, gameState,
+                    averageEyePosition, eyeMatrices.leftEyeMatrix, eyeMatrices.rightEyeMatrix
+                )
 
                 stackPush().use { stack ->
                     val pSubmits = VkSubmitInfo.calloc(1, stack)

@@ -14,7 +14,6 @@ layout(location = 0) out vec4 outColor;
 
 layout(set = 0, binding = 0) uniform Camera {
     mat4 eyeMatrices[2];
-    vec3 position;
 } camera;
 layout(set = 0, binding = 1) uniform sampler textureSampler;
 

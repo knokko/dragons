@@ -7,8 +7,6 @@ import dragons.vr.controls.DragonControls
 import dragons.vr.openxr.*
 import dragons.vr.openxr.createOpenXrInstance
 import dragons.vulkan.queue.DeviceQueue
-import org.joml.Matrix4f
-import org.joml.Vector3f
 import org.lwjgl.PointerBuffer
 import org.lwjgl.openxr.*
 import org.lwjgl.openxr.EXTDebugUtils.xrDestroyDebugUtilsMessengerEXT
@@ -50,6 +48,7 @@ internal class OpenXrManager(
 ) : VrManager {
 
     private val lastViews = XrView.calloc(2)
+    private val camera = XrCamera()
 
     private lateinit var graphicsState: StaticGraphicsState
     private lateinit var vkQueue: DeviceQueue
@@ -190,7 +189,7 @@ internal class OpenXrManager(
         this.input = XrInput(this.xrInstance, this.xrSession)
     }
 
-    override fun prepareRender(extraRotationY: Angle): Triple<Vector3f, Matrix4f, Matrix4f>? {
+    override fun prepareRender(extraRotationY: Angle): CameraMatrices? {
         val logger = getLogger("VR")
         this.sessionState.update()
         val result = if (this.sessionState.shouldTryRender()) {
@@ -224,7 +223,7 @@ internal class OpenXrManager(
                         pSwapchainImageIndex[0]
                     }
 
-                    getCameraMatrices(xrSession, renderSpace, lastViews, displayTime, extraRotationY)
+                    this.camera.getCameraMatrices(xrSession, renderSpace, lastViews, displayTime, extraRotationY)
                 } else {
                     logger.info("Shouldn't render")
                     null

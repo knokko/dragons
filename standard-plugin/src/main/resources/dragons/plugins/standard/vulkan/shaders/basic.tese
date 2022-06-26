@@ -24,7 +24,6 @@ layout(location = 8) out int outHeightTextureIndex;
 
 layout(set = 0, binding = 0) uniform Camera {
     mat4 eyeMatrices[2];
-    vec3 position;
 } camera;
 layout(set = 0, binding = 1) uniform sampler textureSampler;
 
@@ -66,7 +65,6 @@ void main() {
     vec3 improvedPosition = basePosition + baseNormal * extraHeight;
     vec4 transformedPosition = transformationMatrix * vec4(improvedPosition, 1.0);
 
-    // TODO Wait... if we only compute the position here, how does the control shader determine distance to camera?
     gl_Position = camera.eyeMatrices[pushConstants.eyeIndex] * transformedPosition;
 
     outWorldPosition = transformedPosition.xyz;
