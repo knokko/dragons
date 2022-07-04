@@ -12,6 +12,7 @@ import graviks2d.resource.image.ImageReference
 import graviks2d.resource.text.*
 import graviks2d.resource.text.TextShapeCache
 import graviks2d.resource.text.placeText
+import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
@@ -112,7 +113,7 @@ class GraviksContext(
      * The number of **nodes** of the rectangle packing context of the text renderer.
      */
     textRectanglePackingNodeBufferSize: Int = 2 * width
-) {
+): GraviksTarget {
 
     internal val targetImages = ContextTargetImages(this)
     internal val buffers = ContextBuffers(this, vertexBufferSize, operationBufferSize)
@@ -323,7 +324,7 @@ class GraviksContext(
         }
     }
 
-    fun fillRect(x1: Float, y1: Float, x2: Float, y2: Float, color: Color) {
+    override fun fillRect(x1: Float, y1: Float, x2: Float, y2: Float, color: Color) {
         val claimedSpace = this.claimSpace(numVertices = 6, numOperationValues = 2)
 
         this.pushRect(x1, y1, x2, y2, vertexIndex = claimedSpace.vertexIndex, depth = claimedSpace.depth, operationIndex = claimedSpace.operationIndex)
@@ -334,7 +335,7 @@ class GraviksContext(
         }
     }
 
-    fun drawImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImageReference) {
+    override fun drawImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImageReference) {
         val borrowedImage = this.instance.imageCache.borrowImage(image)
         var imageIndex = this.currentImages[borrowedImage]
         if (imageIndex == null) {
@@ -362,7 +363,7 @@ class GraviksContext(
         }
     }
 
-    fun drawString(
+    override fun drawString(
         minX: Float, yBottom: Float, maxX: Float, yTop: Float,
         string: String, style: TextStyle, backgroundColor: Color,
     ) {
