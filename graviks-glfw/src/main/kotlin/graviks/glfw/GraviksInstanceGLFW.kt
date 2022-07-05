@@ -16,8 +16,7 @@ import org.lwjgl.vulkan.KHRDedicatedAllocation.VK_KHR_DEDICATED_ALLOCATION_EXTEN
 import org.lwjgl.vulkan.KHRGetMemoryRequirements2.VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRGetPhysicalDeviceProperties2.VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRSurface.*
-import org.lwjgl.vulkan.KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME
-import org.lwjgl.vulkan.KHRSwapchain.vkCreateSwapchainKHR
+import org.lwjgl.vulkan.KHRSwapchain.*
 import org.lwjgl.vulkan.VK10.*
 import java.nio.ByteBuffer
 
@@ -46,12 +45,6 @@ internal fun createVulkanInstance(
     for (extensionIndex in rawRequiredExtensions.position() until rawRequiredExtensions.limit()) {
         requiredExtensions.add(memUTF8(rawRequiredExtensions[extensionIndex]))
     }
-
-    println("The following Vulkan instance extensions are required by GLFW:")
-    for (extension in requiredExtensions) {
-        println(extension)
-    }
-    println()
 
     if (enableValidation) {
         requiredExtensions.add(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
@@ -137,7 +130,7 @@ internal fun createVulkanInstance(
         ciDebug.`sType$Default`()
         ciDebug.messageSeverity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT or VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
         ciDebug.messageType(VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT or VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
-        ciDebug.pfnUserCallback { messageSeverity, messageTypes, pCallbackData, pUserData ->
+        ciDebug.pfnUserCallback { _, _, pCallbackData, _->
             val callbackData = VkDebugUtilsMessengerCallbackDataEXT.create(pCallbackData)
             println("Validation: ${callbackData.pMessageString()}")
             VK_FALSE
@@ -374,10 +367,22 @@ fun createVulkanSwapchain(
         vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice, surface, pNumSurfaces, surfaceFormats)
     )
 
-    // TODO Experiment with this... I wonder what happens if the format doesn't match the internal Graviks2D format...
+    // Since FIFO is guaranteed to be supported, I don't really need to query the available present modes, but the
+    // validation layer will complain if I don't
+    val pNumPresentModes = stack.callocInt(1)
+    assertSuccess(
+        vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysicalDevice, surface, pNumPresentModes, null)
+    )
+    val numPresentModes = pNumPresentModes[0]
+    val presentModes = stack.callocInt(numPresentModes)
+    assertSuccess(
+        vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysicalDevice, surface, pNumPresentModes, presentModes)
+    )
+
     var chosenSurfaceFormat = surfaceFormats[0]
     for (surfaceFormat in surfaceFormats) {
-        if (surfaceFormat.colorSpace() == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR && surfaceFormat.format() == VK_FORMAT_B8G8R8A8_SRGB) {
+        // Preferably pick the UNORM format to match the format used by Graviks2D internally
+        if (surfaceFormat.colorSpace() == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR && surfaceFormat.format() == VK_FORMAT_B8G8R8A8_UNORM) {
             chosenSurfaceFormat = surfaceFormat
             break
         }
@@ -408,4 +413,19 @@ fun createVulkanSwapchain(
     assertSuccess(
         vkCreateSwapchainKHR(vkDevice, ciSwapchain, null, pSwapchain)
     )
+    val swapchain = pSwapchain[0]
+
+    val pNumImages = stack.callocInt(1)
+    assertSuccess(
+        vkGetSwapchainImagesKHR(vkDevice, swapchain, pNumImages, null)
+    )
+    val numImages = pNumImages[0]
+
+    val pImages = stack.callocLong(numImages)
+    assertSuccess(
+        vkGetSwapchainImagesKHR(vkDevice, swapchain, pNumImages, pImages)
+    )
+    val images = LongArray(numImages) { pImages[it] }
+
+    Pair(swapchain, images)
 }
