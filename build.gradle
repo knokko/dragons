@@ -100,6 +100,7 @@ project(':graviks2d') {
         compileOnly "org.lwjgl:lwjgl-vma"
         compileOnly "org.lwjgl:lwjgl-vulkan"
 
+        testImplementation "org.lwjgl:lwjgl-glfw"
         testImplementation "org.lwjgl:lwjgl-vma"
         testImplementation "org.lwjgl:lwjgl-vulkan"
 
@@ -137,6 +138,19 @@ project(':gruviks') {
 
         testImplementation platform('org.junit:junit-bom:5.7.2')
         testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
+    }
+}
+
+project(':gruviks-glfw') {
+    dependencies {
+        implementation project(':graviks2d')
+        implementation project(':gruviks')
+        implementation project(':graviks-glfw')
+
+        implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+        implementation "org.lwjgl:lwjgl"
+        implementation "org.lwjgl:lwjgl-glfw"
+        testImplementation "org.lwjgl:lwjgl-vulkan"
     }
 }
 

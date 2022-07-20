@@ -1,13 +1,21 @@
 package gruviks.event
 
-import gruviks.event.cursor.Event
-import gruviks.event.cursor.EventPosition
-import gruviks.event.cursor.PositionedEvent
-
 @JvmInline
 value class Cursor(private val id: Int) {
     override fun toString() = "Cursor($id)"
 }
+
+class CursorPressEvent(
+    val cursor: Cursor,
+    position: EventPosition,
+    val button: Int
+): PositionedEvent(position)
+
+class CursorReleaseEvent(
+    val cursor: Cursor,
+    position: EventPosition,
+    val button: Int
+): PositionedEvent(position)
 
 class CursorClickEvent(
     val cursor: Cursor,

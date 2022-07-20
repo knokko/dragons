@@ -21,6 +21,8 @@ fun main() {
         instance = instance, width = width, height = height, translucentPolicy = TranslucentPolicy.Manual
     )}
 
+    var shouldPresentAgain = true
+
     fun drawFunction() {
         val graviks = window.graviksContext
         if (graviks != null) {
@@ -31,7 +33,6 @@ fun main() {
     }
 
     drawFunction()
-    window.presentFrame()
 
     glfwSetCursorPosCallback(window.windowHandle) { _, rawX, rawY ->
         val (x, y) = stackPush().use { stack ->
@@ -45,7 +46,7 @@ fun main() {
 
         val radius = 0.01f
         window.graviksContext?.fillRect(x - radius, y - radius, x + radius, y + radius, Color.rgbInt(0, 100, 200))
-        window.presentFrame()
+        shouldPresentAgain = true
     }
 
     var typedString = ""
@@ -72,7 +73,7 @@ fun main() {
                     backgroundColor
                 )
             }
-            window.presentFrame()
+            shouldPresentAgain = true
         }
     }
 
@@ -100,6 +101,9 @@ fun main() {
         if (window.shouldResize()) {
             window.resize()
             drawFunction()
+            window.presentFrame()
+        } else if (shouldPresentAgain) {
+            shouldPresentAgain = false
             window.presentFrame()
         }
 

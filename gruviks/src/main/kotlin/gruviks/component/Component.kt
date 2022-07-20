@@ -1,7 +1,7 @@
 package gruviks.component
 
 import graviks2d.target.GraviksTarget
-import gruviks.event.cursor.Event
+import gruviks.event.Event
 
 abstract class Component {
     protected lateinit var agent: ComponentAgent

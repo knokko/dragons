@@ -5,11 +5,14 @@ import graviks2d.util.Color
 import gruviks.component.Component
 import gruviks.component.ComponentAgent
 import gruviks.event.*
+import gruviks.event.raw.EventAdapter
+import gruviks.event.raw.RawEvent
 
 class GruviksWindow(
     private var rootComponent: Component
 ) {
     private lateinit var rootAgent: ComponentAgent
+    private val eventAdapter = EventAdapter()
 
     init {
         this.setRootComponent(rootComponent)
@@ -21,33 +24,45 @@ class GruviksWindow(
 
         this.rootComponent.initAgent(this.rootAgent)
         this.rootComponent.subscribeToEvents()
+        this.rootAgent.forbidFutureSubscriptions()
     }
 
-    fun fireEvent(event: Event) {
-        val lastRenderResult = this.rootAgent.lastRenderResult
-        if (event is CursorMoveEvent) {
-            // CursorMoveEvent needs special treatment because CursorEnterEvent and CursorLeaveEvent may need to be
-            // fired as well
-            if (lastRenderResult != null) {
-                val wasInside = lastRenderResult.drawnRegion.isInside(event.oldPosition.x, event.oldPosition.y)
-                val isInside = lastRenderResult.drawnRegion.isInside(event.newPosition.x, event.newPosition.y)
+    fun fireEvent(rawEvent: RawEvent) {
 
-                if (!wasInside && isInside) {
-                    this.rootComponent.processEvent(CursorEnterEvent(event.cursor, event.newPosition))
+        val lastRenderResult = this.rootAgent.lastRenderResult
+        for (event in this.eventAdapter.convertRawEvent(rawEvent)) {
+            if (event is CursorMoveEvent) {
+                // TODO Move this CursorMoveEvent splitting to (Raw)EventAdapter
+                if (!arrayOf(
+                        CursorEnterEvent::class, CursorLeaveEvent::class, CursorMoveEvent::class
+                    ).any { this.rootAgent.isSubscribed(it) }) {
+                    continue
                 }
-                if (wasInside && !isInside) {
-                    this.rootComponent.processEvent(CursorLeaveEvent(event.cursor, event.oldPosition))
+
+                // CursorMoveEvent needs special treatment because CursorEnterEvent and CursorLeaveEvent may need to be
+                // fired as well
+                if (lastRenderResult != null) {
+                    val wasInside = lastRenderResult.drawnRegion.isInside(event.oldPosition.x, event.oldPosition.y)
+                    val isInside = lastRenderResult.drawnRegion.isInside(event.newPosition.x, event.newPosition.y)
+
+                    if (!wasInside && isInside && this.rootAgent.isSubscribed(CursorEnterEvent::class)) {
+                        this.rootComponent.processEvent(CursorEnterEvent(event.cursor, event.newPosition))
+                    }
+                    if (wasInside && !isInside && this.rootAgent.isSubscribed(CursorLeaveEvent::class)) {
+                        this.rootComponent.processEvent(CursorLeaveEvent(event.cursor, event.oldPosition))
+                    }
+                    if (wasInside && isInside && this.rootAgent.isSubscribed(CursorMoveEvent::class)) {
+                        this.rootComponent.processEvent(event)
+                    }
                 }
-                if (wasInside && isInside) {
+            } else {
+                val shouldProcess = if (event is PositionedEvent) {
+                    lastRenderResult?.drawnRegion?.isInside(event.position.x, event.position.y) ?: false
+                } else { true }
+
+                if (shouldProcess && this.rootAgent.isSubscribed(event::class)) {
                     this.rootComponent.processEvent(event)
                 }
-            }
-        } else {
-            val shouldProcess = if (event is PositionedEvent) {
-                lastRenderResult?.drawnRegion?.isInside(event.position.x, event.position.y) ?: false
-            } else { true }
-            if (shouldProcess) {
-                this.rootComponent.processEvent(event)
             }
         }
     }

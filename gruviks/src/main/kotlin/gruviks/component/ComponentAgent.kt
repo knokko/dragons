@@ -1,6 +1,6 @@
 package gruviks.component
 
-import gruviks.event.cursor.Event
+import gruviks.event.Event
 import kotlin.reflect.KClass
 
 class ComponentAgent {
