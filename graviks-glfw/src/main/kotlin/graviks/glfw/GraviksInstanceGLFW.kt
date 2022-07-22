@@ -427,5 +427,5 @@ fun createVulkanSwapchain(
     )
     val images = LongArray(numImages) { pImages[it] }
 
-    Pair(swapchain, images)
+    Triple(swapchain, chosenSurfaceFormat.format(), images)
 }

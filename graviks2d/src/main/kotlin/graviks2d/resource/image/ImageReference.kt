@@ -10,6 +10,8 @@ class ImageReference private constructor(
     internal val file: File?,
     internal val customVkImage: Long?,
     internal var customVkImageView: Long?,
+    internal val customWidth: Int?,
+    internal val customHeight: Int?,
     internal val vkDevice: VkDevice?
 ) {
 
@@ -30,6 +32,10 @@ class ImageReference private constructor(
             }
 
             this.customVkImageView = createImageView(vkDevice, customVkImage)
+        }
+
+        if (customVkImage != null && (customWidth == null || customHeight == null)) {
+            throw Error("When customVkImage is not null, customWidth and customHeight must be non-null")
         }
     }
 
@@ -52,18 +58,21 @@ class ImageReference private constructor(
     companion object {
         fun classLoaderPath(path: String, isSvg: Boolean) = ImageReference(
             isSvg = isSvg, path = path, file = null,
-            customVkImage = null, customVkImageView = null, vkDevice = null
+            customVkImage = null, customVkImageView = null, vkDevice = null,
+            customWidth = null, customHeight = null
         )
 
         fun file(file: File) = ImageReference(
             isSvg = file.name.endsWith(".svg"), path = null, file = file,
-            customVkImage = null, customVkImageView = null, vkDevice = null
+            customVkImage = null, customVkImageView = null, vkDevice = null,
+            customWidth = null, customHeight = null
         )
 
-        fun custom(vkImage: Long, vkImageView: Long?, vkDevice: VkDevice? = null) = ImageReference(
+        fun custom(vkImage: Long, vkImageView: Long?, vkDevice: VkDevice? = null, width: Int, height: Int) = ImageReference(
             isSvg = false, path = null, file = null,
             customVkImage = vkImage, customVkImageView = vkImageView,
-            vkDevice = if (vkImageView == null) { vkDevice } else { null }
+            vkDevice = if (vkImageView == null) { vkDevice } else { null },
+            customWidth = width, customHeight = height
         )
     }
 }

@@ -165,7 +165,9 @@ class TestContext {
             val testAllocation = pTestAllocation[0]
             val testHostBuffer = MemoryUtil.memByteBuffer(testAllocationInfo.pMappedData(), context.width * context.height * 4)
 
-            test({ context.copyColorImageTo(destImage = null, destBuffer = testBuffer)}, HostImage(context.width, context.height, testHostBuffer, flipY))
+            test({ context.copyColorImageTo(
+                destImage = null, destBuffer = testBuffer, destImageFormat = null
+            )}, HostImage(context.width, context.height, testHostBuffer, flipY))
 
             vmaDestroyBuffer(vmaAllocator, testBuffer, testAllocation)
         }

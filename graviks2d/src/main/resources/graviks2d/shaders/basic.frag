@@ -31,9 +31,14 @@ vec4 decodeColor(int rawColor) {
     );
 }
 
+float decodeFloat(int rawValue) {
+    return float(rawValue) * 0.000001;
+}
+
 const int OP_CODE_FILL_RECT = 1;
 const int OP_CODE_DRAW_IMAGE = 2;
 const int OP_CODE_DRAW_TEXT = 6;
+const int OP_CODE_DRAW_ROUNDED_RECT = 7;
 
 void main() {
     int operationCode = shaderStorage.operations[operationIndex];
@@ -70,6 +75,45 @@ void main() {
             backgroundIntensity = 0.0;
         }
         outColor = backgroundIntensity * backgroundColor + strokeIntensity * strokeColor + fillIntensity * textColor;
+    } else if (operationCode == OP_CODE_DRAW_ROUNDED_RECT) {
+        vec4 fillColor = decodeColor(shaderStorage.operations[operationIndex + 1]);
+        float minX = decodeFloat(shaderStorage.operations[operationIndex + 2]);
+        float minY = decodeFloat(shaderStorage.operations[operationIndex + 3]);
+        float maxX = decodeFloat(shaderStorage.operations[operationIndex + 4]);
+        float maxY = decodeFloat(shaderStorage.operations[operationIndex + 5]);
+        float radiusX = decodeFloat(shaderStorage.operations[operationIndex + 6]);
+        float radiusY = decodeFloat(shaderStorage.operations[operationIndex + 7]);
+        float lineWidth = decodeFloat(shaderStorage.operations[operationIndex + 8]);
+
+        float x = quadCoordinates.x;
+        float y = quadCoordinates.y;
+
+        float dx = 0.0;
+        if (x < minX + radiusX) {
+            dx = x - (minX + radiusX);
+        } else if (x > maxX - radiusX) {
+            dx = (maxX - radiusX) - x;
+        }
+
+        float dy = 0.5 * (minY + maxY) - y;
+
+        dx /= radiusX;
+        dy /= radiusY;
+
+        if (dx == 0.0) {
+            if (lineWidth != 0.0 && dy > lineWidth * 0.5 - 1.0 && dy < 1.0 - lineWidth * 0.5) {
+                discard;
+            } else {
+                outColor = fillColor;
+            }
+        } else {
+            float distance = dx * dx + dy * dy;
+            if ((lineWidth == 0.0 || distance >= 1.0 - lineWidth) && distance <= 1.0) {
+                outColor = fillColor;
+            } else {
+                discard;
+            }
+        }
     } else {
         // This is the 'unknown operation code' color, for the sake of debugging
         outColor = vec4(1.0, 0.2, 0.6, 1.0);

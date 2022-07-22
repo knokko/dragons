@@ -21,7 +21,9 @@ internal class ImageCache(
             val imagePair = ImagePair(
                 vkImage = image.customVkImage,
                 vkImageView = image.customVkImageView!!,
-                vmaAllocation = 0L // The allocation is not handled by this cache
+                vmaAllocation = 0L, // The allocation is not handled by this cache
+                width = image.customWidth!!,
+                height = image.customHeight!!
             )
             return BorrowedImage(
                 imageReference = image, imagePair = CompletableDeferred(imagePair)

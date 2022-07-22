@@ -40,6 +40,7 @@ class GraviksWindow(
 
     // Swapchain-dependant variables
     private var swapchain: Long? = null
+    private var swapchainFormat: Int? = null
     private var swapchainImages: LongArray? = null
     var graviksContext: GraviksContext? = null
     private var shouldResize = false
@@ -109,15 +110,17 @@ class GraviksWindow(
 
         if (actualInitialWidth == 0 || actualInitialHeight == 0) {
             this.swapchain = null
+            this.swapchainFormat = null
             this.swapchainImages = null
             this.graviksContext = null
             return
         }
 
-        val (swapchain, swapchainImages) = createVulkanSwapchain(
+        val (swapchain, swapchainFormat, swapchainImages) = createVulkanSwapchain(
             graviksInstance.physicalDevice, graviksInstance.device, windowSurface, actualInitialWidth, actualInitialHeight
         )
         this.swapchain = swapchain
+        this.swapchainFormat = swapchainFormat
         this.swapchainImages = swapchainImages
 
         this.graviksContext = createContext(graviksInstance, actualInitialWidth, actualInitialHeight)
@@ -160,7 +163,8 @@ class GraviksWindow(
             assertSuccess(vkResetFences(graviksInstance.device, stack.longs(acquireFence)))
 
             graviksContext!!.copyColorImageTo(
-                destImage = swapchainImages!![imageIndex], destBuffer = null, signalSemaphore = copySemaphore,
+                destImage = swapchainImages!![imageIndex], destImageFormat = swapchainFormat,
+                destBuffer = null, signalSemaphore = copySemaphore,
                 originalImageLayout = VK_IMAGE_LAYOUT_UNDEFINED, finalImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                 imageSrcAccessMask = 0, imageSrcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                 // There is no need to give proper destinations masks since vkQueuePresentKHR takes care of that

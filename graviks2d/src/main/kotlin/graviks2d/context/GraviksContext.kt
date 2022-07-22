@@ -156,6 +156,8 @@ class GraviksContext(
         }
     }
 
+    private fun encodeFloat(value: Float) = (1_000_000.toFloat() * value).roundToInt()
+
     private fun claimSpace(numVertices: Int, numOperationValues: Int): ContextSpaceClaim {
         var (operationIndex, didOperationFlush) = this.claimNextOperationIndex(numOperationValues)
         var depth = this.claimNextDepth()
@@ -335,6 +337,27 @@ class GraviksContext(
         }
     }
 
+    // TODO Test this
+    override fun drawRoundedRect(
+        x1: Float, y1: Float, x2: Float, y2: Float, radiusX: Float, radiusY: Float, lineWidth: Float, color: Color
+    ) {
+        val claimedSpace = this.claimSpace(numVertices = 6, numOperationValues = 9)
+
+        this.pushRect(x1, y1, x2, y2, vertexIndex = claimedSpace.vertexIndex, depth = claimedSpace.depth, operationIndex = claimedSpace.operationIndex)
+
+        this.buffers.operationCpuBuffer.run {
+            this.put(claimedSpace.operationIndex, OP_CODE_DRAW_ROUNDED_RECT)
+            this.put(claimedSpace.operationIndex + 1, color.rawValue)
+            this.put(claimedSpace.operationIndex + 2, encodeFloat(kotlin.math.min(x1, x2)))
+            this.put(claimedSpace.operationIndex + 3, encodeFloat(kotlin.math.min(y1, y2)))
+            this.put(claimedSpace.operationIndex + 4, encodeFloat(kotlin.math.max(x1, x2)))
+            this.put(claimedSpace.operationIndex + 5, encodeFloat(kotlin.math.max(y1, y2)))
+            this.put(claimedSpace.operationIndex + 6, encodeFloat(radiusX))
+            this.put(claimedSpace.operationIndex + 7, encodeFloat(radiusY))
+            this.put(claimedSpace.operationIndex + 8, encodeFloat(lineWidth))
+        }
+    }
+
     override fun drawImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImageReference) {
         val borrowedImage = this.instance.imageCache.borrowImage(image)
         var imageIndex = this.currentImages[borrowedImage]
@@ -361,6 +384,18 @@ class GraviksContext(
             this.put(claimedSpace.operationIndex + 3, OP_CODE_DRAW_IMAGE_TOP_RIGHT)
             this.put(claimedSpace.operationIndex + 4, OP_CODE_DRAW_IMAGE_TOP_LEFT)
         }
+    }
+
+    override fun getImageSize(image: ImageReference): Pair<Int, Int> {
+        if (image.customVkImage != null) return Pair(image.customWidth!!, image.customHeight!!)
+
+        val borrow = this.instance.imageCache.borrowImage(image)
+        val size = runBlocking {
+            val imagePair = borrow.imagePair.await()
+            Pair(imagePair.width, imagePair.height)
+        }
+        this.instance.imageCache.returnImage(borrow)
+        return size
     }
 
     override fun drawString(
@@ -435,7 +470,6 @@ class GraviksContext(
                     claimedBufferSpace.operationIndex + 3 * operationSize
                 )
 
-                fun encodeFloat(value: Float) = (1_000_000.toFloat() * value).roundToInt()
 
                 this.buffers.operationCpuBuffer.run {
                     for ((startOperationIndex, texX, texY) in arrayOf(
@@ -458,6 +492,24 @@ class GraviksContext(
         }
     }
 
+    override fun getStringAspectRatio(string: String, fontReference: FontReference?): Float {
+        val font = this.instance.fontManager.getFont(fontReference)
+        val totalHeight = font.ascent - font.descent
+
+        var totalWidth = 0
+
+        var lastCodepoint = -1
+        for (codepoint in string.codePoints()) {
+            if (lastCodepoint != -1) totalWidth += font.getExtraAdvance(lastCodepoint, codepoint)
+            totalWidth += font.getGlyphShape(codepoint).advanceWidth
+            lastCodepoint = codepoint
+        }
+
+        return totalWidth.toFloat() / totalHeight.toFloat()
+    }
+
+    override fun getAspectRatio() = this.width.toFloat() / this.height.toFloat()
+
     fun setManualDepth(newDepth: Int) {
         if (depthPolicy != DepthPolicy.Manual) {
             throw UnsupportedOperationException("setManualDepth is only allowed when depthMode is Manual")
@@ -469,7 +521,7 @@ class GraviksContext(
     }
 
     fun copyColorImageTo(
-        destImage: Long?, destBuffer: Long?,
+        destImage: Long?, destBuffer: Long?, destImageFormat: Int?,
         signalSemaphore: Long? = null, submissionMarker: CompletableDeferred<Unit>? = null,
         originalImageLayout: Int? = null, finalImageLayout: Int? = null,
         imageSrcAccessMask: Int? = null, imageSrcStageMask: Int? = null,
@@ -477,7 +529,7 @@ class GraviksContext(
     ) {
         hardFlush()
         commands.copyColorImageTo(
-            destImage = destImage, destBuffer = destBuffer,
+            destImage = destImage, destBuffer = destBuffer, destImageFormat = destImageFormat,
             signalSemaphore = signalSemaphore, submissionMarker = submissionMarker,
             originalImageLayout = originalImageLayout, finalImageLayout = finalImageLayout,
             imageSrcAccessMask = imageSrcAccessMask, imageSrcStageMask = imageSrcStageMask,

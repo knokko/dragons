@@ -46,7 +46,7 @@ class Panel(
     fun updateImage(signalSemaphore: Long, submissionMarker: CompletableDeferred<Unit>) {
         this.execute {
             this.graviks.copyColorImageTo(
-                destImage = this.image.handle, destBuffer = null,
+                destImage = this.image.handle, destBuffer = null, destImageFormat = VK_FORMAT_R8G8B8A8_UNORM,
                 originalImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 finalImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 imageSrcAccessMask = VK_ACCESS_SHADER_READ_BIT, imageSrcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,

@@ -57,6 +57,9 @@ internal fun createImagePair(
     val imageRawByteBuffer = memCalloc(imageByteArray.size)
     imageRawByteBuffer.put(0, imageByteArray)
 
+    val width: Int
+    val height: Int
+
     val (image, allocation) = stackPush().use { stack ->
         val pWidth = stack.callocInt(1)
         val pHeight = stack.callocInt(1)
@@ -66,8 +69,8 @@ internal fun createImagePair(
             throw IllegalArgumentException("Can't decode image info at path $pathDescription")
         }
 
-        val width = pWidth[0]
-        val height = pHeight[0]
+        width = pWidth[0]
+        height = pHeight[0]
         val imagePixelByteBuffer = stbi_load_from_memory(imageRawByteBuffer, pWidth, pHeight, pComponents, 4)
             ?: throw IllegalArgumentException("Can't decode image at path $pathDescription")
 
@@ -262,7 +265,7 @@ internal fun createImagePair(
     }
 
     val imageView = createImageView(instance.device, image)
-    return ImagePair(vkImage = image, vkImageView = imageView, vmaAllocation = allocation)
+    return ImagePair(vkImage = image, vkImageView = imageView, vmaAllocation = allocation, width = width, height = height)
 }
 
 internal fun createDummyImage(instance: GraviksInstance): ImagePair {
@@ -277,5 +280,5 @@ internal fun createDummyImage(instance: GraviksInstance): ImagePair {
 }
 
 internal class ImagePair(
-    val vkImage: Long, val vkImageView: Long, val vmaAllocation: Long
+    val vkImage: Long, val vkImageView: Long, val vmaAllocation: Long, val width: Int, val height: Int
 )

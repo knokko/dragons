@@ -1,6 +1,7 @@
 package graviks2d.target
 
 import graviks2d.resource.image.ImageReference
+import graviks2d.resource.text.FontReference
 import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
 
@@ -24,11 +25,30 @@ class ChildTarget(
         }
     }
 
+    override fun drawRoundedRect(
+        x1: Float,
+        y1: Float,
+        x2: Float,
+        y2: Float,
+        radiusX: Float,
+        radiusY: Float,
+        lineWidth: Float,
+        color: Color
+    ) {
+        val dx = this.maxX - this.minX
+        val dy = this.maxY - this.minY
+        this.transform(x1, y1, x2, y2) { tx1, ty1, tx2, ty2 ->
+            this.parent.drawRoundedRect(tx1, ty1, tx2, ty2, radiusX * dx, radiusY * dy, lineWidth, color)
+        }
+    }
+
     override fun drawImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImageReference) {
         this.transform(xLeft, yBottom, xRight, yTop) { tLeft, tBottom, tRight, tTop ->
             this.parent.drawImage(tLeft, tBottom, tRight, tTop, image)
         }
     }
+
+    override fun getImageSize(image: ImageReference) = parent.getImageSize(image)
 
     override fun drawString(
         minX: Float,
@@ -43,4 +63,8 @@ class ChildTarget(
             this.parent.drawString(tMinX, tBottom, tMaxX, tTop, string, style, backgroundColor)
         }
     }
+
+    override fun getStringAspectRatio(string: String, fontReference: FontReference?) = parent.getStringAspectRatio(string, fontReference)
+
+    override fun getAspectRatio() = parent.getAspectRatio() * (maxX - minX) / (maxY - minY)
 }

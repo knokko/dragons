@@ -221,7 +221,8 @@ internal class ContextCommands(
     }
 
     fun copyColorImageTo(
-        destImage: Long?, destBuffer: Long?, signalSemaphore: Long?, submissionMarker: CompletableDeferred<Unit>?,
+        destImage: Long?, destBuffer: Long?, destImageFormat: Int?,
+        signalSemaphore: Long?, submissionMarker: CompletableDeferred<Unit>?,
         originalImageLayout: Int?, imageSrcAccessMask: Int?, imageSrcStageMask: Int?,
         finalImageLayout: Int?, imageDstAccessMask: Int?, imageDstStageMask: Int?
     ) {
@@ -256,14 +257,6 @@ internal class ContextCommands(
                 checkPresent(imageDstAccessMask, "imageDstAccessMask")
                 checkPresent(imageDstStageMask, "imageDstStageMask")
 
-                val imageCopyRegions = VkImageCopy.calloc(1, stack)
-                val copyRegion = imageCopyRegions[0]
-                populateSubresource(copyRegion.srcSubresource())
-                copyRegion.srcOffset { it.set(0, 0, 0) }
-                populateSubresource(copyRegion.dstSubresource())
-                copyRegion.dstOffset { it.set(0, 0, 0) }
-                copyRegion.extent { it.set(this.context.width, this.context.height, 1) }
-
                 if (originalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
                     transitionImageLayout(
                         stack, destImage, VK_IMAGE_ASPECT_COLOR_BIT,
@@ -273,12 +266,43 @@ internal class ContextCommands(
                     )
                 }
 
-                vkCmdCopyImage(
-                    this.commandBuffer,
-                    this.context.targetImages.colorImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    imageCopyRegions
-                )
+                if (destImageFormat == TARGET_COLOR_FORMAT) {
+
+                    val imageCopyRegions = VkImageCopy.calloc(1, stack)
+                    val copyRegion = imageCopyRegions[0]
+                    populateSubresource(copyRegion.srcSubresource())
+                    copyRegion.srcOffset { it.set(0, 0, 0) }
+                    populateSubresource(copyRegion.dstSubresource())
+                    copyRegion.dstOffset { it.set(0, 0, 0) }
+                    copyRegion.extent { it.set(this.context.width, this.context.height, 1) }
+
+                    vkCmdCopyImage(
+                        this.commandBuffer,
+                        this.context.targetImages.colorImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        imageCopyRegions
+                    )
+                } else {
+                    val imageCopyRegions = VkImageBlit.calloc(1, stack)
+                    val copyRegion = imageCopyRegions[0]
+                    populateSubresource(copyRegion.srcSubresource())
+                    copyRegion.srcOffsets { offsets ->
+                        offsets[0].set(0, 0, 0)
+                        offsets[1].set(this.context.width, this.context.height, 1)
+                    }
+                    populateSubresource(copyRegion.dstSubresource())
+                    copyRegion.dstOffsets { offsets ->
+                        offsets[0].set(0, 0, 0)
+                        offsets[1].set(this.context.width, this.context.height, 1)
+                    }
+
+                    vkCmdBlitImage(
+                        this.commandBuffer,
+                        this.context.targetImages.colorImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        imageCopyRegions, VK_FILTER_NEAREST
+                    )
+                }
 
                 if (finalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
                     transitionImageLayout(
