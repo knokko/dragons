@@ -1,11 +1,12 @@
 package gruviks.event.raw
 
+import gruviks.component.agent.TrackedCursor
 import gruviks.event.*
 import java.lang.System.currentTimeMillis
 
 const val CLICK_DURATION_THRESHOLD = 500
 
-class EventAdapter {
+class RawEventAdapter {
 
     private val lastCursorStates = HashMap<Cursor, CursorState>()
 
@@ -67,6 +68,15 @@ class EventAdapter {
         }
 
         return result
+    }
+
+    fun getAllCursors() = lastCursorStates.keys
+
+    fun getCursorState(cursor: Cursor): TrackedCursor? {
+        val state = lastCursorStates[cursor] ?: return null
+        return TrackedCursor(
+            state.position, state.pressedButtons.keys
+        )
     }
 }
 

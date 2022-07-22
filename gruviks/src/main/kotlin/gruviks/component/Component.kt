@@ -1,6 +1,7 @@
 package gruviks.component
 
 import graviks2d.target.GraviksTarget
+import gruviks.component.agent.ComponentAgent
 import gruviks.event.Event
 
 abstract class Component {

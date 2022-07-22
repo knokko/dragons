@@ -3,16 +3,17 @@ package gruviks.core
 import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 import gruviks.component.Component
-import gruviks.component.ComponentAgent
+import gruviks.component.agent.ComponentAgent
+import gruviks.component.agent.RootCursorTracker
 import gruviks.event.*
-import gruviks.event.raw.EventAdapter
+import gruviks.event.raw.RawEventAdapter
 import gruviks.event.raw.RawEvent
 
 class GruviksWindow(
     private var rootComponent: Component
 ) {
     private lateinit var rootAgent: ComponentAgent
-    private val eventAdapter = EventAdapter()
+    private val eventAdapter = RawEventAdapter()
 
     init {
         this.setRootComponent(rootComponent)
@@ -20,7 +21,7 @@ class GruviksWindow(
 
     fun setRootComponent(newComponent: Component) {
         this.rootComponent = newComponent
-        this.rootAgent = ComponentAgent()
+        this.rootAgent = ComponentAgent(RootCursorTracker(eventAdapter) { this.rootAgent.lastRenderResult })
 
         this.rootComponent.initAgent(this.rootAgent)
         this.rootComponent.subscribeToEvents()

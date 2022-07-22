@@ -1,9 +1,12 @@
-package gruviks.component
+package gruviks.component.agent
 
+import gruviks.component.RenderResult
 import gruviks.event.Event
 import kotlin.reflect.KClass
 
-class ComponentAgent {
+class ComponentAgent(
+    val cursorTracker: CursorTracker
+) {
 
     /**
      * This is true by default since every component should be rendered as soon as it is placed
