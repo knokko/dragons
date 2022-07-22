@@ -42,7 +42,6 @@ class RectangularDrawnRegion(
     minX: Float, minY: Float, maxX: Float, maxY: Float
 ): DrawnRegion(minX, minY, maxX, maxY) {
     override fun isInside(x: Float, y: Float) = this.isWithinBounds(x, y)
-
 }
 
 class RoundedRectangularDrawnRegion(

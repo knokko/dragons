@@ -17,7 +17,13 @@ interface CursorTracker {
 class TrackedCursor(
     val localPosition: EventPosition,
     val pressedButtons: Set<Int>
-)
+) {
+    override fun equals(other: Any?) = other is TrackedCursor && this.localPosition == other.localPosition && this.pressedButtons == other.pressedButtons
+
+    override fun hashCode() = localPosition.hashCode() + 31 * pressedButtons.hashCode()
+
+    override fun toString() = "TrackedCursor($localPosition, pressedButtons=$pressedButtons)"
+}
 
 class RootCursorTracker(
     private val rawEventAdapter: RawEventAdapter,

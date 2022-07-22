@@ -1,5 +1,7 @@
 package gruviks.event
 
+import kotlin.math.absoluteValue
+
 abstract class Event
 
 abstract class PositionedEvent(val position: EventPosition): Event()
@@ -9,5 +11,9 @@ abstract class PositionedEvent(val position: EventPosition): Event()
  * (1, 1) is the top-right corner of the component domain).
  */
 class EventPosition(val x: Float, val y: Float) {
+    override fun equals(other: Any?) = other is EventPosition && (this.x - other.x).absoluteValue < 0.001f && (this.y - other.y).absoluteValue < 0.001f
+
     override fun toString() = String.format("(%.3f, %.3f)", x, y)
+
+    override fun hashCode() = x.hashCode() + 31 * y.hashCode()
 }
