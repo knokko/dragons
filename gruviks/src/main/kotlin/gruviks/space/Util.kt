@@ -1,6 +1,7 @@
 package gruviks.space
 
 import kotlin.math.absoluteValue
+import kotlin.math.sign
 
 fun wouldMultiplicationOverflow(a: Long, b: Long): Boolean {
     // Multiplication with 0 clearly never overflows. This case needs special treatment because the check below would
@@ -15,7 +16,7 @@ fun divideRounded(numerator: Long, denominator: Long): Long {
     val rawQuotient = numerator / denominator
     val recoveredNumerator = rawQuotient * denominator
 
-    return if (rawQuotient >= 0) {
+    return if (numerator.sign * denominator.sign >= 0) {
         if ((numerator - recoveredNumerator).absoluteValue <= (numerator - ((rawQuotient + 1) * denominator)).absoluteValue) {
             rawQuotient
         } else {
