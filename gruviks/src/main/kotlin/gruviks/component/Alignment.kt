@@ -15,7 +15,10 @@ enum class VerticalComponentAlignment {
 fun computeBoundsX(minX: Float, maxX: Float, neededWidth: Float, alignment: HorizontalComponentAlignment): Pair<Float, Float> {
     return when (alignment) {
         HorizontalComponentAlignment.Left -> Pair(minX, minX + neededWidth)
-        HorizontalComponentAlignment.Middle -> Pair(minX + 0.5f * (1f - neededWidth), maxX - 0.5f * (1f - neededWidth))
+        HorizontalComponentAlignment.Middle -> {
+            val margin = 0.5f * (maxX - minX - neededWidth)
+            Pair(minX + margin, maxX - margin)
+        }
         HorizontalComponentAlignment.Right -> Pair(maxX - neededWidth, maxX)
     }
 }
