@@ -45,6 +45,30 @@ class RectangularDrawnRegion(
 
 }
 
+class RoundedRectangularDrawnRegion(
+    minX: Float, minY: Float, maxX: Float, maxY: Float, val radiusX: Float, val radiusY: Float
+): DrawnRegion(minX, minY, maxX, maxY) {
+    override fun isInside(x: Float, y: Float): Boolean {
+        if (y < minY || y > maxY) return false
+
+        var dy = 0.5f * (minY + maxY) - y
+
+        var dx = 0f
+        if (x < minX + radiusX) {
+            dx = x - (minX + radiusX)
+        } else if (x > maxX - radiusX) {
+            dx = (maxX - radiusX) - x
+        }
+
+        if (dx == 0f) return true
+
+        dx /= radiusX
+        dy /= radiusY
+
+        return dx * dx + dy * dy <= 1.0
+    }
+}
+
 class CompositeDrawnRegion(
     private val regions: Collection<DrawnRegion>
 ): DrawnRegion(
