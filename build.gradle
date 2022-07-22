@@ -45,7 +45,7 @@ allprojects {
 
     dependencies {
         compileOnly 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
-        testCompileOnly 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
+        testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
 
         testImplementation platform('org.junit:junit-bom:5.7.2')
         testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
@@ -57,6 +57,10 @@ allprojects {
         compileOnly "org.lwjgl:lwjgl-vulkan"
         compileOnly "org.lwjgl:lwjgl-vma"
         compileOnly "org.joml:joml:${jomlVersion}"
+    }
+
+    test {
+        useJUnitPlatform()
     }
 }
 
@@ -91,6 +95,7 @@ project(':standard-plugin') {
 
         testImplementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
         testImplementation "org.lwjgl:lwjgl"
+        testRuntimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
     }
 }
 
@@ -110,8 +115,6 @@ project(':graviks2d') {
         runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
         runtimeOnly "org.lwjgl:lwjgl-stb::$lwjglNatives"
 
-        testImplementation platform('org.junit:junit-bom:5.7.2')
-        testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
         testImplementation project(':graviks-glfw')
     }
 }
@@ -138,9 +141,6 @@ project(':graviks-glfw') {
 project(':gruviks') {
     dependencies {
         implementation project(':graviks2d')
-
-        testImplementation platform('org.junit:junit-bom:5.7.2')
-        testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
     }
 }
 
