@@ -88,6 +88,9 @@ project(':standard-plugin') {
     dependencies {
         compileOnly project(':')
         compileOnly project(':graviks2d')
+
+        testImplementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+        testImplementation "org.lwjgl:lwjgl"
     }
 }
 
