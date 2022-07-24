@@ -55,8 +55,7 @@ class ColorShuffleComponent : Component() {
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {
         target.fillRect(0f, 0f, 0.8f, 1f, currentColor)
         return RenderResult(
-            RectangularDrawnRegion(0f, 0f, 0.8f, 1f),
-            isOpaque = true, propagateMissedCursorEvents = false
+            RectangularDrawnRegion(0f, 0f, 0.8f, 1f), propagateMissedCursorEvents = false
         )
     }
 }

@@ -58,7 +58,6 @@ class TestGruviksWindow {
         assertTrue(window.render(DummyGraviksTarget(), false))
 
         val cursor1 = Cursor(1)
-        // TODO Test with more cursors
         window.fireEvent(RawCursorMoveEvent(cursor1, EventPosition(0.05f, 0.2f)))
 
         // Since the cursor 'landed' outside the drawn region of the component, the event won't be propagated
@@ -94,8 +93,7 @@ class TestGruviksWindow {
         assertEquals(CursorLeaveEvent(cursor1, EventPosition(0.2f, 0.21f)), component.log[3])
     }
 
-    // TODO Fix and uncomment this test
-    //@Test
+    @Test
     fun testRender() {
         val window = GruviksWindow(TextButton("test1234", null, textButtonStyle) {})
 

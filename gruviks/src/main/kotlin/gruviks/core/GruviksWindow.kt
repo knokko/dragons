@@ -29,51 +29,26 @@ class GruviksWindow(
     }
 
     fun fireEvent(rawEvent: RawEvent) {
-
-        val lastRenderResult = this.rootAgent.lastRenderResult
         for (event in this.eventAdapter.convertRawEvent(rawEvent)) {
-            if (event is CursorMoveEvent) {
-                // TODO Move this CursorMoveEvent splitting to (Raw)EventAdapter
-                if (!arrayOf(
-                        CursorEnterEvent::class, CursorLeaveEvent::class, CursorMoveEvent::class
-                    ).any { this.rootAgent.isSubscribed(it) }) {
-                    continue
-                }
-
-                // CursorMoveEvent needs special treatment because CursorEnterEvent and CursorLeaveEvent may need to be
-                // fired as well
-                if (lastRenderResult != null) {
-                    val wasInside = lastRenderResult.drawnRegion.isInside(event.oldPosition.x, event.oldPosition.y)
-                    val isInside = lastRenderResult.drawnRegion.isInside(event.newPosition.x, event.newPosition.y)
-
-                    if (!wasInside && isInside && this.rootAgent.isSubscribed(CursorEnterEvent::class)) {
-                        this.rootComponent.processEvent(CursorEnterEvent(event.cursor, event.newPosition))
-                    }
-                    if (wasInside && !isInside && this.rootAgent.isSubscribed(CursorLeaveEvent::class)) {
-                        this.rootComponent.processEvent(CursorLeaveEvent(event.cursor, event.oldPosition))
-                    }
-                    if (wasInside && isInside && this.rootAgent.isSubscribed(CursorMoveEvent::class)) {
-                        this.rootComponent.processEvent(event)
-                    }
-                }
-            } else {
-                val shouldProcess = if (event is PositionedEvent) {
-                    lastRenderResult?.drawnRegion?.isInside(event.position.x, event.position.y) ?: false
-                } else { true }
-
-                if (shouldProcess && this.rootAgent.isSubscribed(event::class)) {
-                    this.rootComponent.processEvent(event)
-                }
-            }
+            propagateEvent(event, rootComponent, rootAgent)
         }
     }
 
     fun render(target: GraviksTarget, force: Boolean): Boolean {
         return if (force || this.rootAgent.didRequestRender) {
 
-            // When the render is forced, we should invalidate any previously drawn content
             if (force) {
+
+                // When the render is forced, we should invalidate any previously drawn content
                 target.fillRect(0f, 0f, 1f, 1f, Color.rgbInt(0, 0, 0))
+            } else {
+                // If the render is not forced, we should only redraw the background areas requested by the component
+                for (backgroundRegion in this.rootComponent.regionsToRedrawBeforeNextRender()) {
+                    target.fillRect(
+                        backgroundRegion.minX, backgroundRegion.minY, backgroundRegion.maxX, backgroundRegion.maxY,
+                        Color.rgbInt(0, 0, 0)
+                    )
+                }
             }
 
             this.rootAgent.didRequestRender = false

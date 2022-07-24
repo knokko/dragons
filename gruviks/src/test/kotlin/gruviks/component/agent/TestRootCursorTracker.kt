@@ -21,8 +21,7 @@ class TestRootCursorTracker {
         val events = RawEventAdapter()
         tracker = RootCursorTracker(events) {
             RenderResult(
-                RectangularDrawnRegion(0.1f, 0f, 0.9f, 1f),
-                isOpaque = true, propagateMissedCursorEvents = true
+                RectangularDrawnRegion(0.1f, 0f, 0.9f, 1f), propagateMissedCursorEvents = true
             )
         }
 

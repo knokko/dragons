@@ -17,8 +17,7 @@ class SimpleColorFillComponent(private val color: Color): Component() {
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {
         target.fillRect(0f, 0f, 1f, 1f, this.color)
         return RenderResult(
-            RectangularDrawnRegion(0f, 0f, 1f, 1f),
-            isOpaque = true, propagateMissedCursorEvents = true
+            RectangularDrawnRegion(0f, 0f, 1f, 1f), propagateMissedCursorEvents = true
         )
     }
 }

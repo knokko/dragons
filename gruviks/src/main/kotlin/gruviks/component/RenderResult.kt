@@ -9,16 +9,6 @@ class RenderResult(
     val drawnRegion: DrawnRegion,
 
     /**
-     * This should be true if and only if something *opaque* has been drawn on top of **all** points inside
-     * *drawnRegion*. (For instance, if an image without any transparent or translucent pixels has been drawn over the
-     * entire *drawnRegion*.)
-     *
-     * If this is true, the caller of the render method might be able to do powerful optimizations. In particular, it
-     * can skip rendering anything *behind* the component when the component has been redrawn.
-     */
-    val isOpaque: Boolean,
-
-    /**
      * This variable determines what happens when a cursor event happens inside the rectangular *domain* of the
      * component, but outside the *drawnRegion*. If true, the cursor event will be propagated to the component behind
      * it. If false, the event will be discarded.

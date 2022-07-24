@@ -21,7 +21,6 @@ class EventLogComponent(private val allowedEvents: Set<KClass<out Event>>): Comp
     }
 
     override fun render(target: GraviksTarget, force: Boolean) = RenderResult(
-        RectangularDrawnRegion(0.1f, 0.1f, 0.9f, 0.9f),
-        isOpaque = false, propagateMissedCursorEvents = false
+        RectangularDrawnRegion(0.1f, 0.1f, 0.9f, 0.9f), propagateMissedCursorEvents = false
     )
 }
