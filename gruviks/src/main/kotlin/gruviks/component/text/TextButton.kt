@@ -72,12 +72,14 @@ class TextButton(
 
         if (icon != null) {
             val deltaY = maxY - minY
-            val iconMinX = minX + cornerRadiusX
+            val iconMinX = minX + cornerRadiusX * 0.6f
             val iconMinY = minY + deltaY * 0.5f * (1f - iconHeightFraction)
-            val iconMaxX = iconMinX + iconHeightFraction * iconAspectRatio / targetAspectRatio
             val iconMaxY = maxY - deltaY * 0.5f * (1f - iconHeightFraction)
+            val finalIconHeight = iconMaxY - iconMinY
+            val iconMaxX = iconMinX + finalIconHeight / targetAspectRatio
             target.drawImage(iconMinX, iconMinY, iconMaxX, iconMaxY, icon)
-            textMinX = iconMaxX
+
+            textMinX = iconMaxX + 0.01f
         }
 
         val dy = maxY - minY
@@ -90,7 +92,7 @@ class TextButton(
 
         return RenderResult(
             drawnRegion = RoundedRectangularDrawnRegion(minX, minY, maxX, maxY, cornerRadiusX, cornerRadiusY),
-            isOpaque = false, propagateMissedCursorEvents = true
+            propagateMissedCursorEvents = true
         )
     }
 }

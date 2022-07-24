@@ -3,7 +3,7 @@ package playground
 import graviks.glfw.GraviksWindow
 import graviks2d.context.GraviksContext
 import graviks2d.context.TranslucentPolicy
-import graviks2d.resource.text.TextStyle
+import graviks2d.resource.image.ImageReference
 import graviks2d.util.Color
 import gruviks.component.text.TextButton
 import gruviks.component.text.TextButtonStyle
@@ -19,7 +19,7 @@ fun main() {
     }
 
     createAndControlGruviksWindow(graviksWindow, TextButton(
-        "Play!!", null, TextButtonStyle.textAndBorder(
+        "Play!!", ImageReference.classLoaderPath("test-icon.png", false), TextButtonStyle.textAndBorder(
             Color.rgbInt(200, 70, 0), Color.rgbInt(250, 100, 0)
         )
     ) {
