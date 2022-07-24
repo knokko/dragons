@@ -9,13 +9,13 @@ interface GraviksTarget {
     fun fillRect(x1: Float, y1: Float, x2: Float, y2: Float, color: Color)
 
     fun drawRoundedRect(
-        x1: Float, y1: Float, x2: Float, y2: Float, radiusX: Float, radiusY: Float, lineWidth: Float, color: Color
+        x1: Float, y1: Float, x2: Float, y2: Float, radiusX: Float, lineWidth: Float, color: Color
     )
 
     fun fillRoundedRect(
-        x1: Float, y1: Float, x2: Float, y2: Float, radiusX: Float, radiusY: Float, color: Color
+        x1: Float, y1: Float, x2: Float, y2: Float, radiusX: Float, color: Color
     ) {
-        drawRoundedRect(x1, y2, x2, y2, radiusX, radiusY, 0f, color)
+        drawRoundedRect(x1, y2, x2, y2, radiusX, 0f, color)
     }
 
     fun drawImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImageReference)

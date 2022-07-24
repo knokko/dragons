@@ -339,9 +339,9 @@ class GraviksContext(
 
     // TODO Test this
     override fun drawRoundedRect(
-        x1: Float, y1: Float, x2: Float, y2: Float, radiusX: Float, radiusY: Float, lineWidth: Float, color: Color
+        x1: Float, y1: Float, x2: Float, y2: Float, radiusX: Float, lineWidth: Float, color: Color
     ) {
-        val claimedSpace = this.claimSpace(numVertices = 6, numOperationValues = 9)
+        val claimedSpace = this.claimSpace(numVertices = 6, numOperationValues = 8)
 
         this.pushRect(x1, y1, x2, y2, vertexIndex = claimedSpace.vertexIndex, depth = claimedSpace.depth, operationIndex = claimedSpace.operationIndex)
 
@@ -353,8 +353,7 @@ class GraviksContext(
             this.put(claimedSpace.operationIndex + 4, encodeFloat(kotlin.math.max(x1, x2)))
             this.put(claimedSpace.operationIndex + 5, encodeFloat(kotlin.math.max(y1, y2)))
             this.put(claimedSpace.operationIndex + 6, encodeFloat(radiusX))
-            this.put(claimedSpace.operationIndex + 7, encodeFloat(radiusY))
-            this.put(claimedSpace.operationIndex + 8, encodeFloat(lineWidth))
+            this.put(claimedSpace.operationIndex + 7, encodeFloat(lineWidth))
         }
     }
 
@@ -386,6 +385,7 @@ class GraviksContext(
         }
     }
 
+    // TODO Test this
     override fun getImageSize(image: ImageReference): Pair<Int, Int> {
         if (image.customVkImage != null) return Pair(image.customWidth!!, image.customHeight!!)
 
@@ -398,6 +398,7 @@ class GraviksContext(
         return size
     }
 
+    // TODO Test this
     override fun drawString(
         minX: Float, yBottom: Float, maxX: Float, yTop: Float,
         string: String, style: TextStyle, backgroundColor: Color,
@@ -492,6 +493,7 @@ class GraviksContext(
         }
     }
 
+    // TODO Test this
     override fun getStringAspectRatio(string: String, fontReference: FontReference?): Float {
         val font = this.instance.fontManager.getFont(fontReference)
         val totalHeight = font.ascent - font.descent
@@ -520,6 +522,7 @@ class GraviksContext(
         currentDepth = newDepth
     }
 
+    // TODO Test the blit copy
     fun copyColorImageTo(
         destImage: Long?, destBuffer: Long?, destImageFormat: Int?,
         signalSemaphore: Long? = null, submissionMarker: CompletableDeferred<Unit>? = null,

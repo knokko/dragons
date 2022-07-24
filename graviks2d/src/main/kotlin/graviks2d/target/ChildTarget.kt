@@ -31,14 +31,12 @@ class ChildTarget(
         x2: Float,
         y2: Float,
         radiusX: Float,
-        radiusY: Float,
         lineWidth: Float,
         color: Color
     ) {
         val dx = this.maxX - this.minX
-        val dy = this.maxY - this.minY
         this.transform(x1, y1, x2, y2) { tx1, ty1, tx2, ty2 ->
-            this.parent.drawRoundedRect(tx1, ty1, tx2, ty2, radiusX * dx, radiusY * dy, lineWidth, color)
+            this.parent.drawRoundedRect(tx1, ty1, tx2, ty2, radiusX * dx,  lineWidth, color)
         }
     }
 

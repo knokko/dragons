@@ -61,10 +61,10 @@ class TextButton(
         val normalizedLineWidth = 0.05f
 
         if (backgroundColor.alpha > 0) {
-            target.fillRoundedRect(minX, minY, maxX, maxY, cornerRadiusX, cornerRadiusY, backgroundColor)
+            target.fillRoundedRect(minX, minY, maxX, maxY, cornerRadiusX, backgroundColor)
         }
         if (borderColor.alpha > 0) {
-            target.drawRoundedRect(minX, minY, maxX, maxY, cornerRadiusX, cornerRadiusY, normalizedLineWidth, borderColor)
+            target.drawRoundedRect(minX, minY, maxX, maxY, cornerRadiusX, normalizedLineWidth, borderColor)
         }
 
         var textMinX = minX + cornerRadiusX

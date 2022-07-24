@@ -82,8 +82,8 @@ void main() {
         float maxX = decodeFloat(shaderStorage.operations[operationIndex + 4]);
         float maxY = decodeFloat(shaderStorage.operations[operationIndex + 5]);
         float radiusX = decodeFloat(shaderStorage.operations[operationIndex + 6]);
-        float radiusY = decodeFloat(shaderStorage.operations[operationIndex + 7]);
-        float lineWidth = decodeFloat(shaderStorage.operations[operationIndex + 8]);
+        float radiusY = 0.5f * (maxY - minY);
+        float lineWidth = decodeFloat(shaderStorage.operations[operationIndex + 7]);
 
         float x = quadCoordinates.x;
         float y = quadCoordinates.y;
