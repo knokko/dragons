@@ -15,7 +15,7 @@ interface GraviksTarget {
     fun fillRoundedRect(
         x1: Float, y1: Float, x2: Float, y2: Float, radiusX: Float, color: Color
     ) {
-        drawRoundedRect(x1, y2, x2, y2, radiusX, 0f, color)
+        drawRoundedRect(x1, y1, x2, y2, radiusX, 0f, color)
     }
 
     fun drawImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImageReference)
