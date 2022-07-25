@@ -101,7 +101,7 @@ internal class ContextCommands(
         submissionMarker?.complete(Unit)
 
         // If this simple command can't complete within this timeout, something is wrong
-        val timeout = 1_000_000_000L
+        val timeout = 10_000_000_000L
         assertSuccess(
             vkWaitForFences(this.context.instance.device, stack.longs(this.fence), true, timeout),
             "vkWaitForFences"
@@ -182,10 +182,10 @@ internal class ContextCommands(
         )
     }
 
-    private fun clearDepthImageNow(stack: MemoryStack, currentDepthImageLayout: Int) {
+    private fun clearDepthImageNow(stack: MemoryStack) {
         transitionDepthImageLayout(
             stack,
-            currentDepthImageLayout,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -383,7 +383,7 @@ internal class ContextCommands(
                         vkCmdEndRenderPass(this.commandBuffer)
                         isInsideRenderPass = false
                     }
-                    this.clearDepthImageNow(stack, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+                    this.clearDepthImageNow(stack)
                 }
                 if (drawCommand.numVertices > 0) {
                     if (!isInsideRenderPass) {
