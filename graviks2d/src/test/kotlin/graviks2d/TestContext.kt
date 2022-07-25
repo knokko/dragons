@@ -6,6 +6,7 @@ import graviks2d.context.TranslucentPolicy
 import graviks2d.core.GraviksInstance
 import graviks2d.resource.image.ImageCache
 import graviks2d.resource.image.ImageReference
+import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
 import graviks2d.util.HostImage
 import graviks2d.util.assertSuccess
@@ -18,9 +19,7 @@ import org.junit.jupiter.api.TestInstance
 import org.lwjgl.stb.STBImage.stbi_info_from_memory
 import org.lwjgl.stb.STBImage.stbi_load_from_memory
 import org.lwjgl.system.MemoryStack.stackPush
-import org.lwjgl.system.MemoryUtil
-import org.lwjgl.system.MemoryUtil.memCalloc
-import org.lwjgl.system.MemoryUtil.memFree
+import org.lwjgl.system.MemoryUtil.*
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.util.vma.VmaAllocationCreateInfo
 import org.lwjgl.util.vma.VmaAllocationInfo
@@ -163,7 +162,7 @@ class TestContext {
             )
             val testBuffer = pTestBuffer[0]
             val testAllocation = pTestAllocation[0]
-            val testHostBuffer = MemoryUtil.memByteBuffer(testAllocationInfo.pMappedData(), context.width * context.height * 4)
+            val testHostBuffer = memByteBuffer(testAllocationInfo.pMappedData(), context.width * context.height * 4)
 
             test({ context.copyColorImageTo(
                 destImage = null, destBuffer = testBuffer, destImageFormat = null
@@ -254,6 +253,74 @@ class TestContext {
     }
 
     @Test
+    fun testFillRoundedRect() {
+        val backgroundColor = Color.rgbInt(100, 0, 0)
+        val graviks = GraviksContext(
+            this.graviksInstance, 100, 100,
+            TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
+        )
+
+        withTestImage(graviks, true) { update, hostImage ->
+            val rectColor = Color.rgbInt(0, 100, 0)
+            graviks.fillRoundedRect(0.1f, 0.2f, 0.6f, 0.4f, 0.1f, rectColor)
+            update()
+
+            // Left side
+            assertColorEquals(backgroundColor, hostImage.getPixel(11, 21))
+            assertColorEquals(backgroundColor, hostImage.getPixel(11, 38))
+            for (x in 11 until 23) assertColorEquals(rectColor, hostImage.getPixel(x, 30))
+
+            // Middle
+            assertColorEquals(backgroundColor, hostImage.getPixel(35, 18))
+            for (y in 21 .. 38) assertColorEquals(rectColor, hostImage.getPixel(35, y))
+            assertColorEquals(backgroundColor, hostImage.getPixel(35, 41))
+
+            // Right
+            assertColorEquals(backgroundColor, hostImage.getPixel(58, 21))
+            assertColorEquals(backgroundColor, hostImage.getPixel(58, 38))
+            for (x in 48 until 58) assertColorEquals(rectColor, hostImage.getPixel(x, 30))
+        }
+
+        graviks.destroy()
+    }
+
+    @Test
+    fun testDrawRoundedRect() {
+        val backgroundColor = Color.rgbInt(100, 0, 0)
+        val graviks = GraviksContext(
+            this.graviksInstance, 100, 100,
+            TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
+        )
+
+        withTestImage(graviks, true) { update, hostImage ->
+            val rectColor = Color.rgbInt(0, 100, 0)
+            graviks.drawRoundedRect(0.1f, 0.2f, 0.6f, 0.4f, 0.1f, 0.55f, rectColor)
+            update()
+
+            // Left side
+            assertColorEquals(backgroundColor, hostImage.getPixel(11, 21))
+            assertColorEquals(backgroundColor, hostImage.getPixel(11, 38))
+            assertColorEquals(rectColor, hostImage.getPixel(11, 30))
+            for (x in 16 until 23) assertColorEquals(backgroundColor, hostImage.getPixel(x, 30))
+
+            // Middle
+            assertColorEquals(backgroundColor, hostImage.getPixel(35, 18))
+            assertColorEquals(rectColor, hostImage.getPixel(35, 21))
+            assertColorEquals(backgroundColor, hostImage.getPixel(35, 30))
+            assertColorEquals(rectColor, hostImage.getPixel(35, 38))
+            assertColorEquals(backgroundColor, hostImage.getPixel(35, 41))
+
+            // Right
+            assertColorEquals(backgroundColor, hostImage.getPixel(58, 21))
+            assertColorEquals(backgroundColor, hostImage.getPixel(58, 38))
+            assertColorEquals(rectColor, hostImage.getPixel(58, 30))
+            for (x in 48 until 54) assertColorEquals(backgroundColor, hostImage.getPixel(x, 30))
+        }
+
+        graviks.destroy()
+    }
+
+    @Test
     fun testDrawImage() {
         val backgroundColor = Color.rgbInt(255, 255, 255)
         val graviks = GraviksContext(
@@ -276,6 +343,72 @@ class TestContext {
             drawFlippedImage(0.54f, 0.22f, 0.96f, 0.64f, image2)
             update()
             assertImageEquals("drawImage.png", hostImage)
+        }
+
+        graviks.destroy()
+    }
+
+    @Test
+    fun testDrawString() {
+        val backgroundColor = Color.rgbInt(255, 255, 255)
+        val graviks = GraviksContext(
+            this.graviksInstance, 300, 600,
+            TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
+        )
+
+        val style = TextStyle(
+            fillColor = Color.rgbInt(0, 0, 150),
+            font = null
+        )
+
+        withTestImage(graviks, true) { update, hostImage ->
+            // Test that drawing an empty string won't crash and has no effect
+            graviks.drawString(0.1f, 0.2f, 0.3f, 0.4f, "", style, backgroundColor)
+            update()
+            for (x in 0 until hostImage.width) {
+                for (y in 0 until hostImage.height) {
+                    assertColorEquals(backgroundColor, hostImage.getPixel(x, y))
+                }
+            }
+
+            graviks.drawString(0.1f, 0.1f, 0.9f, 0.4f, "T E", style, backgroundColor)
+            update()
+
+            fun countSplittedOccurrences(x: Int): Int {
+                var counter = 0
+                var wasTextColor = false
+                for (y in 0 until graviks.height) {
+                    val isTextColor = hostImage.getPixel(x, y) == style.fillColor
+                    if (isTextColor && !wasTextColor) counter += 1
+                    wasTextColor = isTextColor
+                }
+                return counter
+            }
+
+            fun countAllOccurrences(x: Int): Int {
+                return (0 until graviks.height).count { y -> hostImage.getPixel(x, y) == style.fillColor }
+            }
+
+            val tBarLeftIndex = (0 until graviks.width).indexOfFirst { x -> countAllOccurrences(x) > 50 }
+            val tBarRightIndex = (0 until graviks.width).indexOfFirst { x -> x > tBarLeftIndex && countAllOccurrences(x) < 50 } - 1
+            assertEquals(2, countSplittedOccurrences(tBarLeftIndex - 2))
+            assertEquals(2, countSplittedOccurrences(tBarRightIndex + 2))
+            assertEquals(1, countSplittedOccurrences(tBarLeftIndex - 25))
+            assertEquals(1, countSplittedOccurrences(tBarRightIndex + 25))
+
+            val eBarRightIndex = (0 until graviks.width).indexOfLast { x -> countAllOccurrences(x) > 50 }
+            val eBarLeftIndex = (0 until eBarRightIndex).indexOfLast { x -> countAllOccurrences(x) < 50 } + 1
+            assertEquals(0, countSplittedOccurrences(eBarLeftIndex - 20))
+            assertEquals(2, countSplittedOccurrences(eBarLeftIndex - 2))
+            assertEquals(3, countSplittedOccurrences(eBarRightIndex + 2))
+            assertEquals(3, countSplittedOccurrences(eBarRightIndex + 20))
+
+            for (x in 0 until graviks.width) {
+                for (y in graviks.height / 2 until graviks.height) {
+                    assertColorEquals(backgroundColor, hostImage.getPixel(x, y))
+                }
+            }
+
         }
 
         graviks.destroy()
@@ -402,6 +535,43 @@ class TestContext {
     }
 
     @Test
+    fun testGetImageSize() {
+        val graviks = GraviksContext(
+            this.graviksInstance, 50, 50,
+            TranslucentPolicy.Manual, initialBackgroundColor = Color.rgbInt(1, 2, 3)
+        )
+
+        assertEquals(
+            Pair(14, 14),
+            graviks.getImageSize(ImageReference.classLoaderPath("graviks2d/images/test1.png", false))
+        )
+
+        val testFile = Files.createTempFile("", ".png").toFile()
+        val testImage = BufferedImage(10, 11, TYPE_INT_ARGB)
+        ImageIO.write(testImage, "PNG", testFile)
+
+        assertEquals(Pair(10, 11), graviks.getImageSize(ImageReference.file(testFile)))
+
+        graviks.destroy()
+    }
+
+    @Test
+    fun testGetStringAspectRatio() {
+        val graviks = GraviksContext(
+            this.graviksInstance, 50, 50,
+            TranslucentPolicy.Manual, initialBackgroundColor = Color.rgbInt(1, 2, 3)
+        )
+
+        val aspectHelloWorld = graviks.getStringAspectRatio("Hello, World!", null)
+        assertEquals(5.11f, aspectHelloWorld, 0.5f)
+        val aspectH = graviks.getStringAspectRatio("H", null)
+        assertEquals(0.58f, aspectH, 0.2f)
+        assertEquals(0f, graviks.getStringAspectRatio("", null))
+
+        graviks.destroy()
+    }
+
+    @Test
     fun testAutomaticDepth() {
         val colors = (0 until 10).map { Color.rgbInt(10 * it, 10 * it, 10 * it) }
         val graviks = GraviksContext(
@@ -484,6 +654,172 @@ class TestContext {
             val time4 = System.currentTimeMillis()
 
             println("Performance of depth precision test: ${time2 - time1}, ${time3 - time2}, ${time4 - time3}")
+        }
+
+        graviks.destroy()
+    }
+
+    @Test
+    fun testBlitColorImageTo() {
+        val graviks = GraviksContext(
+            this.graviksInstance, 50, 50,
+            TranslucentPolicy.Manual, initialBackgroundColor = Color.rgbInt(10, 20, 30)
+        )
+
+        stackPush().use { stack ->
+            val ciDestImage = VkImageCreateInfo.calloc(stack)
+            ciDestImage.`sType$Default`()
+            ciDestImage.imageType(VK_IMAGE_TYPE_2D)
+            ciDestImage.format(VK_FORMAT_B8G8R8A8_UNORM)
+            ciDestImage.extent().set(graviks.width, graviks.height, 1)
+            ciDestImage.mipLevels(1)
+            ciDestImage.arrayLayers(1)
+            ciDestImage.samples(VK_SAMPLE_COUNT_1_BIT)
+            ciDestImage.tiling(VK_IMAGE_TILING_OPTIMAL)
+            ciDestImage.usage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT or VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+            ciDestImage.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
+            ciDestImage.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
+
+            val ciDestImageAllocation = VmaAllocationCreateInfo.calloc(stack)
+            ciDestImageAllocation.usage(VMA_MEMORY_USAGE_AUTO_PREFER_HOST)
+
+            val pDestImage = stack.callocLong(1)
+            val pDestImageAllocation = stack.callocPointer(1)
+            assertSuccess(
+                vmaCreateImage(
+                    vmaAllocator, ciDestImage, ciDestImageAllocation,
+                    pDestImage, pDestImageAllocation, null
+                ), "vmaCreateImage"
+            )
+            val destImage = pDestImage[0]
+            val destImageAllocation = pDestImageAllocation[0]
+
+            graviks.copyColorImageTo(
+                destImage = destImage, destBuffer = null, destImageFormat = VK_FORMAT_B8G8R8A8_UNORM,
+                originalImageLayout = VK_IMAGE_LAYOUT_UNDEFINED, finalImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                imageSrcAccessMask = 0, imageSrcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                imageDstAccessMask = VK_ACCESS_TRANSFER_READ_BIT, imageDstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT
+            )
+
+            val ciDestBuffer = VkBufferCreateInfo.calloc(stack)
+            ciDestBuffer.`sType$Default`()
+            ciDestBuffer.size((graviks.width * graviks.height * 4).toLong())
+            ciDestBuffer.usage(VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+            ciDestBuffer.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
+
+            val ciDestBufferAllocation = VmaAllocationCreateInfo.calloc(stack)
+            ciDestBufferAllocation.flags(
+                VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT or
+                        VMA_ALLOCATION_CREATE_MAPPED_BIT
+            )
+            ciDestBufferAllocation.usage(VMA_MEMORY_USAGE_AUTO)
+
+            val pDestBuffer = stack.callocLong(1)
+            val pDestBufferAllocation = stack.callocPointer(1)
+            val destBufferAllocationInfo = VmaAllocationInfo.calloc(stack)
+            assertSuccess(
+                vmaCreateBuffer(vmaAllocator, ciDestBuffer, ciDestBufferAllocation, pDestBuffer, pDestBufferAllocation, destBufferAllocationInfo),
+                "vmaCreateBuffer"
+            )
+            val destBuffer = pDestBuffer[0]
+            val destBufferAllocation = pDestBufferAllocation[0]
+            val destHostBuffer = memByteBuffer(destBufferAllocationInfo.pMappedData(), graviks.width * graviks.height * 4)
+
+            val ciCommandPool = VkCommandPoolCreateInfo.calloc(stack)
+            ciCommandPool.`sType$Default`()
+            ciCommandPool.flags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
+            ciCommandPool.queueFamilyIndex(graphicsQueueIndex)
+
+            val pCommandPool = stack.callocLong(1)
+            assertSuccess(
+                vkCreateCommandPool(graviks.instance.device, ciCommandPool, null, pCommandPool),
+                "vkCreateCommandPool"
+            )
+            val commandPool = pCommandPool[0]
+
+            val aiCommandBuffer = VkCommandBufferAllocateInfo.calloc(stack)
+            aiCommandBuffer.`sType$Default`()
+            aiCommandBuffer.commandPool(commandPool)
+            aiCommandBuffer.level(VK_COMMAND_BUFFER_LEVEL_PRIMARY)
+            aiCommandBuffer.commandBufferCount(1)
+
+            val pCommandBuffer = stack.callocPointer(1)
+            assertSuccess(
+                vkAllocateCommandBuffers(graviks.instance.device, aiCommandBuffer, pCommandBuffer),
+                "vkAllocateCommandBuffers"
+            )
+            val commandBuffer = VkCommandBuffer(pCommandBuffer[0], graviks.instance.device)
+
+            val biCommandBuffer = VkCommandBufferBeginInfo.calloc(stack)
+            biCommandBuffer.`sType$Default`()
+            assertSuccess(vkBeginCommandBuffer(commandBuffer, biCommandBuffer), "vkBeginCommandBuffer")
+
+            val copyRegions = VkBufferImageCopy.calloc(1, stack)
+            val copyRegion = copyRegions[0]
+            copyRegion.imageSubresource {
+                it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+                it.baseArrayLayer(0)
+                it.layerCount(1)
+                it.mipLevel(0)
+            }
+            copyRegion.imageExtent().set(graviks.width, graviks.height, 1)
+
+            vkCmdCopyImageToBuffer(commandBuffer, destImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destBuffer, copyRegions)
+
+            val bufferBarriers = VkBufferMemoryBarrier.calloc(1, stack)
+            val bufferBarrier = bufferBarriers[0]
+            bufferBarrier.`sType$Default`()
+            bufferBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+            bufferBarrier.dstAccessMask(VK_ACCESS_HOST_READ_BIT)
+            bufferBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+            bufferBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+            bufferBarrier.buffer(destBuffer)
+            bufferBarrier.size(VK_WHOLE_SIZE)
+
+            vkCmdPipelineBarrier(
+                commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0,
+                null, bufferBarriers, null
+            )
+
+            assertSuccess(vkEndCommandBuffer(commandBuffer), "vkEndCommandBuffer")
+
+            val siCopy = VkSubmitInfo.calloc(stack)
+            siCopy.`sType$Default`()
+            siCopy.waitSemaphoreCount(0)
+            siCopy.pCommandBuffers(pCommandBuffer)
+            siCopy.pSignalSemaphores(null)
+
+            val ciCopyFence = VkFenceCreateInfo.calloc(stack)
+            ciCopyFence.`sType$Default`()
+
+            val pCopyFence = stack.callocLong(1)
+            assertSuccess(
+                vkCreateFence(graviks.instance.device, ciCopyFence, null, pCopyFence),
+                "vkCreateFence"
+            )
+            val copyFence = pCopyFence[0]
+
+            assertSuccess(vkQueueSubmit(queue, siCopy, copyFence), "vkQueueSubmit")
+            assertSuccess(
+                vkWaitForFences(graviks.instance.device, pCopyFence, true, 1_000_000_000),
+                "vkWaitForFences"
+            )
+
+            vkDestroyFence(graviks.instance.device, copyFence, null)
+            vkDestroyCommandPool(graviks.instance.device, commandPool, null)
+
+            for (x in 0 until graviks.width) {
+                for (y in 0 until graviks.height) {
+                    val index = 4 * (x + y * graviks.width)
+                    assertEquals(30, destHostBuffer[index].toUByte().toInt())
+                    assertEquals(20, destHostBuffer[index + 1].toUByte().toInt())
+                    assertEquals(10, destHostBuffer[index + 2].toUByte().toInt())
+                    assertEquals(255, destHostBuffer[index + 3].toUByte().toInt())
+                }
+            }
+
+            vmaDestroyImage(vmaAllocator, destImage, destImageAllocation)
+            vmaDestroyBuffer(vmaAllocator, destBuffer, destBufferAllocation)
         }
 
         graviks.destroy()

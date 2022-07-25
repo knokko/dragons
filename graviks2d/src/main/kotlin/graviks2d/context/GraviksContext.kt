@@ -138,6 +138,7 @@ class GraviksContext(
     private var clearDepthBeforeNextDrawCommand = false
 
     init {
+        // TODO Add support for more translucent policies
         if (translucentPolicy != TranslucentPolicy.Manual) {
             throw UnsupportedOperationException("This TranslucentPolicy is not yet implemented")
         }
@@ -337,7 +338,6 @@ class GraviksContext(
         }
     }
 
-    // TODO Test this
     override fun drawRoundedRect(
         x1: Float, y1: Float, x2: Float, y2: Float, radiusX: Float, lineWidth: Float, color: Color
     ) {
@@ -385,7 +385,6 @@ class GraviksContext(
         }
     }
 
-    // TODO Test this
     override fun getImageSize(image: ImageReference): Pair<Int, Int> {
         if (image.customVkImage != null) return Pair(image.customWidth!!, image.customHeight!!)
 
@@ -398,7 +397,6 @@ class GraviksContext(
         return size
     }
 
-    // TODO Test this
     override fun drawString(
         minX: Float, yBottom: Float, maxX: Float, yTop: Float,
         string: String, style: TextStyle, backgroundColor: Color,
@@ -493,7 +491,6 @@ class GraviksContext(
         }
     }
 
-    // TODO Test this
     override fun getStringAspectRatio(string: String, fontReference: FontReference?): Float {
         val font = this.instance.fontManager.getFont(fontReference)
         val totalHeight = font.ascent - font.descent
@@ -522,7 +519,6 @@ class GraviksContext(
         currentDepth = newDepth
     }
 
-    // TODO Test the blit copy
     fun copyColorImageTo(
         destImage: Long?, destBuffer: Long?, destImageFormat: Int?,
         signalSemaphore: Long? = null, submissionMarker: CompletableDeferred<Unit>? = null,
