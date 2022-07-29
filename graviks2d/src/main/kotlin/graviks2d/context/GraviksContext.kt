@@ -237,7 +237,7 @@ class GraviksContext(
 
     private fun softFlush() {
         val firstVertexIndex = if (this.queuedDrawCommands.isEmpty()) { 0 } else {
-            this.queuedDrawCommands[0].vertexIndex + this.queuedDrawCommands[0].numVertices
+            this.queuedDrawCommands.last().vertexIndex + this.queuedDrawCommands.last().numVertices
         }
         if (firstVertexIndex != this.currentVertexIndex) {
             this.queuedDrawCommands.add(
