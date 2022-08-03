@@ -128,7 +128,7 @@ fun createMainMenuRenderCommands(pluginInstance: PluginInstance, gameState: Stat
         val depthClearValue = clearValues[1]
         depthClearValue.depthStencil { depthStencil ->
             depthStencil.depth(1f) // 1 is at the far plane
-            depthStencil.stencil(0) // I don't really know what to do this this...
+            depthStencil.stencil(0) // I don't really know what to do with this...
         }
 
         val biRenderPass = VkRenderPassBeginInfo.calloc(stack)
