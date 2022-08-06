@@ -118,6 +118,7 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
         ))
 
         // Indirect drawing buffer
+        // TODO Enforce alignment of 4 bytes
         agent.claims.stagingBuffers.add(StagingBufferMemoryClaim(
             size = VkDrawIndexedIndirectCommand.SIZEOF * MAX_NUM_INDIRECT_DRAW_CALLS,
             usageFlags = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
