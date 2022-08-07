@@ -21,7 +21,8 @@ class TileRenderer(
 
     private val chunkEntries = mutableMapOf<VulkanBuffer, ChunkTilesRenderEntry>()
 
-    private var shouldRecordCommandsAgain = false
+    var shouldRecordCommandsAgain = false
+        private set
     private var isAcceptingDrawCommands = false
 
     init {
@@ -34,12 +35,7 @@ class TileRenderer(
         commandBuffer: VkCommandBuffer, pipeline: BasicGraphicsPipeline, staticDescriptorSet: Long
     ) {
         if (this.isAcceptingDrawCommands) throw IllegalStateException("Can't record commands between startFrame() and endFrame()")
-        // TODO Before this is called, the commands should have began by vkBeginCommandBuffer
-        // TODO Before this is called, the camera buffers should be filled
-        // TODO Before this is called, the color image and depth image should be cleared
-        // TODO Before this is called, the render pass should have been started
-        // TODO Before this is called, the basic graphics pipeline should have been bound
-        // TODO Before this is called, the push constants (the eye index) should be ready
+
         stackPush().use { stack ->
             for (chunkEntry in this.chunkEntries.values) {
                 vkCmdBindDescriptorSets(
@@ -61,9 +57,9 @@ class TileRenderer(
                 vkCmdDrawIndexedIndirectCountKHR(
                     commandBuffer,
                     this.indirectDrawVulkanBuffer.buffer.handle,
-                    chunkEntry.indirectDrawIndex.toLong() * Int.SIZE_BYTES,
+                    this.indirectDrawVulkanBuffer.offset + chunkEntry.indirectDrawIndex.toLong() * Int.SIZE_BYTES,
                     this.indirectDrawVulkanBuffer.buffer.handle,
-                    chunkEntry.indirectCountIndex.toLong() * Int.SIZE_BYTES,
+                    this.indirectDrawVulkanBuffer.offset + chunkEntry.indirectCountIndex.toLong() * Int.SIZE_BYTES,
                     chunkEntry.maxNumIndirectDrawCalls,
                     VkDrawIndexedIndirectCommand.SIZEOF
                 )
@@ -136,7 +132,7 @@ class TileRenderer(
 
         if (indices.size % 4L != 0L) throw IllegalArgumentException("Size of indices must be a multiple of 4")
         if (indices.offset % 4L != 0L) throw IllegalArgumentException("Offset of indices must be a multiple of 4")
-        if (vertices.offset % 4L != 0L) throw IllegalArgumentException("Offset of vertices must be a multiple of 4")
+        if (vertices.offset % BasicVertex.SIZE != 0L) throw IllegalArgumentException("Offset of vertices must be a multiple of BasicVertex.SIZE")
 
         val chunkEntry = this.chunkEntries[vertices.buffer] ?: throw IllegalArgumentException("No loaded chunk has this vertex buffer")
         if (indices.buffer != chunkEntry.indexBuffer) {
@@ -146,9 +142,10 @@ class TileRenderer(
         val firstMatrixIndex = this.transformationMatrixManager.prepareMatrices(transformationMatrices)
 
         // TODO Handle currentDrawCount atomically
-        val drawCommand = VkDrawIndexedIndirectCommand.create(
-                memAddress(this.indirectDrawIntBuffer, chunkEntry.indirectDrawIndex + chunkEntry.currentDrawCount)
-        )
+        val drawCommand = VkDrawIndexedIndirectCommand.create(memAddress(
+            this.indirectDrawIntBuffer,
+            chunkEntry.indirectDrawIndex + chunkEntry.currentDrawCount * (VkDrawIndexedIndirectCommand.SIZEOF / Int.SIZE_BYTES)
+        ))
         drawCommand.indexCount((indices.size / 4).toInt())
         drawCommand.instanceCount(transformationMatrices.size)
         drawCommand.firstIndex((indices.offset / 4).toInt())

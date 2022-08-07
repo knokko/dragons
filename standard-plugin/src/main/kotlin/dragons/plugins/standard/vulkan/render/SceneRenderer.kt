@@ -1,18 +1,20 @@
 package dragons.plugins.standard.vulkan.render
 
-import dragons.plugins.standard.vulkan.pipeline.BasicGraphicsPipeline
 import dragons.plugins.standard.vulkan.render.tile.TileRenderer
 import dragons.vulkan.memory.VulkanBufferRange
+import dragons.vulkan.queue.QueueFamily
 import org.joml.Matrix4f
-import org.lwjgl.system.MemoryStack.stackPush
-import org.lwjgl.vulkan.VK10.*
-import org.lwjgl.vulkan.VkClearValue
-import org.lwjgl.vulkan.VkCommandBuffer
-import org.lwjgl.vulkan.VkRenderPassBeginInfo
+import org.lwjgl.system.MemoryStack
+import org.lwjgl.vulkan.VkDevice
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
 class SceneRenderer(
+    vkDevice: VkDevice,
+    queueFamily: QueueFamily,
+    scenePipelines: ScenePipelines,
+    sceneRenderTarget: SceneRenderTarget,
+
     private val indirectDrawIntBuffer: IntBuffer,
     private val indirectDrawVulkanBuffer: VulkanBufferRange,
 
@@ -24,11 +26,18 @@ class SceneRenderer(
     private val cameraHostBuffer: VulkanBufferRange,
     private val cameraDeviceBuffer: VulkanBufferRange
 ) {
+    private val sceneCommands: SceneCommands
     private val cameraManager: CameraBufferManager
     private val transformationMatrixManager: TransformationMatrixManager
-    private val tileRenderer: TileRenderer
+    val tileRenderer: TileRenderer
 
     init {
+        this.sceneCommands = SceneCommands(
+            vkDevice = vkDevice,
+            queueFamily = queueFamily,
+            pipelines = scenePipelines,
+            renderTarget = sceneRenderTarget
+        )
         this.cameraManager = CameraBufferManager(
             floatBuffer = this.cameraFloatBuffer,
             hostBuffer = this.cameraHostBuffer,
@@ -45,71 +54,24 @@ class SceneRenderer(
         this.tileRenderer = TileRenderer(
             indirectDrawIntBuffer = this.indirectDrawIntBuffer.slice(0, indirectDrawTileSize),
             indirectDrawVulkanBuffer = VulkanBufferRange(
-                this.indirectDrawVulkanBuffer.buffer, 0, (indirectDrawTileSize * Int.SIZE_BYTES).toLong()
+                this.indirectDrawVulkanBuffer.buffer, this.indirectDrawVulkanBuffer.offset, (indirectDrawTileSize * Int.SIZE_BYTES).toLong()
             ),
             transformationMatrixManager = this.transformationMatrixManager
         )
     }
 
-    fun recordCommands(
-        commandBuffer: VkCommandBuffer,
-        basicRenderPass: Long, basicPipeline: BasicGraphicsPipeline, staticDescriptorSet: Long,
-        leftFramebuffer: Long, rightFramebuffer: Long, framebufferWidth: Int, framebufferHeight: Int
-    ) {
-        stackPush().use { stack ->
-            this.cameraManager.recordCommands(commandBuffer)
-            this.transformationMatrixManager.recordCommands(commandBuffer)
-
-            val clearValues = VkClearValue.calloc(2, stack)
-            val colorClearValue = clearValues[0]
-            colorClearValue.color { color ->
-                color.float32(0, 68f / 255f)
-                color.float32(1, 107f / 255f)
-                color.float32(2, 176f / 255f)
-                color.float32(3, 1f)
-            }
-            val depthClearValue = clearValues[1]
-            depthClearValue.depthStencil { depthStencil ->
-                depthStencil.depth(1f) // 1 is at the far plane
-                depthStencil.stencil(0) // I don't really know what to do with this...
-            }
-
-            val biRenderPass = VkRenderPassBeginInfo.calloc(stack)
-            biRenderPass.`sType$Default`()
-            biRenderPass.renderPass(basicRenderPass)
-            // framebuffer will be filled in later
-            biRenderPass.renderArea { renderArea ->
-                renderArea.offset { offset -> offset.set(0, 0) }
-                renderArea.extent { extent -> extent.set(framebufferWidth, framebufferHeight) }
-            }
-            biRenderPass.clearValueCount(2)
-            biRenderPass.pClearValues(clearValues)
-
-            for ((eyeIndex, framebuffer) in arrayOf(leftFramebuffer, rightFramebuffer).withIndex()) {
-                biRenderPass.framebuffer(framebuffer)
-
-                vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
-                vkCmdBindPipeline(
-                    commandBuffer,
-                    VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    basicPipeline.handle
-                )
-                vkCmdPushConstants(
-                    commandBuffer,
-                    basicPipeline.pipelineLayout,
-                    VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
-                    0,
-                    stack.ints(eyeIndex)
-                )
-
-                this.tileRenderer.recordCommands(commandBuffer, basicPipeline, staticDescriptorSet)
-
-                vkCmdEndRenderPass(commandBuffer)
-            }
-        }
+    private fun recordCommands() {
+        this.sceneCommands.record(
+            this.cameraManager,
+            this.transformationMatrixManager,
+            this.tileRenderer
+        )
     }
 
-    fun startFrame(leftCameraMatrix: Matrix4f, rightCameraMatrix: Matrix4f) {
+    fun startFrame(stack: MemoryStack, leftCameraMatrix: Matrix4f, rightCameraMatrix: Matrix4f) {
+        if (this.tileRenderer.shouldRecordCommandsAgain) this.recordCommands()
+        this.sceneCommands.awaitLastSubmission(stack)
+
         this.cameraManager.setCamera(leftCameraMatrix, rightCameraMatrix)
         this.transformationMatrixManager.startFrame()
         this.tileRenderer.startFrame()
@@ -118,5 +80,13 @@ class SceneRenderer(
     fun endFrame() {
         this.tileRenderer.endFrame()
         this.transformationMatrixManager.endFrame()
+    }
+
+    fun submit(waitSemaphores: LongArray, waitStageMasks: IntArray, signalSemaphores: LongArray) {
+        this.sceneCommands.submit(waitSemaphores, waitStageMasks, signalSemaphores)
+    }
+
+    fun destroy() {
+        this.sceneCommands.destroy()
     }
 }
