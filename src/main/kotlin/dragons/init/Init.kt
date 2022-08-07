@@ -24,11 +24,13 @@ import dragons.vulkan.memory.allocateStaticMemory
 import graviks2d.core.GraviksInstance
 import kotlinx.coroutines.*
 import org.lwjgl.system.Platform
-import org.lwjgl.util.vma.Vma.vmaDestroyAllocator
 import org.slf4j.Logger
 import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory.getLogger
 import java.io.File
+import java.io.InputStream
+import java.lang.Thread.sleep
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import kotlin.io.path.absolutePathString
 
@@ -128,6 +130,37 @@ fun main(args: Array<String>) {
     }
 }
 
+fun debugBuildProcess(process: Process): Int {
+    val processInputStream = process.inputStream
+    val processErrorStream = process.errorStream
+
+    val startTime = System.currentTimeMillis()
+    val timeoutSeconds = 10
+
+    fun printProcessStream(input: InputStream, description: String) {
+        val inputArray = ByteArray(input.available())
+        if (inputArray.isNotEmpty()) {
+            input.read(inputArray)
+            val inputStrings = String(inputArray, StandardCharsets.UTF_8)
+            println("$description:")
+            println(inputStrings)
+        }
+    }
+
+    while (process.isAlive) {
+        if (System.currentTimeMillis() > startTime + timeoutSeconds * 1000) {
+            process.destroy()
+        }
+
+        printProcessStream(processInputStream, "Build plug-ins standard output")
+        printProcessStream(processErrorStream, "Build plug-ins standard error output")
+
+        sleep(5000)
+    }
+
+    return process.exitValue()
+}
+
 fun ensurePluginsAreBuilt(logger: Logger): Boolean {
     logger.warn("Running in development, so the plug-ins need to be built...")
 
@@ -139,10 +172,10 @@ fun ensurePluginsAreBuilt(logger: Logger): Boolean {
         val buildPluginsBuilder = ProcessBuilder(buildPluginScript.absolutePathString())
         buildPluginsBuilder.redirectError(ProcessBuilder.Redirect.INHERIT)
         val buildPluginsProcess = buildPluginsBuilder.start()
-        buildPluginsProcess.waitFor()
+        debugBuildProcess(buildPluginsProcess)
     } else {
         val buildPluginsProcess = Runtime.getRuntime().exec("./gradlew build -x test")
-        buildPluginsProcess.waitFor()
+        debugBuildProcess(buildPluginsProcess)
     }
 
     if (exitCode != 0) {
