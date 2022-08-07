@@ -24,7 +24,7 @@ class MainParameters(args: Array<String>) {
     init {
         for (arg in args) {
             if (!ALL_PARAMETERS.contains(arg)) {
-                throw IllegalArgumentException("Unknown main argument $arg")
+                throw IllegalArgumentException("Unknown main argument '$arg'")
             }
         }
 
