@@ -3,8 +3,12 @@ package dragons.plugins.standard.menu
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.menu.MainMenuManager
 import dragons.plugins.standard.state.StandardPluginState
-import dragons.plugins.standard.vulkan.command.createMainMenuRenderCommands
+import dragons.plugins.standard.vulkan.MAX_NUM_INDIRECT_DRAW_CALLS
 import dragons.plugins.standard.vulkan.command.fillDrawingBuffers
+import dragons.plugins.standard.vulkan.pipeline.updateBasicDynamicDescriptorSet
+import dragons.plugins.standard.vulkan.render.ScenePipelines
+import dragons.plugins.standard.vulkan.render.SceneRenderTarget
+import dragons.plugins.standard.vulkan.render.SceneRenderer
 import dragons.state.StaticGameState
 import dragons.util.Angle
 import dragons.util.getStandardOutputHistory
@@ -36,8 +40,6 @@ class StandardMainMenu: MainMenuManager {
 
     override suspend fun controlMainMenu(pluginInstance: PluginInstance, gameState: StaticGameState) {
 
-        val (mainCommandPool, mainCommandBuffer) = createMainMenuRenderCommands(pluginInstance, gameState)
-
         fun createSemaphore(description: String): Long {
             return stackPush().use { stack ->
                 val ciSemaphore = VkSemaphoreCreateInfo.calloc(stack)
@@ -52,11 +54,50 @@ class StandardMainMenu: MainMenuManager {
             }
         }
 
+        val pluginState = pluginInstance.state as StandardPluginState
+
+        // TODO Handle these properly...
+        updateBasicDynamicDescriptorSet(
+            gameState.graphics.vkDevice,
+            pluginState.graphics.basicDynamicDescriptorSet,
+            pluginState.graphics.mainMenu.textureSet.colorTextureList,
+            pluginState.graphics.mainMenu.textureSet.heightTextureList
+        )
+
+        val sceneRenderer = SceneRenderer(
+            vkDevice = gameState.graphics.vkDevice, queueFamily = gameState.graphics.queueManager.generalQueueFamily,
+            scenePipelines = ScenePipelines(
+                basicRenderPass = pluginState.graphics.basicRenderPass,
+                basicPipeline = pluginState.graphics.basicGraphicsPipeline,
+                staticDescriptorSet = pluginState.graphics.basicStaticDescriptorSet
+            ),
+            sceneRenderTarget = SceneRenderTarget(
+                leftFramebuffer = pluginState.graphics.basicLeftFramebuffer,
+                rightFramebuffer = pluginState.graphics.basicRightFramebuffer,
+                width = gameState.vrManager.getWidth(), height = gameState.vrManager.getHeight()
+            ),
+            indirectDrawIntBuffer = pluginState.graphics.buffers.indirectDrawHost.asIntBuffer(),
+            indirectDrawVulkanBuffer = pluginState.graphics.buffers.indirectDrawDevice,
+            storageFloatBuffer = pluginState.graphics.buffers.transformationMatrixHost.asFloatBuffer(),
+            storageHostBuffer = pluginState.graphics.buffers.transformationMatrixStaging,
+            storageDeviceBuffer = pluginState.graphics.buffers.transformationMatrixDevice,
+            cameraFloatBuffer = pluginState.graphics.buffers.cameraHost.asFloatBuffer(),
+            cameraHostBuffer = pluginState.graphics.buffers.cameraStaging,
+            cameraDeviceBuffer = pluginState.graphics.buffers.cameraDevice
+        )
+
+        sceneRenderer.tileRenderer.addChunk(
+            vertexBuffer = pluginState.graphics.mainMenu.modelSet.vertexBuffer,
+            indexBuffer = pluginState.graphics.mainMenu.modelSet.indexBuffer,
+            dynamicDescriptorSet = pluginState.graphics.basicDynamicDescriptorSet,
+            maxNumIndirectDrawCalls = MAX_NUM_INDIRECT_DRAW_CALLS - 1 // TODO Handle this neatly
+        )
+
         val renderFinishedSemaphore = createSemaphore("main menu rendering")
         val debugPanelSemaphore = createSemaphore("main menu debug panel")
 
         // TODO Add more iterations (and eventually loop indefinitely)
-        var numIterationsLeft = 100
+        var numIterationsLeft = 5000
 
         val currentPosition = Vector3f()
         var extraRotation = 0f
@@ -95,7 +136,6 @@ class StandardMainMenu: MainMenuManager {
 
                 val averageEyePosition = eyeMatrices.averageVirtualEyePosition.add(currentPosition, Vector3f())
 
-                val pluginState = pluginInstance.state as StandardPluginState
                 pluginState.graphics.debugPanel.execute {
 
                     val newStandardOutputHistory = getStandardOutputHistory(50)
@@ -118,31 +158,26 @@ class StandardMainMenu: MainMenuManager {
 
                         lastStandardOutputHistory = newStandardOutputHistory
                     }
-
                 }
 
                 val submissionMarker = CompletableDeferred<Unit>()
                 pluginState.graphics.debugPanel.updateImage(debugPanelSemaphore, submissionMarker)
-                fillDrawingBuffers(
-                    pluginInstance, gameState,
-                    averageEyePosition, eyeMatrices.leftEyeMatrix, eyeMatrices.rightEyeMatrix
-                )
 
                 stackPush().use { stack ->
-                    val pSubmits = VkSubmitInfo.calloc(1, stack)
-                    val pSubmit = pSubmits[0]
-                    pSubmit.`sType$Default`()
-                    pSubmit.waitSemaphoreCount(1)
-                    pSubmit.pWaitSemaphores(stack.longs(debugPanelSemaphore))
-                    pSubmit.pWaitDstStageMask(stack.ints(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT))
-                    pSubmit.pCommandBuffers(stack.pointers(mainCommandBuffer.address()))
-                    pSubmit.pSignalSemaphores(stack.longs(renderFinishedSemaphore))
+
+                    sceneRenderer.startFrame(stack, eyeMatrices.leftEyeMatrix, eyeMatrices.rightEyeMatrix)
+                    fillDrawingBuffers(sceneRenderer, pluginState.graphics, averageEyePosition)
+                    sceneRenderer.endFrame()
 
                     // The debug panel queue submission must have ended before I can submit the frame queue submission
                     runBlocking { submissionMarker.await() }
 
                     gameState.vrManager.markFirstFrameQueueSubmit()
-                    gameState.graphics.queueManager.generalQueueFamily.getRandomPriorityQueue().submit(pSubmits, VK_NULL_HANDLE)
+                    sceneRenderer.submit(
+                        longArrayOf(debugPanelSemaphore),
+                        intArrayOf(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT),
+                        longArrayOf(renderFinishedSemaphore)
+                    )
                 }
                 gameState.vrManager.resolveAndSubmitFrames(
                     renderFinishedSemaphore, numIterationsLeft == 1
@@ -160,8 +195,9 @@ class StandardMainMenu: MainMenuManager {
             }
         }
 
+        sceneRenderer.destroy()
+
         vkDestroySemaphore(gameState.graphics.vkDevice, renderFinishedSemaphore, null)
         vkDestroySemaphore(gameState.graphics.vkDevice, debugPanelSemaphore, null)
-        vkDestroyCommandPool(gameState.graphics.vkDevice, mainCommandPool, null)
     }
 }
