@@ -135,7 +135,7 @@ fun debugBuildProcess(process: Process): Int {
     val processErrorStream = process.errorStream
 
     val startTime = System.currentTimeMillis()
-    val timeoutSeconds = 10
+    val timeoutSeconds = 60
 
     fun printProcessStream(input: InputStream, description: String) {
         val inputArray = ByteArray(input.available())
