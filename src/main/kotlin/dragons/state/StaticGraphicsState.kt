@@ -2,6 +2,7 @@ package dragons.state
 
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.CoreStaticMemory
+import dragons.vulkan.memory.MemoryInfo
 import dragons.vulkan.memory.scope.MemoryScope
 import dragons.vulkan.queue.QueueManager
 import graviks2d.core.GraviksInstance
@@ -12,6 +13,7 @@ import org.lwjgl.vulkan.VkPhysicalDevice
 class StaticGraphicsState(
     val vkInstance: VkInstance,
     val vkPhysicalDevice: VkPhysicalDevice,
+    val memoryInfo: MemoryInfo,
     val vkDevice: VkDevice,
     val queueManager: QueueManager,
     val vmaAllocator: Long,

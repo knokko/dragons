@@ -6,18 +6,16 @@ import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.model.PreModel
 import dragons.plugins.standard.vulkan.model.generator.*
 import dragons.plugins.standard.vulkan.texture.PreTexture
-import dragons.plugins.standard.vulkan.vertex.BasicVertex
+import dragons.plugins.standard.vulkan.util.claimColorImage
+import dragons.plugins.standard.vulkan.util.claimHeightImage
+import dragons.plugins.standard.vulkan.util.claimVertexAndIndexBuffer
 import dragons.vulkan.memory.claim.BufferMemoryClaim
 import dragons.vulkan.memory.claim.ImageMemoryClaim
 import dragons.vulkan.memory.claim.StagingBufferMemoryClaim
-import dragons.vulkan.memory.claim.prefillBufferedImage
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkDrawIndexedIndirectCommand
 import java.awt.Color
-import java.awt.image.BufferedImage
-import java.awt.image.BufferedImage.TYPE_INT_ARGB
 import java.nio.ByteBuffer
-import javax.imageio.ImageIO
 
 const val MAX_NUM_TRANSFORMATION_MATRICES = 100_000
 const val MAX_NUM_INDIRECT_DRAW_CALLS = 100_000
@@ -134,136 +132,38 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
     }
 }
 
-private fun claimVertexBuffer(
-    agent: VulkanStaticMemoryUser.Agent, model: PreModel, generator: ModelGenerator
-) {
-    agent.claims.buffers.add(BufferMemoryClaim(
-        size = generator.numVertices * BasicVertex.SIZE,
-        alignment = BasicVertex.SIZE,
-        usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
-        dstPipelineStageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-        queueFamily = agent.queueManager.generalQueueFamily,
-        storeResult = model.vertices
-    ) { destBuffer ->
-        val vertices = BasicVertex.createArray(destBuffer, 0, generator.numVertices.toLong())
-        generator.fillVertexBuffer(vertices)
-    })
-}
-
-private fun claimIndexBuffer(
-    agent: VulkanStaticMemoryUser.Agent, model: PreModel, generator: ModelGenerator
-) {
-    agent.claims.buffers.add(BufferMemoryClaim(
-        size = generator.numIndices * Int.SIZE_BYTES,
-        alignment = 4,
-        usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        dstAccessMask = VK_ACCESS_INDEX_READ_BIT,
-        dstPipelineStageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-        queueFamily = agent.queueManager.generalQueueFamily,
-        storeResult = model.indices
-    ) { destBuffer ->
-        generator.fillIndexBuffer(destBuffer.asIntBuffer())
-    })
-}
-
 private fun claimVertexAndIndexBuffer(
     agent: VulkanStaticMemoryUser.Agent, model: PreModel, generator: ModelGenerator
 ) {
-    claimVertexBuffer(agent, model, generator)
-    claimIndexBuffer(agent, model, generator)
-}
-
-private fun claimColorImage(
-    agent: VulkanStaticMemoryUser.Agent, width: Int, height: Int, texture: PreTexture, prefill: (ByteBuffer) -> Unit
-) {
-    agent.claims.images.add(
-        ImageMemoryClaim(
-            width = width,
-            height = height,
-            queueFamily = agent.queueManager.generalQueueFamily,
-            bytesPerPixel = 4,
-            imageFormat = VK_FORMAT_R8G8B8A8_SRGB,
-            tiling = VK_IMAGE_TILING_OPTIMAL,
-            imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT,
-            initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            accessMask = VK_ACCESS_SHADER_READ_BIT,
-            dstPipelineStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            storeResult = texture.image,
-            prefill = prefill
-        )
-    )
+    claimVertexAndIndexBuffer(agent.claims, agent.queueManager, model.vertices, model.indices, generator)
 }
 
 private fun claimColorImage(
     agent: VulkanStaticMemoryUser.Agent, width: Int, height: Int, texture: PreTexture, resourceName: String
 ) {
-    claimColorImage(agent, width, height, texture, prefillBufferedImage(
-            // TODO Start loading the image asynchronously earlier
-            { ImageIO.read(agent.pluginClassLoader.getResourceAsStream(resourceName)) },
-            width, height, 4
-        )
-    )
+    claimColorImage(agent.claims, agent.queueManager, agent.pluginClassLoader, width, height, texture.image, resourceName)
 }
 
 private fun claimColorImage(
     agent: VulkanStaticMemoryUser.Agent, width: Int, height: Int, texture: PreTexture, pixelFunction: (Int, Int) -> Color
 ) {
-    claimColorImage(agent, width, height, texture, prefillBufferedImage({
-        val image = BufferedImage(width, height, TYPE_INT_ARGB)
-        for (x in 0 until width) {
-            for (y in 0 until height) {
-                val pixelColor = pixelFunction(x, y)
-                image.setRGB(x, y, pixelColor.rgb)
-            }
-        }
-        image
-    }, width, height, 4))
+    claimColorImage(agent.claims, agent.queueManager, width, height, texture.image, pixelFunction)
 }
 
 private fun claimHeightImage(
     agent: VulkanStaticMemoryUser.Agent, width: Int, height: Int, texture: PreTexture, prefill: (ByteBuffer) -> Unit
 ) {
-    agent.claims.images.add(ImageMemoryClaim(
-        width = width, height = height, queueFamily = agent.queueManager.generalQueueFamily, bytesPerPixel = 4,
-        imageFormat = VK_FORMAT_R32_SFLOAT, tiling = VK_IMAGE_TILING_OPTIMAL,
-        imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT, initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, accessMask = VK_ACCESS_SHADER_READ_BIT,
-        dstPipelineStageMask = VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT or VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        storeResult = texture.image,
-        prefill = prefill
-    ))
+    claimHeightImage(agent.claims, agent.queueManager, width, height, texture.image, prefill)
 }
 
 private fun claimHeightImage(
     agent: VulkanStaticMemoryUser.Agent, width: Int, height: Int, texture: PreTexture, resourceName: String, weight: Float
 ) {
-    claimHeightImage(agent, width, height, texture) { destBuffer ->
-        val bufferedHeightImage = ImageIO.read(
-            agent.pluginClassLoader.getResourceAsStream(resourceName)
-        )
-
-        for (x in 0 until width) {
-            for (y in 0 until height) {
-                val destIndex = 4 * (x + y * width)
-                val bufferedHeightValue = Color(bufferedHeightImage.getRGB(x, y)).red
-                val destHeightValue = weight * (bufferedHeightValue - 127)
-                destBuffer.putFloat(destIndex, destHeightValue)
-            }
-        }
-    }
+    claimHeightImage(agent.claims, agent.queueManager, agent.pluginClassLoader, width, height, texture.image, resourceName, weight)
 }
 
 private fun claimHeightImage(
     agent: VulkanStaticMemoryUser.Agent, width: Int, height: Int, texture: PreTexture, heightFunction: (Int, Int) -> Float
 ) {
-    claimHeightImage(agent, width, height, texture) { destBuffer ->
-        for (x in 0 until width) {
-            for (y in 0 until height) {
-                val destIndex = 4 * (x + y * width)
-                destBuffer.putFloat(destIndex, heightFunction(x, y))
-            }
-        }
-    }
+    claimHeightImage(agent.claims, agent.queueManager, width, height, texture.image, heightFunction)
 }

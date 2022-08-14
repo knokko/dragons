@@ -1,16 +1,19 @@
 package dragons.plugins.standard.vulkan.render
 
-import dragons.plugins.standard.vulkan.render.tile.TileRenderer
+import dragons.plugins.standard.vulkan.pipeline.BasicGraphicsPipeline
+import dragons.plugins.standard.vulkan.render.tile.StandardTileRenderer
 import dragons.vulkan.queue.QueueFamily
 import dragons.vulkan.util.assertVkSuccess
+import dragons.world.render.SceneRenderTarget
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
 
-class SceneCommands(
+internal class SceneCommands(
     private val vkDevice: VkDevice, private val queueFamily: QueueFamily,
-    private val pipelines: ScenePipelines, private val renderTarget: SceneRenderTarget
+    private val basicRenderPass: Long, private val basicPipeline: BasicGraphicsPipeline,
+    private val staticDescriptorSet: Long, private val renderTarget: SceneRenderTarget
 ) {
 
     private val commandPool: Long
@@ -71,7 +74,7 @@ class SceneCommands(
     fun record(
         cameraBufferManager: CameraBufferManager,
         transformationMatrixManager: TransformationMatrixManager,
-        tileRenderer: TileRenderer
+        tileRenderer: StandardTileRenderer
     ) {
         stackPush().use { stack ->
 
@@ -107,7 +110,7 @@ class SceneCommands(
 
             val biRenderPass = VkRenderPassBeginInfo.calloc(stack)
             biRenderPass.`sType$Default`()
-            biRenderPass.renderPass(this.pipelines.basicRenderPass)
+            biRenderPass.renderPass(this.basicRenderPass)
             // framebuffer will be filled in later
             biRenderPass.renderArea { renderArea ->
                 renderArea.offset { offset -> offset.set(0, 0) }
@@ -123,17 +126,17 @@ class SceneCommands(
                 vkCmdBindPipeline(
                     this.commandBuffer,
                     VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    this.pipelines.basicPipeline.handle
+                    this.basicPipeline.handle
                 )
                 vkCmdPushConstants(
                     this.commandBuffer,
-                    this.pipelines.basicPipeline.pipelineLayout,
+                    this.basicPipeline.pipelineLayout,
                     VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
                     0,
                     stack.ints(eyeIndex)
                 )
 
-                tileRenderer.recordCommands(this.commandBuffer, this.pipelines.basicPipeline, this.pipelines.staticDescriptorSet)
+                tileRenderer.recordCommands(this.commandBuffer, this.basicPipeline, this.staticDescriptorSet)
 
                 vkCmdEndRenderPass(this.commandBuffer)
             }

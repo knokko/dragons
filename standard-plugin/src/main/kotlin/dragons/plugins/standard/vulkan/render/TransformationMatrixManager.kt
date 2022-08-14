@@ -6,7 +6,7 @@ import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkCommandBuffer
 import java.nio.FloatBuffer
 
-class TransformationMatrixManager(
+internal class TransformationMatrixManager(
     private val floatBuffer: FloatBuffer,
     private val hostBuffer: VulkanBufferRange,
     private val deviceBuffer: VulkanBufferRange

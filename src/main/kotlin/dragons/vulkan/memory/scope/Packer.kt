@@ -155,7 +155,7 @@ suspend fun packMemoryClaims(
 
         MemoryScope(
             deviceBufferMemory = deviceBufferMemory,
-            deviceBuffers = deviceQueueFamilyToBufferMap.values,
+            deviceBuffers = deviceQueueFamilyToBufferMap,
             persistentStagingMemory = persistentStagingMemory,
             persistentStagingBuffers = stagingQueueFamilyToBufferMap.values,
             deviceImageMemory = deviceImageMemory,

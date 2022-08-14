@@ -1,4 +1,4 @@
-package dragons.plugins.standard.vulkan.render.tile
+package dragons.plugins.standard.vulkan.render.chunk
 
 import dragons.vulkan.memory.VulkanBuffer
 import dragons.vulkan.memory.VulkanBufferRange

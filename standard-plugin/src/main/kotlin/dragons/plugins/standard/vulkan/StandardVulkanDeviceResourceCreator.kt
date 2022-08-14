@@ -26,7 +26,8 @@ class StandardVulkanDeviceResourceCreator: VulkanDeviceCreationListener {
             val staticDescriptorPool = createBasicStaticDescriptorPool(agent.vulkanDevice)
             state.preGraphics.basicStaticDescriptorPool.complete(staticDescriptorPool)
 
-            val dynamicDescriptorPool = createBasicDynamicDescriptorPool(agent.vulkanDevice)
+            // TODO Remove this after refactoring
+            val dynamicDescriptorPool = createBasicDynamicDescriptorPool(agent.vulkanDevice, 1)
             state.preGraphics.basicDynamicDescriptorPool.complete(dynamicDescriptorPool)
 
             val basicPipeline = state.preGraphics.basicGraphicsPipeline.await()

@@ -1,4 +1,4 @@
-package dragons.plugins.standard.vulkan.render
+package dragons.world.render
 
 class SceneRenderTarget(
     val leftFramebuffer: Long, val rightFramebuffer: Long,

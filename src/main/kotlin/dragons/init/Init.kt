@@ -279,6 +279,7 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
             graphics = StaticGraphicsState(
                 vulkanInstance,
                 vulkanPhysicalDevice,
+                memoryInfo,
                 vulkanDevice,
                 queueManager,
                 vmaAllocator,

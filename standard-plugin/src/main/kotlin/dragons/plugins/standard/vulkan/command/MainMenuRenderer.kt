@@ -2,14 +2,14 @@ package dragons.plugins.standard.vulkan.command
 
 import dragons.plugins.standard.state.StandardGraphicsState
 import dragons.plugins.standard.vulkan.model.generator.FlowerGenerators
-import dragons.plugins.standard.vulkan.render.SceneRenderer
+import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import org.joml.Math.toRadians
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import java.util.*
 
 fun fillDrawingBuffers(
-    renderer: SceneRenderer, graphicsState: StandardGraphicsState, averageEyePosition: Vector3f
+    renderer: StandardSceneRenderer, graphicsState: StandardGraphicsState, averageEyePosition: Vector3f
 ) {
     val numTerrainDrawCalls = 300
     val numDebugPanels = 4
@@ -27,7 +27,7 @@ fun fillDrawingBuffers(
                 -10f + 2f * (currentDrawCall % 10)
             )
 
-        renderer.tileRenderer.drawTile(
+        renderer.drawTile(
             vertices = graphicsState.mainMenu.skyland.vertices,
             indices = graphicsState.mainMenu.skyland.indices,
             transformationMatrices = arrayOf(transformationMatrix)
@@ -49,7 +49,7 @@ fun fillDrawingBuffers(
     }
 
     for (panelIndex in 0 until numDebugPanels) {
-        renderer.tileRenderer.drawTile(
+        renderer.drawTile(
             vertices = graphicsState.mainMenu.debugPanel.vertices,
             indices = graphicsState.mainMenu.debugPanel.indices,
             transformationMatrices = arrayOf(debugMatrices[panelIndex])
@@ -67,7 +67,7 @@ fun fillDrawingBuffers(
                 .scale(1f)
         }.toTypedArray()
 
-        renderer.tileRenderer.drawTile(
+        renderer.drawTile(
             vertices = flowerModel.vertices,
             indices = flowerModel.indices,
             transformationMatrices = flowerMatrices

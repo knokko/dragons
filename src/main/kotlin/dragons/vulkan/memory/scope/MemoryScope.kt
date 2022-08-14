@@ -2,6 +2,7 @@ package dragons.vulkan.memory.scope
 
 import dragons.vulkan.memory.VulkanBuffer
 import dragons.vulkan.memory.VulkanImage
+import dragons.vulkan.queue.QueueFamily
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkDevice
 
@@ -21,7 +22,7 @@ import org.lwjgl.vulkan.VkDevice
  */
 class MemoryScope(
     val deviceBufferMemory: Long?,
-    val deviceBuffers: Collection<VulkanBuffer>,
+    val deviceBuffers: Map<QueueFamily?, VulkanBuffer>,
     val persistentStagingMemory: Long?,
     val persistentStagingBuffers: Collection<VulkanBuffer>,
     val deviceImageMemory: Long?,
@@ -29,7 +30,7 @@ class MemoryScope(
 ) {
 
     fun destroy(vkDevice: VkDevice) {
-        for (deviceBuffer in deviceBuffers) {
+        for (deviceBuffer in deviceBuffers.values) {
             vkDestroyBuffer(vkDevice, deviceBuffer.handle, null)
         }
         if (deviceBufferMemory != null) {

@@ -6,9 +6,7 @@ import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.MAX_NUM_INDIRECT_DRAW_CALLS
 import dragons.plugins.standard.vulkan.command.fillDrawingBuffers
 import dragons.plugins.standard.vulkan.pipeline.updateBasicDynamicDescriptorSet
-import dragons.plugins.standard.vulkan.render.ScenePipelines
-import dragons.plugins.standard.vulkan.render.SceneRenderTarget
-import dragons.plugins.standard.vulkan.render.SceneRenderer
+import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.state.StaticGameState
 import dragons.util.Angle
 import dragons.util.getStandardOutputHistory
@@ -23,7 +21,6 @@ import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
-import org.lwjgl.vulkan.VkSubmitInfo
 import kotlin.math.atan2
 
 class StandardMainMenu: MainMenuManager {
@@ -64,29 +61,9 @@ class StandardMainMenu: MainMenuManager {
             pluginState.graphics.mainMenu.textureSet.heightTextureList
         )
 
-        val sceneRenderer = SceneRenderer(
-            vkDevice = gameState.graphics.vkDevice, queueFamily = gameState.graphics.queueManager.generalQueueFamily,
-            scenePipelines = ScenePipelines(
-                basicRenderPass = pluginState.graphics.basicRenderPass,
-                basicPipeline = pluginState.graphics.basicGraphicsPipeline,
-                staticDescriptorSet = pluginState.graphics.basicStaticDescriptorSet
-            ),
-            sceneRenderTarget = SceneRenderTarget(
-                leftFramebuffer = pluginState.graphics.basicLeftFramebuffer,
-                rightFramebuffer = pluginState.graphics.basicRightFramebuffer,
-                width = gameState.vrManager.getWidth(), height = gameState.vrManager.getHeight()
-            ),
-            indirectDrawIntBuffer = pluginState.graphics.buffers.indirectDrawHost.asIntBuffer(),
-            indirectDrawVulkanBuffer = pluginState.graphics.buffers.indirectDrawDevice,
-            storageFloatBuffer = pluginState.graphics.buffers.transformationMatrixHost.asFloatBuffer(),
-            storageHostBuffer = pluginState.graphics.buffers.transformationMatrixStaging,
-            storageDeviceBuffer = pluginState.graphics.buffers.transformationMatrixDevice,
-            cameraFloatBuffer = pluginState.graphics.buffers.cameraHost.asFloatBuffer(),
-            cameraHostBuffer = pluginState.graphics.buffers.cameraStaging,
-            cameraDeviceBuffer = pluginState.graphics.buffers.cameraDevice
-        )
+        val sceneRenderer = StandardSceneRenderer(gameState, pluginState)
 
-        sceneRenderer.tileRenderer.addChunk(
+        sceneRenderer.addChunk(
             vertexBuffer = pluginState.graphics.mainMenu.modelSet.vertexBuffer,
             indexBuffer = pluginState.graphics.mainMenu.modelSet.indexBuffer,
             dynamicDescriptorSet = pluginState.graphics.basicDynamicDescriptorSet,
@@ -97,7 +74,7 @@ class StandardMainMenu: MainMenuManager {
         val debugPanelSemaphore = createSemaphore("main menu debug panel")
 
         // TODO Add more iterations (and eventually loop indefinitely)
-        var numIterationsLeft = 5000
+        var numIterationsLeft = 500
 
         val currentPosition = Vector3f()
         var extraRotation = 0f
@@ -195,7 +172,7 @@ class StandardMainMenu: MainMenuManager {
             }
         }
 
-        sceneRenderer.destroy()
+        sceneRenderer.destroy(gameState.graphics.vkDevice)
 
         vkDestroySemaphore(gameState.graphics.vkDevice, renderFinishedSemaphore, null)
         vkDestroySemaphore(gameState.graphics.vkDevice, debugPanelSemaphore, null)

@@ -6,7 +6,7 @@ import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkCommandBuffer
 import java.nio.FloatBuffer
 
-class CameraBufferManager(
+internal class CameraBufferManager(
     private val floatBuffer: FloatBuffer,
     private val hostBuffer: VulkanBufferRange,
     private val deviceBuffer: VulkanBufferRange

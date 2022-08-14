@@ -40,21 +40,21 @@ fun createBasicStaticDescriptorPool(vkDevice: VkDevice): Long {
     }
 }
 
-fun createBasicDynamicDescriptorPool(vkDevice: VkDevice): Long {
+fun createBasicDynamicDescriptorPool(vkDevice: VkDevice, maxSets: Int): Long {
     return stackPush().use { stack ->
         // Color images and height images
         val poolSizes = VkDescriptorPoolSize.calloc(2, stack)
         val colorImagesPoolSize = poolSizes[0]
         colorImagesPoolSize.type(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
-        colorImagesPoolSize.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
+        colorImagesPoolSize.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES * maxSets)
 
         val heightImagesPoolSize = poolSizes[1]
         heightImagesPoolSize.type(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
-        heightImagesPoolSize.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES)
+        heightImagesPoolSize.descriptorCount(MAX_NUM_DESCRIPTOR_IMAGES * maxSets)
 
         val ciDescriptorPool = VkDescriptorPoolCreateInfo.calloc(stack)
         ciDescriptorPool.`sType$Default`()
-        ciDescriptorPool.maxSets(1)
+        ciDescriptorPool.maxSets(maxSets)
         ciDescriptorPool.pPoolSizes(poolSizes)
 
         val pDescriptorPool = stack.callocLong(1)
