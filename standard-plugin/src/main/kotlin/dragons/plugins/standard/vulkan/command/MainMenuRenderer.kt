@@ -3,10 +3,30 @@ package dragons.plugins.standard.vulkan.command
 import dragons.plugins.standard.state.StandardGraphicsState
 import dragons.plugins.standard.vulkan.model.generator.FlowerGenerators
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
+import dragons.plugins.standard.world.tile.SkylandTestTile
+import dragons.world.chunk.ChunkLocation
+import dragons.world.realm.InMemoryRealm
+import dragons.world.realm.Realm
 import org.joml.Math.toRadians
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import java.util.*
+
+fun createRealm(): Realm {
+    val realm = InMemoryRealm(UUID.randomUUID(), "Test realm 1", true)
+
+    for (terrainIndex in 110 until 190) {
+        realm.getChunk(ChunkLocation(0, 0, 0)).addTile(
+            SkylandTestTile(Vector3f(
+                -10f + 2f * ((terrainIndex % 100) / 10),
+                -4f + 4f * (terrainIndex / 100),
+                -10f + 2f * (terrainIndex % 10)
+            )), SkylandTestTile.State()
+        )
+    }
+
+    return realm
+}
 
 fun fillDrawingBuffers(
     renderer: StandardSceneRenderer, graphicsState: StandardGraphicsState, averageEyePosition: Vector3f
