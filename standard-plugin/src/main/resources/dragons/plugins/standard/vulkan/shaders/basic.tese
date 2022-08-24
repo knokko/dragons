@@ -2,6 +2,8 @@
 // For some reason, using ccw seems to invert the orientation
 layout(triangles, equal_spacing, cw) in;
 
+layout(constant_id = 0) const int MAX_NUM_DESCRIPTOR_IMAGES = 100;
+
 layout(location = 0) in vec3 inBasePosition[];
 layout(location = 1) in vec3 inBaseNormal[];
 layout(location = 2) in vec2 inColorTexCoordinates[];
@@ -31,9 +33,7 @@ layout(set = 0, binding = 2) readonly buffer Objects {
     mat4 transformationMatrices[];
 } objects;
 
-// Note: this must be identical to BasicPipelineLayout.MAX_NUM_DESCRIPTOR_IMAGES
-// Perhaps I can use specialization constants or 'runtime substitiutions' and compile the shader on runtime
-layout(set = 1, binding = 1) uniform texture2D heightTextures[100];
+layout(set = 1, binding = 1) uniform texture2D heightTextures[MAX_NUM_DESCRIPTOR_IMAGES];
 
 layout(push_constant) uniform PushConstants {
     int eyeIndex;

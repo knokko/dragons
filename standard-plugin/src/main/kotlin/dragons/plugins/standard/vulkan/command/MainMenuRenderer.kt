@@ -15,7 +15,7 @@ import java.util.*
 fun createRealm(): Realm {
     val realm = InMemoryRealm(UUID.randomUUID(), "Test realm 1", true)
 
-    for (terrainIndex in 110 until 190) {
+    for (terrainIndex in 0 until 300) {
         realm.getChunk(ChunkLocation(0, 0, 0)).addTile(
             SkylandTestTile(Vector3f(
                 -10f + 2f * ((terrainIndex % 100) / 10),

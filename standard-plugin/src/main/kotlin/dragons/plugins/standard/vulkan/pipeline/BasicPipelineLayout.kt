@@ -5,8 +5,7 @@ import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
 
-// NOTE: This must match the sizes hardcoded in the fragment shader and tessellation evaluation shader
-const val MAX_NUM_DESCRIPTOR_IMAGES = 100
+const val MAX_NUM_DESCRIPTOR_IMAGES = 1000
 
 fun createBasicPipelineLayout(vkDevice: VkDevice, stack: MemoryStack): Triple<Long, Long, Long> {
     val staticBindings = VkDescriptorSetLayoutBinding.calloc(3, stack)

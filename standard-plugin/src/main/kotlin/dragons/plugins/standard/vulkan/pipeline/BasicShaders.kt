@@ -5,12 +5,22 @@ import dragons.util.mallocBundledResource
 import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil.memFree
+import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
-import org.lwjgl.vulkan.VkDevice
-import org.lwjgl.vulkan.VkPipelineShaderStageCreateInfo
-import org.lwjgl.vulkan.VkShaderModuleCreateInfo
 
 fun createBasicShaders(vkDevice: VkDevice, stack: MemoryStack): VkPipelineShaderStageCreateInfo.Buffer {
+    val specializationData = stack.calloc(4)
+    specializationData.putInt(0, MAX_NUM_DESCRIPTOR_IMAGES)
+
+    val specializationMapping = VkSpecializationMapEntry.calloc(1, stack)
+    specializationMapping.constantID(0)
+    specializationMapping.offset(0)
+    specializationMapping.size(4)
+
+    val specializationInfo = VkSpecializationInfo.calloc(stack)
+    specializationInfo.pMapEntries(specializationMapping)
+    specializationInfo.pData(specializationData)
+
     val ciShaderStages = VkPipelineShaderStageCreateInfo.calloc(4, stack)
 
     val vertexStage = ciShaderStages[0]
@@ -33,6 +43,7 @@ fun createBasicShaders(vkDevice: VkDevice, stack: MemoryStack): VkPipelineShader
     tessEvalStage.stage(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)
     tessEvalStage.module(createShaderModule(vkDevice, stack, "tese", "basic"))
     tessEvalStage.pName(stack.UTF8("main"))
+    tessEvalStage.pSpecializationInfo(specializationInfo)
 
     val fragmentStage = ciShaderStages[3]
     fragmentStage.sType(VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
@@ -40,6 +51,7 @@ fun createBasicShaders(vkDevice: VkDevice, stack: MemoryStack): VkPipelineShader
     fragmentStage.stage(VK_SHADER_STAGE_FRAGMENT_BIT)
     fragmentStage.module(createShaderModule(vkDevice, stack, "frag", "basic"))
     fragmentStage.pName(stack.UTF8("main"))
+    fragmentStage.pSpecializationInfo(specializationInfo)
 
     return ciShaderStages
 }

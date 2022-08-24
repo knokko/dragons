@@ -66,6 +66,7 @@ class SkylandTestTile(private val position: Vector3f): TileProperties {
                     agent.claims, graphics.queueManager, agent.gameState.classLoader, 128, 128, heightTexture,
                     "dragons/plugins/standard/images/testTerrainHeight.png", 0.001f
                 )
+                // TODO Share resources with identical tiles
             }
 
             override suspend fun createRenderer() = Renderer(
