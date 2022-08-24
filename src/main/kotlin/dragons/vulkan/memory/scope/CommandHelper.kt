@@ -377,6 +377,10 @@ internal class FamiliesCommands(
     private val vkDevice: VkDevice,
     private val familyMap: Map<QueueFamily, FamilyCommands>
 ) {
+
+    private var didInitialLayoutTransition = false
+    private var didOwnershipTransfer = false
+
     companion object {
         fun construct(vkDevice: VkDevice, queueManager: QueueManager, description: String): FamiliesCommands {
 
@@ -422,6 +426,8 @@ internal class FamiliesCommands(
                 }
             }, queueFamily, description)
         }
+
+        didInitialLayoutTransition = true
     }
 
     fun performStagingCopy(
@@ -434,15 +440,17 @@ internal class FamiliesCommands(
     ) {
         stackPush().use { stack ->
             // First, we should wait until all initial transitions are complete
-            val pAllFences = collectionToBuffer(familyMap.values.map { it.fence }, stack)
-            assertVkSuccess(
-                vkWaitForFences(vkDevice, pAllFences, true, -1),
-                "WaitForFences", "Scope $description: initial image transition"
-            )
-            assertVkSuccess(
-                vkResetFences(vkDevice, pAllFences), "ResetFences",
-                "Scope $description: initial image transition"
-            )
+            if (didInitialLayoutTransition) {
+                val pAllFences = collectionToBuffer(familyMap.values.map { it.fence }, stack)
+                assertVkSuccess(
+                    vkWaitForFences(vkDevice, pAllFences, true, -1),
+                    "WaitForFences", "Scope $description: initial image transition"
+                )
+                assertVkSuccess(
+                    vkResetFences(vkDevice, pAllFences), "ResetFences",
+                    "Scope $description: initial image transition"
+                )
+            }
 
             // The general queue family is needed for depth-stencil transfers
             familyMap[queueManager.generalQueueFamily]!!.performStagingCopy(
@@ -491,24 +499,30 @@ internal class FamiliesCommands(
                 )
             }
         }
+
+        didOwnershipTransfer = true
     }
 
     fun finishAndCleanUp(description: String) {
         stackPush().use { stack ->
             /*
-             * There are 2 cases:
-             *  - Case 1: No staging copy was needed. In this case, we need to wait on all the image layout transition
+             * There are 3 cases:
+             *  - Case 1: No staging copy was needed and no image layout transitions are needed.
+             *  - Case 2: No staging copy was needed. In this case, we need to wait on all the image layout transition
              * fences.
-             *  - Case 2: A staging copy was needed. In this case, we need to wait on all queue family ownership
+             *  - Case 3: A staging copy was needed. In this case, we need to wait on all queue family ownership
              * transfers (which happened right after the staging copy).
              *
-             * In either case, we need to wait on all fences.
+             * In cases 2 and 3, we need to wait on all fences.
              */
-            val pAllFences = collectionToBuffer(familyMap.values.map { it.fence }, stack)
-            assertVkSuccess(
-                vkWaitForFences(vkDevice, pAllFences, true, -1),
-                "WaitForFences", "Scope $description: ownership transfer + layout transition"
-            )
+            if (didInitialLayoutTransition || didOwnershipTransfer) {
+                val pAllFences = collectionToBuffer(familyMap.values.map { it.fence }, stack)
+                assertVkSuccess(
+                    vkWaitForFences(vkDevice, pAllFences, true, -1),
+                    "WaitForFences", "Scope $description: ownership transfer + layout transition"
+                )
+            }
+
             for (familyCommands in familyMap.values) {
                 familyCommands.destroy(vkDevice)
             }
