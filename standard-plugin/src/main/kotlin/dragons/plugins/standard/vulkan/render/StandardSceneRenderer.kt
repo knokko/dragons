@@ -83,6 +83,10 @@ class StandardSceneRenderer internal constructor(
 
     override fun render(realm: Realm, averageEyePosition: Vector3f, leftCameraMatrix: Matrix4f, rightCameraMatrix: Matrix4f) {
         stackPush().use { stack ->
+
+            // The chunks must be chosen and loaded before starting the frame
+            this.chunkRenderManager.chooseAndLoadChunks(realm, averageEyePosition)
+
             this.startFrame(stack, leftCameraMatrix, rightCameraMatrix)
 
             // TODO Render big tiles and entities as well
@@ -92,7 +96,7 @@ class StandardSceneRenderer internal constructor(
         }
     }
 
-    fun startFrame(stack: MemoryStack, leftCameraMatrix: Matrix4f, rightCameraMatrix: Matrix4f) {
+    private fun startFrame(stack: MemoryStack, leftCameraMatrix: Matrix4f, rightCameraMatrix: Matrix4f) {
         if (this.tileRenderer.shouldRecordCommandsAgain) this.recordCommands()
         this.sceneCommands.awaitLastSubmission(stack)
 
@@ -118,7 +122,7 @@ class StandardSceneRenderer internal constructor(
         this.tileRenderer.drawTile(vertices, indices, transformationMatrices)
     }
 
-    fun endFrame() {
+    private fun endFrame() {
         this.tileRenderer.endFrame()
         this.transformationMatrixManager.endFrame()
     }

@@ -22,7 +22,11 @@ internal class ChunkRenderManager(
     private val chunkLoader = ChunkLoader(gameState, pluginState, tileRenderer)
     private val loadedChunks = mutableMapOf<ChunkLocation, ChunkEntry>()
 
-    private fun chooseAndLoadChunks(realm: Realm, cameraPosition: Vector3f): Collection<ChunkLocation> {
+    private var chosenChunks: Collection<ChunkLocation>? = null
+
+    fun chooseAndLoadChunks(realm: Realm, cameraPosition: Vector3f) {
+        if (this.chosenChunks != null) throw IllegalStateException("You must render after each call to chooseAndLoadChunks()")
+
         // TODO Reset all loaded chunks when the realm is not identical to the previous realm
         // TODO Level of detail for each chunk location
 
@@ -45,19 +49,20 @@ internal class ChunkRenderManager(
 
         // TODO Eventually clean up loaded chunks that have not been rendered recently
 
-        return chosenChunks
+        this.chosenChunks = chosenChunks
     }
 
     fun renderChunks(sceneRenderer: StandardSceneRenderer, realm: Realm, cameraPosition: Vector3f) {
         val negativeCameraPosition = cameraPosition.negate(Vector3f())
 
-        for (location in this.chooseAndLoadChunks(realm, cameraPosition)) {
+        for (location in this.chosenChunks!!) {
             val chunk = realm.getChunk(location)
             val chunkEntry = loadedChunks[location]!!
             for ((tileID, tileRenderer) in chunkEntry.tiles) {
                 tileRenderer.render(sceneRenderer, chunk.getTileState(tileID), negativeCameraPosition)
             }
         }
+        this.chosenChunks = null
     }
 
     fun destroy(vkDevice: VkDevice) {
