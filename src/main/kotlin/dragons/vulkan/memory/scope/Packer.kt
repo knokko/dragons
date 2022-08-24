@@ -12,6 +12,7 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memByteBuffer
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkDevice
+import org.lwjgl.vulkan.VkImageCreateInfo
 import org.slf4j.LoggerFactory.getLogger
 
 suspend fun packMemoryClaims(
@@ -82,10 +83,19 @@ suspend fun packMemoryClaims(
         val numDeviceImages = familyClaimsMap.values.sumOf { it.claims.allImageClaims.size }
         val (deviceImageMemory, claimsToImageMap) = if (numDeviceImages > 0) {
 
+            // Pre-allocate these variables to reduce the number of stack allocations
+            val ciImage = VkImageCreateInfo.calloc(stack)
+            val pImage = stack.callocLong(1)
+            val queueFamilies = queueManager.allQueueFamilies
+            val pQueueFamilyIndices = stack.callocInt(queueFamilies.size)
+            for ((index, queueFamily) in queueFamilies.withIndex()) {
+                pQueueFamilyIndices.put(index, queueFamily.index)
+            }
+
             val pairedImageClaims = mutableListOf<Pair<ImageMemoryClaim, VulkanImage>>()
             for ((_, claims) in familyClaimsMap.entries) {
                 pairedImageClaims.addAll(claims.claims.allImageClaims.map { claim ->
-                    Pair(claim, createImage(stack, vkDevice, queueManager, claim))
+                    Pair(claim, createImage(ciImage, pImage, pQueueFamilyIndices, vkDevice, queueManager, claim))
                 })
             }
 

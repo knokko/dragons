@@ -17,6 +17,8 @@ import org.lwjgl.vulkan.KHRFragmentShadingRate.VK_IMAGE_USAGE_FRAGMENT_SHADING_R
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
+import java.nio.IntBuffer
+import java.nio.LongBuffer
 
 internal fun createCombinedBuffers(
     logger: Logger, stack: MemoryStack, vkDevice: VkDevice, queueManager: QueueManager,
@@ -182,7 +184,8 @@ internal fun createCombinedStagingBuffer(
 }
 
 internal fun createImage(
-    stack: MemoryStack, vkDevice: VkDevice, queueManager: QueueManager,
+    ciImage: VkImageCreateInfo, pImage: LongBuffer, pAllQueueFamilyIndices: IntBuffer,
+    vkDevice: VkDevice, queueManager: QueueManager,
     claim: ImageMemoryClaim
 ): VulkanImage {
 
@@ -190,12 +193,11 @@ internal fun createImage(
     val arrayLayers = 1
     // TODO Stop hardcoding these and handle them appropriately
 
-    val ciImage = VkImageCreateInfo.calloc(stack)
     ciImage.sType(VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
     ciImage.flags(claim.imageCreateFlags)
     ciImage.imageType(VK_IMAGE_TYPE_2D)
     ciImage.format(claim.imageFormat)
-    ciImage.extent(VkExtent3D.calloc(stack).set(claim.width, claim.height, 1))
+    ciImage.extent().set(claim.width, claim.height, 1)
     ciImage.mipLevels(mipLevels)
     ciImage.arrayLayers(arrayLayers)
     ciImage.samples(claim.samples)
@@ -207,19 +209,12 @@ internal fun createImage(
     }
     if (claim.queueFamily == null && queueManager.allQueueFamilies.size > 1) {
         ciImage.sharingMode(VK_SHARING_MODE_CONCURRENT)
-
-        val queueFamilies = queueManager.allQueueFamilies
-        val pQueueFamilies = stack.callocInt(queueFamilies.size)
-        for ((index, queueFamily) in queueFamilies.withIndex()) {
-            pQueueFamilies.put(index, queueFamily.index)
-        }
-        ciImage.pQueueFamilyIndices(pQueueFamilies)
+        ciImage.pQueueFamilyIndices(pAllQueueFamilyIndices)
     } else {
         ciImage.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
     }
     ciImage.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
 
-    val pImage = stack.callocLong(1)
     assertVkSuccess(
         vkCreateImage(vkDevice, ciImage, null, pImage),
         "CreateImage", "static"
@@ -230,13 +225,12 @@ internal fun createImage(
 }
 
 internal fun createFullImageView(
-    stack: MemoryStack, vkDevice: VkDevice, claim: ImageMemoryClaim, image: VulkanImage
+    ciView: VkImageViewCreateInfo, pImageView: LongBuffer, vkDevice: VkDevice, claim: ImageMemoryClaim, image: VulkanImage
 ) {
     val mipLevels = 1
     val arrayLayers = 1
     // TODO Stop hardcoding these and handle them appropriately
 
-    val ciView = VkImageViewCreateInfo.calloc(stack)
     ciView.sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
     ciView.flags(claim.imageViewFlags)
     ciView.image(image.handle)
@@ -256,7 +250,6 @@ internal fun createFullImageView(
         range.layerCount(arrayLayers)
     }
 
-    val pImageView = stack.callocLong(1)
     assertVkSuccess(
         vkCreateImageView(vkDevice, ciView, null, pImageView),
         "CreateImageView", "full static"
@@ -317,12 +310,17 @@ internal fun bindAndAllocateImageMemory(
             VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR or
             VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT
 
-    for ((claim, image) in allDeviceImages) {
-        if ((claim.imageUsage and requiredImageViewUsages) != 0) {
-            createFullImageView(stack, vkDevice, claim, image)
+    run {
+        // Pre-allocate ciImageView and pImageView to reduce the number of stack allocations
+        val ciImageView = VkImageViewCreateInfo.calloc(stack)
+        val pImageView = stack.callocLong(1)
+        for ((claim, image) in allDeviceImages) {
+            if ((claim.imageUsage and requiredImageViewUsages) != 0) {
+                createFullImageView(ciImageView, pImageView, vkDevice, claim, image)
+            }
+            // Images that do not have any of these usages simply won't get a full image view
+            // (and they shouldn't need a full image view)
         }
-        // Images that do not have any of these usages simply won't get a full image view
-        // (and they shouldn't need a full image view)
     }
 
     val claimsToImageMap = mutableMapOf<ImageMemoryClaim, VulkanImage>()
