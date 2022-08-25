@@ -12,6 +12,7 @@ import dragons.world.tile.TileProperties
 import org.joml.Vector3f
 import org.lwjgl.vulkan.VkDevice
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 
 internal class ChunkRenderManager(
@@ -62,7 +63,22 @@ internal class ChunkRenderManager(
                 tileRenderer.render(sceneRenderer, chunk.getTileState(tileID), negativeCameraPosition)
             }
         }
+    }
+
+    fun getWaitSemaphores(realm: Realm): Collection<Pair<Long, Int>> {
+        val waitSemaphores = ArrayList<Pair<Long, Int>>()
+
+        for (location in this.chosenChunks!!) {
+            val chunk = realm.getChunk(location)
+            val chunkEntry = loadedChunks[location]!!
+            for ((tileID, tileRenderer) in chunkEntry.tiles) {
+                waitSemaphores.addAll(tileRenderer.getWaitSemaphores(chunk.getTileState(tileID)))
+            }
+        }
+
         this.chosenChunks = null
+
+        return waitSemaphores
     }
 
     fun destroy(vkDevice: VkDevice) {
@@ -80,5 +96,8 @@ internal class ChunkEntry(
 ) {
     fun destroy(vkDevice: VkDevice) {
         memoryScope.destroy(vkDevice)
+        for (tileRenderer in tiles.values) {
+            tileRenderer.destroy(vkDevice)
+        }
     }
 }

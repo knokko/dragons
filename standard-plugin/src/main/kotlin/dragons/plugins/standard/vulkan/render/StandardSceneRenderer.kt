@@ -127,8 +127,12 @@ class StandardSceneRenderer internal constructor(
         this.transformationMatrixManager.endFrame()
     }
 
-    override fun submit(waitSemaphores: LongArray, waitStageMasks: IntArray, signalSemaphores: LongArray) {
-        this.sceneCommands.submit(waitSemaphores, waitStageMasks, signalSemaphores)
+    override fun submit(realm: Realm, waitSemaphores: LongArray, waitStageMasks: IntArray, signalSemaphores: LongArray) {
+        val chunkSemaphores = this.chunkRenderManager.getWaitSemaphores(realm)
+
+        val combinedWaitSemaphores = waitSemaphores + chunkSemaphores.map { it.first }
+        val combinedWaitDstStageMasks = waitStageMasks + chunkSemaphores.map { it.second }
+        this.sceneCommands.submit(combinedWaitSemaphores, combinedWaitDstStageMasks, signalSemaphores)
     }
 
     fun destroy(vkDevice: VkDevice) {

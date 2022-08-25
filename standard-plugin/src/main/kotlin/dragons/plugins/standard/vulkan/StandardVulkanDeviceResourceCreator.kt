@@ -26,13 +26,8 @@ class StandardVulkanDeviceResourceCreator: VulkanDeviceCreationListener {
             val staticDescriptorPool = createBasicStaticDescriptorPool(agent.vulkanDevice)
             state.preGraphics.basicStaticDescriptorPool.complete(staticDescriptorPool)
 
-            // TODO Remove this after refactoring
-            val dynamicDescriptorPool = createBasicDynamicDescriptorPool(agent.vulkanDevice, 1)
-            state.preGraphics.basicDynamicDescriptorPool.complete(dynamicDescriptorPool)
-
             val basicPipeline = state.preGraphics.basicGraphicsPipeline.await()
             val staticDescriptorSetLayout = basicPipeline.staticDescriptorSetLayout
-            val dynamicDescriptorSetLayout = basicPipeline.dynamicDescriptorSetLayout
 
             val cameraDeviceBuffer = state.preGraphics.cameraDeviceBuffer.await()
             val transformationMatrixDeviceBuffer = state.preGraphics.transformationMatrixDeviceBuffer.await()
@@ -41,11 +36,6 @@ class StandardVulkanDeviceResourceCreator: VulkanDeviceCreationListener {
                 agent.vulkanDevice, staticDescriptorPool, staticDescriptorSetLayout,
                 cameraDeviceBuffer, transformationMatrixDeviceBuffer, basicSampler
             ))
-
-            val basicDynamicDescriptorSet = createBasicDynamicDescriptorSet(
-                agent.vulkanDevice, dynamicDescriptorPool, dynamicDescriptorSetLayout
-            )
-            state.preGraphics.basicDynamicDescriptorSet.complete(basicDynamicDescriptorSet)
         }
     }
 }

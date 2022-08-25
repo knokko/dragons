@@ -5,7 +5,6 @@ import dragons.plugin.interfaces.general.StaticStateListener
 import dragons.plugins.standard.state.StandardGraphicsBuffers
 import dragons.plugins.standard.state.StandardGraphicsState
 import dragons.plugins.standard.state.StandardPluginState
-import dragons.plugins.standard.vulkan.panel.Panel
 import dragons.vulkan.util.assertVkSuccess
 import kotlinx.coroutines.runBlocking
 import org.lwjgl.system.MemoryStack.stackPush
@@ -60,9 +59,6 @@ class StandardStaticStateListener: StaticStateListener {
             val (indirectDrawHostBuffer, indirectDrawDeviceBuffer) = runBlocking {
                 state.preGraphics.indirectDrawingBuffer.await()
             }
-            val (indirectDrawCountHostBuffer, indirectDrawCountDeviceBuffer) = runBlocking {
-                state.preGraphics.indirectDrawCountBuffer.await()
-            }
 
             state.graphics = runBlocking { StandardGraphicsState(
                 basicGraphicsPipeline = basicGraphicsPipeline,
@@ -70,10 +66,7 @@ class StandardStaticStateListener: StaticStateListener {
                 basicLeftFramebuffer = leftFramebuffer,
                 basicRightFramebuffer = rightFramebuffer,
                 basicStaticDescriptorPool = state.preGraphics.basicStaticDescriptorPool.await(),
-                basicDynamicDescriptorPool = state.preGraphics.basicDynamicDescriptorPool.await(),
                 basicStaticDescriptorSet = state.preGraphics.basicStaticDescriptorSet.await(),
-                basicDynamicDescriptorSet = state.preGraphics.basicDynamicDescriptorSet.await(),
-                debugPanel = Panel(agent.gameState.graphics.graviksInstance, state.preGraphics.mainMenu.debugPanelTexture.image.await()),
                 basicSampler = state.preGraphics.basicSampler.await(),
 
                 buffers = StandardGraphicsBuffers(
@@ -84,11 +77,8 @@ class StandardStaticStateListener: StaticStateListener {
                     cameraStaging = cameraStagingBuffer,
                     cameraHost = cameraHostBuffer,
                     indirectDrawDevice = indirectDrawDeviceBuffer,
-                    indirectDrawHost = indirectDrawHostBuffer,
-                    indirectDrawCountDevice = indirectDrawCountDeviceBuffer,
-                    indirectDrawCountHost = indirectDrawCountHostBuffer,
-                ),
-                mainMenu = state.preGraphics.mainMenu.await(),
+                    indirectDrawHost = indirectDrawHostBuffer
+                )
             )}
         }
     }

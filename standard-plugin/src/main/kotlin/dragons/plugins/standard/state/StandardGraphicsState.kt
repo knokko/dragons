@@ -1,6 +1,5 @@
 package dragons.plugins.standard.state
 
-import dragons.plugins.standard.menu.MainMenuModels
 import dragons.plugins.standard.vulkan.panel.Panel
 import dragons.plugins.standard.vulkan.pipeline.BasicGraphicsPipeline
 import dragons.vulkan.memory.VulkanBufferRange
@@ -12,13 +11,9 @@ class StandardGraphicsState(
     val basicLeftFramebuffer: Long,
     val basicRightFramebuffer: Long,
     val basicStaticDescriptorPool: Long,
-    val basicDynamicDescriptorPool: Long,
     val basicStaticDescriptorSet: Long,
-    val basicDynamicDescriptorSet: Long,
     val basicSampler: Long,
-    val debugPanel: Panel,
-    val buffers: StandardGraphicsBuffers,
-    val mainMenu: MainMenuModels,
+    val buffers: StandardGraphicsBuffers
 )
 
 class StandardGraphicsBuffers(
@@ -29,7 +24,5 @@ class StandardGraphicsBuffers(
     val cameraStaging: VulkanBufferRange,
     val cameraHost: ByteBuffer,
     val indirectDrawDevice: VulkanBufferRange,
-    val indirectDrawHost: ByteBuffer,
-    val indirectDrawCountDevice: VulkanBufferRange,
-    val indirectDrawCountHost: ByteBuffer,
+    val indirectDrawHost: ByteBuffer
 )

@@ -7,5 +7,5 @@ import org.joml.Vector3f
 interface SceneRenderer {
     fun render(realm: Realm, averageEyePosition: Vector3f, leftCameraMatrix: Matrix4f, rightCameraMatrix: Matrix4f)
 
-    fun submit(waitSemaphores: LongArray, waitStageMasks: IntArray, signalSemaphores: LongArray)
+    fun submit(realm: Realm, waitSemaphores: LongArray, waitStageMasks: IntArray, signalSemaphores: LongArray)
 }
