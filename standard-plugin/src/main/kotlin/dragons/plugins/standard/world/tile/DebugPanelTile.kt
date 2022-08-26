@@ -146,7 +146,10 @@ class DebugPanelTile(
                     textureIndex = agent.claimColorImageIndex(panelImage),
                     heightTextureIndex = agent.claimHeightImageIndex(zeroHeightTexture)
                 )
-                claimVertexAndIndexBuffer(agent.claims, agent.gameState.graphics.queueManager, vertices, indices, debugPanel)
+                claimVertexAndIndexBuffer(
+                    agent.claims, agent.gameState.graphics.queueManager, vertices, indices,
+                    debugPanel, "standard plug-in: DebugPanelTile"
+                )
 
                 this.panelSemaphore = stackPush().use { stack ->
                     val ciSemaphore = VkSemaphoreCreateInfo.calloc(stack)

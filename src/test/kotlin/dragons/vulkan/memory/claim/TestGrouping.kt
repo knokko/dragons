@@ -123,13 +123,13 @@ class TestGrouping {
         ){}
 
         val uninitBuffer1 = BufferMemoryClaim(
-            400, 4, 0, 0, 1, null, CompletableDeferred(), null
+            400, 4, 0, 0, 1, null, CompletableDeferred(), null, null
         )
         val uninitBuffer2 = BufferMemoryClaim(
-            500, 8, 0, 0, 1, queueManager.computeOnlyQueueFamily, CompletableDeferred(), null
+            500, 8, 0, 0, 1, queueManager.computeOnlyQueueFamily, CompletableDeferred(), null, null
         )
         val uninitBuffer3 = BufferMemoryClaim(
-            600, 13, 0, 0, 1, queueManager.generalQueueFamily, CompletableDeferred(), null
+            600, 13, 0, 0, 1, queueManager.generalQueueFamily, CompletableDeferred(), null, null
         )
 
         val stagingBuffer1 = StagingBufferMemoryClaim(700, null, 0, CompletableDeferred())

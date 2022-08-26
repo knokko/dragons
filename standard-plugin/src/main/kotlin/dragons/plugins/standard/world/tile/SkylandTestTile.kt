@@ -58,7 +58,9 @@ class SkylandTestTile(private val position: Vector3f): TileProperties {
                 val mainMenuSkyland = generateSkylandModel({
                     0.5f
                 }, agent.claimColorImageIndex(colorTexture), agent.claimHeightImageIndex(heightTexture))
-                claimVertexAndIndexBuffer(agent.claims, graphics.queueManager, vertices, indices, mainMenuSkyland)
+                claimVertexAndIndexBuffer(
+                    agent.claims, graphics.queueManager, vertices, indices, mainMenuSkyland, "standard plug-in:SkylandTestTile"
+                )
                 claimColorImage(
                     agent.claims, graphics.queueManager, agent.gameState.classLoader, 1024, 1024, colorTexture,
                     "dragons/plugins/standard/images/testTerrain.jpg"

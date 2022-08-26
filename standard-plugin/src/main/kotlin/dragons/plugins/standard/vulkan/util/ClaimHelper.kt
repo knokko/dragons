@@ -68,7 +68,8 @@ fun claimHeightImage(
 }
 
 fun claimVertexBuffer(
-    claims: MemoryScopeClaims, queueManager: QueueManager, vertices: CompletableDeferred<VulkanBufferRange>, generator: ModelGenerator
+    claims: MemoryScopeClaims, queueManager: QueueManager, vertices: CompletableDeferred<VulkanBufferRange>,
+    generator: ModelGenerator, sharingID: String?
 ) {
     claims.buffers.add(BufferMemoryClaim(
         size = generator.numVertices * BasicVertex.SIZE,
@@ -77,7 +78,8 @@ fun claimVertexBuffer(
         dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
         dstPipelineStageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
         queueFamily = queueManager.generalQueueFamily,
-        storeResult = vertices
+        storeResult = vertices,
+        sharingID = sharingID
     ) { destBuffer ->
         val vertexArray = BasicVertex.createArray(destBuffer, 0, generator.numVertices.toLong())
         generator.fillVertexBuffer(vertexArray)
@@ -85,7 +87,8 @@ fun claimVertexBuffer(
 }
 
 fun claimIndexBuffer(
-    claims: MemoryScopeClaims, queueManager: QueueManager, indices: CompletableDeferred<VulkanBufferRange>, generator: ModelGenerator
+    claims: MemoryScopeClaims, queueManager: QueueManager, indices: CompletableDeferred<VulkanBufferRange>,
+    generator: ModelGenerator, sharingID: String?
 ) {
     claims.buffers.add(BufferMemoryClaim(
         size = generator.numIndices * Int.SIZE_BYTES,
@@ -94,7 +97,8 @@ fun claimIndexBuffer(
         dstAccessMask = VK_ACCESS_INDEX_READ_BIT,
         dstPipelineStageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
         queueFamily = queueManager.generalQueueFamily,
-        storeResult = indices
+        storeResult = indices,
+        sharingID = sharingID
     ) { destBuffer ->
         generator.fillIndexBuffer(destBuffer.asIntBuffer())
     })
@@ -102,10 +106,10 @@ fun claimIndexBuffer(
 
 fun claimVertexAndIndexBuffer(
     claims: MemoryScopeClaims, queueManager: QueueManager, vertices: CompletableDeferred<VulkanBufferRange>,
-    indices: CompletableDeferred<VulkanBufferRange>, generator: ModelGenerator
+    indices: CompletableDeferred<VulkanBufferRange>, generator: ModelGenerator, sharingIdPrefix: String?
 ) {
-    claimVertexBuffer(claims, queueManager, vertices, generator)
-    claimIndexBuffer(claims, queueManager, indices, generator)
+    claimVertexBuffer(claims, queueManager, vertices, generator, if (sharingIdPrefix == null) { null } else { "$sharingIdPrefix-vertices"})
+    claimIndexBuffer(claims, queueManager, indices, generator, if (sharingIdPrefix == null) { null} else { "$sharingIdPrefix-indices" })
 }
 
 fun claimColorImage(

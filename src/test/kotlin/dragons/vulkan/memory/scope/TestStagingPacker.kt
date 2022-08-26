@@ -18,10 +18,10 @@ class TestStagingPacker {
         ) {}
 
         val uninitBuffer1 = BufferMemoryClaim(
-            300, 0, 0, 0, 3, null, CompletableDeferred(), null
+            300, 0, 0, 0, 3, null, CompletableDeferred(), null, null
         )
         val uninitBuffer2 = BufferMemoryClaim(
-            400, 0, 0, 0, 5, null, CompletableDeferred(), null
+            400, 0, 0, 0, 5, null, CompletableDeferred(), null, null
         )
 
         val staging1 = StagingBufferMemoryClaim(500, null, 0, CompletableDeferred())

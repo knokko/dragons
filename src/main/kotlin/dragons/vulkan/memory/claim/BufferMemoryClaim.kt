@@ -8,7 +8,8 @@ import java.nio.ByteBuffer
 class BufferMemoryClaim(
     val size: Int, val usageFlags: Int,
     val dstAccessMask: Int = 0, val dstPipelineStageMask: Int = 0, val alignment: Int = 1, val queueFamily: QueueFamily?,
-    val storeResult: CompletableDeferred<VulkanBufferRange>, val prefill: ((ByteBuffer) -> Unit)?
+    val storeResult: CompletableDeferred<VulkanBufferRange>,
+    val sharingID: String? = null, val prefill: ((ByteBuffer) -> Unit)?
 ) {
     init {
         if (size <= 0) throw IllegalArgumentException("Size ($size) must be positive")

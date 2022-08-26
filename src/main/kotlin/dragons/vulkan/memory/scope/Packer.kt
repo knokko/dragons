@@ -5,6 +5,7 @@ import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim
 import dragons.vulkan.memory.claim.groupMemoryClaims
+import dragons.vulkan.memory.claim.shareMemoryClaims
 import dragons.vulkan.queue.QueueManager
 import dragons.vulkan.util.assertVkSuccess
 import kotlinx.coroutines.CoroutineScope
@@ -21,7 +22,7 @@ suspend fun packMemoryClaims(
 ): MemoryScope {
     val logger = getLogger("Vulkan")
 
-    val familyClaimsMap = groupMemoryClaims(allClaims)
+    val familyClaimsMap = shareMemoryClaims(groupMemoryClaims(allClaims))
 
     val combinedStagingPlacements = determineStagingPlacements(familyClaimsMap)
 
@@ -39,8 +40,17 @@ suspend fun packMemoryClaims(
         }
     }
 
-    logger.info("Scope $description: The combined temporary staging buffer size is ${combinedStagingPlacements.totalSize / 1000_000} MB")
-    logger.info("Scope $description: Buffer sizes are ${combinedStagingPlacements.queueFamilies.values.map { it.deviceBufferSize / 1000_000}} MB")
+    logger.info("Scope $description: The combined temporary staging buffer size is ${combinedStagingPlacements.totalSize / 1000_000.0} MB")
+    logger.info("Scope $description: Buffer sizes are ${combinedStagingPlacements.queueFamilies.values.map { it.deviceBufferSize / 1000_000.0}} MB")
+    val imageSizes = combinedStagingPlacements.queueFamilies.values.map {
+        (it.internalPlacements.prefilledImageClaims.sumOf {
+                imageClaim -> imageClaim.claim.getStagingByteSize()
+        } + it.internalPlacements.uninitializedImageClaims.sumOf {
+            // Because the staging byte size of uninitialized images is unknown, 4 * width * height is the best guess
+                imageClaim -> imageClaim.width * imageClaim.height * 4
+        }) / 1_000_000.0
+    }
+    logger.info("Scope $description: Image sizes are approximately $imageSizes MB")
     logger.info("Scope $description: Combined device buffer usage is $combinedDeviceBufferUsage")
 
     return stackPush().use { stack ->
