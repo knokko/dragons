@@ -23,7 +23,6 @@ class DummyGraviksTarget: GraviksTarget {
         x2: Float,
         y2: Float,
         radiusX: Float,
-        radiusY: Float,
         lineWidth: Float,
         color: Color
     ) {
