@@ -29,6 +29,7 @@ class ImageMemoryClaim(
     val accessMask: Int? = null,
     val dstPipelineStageMask: Int? = null,
     val storeResult: CompletableDeferred<VulkanImage>,
+    val sharingID: String? = null,
     val prefill: ((ByteBuffer) -> Unit)?
 ) {
     init {

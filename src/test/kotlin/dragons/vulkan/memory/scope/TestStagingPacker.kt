@@ -34,7 +34,7 @@ class TestStagingPacker {
                 VK_FORMAT_R16G16_UNORM, VK_IMAGE_TILING_LINEAR, VK_SAMPLE_COUNT_4_BIT,
                 VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                CompletableDeferred(), if (prefill) {{}} else { null }
+                CompletableDeferred(), null, if (prefill) {{}} else { null }
             )
         }
 

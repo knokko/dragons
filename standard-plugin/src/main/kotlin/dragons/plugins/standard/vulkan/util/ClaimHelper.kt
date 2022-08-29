@@ -19,7 +19,8 @@ import javax.imageio.ImageIO
 
 fun claimHeightImage(
     claims: MemoryScopeClaims, queueManager: QueueManager,
-    width: Int, height: Int, texture: CompletableDeferred<VulkanImage>, prefill: (ByteBuffer) -> Unit
+    width: Int, height: Int, texture: CompletableDeferred<VulkanImage>,
+    sharingID: String?, prefill: (ByteBuffer) -> Unit
 ) {
     claims.images.add(
         ImageMemoryClaim(
@@ -28,16 +29,17 @@ fun claimHeightImage(
             imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT, initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, accessMask = VK_ACCESS_SHADER_READ_BIT,
             dstPipelineStageMask = VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT or VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            storeResult = texture, prefill = prefill
+            storeResult = texture, sharingID = if (sharingID == null) { null } else { "$sharingID-height" }, prefill = prefill
         )
     )
 }
 
 fun claimHeightImage(
     claims: MemoryScopeClaims, queueManager: QueueManager, pluginClassLoader: ClassLoader,
-    width: Int, height: Int, texture: CompletableDeferred<VulkanImage>, resourceName: String, weight: Float
+    width: Int, height: Int, texture: CompletableDeferred<VulkanImage>, resourceName: String, weight: Float,
+    sharingID: String?
 ) {
-    claimHeightImage(claims, queueManager, width, height, texture) { destBuffer ->
+    claimHeightImage(claims, queueManager, width, height, texture, sharingID) { destBuffer ->
         val bufferedHeightImage = ImageIO.read(
             pluginClassLoader.getResourceAsStream(resourceName)
         )
@@ -55,9 +57,10 @@ fun claimHeightImage(
 
 fun claimHeightImage(
     claims: MemoryScopeClaims, queueManager: QueueManager,
-    width: Int, height: Int, texture: CompletableDeferred<VulkanImage>, heightFunction: (Int, Int) -> Float
+    width: Int, height: Int, texture: CompletableDeferred<VulkanImage>,
+    sharingID: String?, heightFunction: (Int, Int) -> Float
 ) {
-    claimHeightImage(claims, queueManager, width, height, texture) { destBuffer ->
+    claimHeightImage(claims, queueManager, width, height, texture, sharingID) { destBuffer ->
         for (x in 0 until width) {
             for (y in 0 until height) {
                 val destIndex = 4 * (x + y * width)
@@ -114,7 +117,7 @@ fun claimVertexAndIndexBuffer(
 
 fun claimColorImage(
     claims: MemoryScopeClaims, queueManager: QueueManager, width: Int, height: Int,
-    texture: CompletableDeferred<VulkanImage>, prefill: (ByteBuffer) -> Unit
+    texture: CompletableDeferred<VulkanImage>, sharingID: String?, prefill: (ByteBuffer) -> Unit
 ) {
     claims.images.add(
         ImageMemoryClaim(
@@ -130,6 +133,7 @@ fun claimColorImage(
             accessMask = VK_ACCESS_SHADER_READ_BIT,
             dstPipelineStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             storeResult = texture,
+            sharingID = if (sharingID != null) { "$sharingID-color" } else { null },
             prefill = prefill
         )
     )
@@ -137,9 +141,9 @@ fun claimColorImage(
 
 fun claimColorImage(
     claims: MemoryScopeClaims, queueManager: QueueManager, pluginClassLoader: ClassLoader, width: Int, height: Int,
-    texture: CompletableDeferred<VulkanImage>, resourceName: String
+    texture: CompletableDeferred<VulkanImage>, resourceName: String, sharingID: String?
 ) {
-    claimColorImage(claims, queueManager, width, height, texture, prefillBufferedImage(
+    claimColorImage(claims, queueManager, width, height, texture, sharingID, prefillBufferedImage(
         { ImageIO.read(pluginClassLoader.getResourceAsStream(resourceName)) },
         width, height, 4
     ))
@@ -147,9 +151,9 @@ fun claimColorImage(
 
 fun claimColorImage(
     claims: MemoryScopeClaims, queueManager: QueueManager, width: Int, height: Int, texture:
-    CompletableDeferred<VulkanImage>, pixelFunction: (Int, Int) -> Color
+    CompletableDeferred<VulkanImage>, sharingID: String?, pixelFunction: (Int, Int) -> Color
 ) {
-    claimColorImage(claims, queueManager, width, height, texture, prefillBufferedImage({
+    claimColorImage(claims, queueManager, width, height, texture, sharingID, prefillBufferedImage({
         val image = BufferedImage(width, height, TYPE_INT_ARGB)
         for (x in 0 until width) {
             for (y in 0 until height) {

@@ -1,26 +1,55 @@
 package dragons.vulkan.memory.claim
 
-import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.scope.CombinedMemoryScopeClaims
 import dragons.vulkan.queue.QueueFamily
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 
-// TODO Also share images and maybe staging buffers
 internal fun shareMemoryClaims(claimsMap: Map<QueueFamily?, QueueFamilyClaims>) = claimsMap.mapValues { entry -> shareMemoryClaims(entry.value) }
+
+private fun <T> createCompositeCompletableDeferred(storeResults: Collection<CompletableDeferred<T>>): CompletableDeferred<T> {
+    val compositeResult = CompletableDeferred<T>()
+    compositeResult.invokeOnCompletion { result ->
+        if (result == null) {
+            runBlocking {
+                for (storeResult in storeResults) {
+                    storeResult.complete(compositeResult.await())
+                }
+            }
+        } else if (result is CancellationException) {
+            for (storeResult in storeResults) {
+                storeResult.cancel(result)
+            }
+        } else {
+            throw RuntimeException("Sharing ID failed", result)
+        }
+    }
+
+    return compositeResult
+}
 
 private fun shareMemoryClaims(queueFamilyClaims: QueueFamilyClaims): QueueFamilyClaims {
     val claims = queueFamilyClaims.claims
 
     val bufferMap = mutableMapOf<String, MutableList<BufferMemoryClaim>>()
+    val imageMap = mutableMapOf<String, MutableList<ImageMemoryClaim>>()
     val resultBufferClaims = mutableListOf<BufferMemoryClaim>()
+    val resultImageClaims = mutableListOf<ImageMemoryClaim>()
 
     for (bufferClaim in claims.allBufferClaims) {
         if (bufferClaim.sharingID != null) {
             bufferMap.getOrPut(bufferClaim.sharingID, ::mutableListOf).add(bufferClaim)
         } else {
             resultBufferClaims.add(bufferClaim)
+        }
+    }
+
+    for (imageClaim in claims.allImageClaims) {
+        if (imageClaim.sharingID != null) {
+            imageMap.getOrPut(imageClaim.sharingID, ::mutableListOf).add(imageClaim)
+        } else {
+            resultImageClaims.add(imageClaim)
         }
     }
 
@@ -37,22 +66,7 @@ private fun shareMemoryClaims(queueFamilyClaims: QueueFamilyClaims): QueueFamily
             if (claim.queueFamily != firstClaim.queueFamily) throw IllegalArgumentException("Shared claims have different queue families")
         }
 
-        val storeResult = CompletableDeferred<VulkanBufferRange>()
-        storeResult.invokeOnCompletion { result ->
-            if (result == null) {
-                runBlocking {
-                    for (claim in sharedClaims) {
-                        claim.storeResult.complete(storeResult.await())
-                    }
-                }
-            } else if (result is CancellationException) {
-                for (claim in sharedClaims) {
-                    claim.storeResult.cancel(result)
-                }
-            } else {
-                throw RuntimeException("Sharing ID failed", result)
-            }
-        }
+        val storeResult = createCompositeCompletableDeferred(sharedClaims.map { it.storeResult })
 
         val combinedClaim = BufferMemoryClaim(
             size = firstClaim.size,
@@ -69,7 +83,35 @@ private fun shareMemoryClaims(queueFamilyClaims: QueueFamilyClaims): QueueFamily
         resultBufferClaims.add(combinedClaim)
     }
 
+    for (sharedClaims in imageMap.values) {
+        val firstClaim = sharedClaims[0]
+
+        // Sanity check: only identical claims should be shared!
+        for (claim in sharedClaims) {
+            if (claim.width != firstClaim.width) throw IllegalArgumentException("Shared claims have different widths")
+            if (claim.height != firstClaim.height) throw IllegalArgumentException("Shared claims have different heights")
+            if (claim.imageUsage != firstClaim.imageUsage) throw IllegalArgumentException("Shared claims have different image usages")
+            if (claim.dstPipelineStageMask != firstClaim.dstPipelineStageMask) {
+                throw IllegalArgumentException("Shared claims have different dest pipeline stage masks")
+            }
+        }
+
+        val storeResult = createCompositeCompletableDeferred(sharedClaims.map { it.storeResult })
+
+        val combinedClaim = ImageMemoryClaim(
+            width = firstClaim.width, height = firstClaim.height, queueFamily = firstClaim.queueFamily,
+            imageCreateFlags = firstClaim.imageCreateFlags, imageViewFlags = firstClaim.imageViewFlags,
+            bytesPerPixel = firstClaim.bytesPerPixel, imageFormat = firstClaim.imageFormat, tiling = firstClaim.tiling,
+            samples = firstClaim.samples, imageUsage = firstClaim.imageUsage, initialLayout = firstClaim.initialLayout,
+            aspectMask = firstClaim.aspectMask, accessMask = firstClaim.accessMask,
+            dstPipelineStageMask = firstClaim.dstPipelineStageMask, storeResult = storeResult,
+            sharingID = firstClaim.sharingID, prefill = firstClaim.prefill
+        )
+
+        resultImageClaims.add(combinedClaim)
+    }
+
     return QueueFamilyClaims(CombinedMemoryScopeClaims(
-        resultBufferClaims, claims.stagingBufferClaims, claims.allImageClaims
+        resultBufferClaims, claims.stagingBufferClaims, resultImageClaims
     ))
 }

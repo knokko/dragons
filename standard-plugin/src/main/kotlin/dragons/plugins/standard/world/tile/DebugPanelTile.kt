@@ -136,11 +136,14 @@ class DebugPanelTile(
                         initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                         accessMask = VK_ACCESS_SHADER_READ_BIT, aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                         dstPipelineStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                        storeResult = panelImage, prefill = null
+                        storeResult = panelImage, sharingID = null, prefill = null
                     )
                 )
 
-                claimHeightImage(agent.claims, agent.gameState.graphics.queueManager, 1, 1, zeroHeightTexture) { _, _ -> 0f }
+                claimHeightImage(
+                    agent.claims, agent.gameState.graphics.queueManager, 1, 1,
+                    zeroHeightTexture, "standard plug-in: zero height"
+                ) { _, _ -> 0f }
 
                 val debugPanel = generatePanelModel(
                     textureIndex = agent.claimColorImageIndex(panelImage),
@@ -155,7 +158,6 @@ class DebugPanelTile(
                     val ciSemaphore = VkSemaphoreCreateInfo.calloc(stack)
                     ciSemaphore.`sType$Default`()
 
-                    // TODO Destroy this semaphore and maybe the panel when the tile is unloaded
                     val pSemaphore = stack.callocLong(1)
                     assertVkSuccess(
                         vkCreateSemaphore(agent.gameState.graphics.vkDevice, ciSemaphore, null, pSemaphore),

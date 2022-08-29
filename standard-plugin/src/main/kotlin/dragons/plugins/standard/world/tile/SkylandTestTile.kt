@@ -63,11 +63,12 @@ class SkylandTestTile(private val position: Vector3f): TileProperties {
                 )
                 claimColorImage(
                     agent.claims, graphics.queueManager, agent.gameState.classLoader, 1024, 1024, colorTexture,
-                    "dragons/plugins/standard/images/testTerrain.jpg"
+                    "dragons/plugins/standard/images/testTerrain.jpg", "standard plug-in:SkylandTestTile"
                 )
                 claimHeightImage(
                     agent.claims, graphics.queueManager, agent.gameState.classLoader, 128, 128, heightTexture,
-                    "dragons/plugins/standard/images/testTerrainHeight.png", 0.001f
+                    "dragons/plugins/standard/images/testTerrainHeight.png", 0.001f,
+                    "standard plug-in:SkylandTestTile"
                 )
                 // TODO Share resources with identical tiles
             }
