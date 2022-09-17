@@ -169,7 +169,7 @@ class TestStaticMemory: VulkanStaticMemoryUser {
                 val indexStagingResult = CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>()
                 agent.claims.stagingBuffers.add(
                     StagingBufferMemoryClaim(
-                        size = 543, queueFamily = queueFamily, storeResult = indexStagingResult
+                        size = 543, alignment = 3, queueFamily = queueFamily, storeResult = indexStagingResult
                     )
                 )
 

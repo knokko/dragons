@@ -24,8 +24,8 @@ class TestStagingPacker {
             400, 0, 0, 0, 5, null, CompletableDeferred(), null, null
         )
 
-        val staging1 = StagingBufferMemoryClaim(500, null, 0, CompletableDeferred())
-        val staging2 = StagingBufferMemoryClaim(600, null, 0, CompletableDeferred())
+        val staging1 = StagingBufferMemoryClaim(500, 1, null, 0, CompletableDeferred())
+        val staging2 = StagingBufferMemoryClaim(600, 3, null, 0, CompletableDeferred())
 
         fun createImageClaim(width: Int, height: Int, bytesPerPixel: Int, prefill: Boolean): ImageMemoryClaim {
             return ImageMemoryClaim(
@@ -56,15 +56,19 @@ class TestStagingPacker {
             prefilledBufferDeviceOffset = 0,
             uninitializedBufferClaims = listOf(Placed(uninitBuffer1, 1), Placed(uninitBuffer2, 303)),
             uninitializedBufferDeviceOffset = 302,
-            stagingBufferClaims = listOf(Placed(staging1, 0), Placed(staging2, 500)),
+            stagingBufferClaims = listOf(Placed(staging1, 0), Placed(staging2, 501)),
             stagingBufferOffset = 0,
             prefilledImageClaims = listOf(Placed(prefillImage1, 2), Placed(prefillImage2, 20_002)),
             prefilledImageStagingOffset = 302,
             uninitializedImageClaims = listOf(uninitImage1, uninitImage2),
         )
 
-        assertEquals(expectedPlacements, determineStagingPlacements(
-            mapOf(Pair(null, claims))).queueFamilies[null]!!.internalPlacements
-        )
+        val actualPlacements = determineStagingPlacements(
+            mapOf(Pair(null, claims))
+        ).queueFamilies[null]!!
+
+        assertEquals(expectedPlacements, actualPlacements.internalPlacements)
+        assertEquals(1101, actualPlacements.persistentStagingBufferSize)
+        assertEquals(1005, actualPlacements.deviceBufferSize)
     }
 }

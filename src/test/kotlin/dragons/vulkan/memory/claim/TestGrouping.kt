@@ -41,7 +41,7 @@ class TestGrouping {
                         )
                     ),
                     stagingBuffers = mutableListOf(StagingBufferMemoryClaim(
-                        size = 200, queueFamily = null, storeResult = CompletableDeferred()
+                        size = 200, alignment = 1, queueFamily = null, storeResult = CompletableDeferred()
                     ))
                 )
             )
@@ -132,9 +132,9 @@ class TestGrouping {
             600, 13, 0, 0, 1, queueManager.generalQueueFamily, CompletableDeferred(), null, null
         )
 
-        val stagingBuffer1 = StagingBufferMemoryClaim(700, null, 0, CompletableDeferred())
-        val stagingBuffer2 = StagingBufferMemoryClaim(800, queueManager.computeOnlyQueueFamily, 0, CompletableDeferred())
-        val stagingBuffer3 = StagingBufferMemoryClaim(900, queueManager.computeOnlyQueueFamily, 0, CompletableDeferred())
+        val stagingBuffer1 = StagingBufferMemoryClaim(700, 1, null, 0, CompletableDeferred())
+        val stagingBuffer2 = StagingBufferMemoryClaim(800, 2, queueManager.computeOnlyQueueFamily, 0, CompletableDeferred())
+        val stagingBuffer3 = StagingBufferMemoryClaim(900, 3, queueManager.computeOnlyQueueFamily, 0, CompletableDeferred())
 
         fun createImageClaim(width: Int, height: Int, queueFamily: QueueFamily?, prefill: Boolean): ImageMemoryClaim {
             return ImageMemoryClaim(

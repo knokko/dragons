@@ -21,7 +21,7 @@ class BufferMemoryClaim(
 }
 
 class StagingBufferMemoryClaim(
-    val size: Int, val queueFamily: QueueFamily?, val usageFlags: Int = 0,
+    val size: Int, val alignment: Int, val queueFamily: QueueFamily?, val usageFlags: Int = 0,
     val storeResult: CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>
 ) {
     init {

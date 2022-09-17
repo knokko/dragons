@@ -25,13 +25,15 @@ internal class StagingPlacements(
      */
     val externalOffset: Long,
     /**
-     * The total number of bytes that are reserved for **both buffers and images** for this queue family in the shared staging buffer.
-     */
-    val stagingBufferSize: Long,
-    /**
      * The total number of bytes that are reserved for **buffers** for this queue family in the shared staging buffer.
      */
     val stagingBufferOnlyBufferSize: Long,
+    /**
+     * The size (in bytes) that the persistent staging buffer will need.
+     *
+     * Note: this field doesn't really belong in this class, but it is convenient to put it here (at least for now).
+     */
+    val persistentStagingBufferSize: Long,
     /**
      * The size (in bytes) that the device local buffer will need.
      *
@@ -92,7 +94,6 @@ internal fun determineStagingPlacements(
             sharedOffset += claim.getStagingByteSize()
             Placed(claim, claimOffset)
         }
-        val familyStagingSize = sharedOffset - externalOffset
 
         var uninitializedBufferFamilyOffset = 0L
         val uninitializedBufferClaims = claims.uninitializedBufferClaims.map { claim ->
@@ -114,8 +115,13 @@ internal fun determineStagingPlacements(
 
         var stagingBufferFamilyOffset = 0L
         val stagingBufferClaims = claims.stagingBufferClaims.map { claim ->
-            val claimOffset = stagingBufferFamilyOffset
-            stagingBufferFamilyOffset += claim.size
+            /*
+             * The final offset for the claim will be claimOffset + stagingBufferOffset, which is just claimOffset
+             * since stagingBufferOffset is always 0. We need to ensure that this is a multiple of the alignment of
+             * the claim
+             */
+            val claimOffset = nextMultipleOf(claim.alignment.toLong(), stagingBufferFamilyOffset)
+            stagingBufferFamilyOffset = claimOffset + claim.size
             Placed(claim, claimOffset)
         }
 
@@ -134,7 +140,7 @@ internal fun determineStagingPlacements(
 
         familyPlacementMap[queueFamily] = StagingPlacements(
             externalOffset = externalOffset,
-            stagingBufferSize = familyStagingSize,
+            persistentStagingBufferSize = stagingBufferFamilyOffset,
             stagingBufferOnlyBufferSize = totalPrefilledBufferSize,
             deviceBufferSize = uninitializedBufferFamilyOffset + totalPrefilledBufferSize,
             internalPlacements = placedClaims

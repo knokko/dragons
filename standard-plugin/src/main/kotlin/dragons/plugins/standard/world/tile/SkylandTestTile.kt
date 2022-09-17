@@ -70,7 +70,6 @@ class SkylandTestTile(private val position: Vector3f): TileProperties {
                     "dragons/plugins/standard/images/testTerrainHeight.png", 0.001f,
                     "standard plug-in:SkylandTestTile"
                 )
-                // TODO Share resources with identical tiles
             }
 
             override suspend fun createRenderer() = Renderer(

@@ -28,6 +28,8 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
         ))
         agent.claims.stagingBuffers.add(StagingBufferMemoryClaim(
             size = 2 * 64,
+            // No special alignment is needed because the staging buffer is only used for copying
+            alignment = 1,
             queueFamily = agent.queueManager.generalQueueFamily,
             storeResult = preGraphics.cameraStagingBuffer
         ))
@@ -44,14 +46,17 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
         agent.claims.stagingBuffers.add(StagingBufferMemoryClaim(
             size = 4 * 16 * MAX_NUM_TRANSFORMATION_MATRICES,
             queueFamily = agent.queueManager.generalQueueFamily,
+            // No special alignment is needed because the staging buffer is only used for copying
+            alignment = 1,
             storeResult = preGraphics.transformationMatrixStagingBuffer
         ))
 
         // Indirect drawing buffer
-        // TODO Enforce alignment of 4 bytes
         agent.claims.stagingBuffers.add(StagingBufferMemoryClaim(
             size = VkDrawIndexedIndirectCommand.SIZEOF * MAX_NUM_INDIRECT_DRAW_CALLS,
             usageFlags = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
+            // vkCmdDrawIndexedIndirectCountKHR wants the offset to be a multiple of 4
+            alignment = 4,
             queueFamily = agent.queueManager.generalQueueFamily,
             storeResult = preGraphics.indirectDrawingBuffer
         ))

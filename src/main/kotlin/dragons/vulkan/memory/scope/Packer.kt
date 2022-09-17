@@ -58,7 +58,7 @@ suspend fun packMemoryClaims(
             logger = logger, stack = stack, vkDevice = vkDevice, queueManager = queueManager,
             groups = familyClaimsMap, memoryInfo = memoryInfo,
 
-            getSize = { claims, _ -> claims.persistentStagingSize },
+            getSize = { _, queueFamily -> combinedStagingPlacements.queueFamilies[queueFamily]!!.persistentStagingBufferSize },
             bufferUsage = combinedStagingBufferUsage,
             description = "Scope $description: persistent staging",
             // Note: the Vulkan specification guarantees that at least 1 memory heap has these properties
