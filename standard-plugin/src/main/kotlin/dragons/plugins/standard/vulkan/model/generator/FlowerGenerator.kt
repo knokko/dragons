@@ -1,8 +1,8 @@
 package dragons.plugins.standard.vulkan.model.generator
 
 import dragons.plugins.standard.vulkan.vertex.BasicVertex.Companion.MATERIAL_TERRAIN
-import dragons.util.Angle
-import dragons.util.Distance
+import dragons.space.Angle
+import dragons.space.Distance
 import org.joml.Math.*
 import org.joml.Vector3f
 

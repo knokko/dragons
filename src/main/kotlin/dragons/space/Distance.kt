@@ -1,4 +1,4 @@
-package dragons.util
+package dragons.space
 
 @JvmInline
 value class Distance private constructor(
@@ -62,6 +62,8 @@ value class Distance private constructor(
         fun milliMeters(distance: Long) = microMeters(distance * 1000)
 
         fun milliMeters(distance: Float) = Distance((distance * 1000_000f).toLong())
+
+        fun meters(distance: Int) = meters(distance.toLong())
 
         fun meters(distance: Long) = milliMeters(distance * 1000)
 

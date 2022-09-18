@@ -4,12 +4,11 @@ import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.plugins.standard.vulkan.render.tile.*
 import dragons.plugins.standard.vulkan.render.tile.StandardTileRenderer
+import dragons.space.Position
 import dragons.state.StaticGameState
 import dragons.vulkan.memory.scope.MemoryScope
 import dragons.world.chunk.ChunkLocation
 import dragons.world.realm.Realm
-import dragons.world.tile.TileProperties
-import org.joml.Vector3f
 import org.lwjgl.vulkan.VkDevice
 import java.util.*
 import kotlin.collections.ArrayList
@@ -25,7 +24,7 @@ internal class ChunkRenderManager(
 
     private var chosenChunks: Collection<ChunkLocation>? = null
 
-    fun chooseAndLoadChunks(realm: Realm, cameraPosition: Vector3f) {
+    fun chooseAndLoadChunks(realm: Realm, cameraPosition: Position) {
         if (this.chosenChunks != null) throw IllegalStateException("You must render after each call to chooseAndLoadChunks()")
 
         // TODO Reset all loaded chunks when the realm is not identical to the previous realm
@@ -53,14 +52,12 @@ internal class ChunkRenderManager(
         this.chosenChunks = chosenChunks
     }
 
-    fun renderChunks(sceneRenderer: StandardSceneRenderer, realm: Realm, cameraPosition: Vector3f) {
-        val negativeCameraPosition = cameraPosition.negate(Vector3f())
-
+    fun renderChunks(sceneRenderer: StandardSceneRenderer, realm: Realm, cameraPosition: Position) {
         for (location in this.chosenChunks!!) {
             val chunk = realm.getChunk(location)
             val chunkEntry = loadedChunks[location]!!
             for ((tileID, tileRenderer) in chunkEntry.tiles) {
-                tileRenderer.render(sceneRenderer, chunk.getTileState(tileID), negativeCameraPosition)
+                tileRenderer.render(sceneRenderer, chunk.getTileState(tileID), cameraPosition)
             }
         }
     }

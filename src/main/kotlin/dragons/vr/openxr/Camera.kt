@@ -1,6 +1,6 @@
 package dragons.vr.openxr
 
-import dragons.util.Angle
+import dragons.space.Angle
 import dragons.vr.CameraMatrices
 import org.joml.Math.*
 import org.joml.Matrix4f

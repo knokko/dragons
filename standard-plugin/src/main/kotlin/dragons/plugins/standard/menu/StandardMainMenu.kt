@@ -5,7 +5,8 @@ import dragons.plugin.interfaces.menu.MainMenuManager
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.state.StaticGameState
-import dragons.util.Angle
+import dragons.space.Angle
+import dragons.space.Position
 import dragons.vulkan.util.assertVkSuccess
 import org.joml.Math.cos
 import org.joml.Math.sin
@@ -56,7 +57,7 @@ class StandardMainMenu: MainMenuManager {
         // TODO Add more iterations (and eventually loop indefinitely)
         var numIterationsLeft = 500
 
-        val currentPosition = Vector3f()
+        var currentPosition = Position.meters(0, 0, 0)
         var extraRotation = 0f
 
         while (!gameState.vrManager.shouldStop()) {
@@ -69,17 +70,20 @@ class StandardMainMenu: MainMenuManager {
                 val currentDirection = eyeMatrices.averageViewMatrix.transformDirection(Vector3f(0f, 0f, 1f))
                 val currentRotation = atan2(currentDirection.x, currentDirection.z)
 
-                currentPosition.x += 0.1f * (cos(currentRotation) * currentMovement.x + sin(currentRotation) * currentMovement.y)
-                currentPosition.z += 0.1f * (sin(currentRotation) * currentMovement.x - cos(currentRotation) * currentMovement.y)
+                val dx = 0.1f * (cos(currentRotation) * currentMovement.x + sin(currentRotation) * currentMovement.y)
+                var dy = 0f
+                val dz = 0.1f * (sin(currentRotation) * currentMovement.x - cos(currentRotation) * currentMovement.y)
 
                 extraRotation += currentInput.cameraTurnDirection * 2f
 
                 if (currentInput.isGrabbingLeft) {
-                    currentPosition.y -= 0.1f
+                    dy -= 0.1f
                 }
                 if (currentInput.isGrabbingRight) {
-                    currentPosition.y += 0.1f
+                    dy += 0.1f
                 }
+
+                currentPosition += Position.meters(dx, dy, dz)
 
                 // Work around to let the user choose when to end the game
                 if (currentMovement.length() > 0f) {
@@ -91,7 +95,7 @@ class StandardMainMenu: MainMenuManager {
 
                 println("${UUID.randomUUID()}")
 
-                val averageEyePosition = eyeMatrices.averageVirtualEyePosition.add(currentPosition, Vector3f())
+                val averageEyePosition = Position.meters(eyeMatrices.averageVirtualEyePosition) + currentPosition
 
                 sceneRenderer.render(realm, averageEyePosition, eyeMatrices.leftEyeMatrix, eyeMatrices.rightEyeMatrix)
                 gameState.vrManager.markFirstFrameQueueSubmit()

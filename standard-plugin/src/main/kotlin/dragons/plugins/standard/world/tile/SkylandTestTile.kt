@@ -9,16 +9,15 @@ import dragons.plugins.standard.vulkan.render.tile.TileRendererFactory
 import dragons.plugins.standard.vulkan.util.claimColorImage
 import dragons.plugins.standard.vulkan.util.claimHeightImage
 import dragons.plugins.standard.vulkan.util.claimVertexAndIndexBuffer
+import dragons.space.Position
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
 import dragons.world.tile.TileProperties
 import dragons.world.tile.TileState
 import kotlinx.coroutines.CompletableDeferred
 import org.joml.Matrix4f
-import org.joml.Vector3f
-import java.util.*
 
-class SkylandTestTile(private val position: Vector3f): TileProperties {
+class SkylandTestTile(position: Position): TileProperties(position) {
 
     override fun getPersistentClassID() = "standard-plugin:SkylandTestTile"
 
@@ -26,16 +25,16 @@ class SkylandTestTile(private val position: Vector3f): TileProperties {
     class State: TileState
 
     class Renderer(
-        private val position: Vector3f,
+        private val position: Position,
         private val vertices: VulkanBufferRange,
         private val indices: VulkanBufferRange,
     ): TileRenderer {
 
-        override fun render(renderer: StandardSceneRenderer, state: TileState, negativeCameraPosition: Vector3f) {
+        override fun render(renderer: StandardSceneRenderer, state: TileState, cameraPosition: Position) {
+            val renderPosition = position - cameraPosition
             val transformationMatrix = Matrix4f()
-                .translate(negativeCameraPosition)
-                .scale(10f) // TODO doing translate -> scale -> translate isn't clean
-                .translate(position)
+                .translate(renderPosition.x.meters, renderPosition.y.meters, renderPosition.z.meters)
+                .scale(10f)
             renderer.drawTile(vertices, indices, arrayOf(transformationMatrix))
         }
 

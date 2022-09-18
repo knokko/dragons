@@ -1,4 +1,4 @@
-package dragons.util
+package dragons.space
 
 import org.joml.Math.*
 

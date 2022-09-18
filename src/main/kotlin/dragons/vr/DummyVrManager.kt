@@ -2,7 +2,7 @@ package dragons.vr
 
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.state.StaticGraphicsState
-import dragons.util.Angle
+import dragons.space.Angle
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim

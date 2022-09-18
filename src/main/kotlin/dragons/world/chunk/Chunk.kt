@@ -1,6 +1,6 @@
 package dragons.world.chunk
 
-import dragons.util.Distance
+import dragons.space.Distance
 import dragons.world.tile.SmallTile
 import dragons.world.tile.TemporaryTile
 import dragons.world.tile.TileProperties

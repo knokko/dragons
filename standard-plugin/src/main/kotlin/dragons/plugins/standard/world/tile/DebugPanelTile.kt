@@ -9,7 +9,8 @@ import dragons.plugins.standard.vulkan.render.tile.TileRendererClaims
 import dragons.plugins.standard.vulkan.render.tile.TileRendererFactory
 import dragons.plugins.standard.vulkan.util.claimHeightImage
 import dragons.plugins.standard.vulkan.util.claimVertexAndIndexBuffer
-import dragons.util.Angle
+import dragons.space.Angle
+import dragons.space.Position
 import dragons.util.getStandardOutputHistory
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
@@ -23,16 +24,15 @@ import graviks2d.util.Color
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.joml.Matrix4f
-import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
 
 class DebugPanelTile(
-    private val position: Vector3f,
+    position: Position,
     private val rotation: Angle
-): TileProperties {
+): TileProperties(position) {
     override fun getPersistentClassID() = "standard-plugin:DebugPanelTile"
 
     class State: TileState {
@@ -41,7 +41,7 @@ class DebugPanelTile(
     }
 
     class Renderer(
-        private val position: Vector3f,
+        private val position: Position,
         private val rotation: Angle,
         private val vertices: VulkanBufferRange,
         private val indices: VulkanBufferRange,
@@ -49,13 +49,16 @@ class DebugPanelTile(
         private val panelSemaphore: Long
     ): TileRenderer {
 
-        override fun render(renderer: StandardSceneRenderer, state: TileState, negativeCameraPosition: Vector3f) {
+        override fun render(renderer: StandardSceneRenderer, state: TileState, cameraPosition: Position) {
             val scaleX = 60f
             val aspectRatio = panel.width.toFloat() / panel.height.toFloat()
             val scaleY = scaleX / aspectRatio
 
+            val renderPosition = position - cameraPosition
+
             val transformationMatrix = Matrix4f()
-                .translate(position).translate(negativeCameraPosition).rotateY(rotation.radians).scale(scaleX, scaleY, 1f)
+                .translate(renderPosition.x.meters, renderPosition.y.meters, renderPosition.z.meters)
+                .rotateY(rotation.radians).scale(scaleX, scaleY, 1f)
 
             renderer.drawTile(vertices, indices, arrayOf(transformationMatrix))
 

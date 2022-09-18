@@ -2,7 +2,7 @@ package dragons.vr
 
 import dragons.init.GameInitProperties
 import dragons.state.StaticGraphicsState
-import dragons.util.Angle
+import dragons.space.Angle
 import dragons.vr.controls.DragonControls
 import dragons.vr.openxr.*
 import dragons.vr.openxr.createOpenXrInstance

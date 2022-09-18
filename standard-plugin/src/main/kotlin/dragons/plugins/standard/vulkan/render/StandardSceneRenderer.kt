@@ -3,6 +3,7 @@ package dragons.plugins.standard.vulkan.render
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.render.chunk.ChunkRenderManager
 import dragons.plugins.standard.vulkan.render.tile.StandardTileRenderer
+import dragons.space.Position
 import dragons.state.StaticGameState
 import dragons.vulkan.memory.VulkanBuffer
 import dragons.vulkan.memory.VulkanBufferRange
@@ -10,7 +11,6 @@ import dragons.world.realm.Realm
 import dragons.world.render.SceneRenderTarget
 import dragons.world.render.SceneRenderer
 import org.joml.Matrix4f
-import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VkDevice
@@ -81,7 +81,7 @@ class StandardSceneRenderer internal constructor(
         )
     }
 
-    override fun render(realm: Realm, averageEyePosition: Vector3f, leftCameraMatrix: Matrix4f, rightCameraMatrix: Matrix4f) {
+    override fun render(realm: Realm, averageEyePosition: Position, leftCameraMatrix: Matrix4f, rightCameraMatrix: Matrix4f) {
         stackPush().use { stack ->
 
             // The chunks must be chosen and loaded before starting the frame
