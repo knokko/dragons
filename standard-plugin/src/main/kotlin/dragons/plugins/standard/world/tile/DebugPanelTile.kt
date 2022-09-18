@@ -40,6 +40,7 @@ class DebugPanelTile(
         internal var submissionMarker: CompletableDeferred<Unit>? = null
     }
 
+    @Suppress("unused")
     class Renderer(
         private val position: Position,
         private val rotation: Angle,

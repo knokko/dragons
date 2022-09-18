@@ -11,6 +11,7 @@ import org.lwjgl.vulkan.VkDrawIndexedIndirectCommand
 const val MAX_NUM_TRANSFORMATION_MATRICES = 100_000
 const val MAX_NUM_INDIRECT_DRAW_CALLS = 100_000
 
+@Suppress("unused")
 class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
 
     override fun claimStaticMemory(pluginInstance: PluginInstance, agent: VulkanStaticMemoryUser.Agent) {

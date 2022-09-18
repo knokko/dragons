@@ -4,6 +4,7 @@ import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.general.PluginsLoadedListener
 import dragons.plugins.standard.state.StandardPluginState
 
+@Suppress("unused")
 class StandardPluginInitialization: PluginsLoadedListener {
 
     override fun afterPluginsLoaded(instance: PluginInstance) {

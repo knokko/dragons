@@ -42,7 +42,7 @@ internal class ChunkLoaderDescriptors(
         }
     }
 
-    fun borrowDescriptorSet() = this.descriptorSets.take()
+    fun borrowDescriptorSet(): Long = this.descriptorSets.take()
 
     fun returnDescriptorSet(descriptorSet: Long) = this.descriptorSets.add(descriptorSet)
 

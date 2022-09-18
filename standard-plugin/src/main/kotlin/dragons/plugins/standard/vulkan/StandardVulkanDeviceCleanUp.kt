@@ -8,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.LoggerFactory.getLogger
 
+@Suppress("unused")
 class StandardVulkanDeviceCleanUp: VulkanDeviceDestructionListener {
 
     override fun beforeDeviceDestruction(

@@ -6,6 +6,7 @@ import org.lwjgl.vulkan.KHRDrawIndirectCount.VK_KHR_DRAW_INDIRECT_COUNT_EXTENSIO
 import org.lwjgl.vulkan.KHRShaderDrawParameters.VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME
 import org.lwjgl.vulkan.VK12.*
 
+@Suppress("unused")
 class StandardVulkanDeviceRater: VulkanDeviceRater {
     override fun ratePhysicalDevice(pluginInstance: PluginInstance, agent: VulkanDeviceRater.Agent) {
 

@@ -17,6 +17,7 @@ import org.lwjgl.vulkan.VkSemaphoreCreateInfo
 import java.util.*
 import kotlin.math.atan2
 
+@Suppress("unused")
 class StandardMainMenu: MainMenuManager {
     override fun requestMainMenuControl(pluginInstance: PluginInstance, agent: MainMenuManager.Agent) {
         /*

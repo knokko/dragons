@@ -11,6 +11,7 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.vkCreateFramebuffer
 import org.lwjgl.vulkan.VkFramebufferCreateInfo
 
+@Suppress("unused")
 class StandardStaticStateListener: StaticStateListener {
     override fun afterStaticStateCreation(pluginInstance: PluginInstance, agent: StaticStateListener.Agent) {
         val state = pluginInstance.state as StandardPluginState

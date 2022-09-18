@@ -1,7 +1,6 @@
 package dragons.plugins.standard.vulkan.render.tile
 
 import dragons.state.StaticGameState
-import dragons.state.StaticGraphicsState
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.scope.MemoryScopeClaims
 import kotlinx.coroutines.CompletableDeferred

@@ -7,6 +7,7 @@ import dragons.plugins.standard.vulkan.pipeline.*
 import dragons.plugins.standard.vulkan.renderpass.createBasicRenderPass
 import kotlinx.coroutines.launch
 
+@Suppress("unused")
 class StandardVulkanDeviceResourceCreator: VulkanDeviceCreationListener {
     override fun afterVulkanDeviceCreation(pluginInstance: PluginInstance, agent: VulkanDeviceCreationListener.Agent) {
         val state = pluginInstance.state as StandardPluginState

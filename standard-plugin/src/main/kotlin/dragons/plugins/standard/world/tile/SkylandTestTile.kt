@@ -24,6 +24,7 @@ class SkylandTestTile(position: Position): TileProperties(position) {
     // TODO Use the state for something?
     class State: TileState
 
+    @Suppress("unused")
     class Renderer(
         private val position: Position,
         private val vertices: VulkanBufferRange,

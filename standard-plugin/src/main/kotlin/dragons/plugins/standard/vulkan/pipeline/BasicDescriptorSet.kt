@@ -134,24 +134,6 @@ fun createBasicStaticDescriptorSet(
     }
 }
 
-fun createBasicDynamicDescriptorSet(
-    vkDevice: VkDevice, descriptorPool: Long, descriptorSetLayout: Long
-): Long {
-    return stackPush().use { stack ->
-        val aiDescriptor = VkDescriptorSetAllocateInfo.calloc(stack)
-        aiDescriptor.sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
-        aiDescriptor.descriptorPool(descriptorPool)
-        aiDescriptor.pSetLayouts(stack.longs(descriptorSetLayout))
-
-        val pDescriptorSet = stack.callocLong(1)
-        assertVkSuccess(
-            vkAllocateDescriptorSets(vkDevice, aiDescriptor, pDescriptorSet),
-            "AllocateDescriptorSets", "standard plug-in: basic dynamic"
-        )
-        pDescriptorSet[0]
-    }
-}
-
 fun updateBasicDynamicDescriptorSet(
     vkDevice: VkDevice, basicDynamicDescriptorSet: Long, colorImages: List<VulkanImage?>, heightImages: List<VulkanImage?>
 ) {
