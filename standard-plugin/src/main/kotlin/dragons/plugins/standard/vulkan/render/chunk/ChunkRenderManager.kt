@@ -30,11 +30,12 @@ internal class ChunkRenderManager(
         // TODO Reset all loaded chunks when the realm is not identical to the previous realm
         // TODO Level of detail for each chunk location
 
-        // TODO Choose chunks depending on camera position rather than hardcoding them
         val chosenChunks = HashSet<ChunkLocation>()
-        for (x in -2 .. 2) {
-            for (y in -2 .. 2) {
-                for (z in -2 .. 2) {
+        val centerLocation = ChunkLocation(cameraPosition)
+        val radius = 2
+        for (x in centerLocation.chunkX - radius .. centerLocation.chunkX + radius) {
+            for (y in centerLocation.chunkY - radius .. centerLocation.chunkY + radius) {
+                for (z in centerLocation.chunkZ - radius .. centerLocation.chunkZ + radius) {
                     chosenChunks.add(ChunkLocation(x, y, z))
                 }
             }
