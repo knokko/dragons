@@ -30,7 +30,7 @@ class Chunk internal constructor(
 
     fun getTileState(id: UUID) = getTemporaryTile(id).state
 
-    fun addTile(properties: TileProperties, initialState: TileState): SmallTile {
+    internal fun addTile(properties: TileProperties, initialState: TileState): SmallTile {
         if (!isInDesigner) throw UnsupportedOperationException("Adding tiles is only allowed in the designer")
 
         val temporaryTile = TemporaryTile(UUID.randomUUID(), properties, initialState)
