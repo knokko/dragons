@@ -3,6 +3,7 @@ package dragons.vr
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.state.StaticGraphicsState
 import dragons.space.Angle
+import dragons.space.Distance
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim
@@ -87,7 +88,7 @@ class DummyVrManager(
 
     private var lastRenderTime: Long? = null
 
-    override fun prepareRender(extraRotationY: Angle): CameraMatrices {
+    override fun prepareRender(nearPlane: Distance, farPlane: Distance, extraRotationY: Angle): CameraMatrices {
         if (lastRenderTime != null) {
             // This should cause a framerate of ~90 fps
             val nextRenderTime = lastRenderTime!! + 1000 / 90
@@ -100,7 +101,7 @@ class DummyVrManager(
         val projectionMatrix = Matrix4f().scale(1f, -1f, 1f).perspective(
             toRadians(70f),
             getWidth().toFloat() / getHeight().toFloat(),
-            0.01f, 1000f, true
+            nearPlane.meters, farPlane.meters, true
         )
 
         // Let the camera rotate slowly

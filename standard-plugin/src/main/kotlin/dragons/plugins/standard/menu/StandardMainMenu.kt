@@ -6,6 +6,7 @@ import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.state.StaticGameState
 import dragons.space.Angle
+import dragons.space.Distance
 import dragons.space.Position
 import dragons.vulkan.util.assertVkSuccess
 import org.joml.Math.cos
@@ -56,15 +57,17 @@ class StandardMainMenu: MainMenuManager {
         val debugPanelSemaphore = createSemaphore("main menu debug panel")
 
         // TODO Add more iterations (and eventually loop indefinitely)
-        var numIterationsLeft = 500
+        var numIterationsLeft = 200
 
         var currentPosition = Position.meters(0, 0, 0)
         var extraRotation = 0f
+        val nearPlane = Distance.milliMeters(10)
+        val farPlane = Distance.meters(500)
 
         while (!gameState.vrManager.shouldStop()) {
             val currentInput = gameState.vrManager.getDragonControls()
 
-            val eyeMatrices = gameState.vrManager.prepareRender(Angle.degrees(extraRotation))
+            val eyeMatrices = gameState.vrManager.prepareRender(nearPlane, farPlane, Angle.degrees(extraRotation))
             if (eyeMatrices != null) {
 
                 val currentMovement = currentInput.walkDirection

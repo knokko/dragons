@@ -3,6 +3,7 @@ package dragons.vr
 import dragons.init.GameInitProperties
 import dragons.state.StaticGraphicsState
 import dragons.space.Angle
+import dragons.space.Distance
 import dragons.vr.controls.DragonControls
 import dragons.vr.openxr.*
 import dragons.vr.openxr.createOpenXrInstance
@@ -189,7 +190,7 @@ internal class OpenXrManager(
         this.input = XrInput(this.xrInstance, this.xrSession)
     }
 
-    override fun prepareRender(extraRotationY: Angle): CameraMatrices? {
+    override fun prepareRender(nearPlane: Distance, farPlane: Distance, extraRotationY: Angle): CameraMatrices? {
         val logger = getLogger("VR")
         this.sessionState.update()
         val result = if (this.sessionState.shouldTryRender()) {
@@ -223,7 +224,7 @@ internal class OpenXrManager(
                         pSwapchainImageIndex[0]
                     }
 
-                    this.camera.getCameraMatrices(xrSession, renderSpace, lastViews, displayTime, extraRotationY)
+                    this.camera.getCameraMatrices(xrSession, renderSpace, lastViews, displayTime, nearPlane, farPlane, extraRotationY)
                 } else {
                     logger.info("Shouldn't render")
                     null

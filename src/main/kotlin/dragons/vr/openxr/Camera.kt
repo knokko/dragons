@@ -1,6 +1,7 @@
 package dragons.vr.openxr
 
 import dragons.space.Angle
+import dragons.space.Distance
 import dragons.vr.CameraMatrices
 import org.joml.Math.*
 import org.joml.Matrix4f
@@ -38,7 +39,8 @@ internal class XrCamera {
     private var lastVirtualPosition = Vector3f()
 
     internal fun getCameraMatrices(
-        xrSession: XrSession, renderSpace: XrSpace, pViews: XrView.Buffer, displayTime: Long, extraRotationY: Angle
+        xrSession: XrSession, renderSpace: XrSpace, pViews: XrView.Buffer, displayTime: Long,
+        nearPlane: Distance, farPlane: Distance, extraRotationY: Angle
     ): CameraMatrices? {
         stackPush().use { stack ->
 
@@ -100,9 +102,8 @@ internal class XrCamera {
             val perEyeResults = (0 until 2).map { eyeIndex ->
                 val fov = pViews[eyeIndex].fov()
 
-                // TODO Stop hardcoding nearZ and farZ (note: it happens also in OpenVrManager)
-                val nearZ = 0.01f
-                val farZ = 100f
+                val nearZ = nearPlane.meters
+                val farZ = farPlane.meters
                 val projectionMatrix = Matrix4f().scale(1f, -1f, 1f).frustum(
                     tan(fov.angleLeft()) * nearZ, tan(fov.angleRight()) * nearZ,
                     tan(fov.angleDown()) * nearZ, tan(fov.angleUp()) * nearZ,

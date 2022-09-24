@@ -5,6 +5,7 @@ import dragons.init.trouble.SimpleStartupException
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.state.StaticGraphicsState
 import dragons.space.Angle
+import dragons.space.Distance
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim
@@ -218,7 +219,8 @@ class OpenVrManager: VrManager {
     }
 
     private fun createEyeMatrix(
-        stack: MemoryStack, pose: TrackedDevicePose, leftOrRight: Int, extraRotationY: Angle
+        stack: MemoryStack, pose: TrackedDevicePose, leftOrRight: Int,
+        nearPlane: Distance, farPlane: Distance, extraRotationY: Angle
     ): Triple<Matrix4f, Matrix4f, Vector3f> {
         val matrixBuffer = HmdMatrix34.calloc(stack)
 
@@ -227,7 +229,7 @@ class OpenVrManager: VrManager {
         val pfTop = stack.callocFloat(1)
         val pfBottom = stack.callocFloat(1)
         VRSystem_GetProjectionRaw(leftOrRight, pfLeft, pfRight, pfTop, pfBottom)
-        val projectionMatrix = composeProjection(pfLeft[0], pfRight[0], pfTop[0], pfBottom[0], 0.01f, 100f).scale(1f, -1f, 1f)
+        val projectionMatrix = composeProjection(pfLeft[0], pfRight[0], pfTop[0], pfBottom[0], nearPlane.meters, farPlane.meters).scale(1f, -1f, 1f)
 
         val transformToDeviceMatrix = vrToJomlMatrix(pose.mDeviceToAbsoluteTracking()).rotateY(extraRotationY.radians).invert()
         val deviceToEyeMatrix = vrToJomlMatrix(VRSystem_GetEyeToHeadTransform(leftOrRight, matrixBuffer)).invert()
@@ -264,7 +266,7 @@ class OpenVrManager: VrManager {
         return p
     }
 
-    override fun prepareRender(extraRotationY: Angle): CameraMatrices? {
+    override fun prepareRender(nearPlane: Distance, farPlane: Distance, extraRotationY: Angle): CameraMatrices? {
         var result: CameraMatrices? = null
         stackPush().use { stack ->
             val renderPoses = TrackedDevicePose.calloc(k_unMaxTrackedDeviceCount, stack)
@@ -274,8 +276,12 @@ class OpenVrManager: VrManager {
             if (getPoseResult == 0) {
                 val renderPose = renderPoses[0]
                 if (renderPose.bPoseIsValid()) {
-                    val (leftEyeMatrix, leftViewMatrix, leftEyePosition) = createEyeMatrix(stack, renderPose, EVREye_Eye_Left, extraRotationY)
-                    val (rightEyeMatrix, rightViewMatrix, rightEyePosition) = createEyeMatrix(stack, renderPose, EVREye_Eye_Right, extraRotationY)
+                    val (leftEyeMatrix, leftViewMatrix, leftEyePosition) = createEyeMatrix(
+                        stack, renderPose, EVREye_Eye_Left, nearPlane, farPlane, extraRotationY
+                    )
+                    val (rightEyeMatrix, rightViewMatrix, rightEyePosition) = createEyeMatrix(
+                        stack, renderPose, EVREye_Eye_Right, nearPlane, farPlane, extraRotationY
+                    )
                     val averageEyePosition = leftEyePosition.add(rightEyePosition).mul(0.5f)
                     result = CameraMatrices(
                         averageVirtualEyePosition = averageEyePosition,
