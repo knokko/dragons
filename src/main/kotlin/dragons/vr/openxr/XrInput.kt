@@ -1,7 +1,9 @@
 package dragons.vr.openxr
 
 import dragons.vr.controls.DragonControls
+import org.joml.Quaternionf
 import org.joml.Vector2f
+import org.joml.Vector3f
 import org.lwjgl.openxr.*
 import org.lwjgl.openxr.XR10.*
 import org.lwjgl.system.MemoryStack
@@ -23,6 +25,9 @@ class XrInput(
     val dragonToggleMenuAction: XrAction
     val dragonToggleLeftWingAction: XrAction
     val dragonToggleRightWingAction: XrAction
+    val dragonHandPoseAction: XrAction
+    val dragonLeftHandSpace: XrSpace
+    val dragonRightHandSpace: XrSpace
     val dragonGrabLeftAction: XrAction
     val dragonGrabRightAction: XrAction
 
@@ -96,6 +101,39 @@ class XrInput(
             this.dragonGrabRightAction = createAction(
                 this.dragonActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "dragon_grab_right", "Grab with right claw (dragon)"
             )
+            val leftHandPath = getPath(stack, "/user/hand/left")
+            val rightHandPath = getPath(stack, "/user/hand/right")
+            this.dragonHandPoseAction = run {
+                ciAction.actionType(XR_ACTION_TYPE_POSE_INPUT)
+                ciAction.actionName(stack.UTF8("dragon_hand_location"))
+                ciAction.localizedActionName(stack.UTF8("Position of your hands"))
+                ciAction.subactionPaths(stack.longs(leftHandPath, rightHandPath))
+
+                assertXrSuccess(
+                    xrCreateAction(this.dragonActionSet, ciAction, pAction),
+                    "CreateAction", "dragon hand location"
+                )
+                XrAction(pAction[0], dragonActionSet)
+            }
+
+            fun createHandSpace(handPath: Long, handName: String): XrSpace {
+                val ciSpace = XrActionSpaceCreateInfo.calloc(stack)
+                ciSpace.`type$Default`()
+                ciSpace.action(this.dragonHandPoseAction)
+                ciSpace.subactionPath(handPath)
+                ciSpace.poseInActionSpace().`position$`().set(0f, 0f, 0f)
+                ciSpace.poseInActionSpace().orientation().set(0f, 0f, 0f, 1f)
+
+                val pSpace = stack.callocPointer(1)
+                assertXrSuccess(
+                    xrCreateActionSpace(xrSession, ciSpace, pSpace),
+                    "CreateActionSpace", "$handName hand"
+                )
+                return XrSpace(pSpace[0], xrSession)
+            }
+
+            this.dragonLeftHandSpace = createHandSpace(leftHandPath, "left")
+            this.dragonRightHandSpace = createHandSpace(rightHandPath, "right")
 
             // TODO Also add suggested bindings for all other controllers
             this.suggestOculusTouchBindings(stack)
@@ -121,7 +159,7 @@ class XrInput(
     }
 
     private fun suggestOculusTouchBindings(stack: MemoryStack) {
-        val suggestedBindings = XrActionSuggestedBinding.calloc(12, stack)
+        val suggestedBindings = XrActionSuggestedBinding.calloc(14, stack)
 
         suggestedBindings[0].action(this.dragonWalkSideAction)
         suggestedBindings[0].binding(getPath(stack, "/user/hand/left/input/thumbstick/x"))
@@ -153,11 +191,17 @@ class XrInput(
         suggestedBindings[9].action(this.dragonToggleRightWingAction)
         suggestedBindings[9].binding(getPath(stack, "/user/hand/right/input/trigger/value"))
 
-        suggestedBindings[10].action(this.dragonGrabLeftAction)
-        suggestedBindings[10].binding(getPath(stack, "/user/hand/left/input/squeeze/value"))
+        suggestedBindings[10].action(this.dragonHandPoseAction)
+        suggestedBindings[10].binding(getPath(stack, "/user/hand/left/input/grip/pose"))
 
-        suggestedBindings[11].action(this.dragonGrabRightAction)
-        suggestedBindings[11].binding(getPath(stack, "/user/hand/right/input/squeeze/value"))
+        suggestedBindings[11].action(this.dragonHandPoseAction)
+        suggestedBindings[11].binding(getPath(stack, "/user/hand/right/input/grip/pose"))
+
+        suggestedBindings[12].action(this.dragonGrabLeftAction)
+        suggestedBindings[12].binding(getPath(stack, "/user/hand/left/input/squeeze/value"))
+
+        suggestedBindings[13].action(this.dragonGrabRightAction)
+        suggestedBindings[13].binding(getPath(stack, "/user/hand/right/input/squeeze/value"))
 
         val suggestedOculusTouchBindings = XrInteractionProfileSuggestedBinding.calloc(stack)
         suggestedOculusTouchBindings.`type$Default`()
@@ -170,7 +214,7 @@ class XrInput(
         )
     }
 
-    fun getDragonControls(): DragonControls {
+    fun getDragonControls(renderSpace: XrSpace, handsDisplayTime: Long?): DragonControls {
         return stackPush().use { stack ->
             val activeActionSets = XrActiveActionSet.calloc(1, stack)
             activeActionSets[0].actionSet(this.dragonActionSet)
@@ -227,6 +271,48 @@ class XrInput(
 
             val isWalking = getPressValue(this.dragonWalkSideThresholdAction) || getPressValue(this.dragonWalkForwardThresholdAction)
 
+            var leftHandPosition: Vector3f? = null
+            var rightHandPosition: Vector3f? = null
+
+            var leftHandOrientation: Quaternionf? = null
+            var rightHandOrientation: Quaternionf? = null
+
+            if (handsDisplayTime != null) {
+                val handPose = XrSpaceLocation.calloc(stack)
+                handPose.`type$Default`()
+                assertXrSuccess(
+                    xrLocateSpace(this.dragonLeftHandSpace, renderSpace, handsDisplayTime, handPose),
+                    "LocateSpace", "left hand"
+                )
+
+                var handPosition = handPose.pose().`position$`()
+                var handOrientation = handPose.pose().orientation()
+
+                if ((handPose.locationFlags() and XR_SPACE_LOCATION_POSITION_VALID_BIT.toLong()) != 0L) {
+                    leftHandPosition = Vector3f(handPosition.x(), handPosition.y(), handPosition.z())
+                }
+                if ((handPose.locationFlags() and XR_SPACE_LOCATION_ORIENTATION_VALID_BIT.toLong()) != 0L) {
+                    leftHandOrientation =
+                        Quaternionf(handOrientation.x(), handOrientation.y(), handOrientation.z(), handOrientation.w())
+                }
+
+                assertXrSuccess(
+                    xrLocateSpace(this.dragonRightHandSpace, renderSpace, handsDisplayTime, handPose),
+                    "LocateSpace", "right hand"
+                )
+
+                handPosition = handPose.pose().`position$`()
+                handOrientation = handPose.pose().orientation()
+
+                if ((handPose.locationFlags() and XR_SPACE_LOCATION_POSITION_VALID_BIT.toLong()) != 0L) {
+                    rightHandPosition = Vector3f(handPosition.x(), handPosition.y(), handPosition.z())
+                }
+                if ((handPose.locationFlags() and XR_SPACE_LOCATION_ORIENTATION_VALID_BIT.toLong()) != 0L) {
+                    rightHandOrientation =
+                        Quaternionf(handOrientation.x(), handOrientation.y(), handOrientation.z(), handOrientation.w())
+                }
+            }
+
             DragonControls(
                 walkDirection = Vector2f(
                     if (isWalking) getFloatValue(this.dragonWalkSideAction) else 0f,
@@ -239,12 +325,18 @@ class XrInput(
                 shouldToggleLeftWing = getToggleValue(this.dragonToggleLeftWingAction),
                 shouldToggleRightWing = getToggleValue(this.dragonToggleRightWingAction),
                 isGrabbingLeft = getPressValue(this.dragonGrabLeftAction),
-                isGrabbingRight = getPressValue(this.dragonGrabRightAction)
+                isGrabbingRight = getPressValue(this.dragonGrabRightAction),
+                leftHandPosition = leftHandPosition,
+                rightHandPosition = rightHandPosition,
+                leftHandOrientation = leftHandOrientation,
+                rightHandOrientation = rightHandOrientation
             )
         }
     }
 
     fun destroy() {
         xrDestroyActionSet(this.dragonActionSet)
+        xrDestroySpace(this.dragonLeftHandSpace)
+        xrDestroySpace(this.dragonRightHandSpace)
     }
 }

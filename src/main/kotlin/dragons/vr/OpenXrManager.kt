@@ -216,6 +216,7 @@ internal class OpenXrManager(
                     this.acquiredSwapchainImageIndices = this.swapchains.map { swapchain ->
                         val pSwapchainImageIndex = stack.callocInt(1)
                         synchronized(this.vkQueue.handle) {
+                            // TODO Investigate why this can crash with XR_ERROR_CALL_ORDER_INVALID, see callOrderInvalid.log
                             assertXrSuccess(
                                 xrAcquireSwapchainImage(swapchain.handle, null, pSwapchainImageIndex),
                                 "AcquireSwapchainImage"
@@ -324,7 +325,8 @@ internal class OpenXrManager(
     }
 
     override fun getDragonControls(): DragonControls {
-        return this.input.getDragonControls()
+        val handsDisplayTime = if (this.nextDisplayTime != 0L) { this.nextDisplayTime } else { null }
+        return this.input.getDragonControls(this.renderSpace, handsDisplayTime)
     }
 
     override fun destroy() {

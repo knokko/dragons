@@ -107,7 +107,8 @@ interface VrManager {
         return DragonControls(
             walkDirection = Vector2f(), cameraTurnDirection = 0f, isSpitting = false, isUsingPower = false,
             shouldToggleMenu = false, shouldToggleLeftWing = false, shouldToggleRightWing = false,
-            isGrabbingLeft = false, isGrabbingRight = false
+            isGrabbingLeft = false, isGrabbingRight = false,
+            leftHandPosition = null, rightHandPosition = null, leftHandOrientation = null, rightHandOrientation = null
         )
     }
 
