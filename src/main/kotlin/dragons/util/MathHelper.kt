@@ -14,6 +14,7 @@ fun printFloat(value: Float): String {
     return String.format("%.2f", value)
 }
 
-fun printVector(value: Vector3f): String {
+fun printVector(value: Vector3f?): String {
+    if (value == null) return "null"
     return "(${printFloat(value.x)}, ${printFloat(value.y)}, ${printFloat(value.z)})"
 }
