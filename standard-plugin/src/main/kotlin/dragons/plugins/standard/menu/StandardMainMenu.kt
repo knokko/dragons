@@ -8,6 +8,7 @@ import dragons.state.StaticGameState
 import dragons.space.Angle
 import dragons.space.Distance
 import dragons.space.Position
+import dragons.util.PerformanceStatistics
 import dragons.vulkan.util.assertVkSuccess
 import org.joml.Math.cos
 import org.joml.Math.sin
@@ -15,7 +16,6 @@ import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
-import java.util.*
 import kotlin.math.atan2
 
 @Suppress("unused")
@@ -57,7 +57,7 @@ class StandardMainMenu: MainMenuManager {
         val debugPanelSemaphore = createSemaphore("main menu debug panel")
 
         // TODO Add more iterations (and eventually loop indefinitely)
-        var numIterationsLeft = 200
+        var numIterationsLeft = 1500
 
         var currentPosition = Position.meters(0, 0, 0)
         var extraRotation = 0f
@@ -65,10 +65,12 @@ class StandardMainMenu: MainMenuManager {
         val farPlane = Distance.meters(500)
 
         while (!gameState.vrManager.shouldStop()) {
+            val eyeMatrices = gameState.vrManager.prepareRender(nearPlane, farPlane, Angle.degrees(extraRotation))
             val currentInput = gameState.vrManager.getDragonControls()
 
-            val eyeMatrices = gameState.vrManager.prepareRender(nearPlane, farPlane, Angle.degrees(extraRotation))
             if (eyeMatrices != null) {
+
+                PerformanceStatistics.markFrame()
 
                 val currentMovement = currentInput.walkDirection
                 val currentDirection = eyeMatrices.averageViewMatrix.transformDirection(Vector3f(0f, 0f, 1f))
@@ -96,8 +98,6 @@ class StandardMainMenu: MainMenuManager {
                 if (currentInput.shouldToggleMenu) {
                     numIterationsLeft = 1
                 }
-
-                println("${UUID.randomUUID()}")
 
                 val averageEyePosition = Position.meters(eyeMatrices.averageVirtualEyePosition) + currentPosition
 

@@ -12,6 +12,7 @@ import dragons.plugin.loading.PluginClassLoader
 import dragons.plugin.loading.scanDefaultPluginLocations
 import dragons.state.StaticGameState
 import dragons.state.StaticGraphicsState
+import dragons.util.PerformanceStatistics
 import dragons.vr.initVr
 import dragons.vulkan.destroy.destroyVulkanDevice
 import dragons.vulkan.destroy.destroyVulkanInstance
@@ -118,6 +119,7 @@ fun main(args: Array<String>) {
         staticGameState.pluginManager.getImplementations(ExitListener::class).forEach {
                 listenerPair -> listenerPair.first.onExit(listenerPair.second)
         }
+        PerformanceStatistics.stop()
         logger.info("Finished shutting down the game")
 
         // The user should be informed about the conflict
@@ -201,6 +203,7 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
     return runBlocking(Dispatchers.IO) {
 
         val prepareScope = this
+        PerformanceStatistics.start()
         val vrJob = async { initVr(initProps) }
 
         val pluginJob = async {

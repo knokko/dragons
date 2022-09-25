@@ -11,6 +11,7 @@ import dragons.plugins.standard.vulkan.util.claimHeightImage
 import dragons.plugins.standard.vulkan.util.claimVertexAndIndexBuffer
 import dragons.space.Angle
 import dragons.space.Position
+import dragons.util.PerformanceStatistics
 import dragons.util.getStandardOutputHistory
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
@@ -81,6 +82,22 @@ class DebugPanelTile(
                         it.drawString(
                             0.11f, 0.885f - index * 0.015f, 0.89f, 0.9f - index * 0.015f,
                             line, style, backgroundColor
+                        )
+                    }
+
+                    val stats = PerformanceStatistics.get()
+
+                    val infoLines = arrayOf(
+                        "${stats.fps} FPS",
+                        "Heap memory: ${stats.onHeapMemory}",
+                        "Managed off-heap memory: ${stats.managedOffHeapMemory}",
+                        "Total memory: ${stats.totalMemory}"
+                    )
+
+                    for ((index, infoLine) in infoLines.withIndex()) {
+                        it.drawString(
+                            0.4f, 0.89f - index * 0.015f, 1f, 0.9f - index * 0.015f,
+                            infoLine, style, backgroundColor
                         )
                     }
                 }
