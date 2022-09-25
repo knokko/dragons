@@ -70,6 +70,17 @@ class StbTrueTypeFont(ttfInput: InputStream, closeTtfInput: Boolean) {
         return glyph
     }
 
+    internal fun getAdvanceWidth(codepoint: Int): Int {
+        val glyph = this.getGlyph(codepoint)
+
+        return stackPush().use { stack ->
+            val pAdvanceWidth = stack.callocInt(1)
+            val pLeftSideBearing = stack.callocInt(1)
+            stbtt_GetGlyphHMetrics(this.fontInfo, glyph, pAdvanceWidth, pLeftSideBearing)
+            pAdvanceWidth[0]
+        }
+    }
+
     internal fun getGlyphShape(codepoint: Int): GlyphShape {
         val glyph = this.getGlyph(codepoint)
 

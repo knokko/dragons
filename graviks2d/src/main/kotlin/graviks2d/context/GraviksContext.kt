@@ -488,6 +488,8 @@ class GraviksContext(
                     }
                 }
             }
+
+            glyphShape.destroy()
         }
     }
 
@@ -500,7 +502,7 @@ class GraviksContext(
         var lastCodepoint = -1
         for (codepoint in string.codePoints()) {
             if (lastCodepoint != -1) totalWidth += font.getExtraAdvance(lastCodepoint, codepoint)
-            totalWidth += font.getGlyphShape(codepoint).advanceWidth
+            totalWidth += font.getAdvanceWidth(codepoint)
             lastCodepoint = codepoint
         }
 

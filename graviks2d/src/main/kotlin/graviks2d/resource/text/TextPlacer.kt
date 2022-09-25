@@ -25,16 +25,16 @@ internal fun placeText(
     var finalMinY = pixelMinY.toFloat() / viewportHeight.toFloat()
     var finalMaxY = pixelBoundY.toFloat() / viewportHeight.toFloat()
 
-    fun determineCharWidths(roundDown: Boolean) = (0 until orderedChars.size).map { index ->
+    fun determineCharWidths(roundDown: Boolean) = orderedChars.indices.map { index ->
         val codepoint = orderedChars[index]
-        val glyphShape = font.getGlyphShape(codepoint)
+        val advanceWidth = font.getAdvanceWidth(codepoint)
 
         val charHeight = pixelBoundY - pixelMinY
-        val shapeAspectRatio = glyphShape.advanceWidth.toFloat() / (font.ascent - font.descent).toFloat()
+        val shapeAspectRatio = advanceWidth.toFloat() / (font.ascent - font.descent).toFloat()
         val unroundedWidth = (charHeight.toFloat() * shapeAspectRatio)
         val unroundedExtra = if (index > 0) {
             val rawExtra = font.getExtraAdvance(orderedChars[index - 1], codepoint)
-            unroundedWidth * (rawExtra.toFloat() / glyphShape.advanceWidth.toFloat())
+            unroundedWidth * (rawExtra.toFloat() / advanceWidth.toFloat())
         } else {
             0f
         }
@@ -155,6 +155,8 @@ internal fun placeText(
             ))
         }
         currentPixelMinX = currentPixelBoundX
+
+        glyphShape.destroy()
     }
 
     return placedCharacters
