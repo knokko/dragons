@@ -11,7 +11,7 @@ fun generateFlowerBushModel(flowerProperties: List<FlowerModelProperties>): Mode
     for ((index, props) in flowerProperties.withIndex()) {
         createSingleFlower(index, props, generators)
     }
-    return ModelGenerator.combine(generators)
+    return ModelGenerator.combineWithSharedTextures(generators)
 }
 
 private fun createSingleFlower(baseMatrixIndex: Int, props: FlowerModelProperties, generators: MutableCollection<ModelGenerator>) {
@@ -23,7 +23,8 @@ private fun createFlowerStem(matrixIndex: Int, props: FlowerModelProperties): Mo
     return ModelGenerator(
         numVertices = props.numHorizontalStemParts * props.numVerticalStemParts,
         numIndices = 6 * (props.numHorizontalStemParts - 1) * (props.numVerticalStemParts - 1),
-        fillVertexBuffer = { vertexBuffer ->
+        fillVertexBuffer = { vertexBuffer, colorImageIndices, heightImageIndices ->
+
             val deltaFactorX = props.stemRadius.meters * PI.toFloat()
             val deltaFactorY = props.stemLength.meters
 
@@ -55,11 +56,11 @@ private fun createFlowerStem(matrixIndex: Int, props: FlowerModelProperties): Mo
 
                     currentVertex.colorTextureCoordinates.x = horizontalProgress
                     currentVertex.colorTextureCoordinates.y = verticalProgress
-                    currentVertex.colorTextureIndex = props.stemColorTextureIndex
+                    currentVertex.colorTextureIndex = colorImageIndices[0]
 
                     currentVertex.heightTextureCoordinates.x = horizontalProgress
                     currentVertex.heightTextureCoordinates.y = verticalProgress
-                    currentVertex.heightTextureIndex = props.stemHeightTextureIndex
+                    currentVertex.heightTextureIndex = heightImageIndices[0]
                 }
             }
         },
@@ -89,9 +90,9 @@ private fun createFlowerStem(matrixIndex: Int, props: FlowerModelProperties): Mo
 }
 
 class FlowerModelProperties(
-    val stemLength: Distance, val stemRadius: Distance, val numHorizontalStemParts: Int, val numVerticalStemParts: Int,
-    val topShape: FlowerTopShape, val stemColorTextureIndex: Int, val stemHeightTextureIndex: Int,
-    val topColorTextureIndex: Int, val topHeightTextureIndex: Int
+    val stemLength: Distance, val stemRadius: Distance,
+    val numHorizontalStemParts: Int, val numVerticalStemParts: Int,
+    val topShape: FlowerTopShape
 )
 
 typealias FlowerTopShape = (matrixIndex: Int, props: FlowerModelProperties) -> ModelGenerator
@@ -130,7 +131,11 @@ fun leafRingTopShape(
     ModelGenerator(
         numVertices = 2 * (1 + numInnerRingVertices) + totalNumLeafs * numVerticesPerLeaf,
         numIndices = (3 + 3 + 6) * numInnerRingVertices + totalNumLeafs * numIndicesPerLeaf,
-        fillVertexBuffer = { vertexBuffer ->
+        fillVertexBuffer = { vertexBuffer, colorImageIndices, heightImageIndices ->
+
+            if (colorImageIndices.size != 2 || heightImageIndices.size != 2) {
+                throw IllegalArgumentException("There must be exactly 2 color image indices and 2 height image indices")
+            }
 
             val innerDepth = leafDepthFunction(0f)
             for ((indexOffset, scaleY) in arrayOf(Pair(0, 1f), Pair(1 + numInnerRingVertices, -1f))) {
@@ -270,8 +275,8 @@ fun leafRingTopShape(
                 vertex.deltaFactor.y = deltaFactor
                 vertex.heightTextureCoordinates.x = vertex.colorTextureCoordinates.x
                 vertex.heightTextureCoordinates.y = vertex.colorTextureCoordinates.y
-                vertex.colorTextureIndex = props.topColorTextureIndex
-                vertex.heightTextureIndex = props.topHeightTextureIndex
+                vertex.colorTextureIndex = colorImageIndices[1]
+                vertex.heightTextureIndex = heightImageIndices[1]
             }
         }, fillIndexBuffer = { indexBuffer ->
 
@@ -397,8 +402,6 @@ fun leafRingTopShape(
                         indexBuffer.put(bottomLeftBack)
                     }
 
-
-
                     firstRingVertexIndex += numVerticesPerLeafSide
                 }
             }
@@ -413,7 +416,11 @@ fun circleTopShape(
     ModelGenerator(
         numVertices = 1 + numRingVertices,
         numIndices = 3 * numRingVertices,
-        fillVertexBuffer = { vertexBuffer ->
+        fillVertexBuffer = { vertexBuffer, colorImageIndices, heightImageIndices ->
+
+            if (colorImageIndices.size != 2 || heightImageIndices.size != 2) {
+                throw IllegalArgumentException("There must be exactly 2 color image indices and 2 height image indices")
+            }
 
             // Some values are shared between all vertices
             for (vertex in vertexBuffer) {
@@ -429,8 +436,8 @@ fun circleTopShape(
                 vertex.deltaFactor.x = 2f * radius.meters
                 vertex.deltaFactor.y = 2f * radius.meters
 
-                vertex.colorTextureIndex = props.topColorTextureIndex
-                vertex.heightTextureIndex = props.topHeightTextureIndex
+                vertex.colorTextureIndex = colorImageIndices[1]
+                vertex.heightTextureIndex = heightImageIndices[1]
             }
 
             // The first vertex is special
@@ -478,21 +485,13 @@ fun circleTopShape(
 }
 
 object FlowerGenerators {
-    fun modelProps1(
-        stemColorTextureIndex: Int, stemHeightTextureIndex: Int,
-        topColorTextureIndex: Int, topHeightTextureIndex: Int
-    ) = FlowerModelProperties(
+    val MODEL_PROPS1 = FlowerModelProperties(
         stemLength = Distance.meters(0.5f), stemRadius = Distance.milliMeters(30),
         numHorizontalStemParts = 6, numVerticalStemParts = 4,
-        topShape = circleTopShape(15, Distance.Companion.milliMeters(100)),
-        stemColorTextureIndex = stemColorTextureIndex, stemHeightTextureIndex = stemHeightTextureIndex,
-        topColorTextureIndex = topColorTextureIndex, topHeightTextureIndex = topHeightTextureIndex
+        topShape = circleTopShape(15, Distance.Companion.milliMeters(100))
     )
 
-    fun modelProps2(
-        stemColorTextureIndex: Int, stemHeightTextureIndex: Int,
-        topColorTextureIndex: Int, topHeightTextureIndex: Int
-    ) = FlowerModelProperties(
+    val MODEL_PROPS2 = FlowerModelProperties(
         stemLength = Distance.meters(0.3f), stemRadius = Distance.milliMeters(20),
         numHorizontalStemParts = 6, numVerticalStemParts = 4,
         topShape = leafRingTopShape(
@@ -506,9 +505,7 @@ object FlowerGenerators {
             numVerticesPerLeafHalf = 6,
             leafWidthFunction = { lengthFactor -> Distance.milliMeters(6f + 10f * sin(lengthFactor * PI.toFloat())) },
             leafDepthFunction = { Distance.milliMeters(1) }
-        ),
-        stemColorTextureIndex = stemColorTextureIndex, stemHeightTextureIndex = stemHeightTextureIndex,
-        topColorTextureIndex = topColorTextureIndex, topHeightTextureIndex = topHeightTextureIndex
+        )
     )
 
     const val BUSH_SIZE1 = 8

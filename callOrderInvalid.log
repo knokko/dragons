@@ -1,0 +1,466 @@
+2022-09-24 14:19:58,848 INFO [DefaultDispatcher-worker-1] VR [Init.kt:20] Trying to initialize OpenXR...
+2022-09-24 14:19:58,954 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:32] 21 OpenXR extensions are supported:
+2022-09-24 14:19:58,954 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_D3D11_enable
+2022-09-24 14:19:58,954 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_D3D12_enable
+2022-09-24 14:19:58,954 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_opengl_enable
+2022-09-24 14:19:58,954 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_vulkan_enable
+2022-09-24 14:19:58,954 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_vulkan_enable2
+2022-09-24 14:19:58,954 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_composition_layer_depth
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_win32_convert_performance_counter_time
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_convert_timespec_time
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_composition_layer_cube
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_composition_layer_cylinder
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_composition_layer_equirect
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_visibility_mask
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_KHR_composition_layer_color_scale_bias
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_EXT_win32_appcontainer_compatible
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_OCULUS_recenter_event
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_OCULUS_audio_device_guid
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_FB_color_space
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_FB_display_refresh_rate
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_OCULUS_ovrsession_handle
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_OCULUS_perf_stats
+2022-09-24 14:19:58,955 INFO [DefaultDispatcher-worker-1] VR [Extensions.kt:34] XR_EXT_debug_utils
+2022-09-24 14:19:58,957 INFO [DefaultDispatcher-worker-1] VR [Layers.kt:32] 2 OpenXR layers are available:
+2022-09-24 14:19:58,959 INFO [DefaultDispatcher-worker-1] VR [Layers.kt:34] XR_APILAYER_LUNARG_api_dump
+2022-09-24 14:19:58,959 INFO [DefaultDispatcher-worker-1] VR [Layers.kt:34] XR_APILAYER_LUNARG_core_validation
+2022-09-24 14:19:58,959 INFO [DefaultDispatcher-worker-1] VR [Instance.kt:49] The following 2 OpenXR extensions will be enabled:
+2022-09-24 14:19:58,959 INFO [DefaultDispatcher-worker-1] VR [Instance.kt:53] XR_KHR_vulkan_enable2
+2022-09-24 14:19:58,959 INFO [DefaultDispatcher-worker-1] VR [Instance.kt:53] XR_EXT_debug_utils
+2022-09-24 14:19:58,959 INFO [DefaultDispatcher-worker-1] VR [Instance.kt:56] The following 1 OpenXR layers will be enabled:
+2022-09-24 14:19:58,959 INFO [DefaultDispatcher-worker-1] VR [Instance.kt:60] XR_APILAYER_LUNARG_core_validation
+2022-09-24 14:19:59,735 INFO [main] VR [SessionState.kt:43] Changing OpenXR session state from 1 to 1
+2022-09-24 14:19:59,735 INFO [main] VR [SessionState.kt:43] Changing OpenXR session state from 1 to 2
+2022-09-24 14:19:59,735 INFO [main] VR [SessionState.kt:65] Beginning OpenXR session...
+2022-09-24 14:19:59,743 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,752 INFO [main] VR [SessionState.kt:43] Changing OpenXR session state from 2 to 3
+2022-09-24 14:19:59,758 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,772 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,785 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,799 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,814 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,828 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,842 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,855 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,869 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,883 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,897 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,910 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,924 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,938 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,953 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,967 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,980 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:19:59,995 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,008 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,022 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,037 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,050 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,064 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,077 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,091 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,106 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,120 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,134 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,148 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,161 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,175 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,190 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,203 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,217 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,231 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,245 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,259 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,272 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,286 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,300 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,314 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,329 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,342 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,357 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,370 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,384 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,398 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,412 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,426 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,440 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,454 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,468 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,481 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:20:00,482 INFO [main] VR [SessionState.kt:43] Changing OpenXR session state from 3 to 4
+2022-09-24 14:20:00,482 INFO [main] VR [SessionState.kt:43] Changing OpenXR session state from 4 to 5
+2022-09-24 14:20:03,955 INFO [main] VR [SessionState.kt:55] Received OpenXR event 52
+2022-09-24 14:21:19,002 INFO [main] VR [SessionState.kt:43] Changing OpenXR session state from 5 to 4
+2022-09-24 14:21:30,625 INFO [main] VR [SessionState.kt:43] Changing OpenXR session state from 4 to 3
+2022-09-24 14:21:30,625 INFO [main] VR [SessionState.kt:43] Changing OpenXR session state from 3 to 6
+2022-09-24 14:21:30,625 INFO [main] VR [SessionState.kt:72] Ending OpenXR session...
+2022-09-24 14:21:30,626 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:30,727 INFO [main] VR [SessionState.kt:43] Changing OpenXR session state from 6 to 1
+2022-09-24 14:21:30,727 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:30,830 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:30,931 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:31,033 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:31,134 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:31,235 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:31,338 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:31,439 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:31,541 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:31,642 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:31,745 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:31,849 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:31,949 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:32,050 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:32,151 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:32,254 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:32,355 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:32,455 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:32,556 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:32,656 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:32,758 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:32,861 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:32,962 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:33,063 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:33,164 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:33,264 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:33,365 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:33,468 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:33,569 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:33,671 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:33,772 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:33,872 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:33,973 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:34,074 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:34,176 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:34,279 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:34,380 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:34,481 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:34,582 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:34,684 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:34,785 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:34,885 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:34,987 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:35,090 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:35,191 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:35,293 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:35,394 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:35,495 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:35,597 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:35,698 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:35,798 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:35,899 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:36,001 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:36,103 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:36,205 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:36,306 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:36,409 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:36,509 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:36,611 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:36,712 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:36,813 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:36,914 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:37,014 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:37,115 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:37,215 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:37,317 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:37,418 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:37,518 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:37,619 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:37,720 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:37,821 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:37,922 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:38,022 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:38,124 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:38,226 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:38,327 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:38,427 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:38,528 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:38,629 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:38,733 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:38,834 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:38,935 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:39,037 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:39,140 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:39,240 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:39,342 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:39,444 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:39,546 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:39,647 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:39,749 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:39,851 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:39,952 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:40,052 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:40,156 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:40,257 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:40,360 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:40,461 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:40,561 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:40,662 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:40,765 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:40,867 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:40,968 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:41,069 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:41,170 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:41,272 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:41,374 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:41,475 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:41,575 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:41,678 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:41,780 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:41,881 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:41,982 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:42,082 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:42,185 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:42,286 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:42,387 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:42,488 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:42,592 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:42,693 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:42,794 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:42,896 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:42,998 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:43,099 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:43,201 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:43,302 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:43,403 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:43,504 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:43,605 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:43,708 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:43,809 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:43,910 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:44,012 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:44,112 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:44,213 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:44,313 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:44,414 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:44,514 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:44,615 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:44,716 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:44,817 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:44,917 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:45,018 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:45,119 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:45,220 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:45,322 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:45,422 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:45,523 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:45,627 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:45,729 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:45,831 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:45,932 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:46,032 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:46,133 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:46,233 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:46,334 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:46,436 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:46,537 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:46,639 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:46,740 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:46,840 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:46,941 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:47,045 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:47,146 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:47,247 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:47,349 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:47,450 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:47,551 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:47,651 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:47,752 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:47,852 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:47,953 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:48,055 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:48,157 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:48,259 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:48,360 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:48,460 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:48,562 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:48,665 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:48,767 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:48,867 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:48,970 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:49,071 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:49,174 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:49,275 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:49,376 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:49,476 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:49,577 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:49,679 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:49,781 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:49,883 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:49,983 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:50,086 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:50,186 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:50,290 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:50,391 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:50,491 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:50,594 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:50,695 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:50,798 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:50,899 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:51,001 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:51,102 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:51,202 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:51,303 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:51,403 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:51,506 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:51,606 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:51,707 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:51,807 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:51,908 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:52,010 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:52,112 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:52,213 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:52,315 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:52,416 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:52,517 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:52,618 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:52,720 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:52,822 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:52,923 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:53,024 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:53,125 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:53,227 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:53,328 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:53,430 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:53,531 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:53,631 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:53,732 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:53,833 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:53,934 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:54,035 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:54,135 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:54,237 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:54,338 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:54,442 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:54,542 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:54,643 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:54,743 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:54,844 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:54,944 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:55,045 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:55,147 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:55,248 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:55,349 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:55,452 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:55,552 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:55,655 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:55,756 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:55,964 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:56,064 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:56,165 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:56,266 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:56,366 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:56,469 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:56,572 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:56,674 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:56,775 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:56,875 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:56,976 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:57,079 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:57,180 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:57,281 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:57,381 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:57,482 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:57,584 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:57,685 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:57,789 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:57,890 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:57,991 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:58,093 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:58,196 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:58,297 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:58,398 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:58,500 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:58,602 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:58,703 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:58,806 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:58,909 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:59,010 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:59,111 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:59,212 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:59,314 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:59,416 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:59,517 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:59,619 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:59,720 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:59,820 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:21:59,922 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:00,023 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:00,125 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:00,226 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:00,326 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:00,428 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:00,529 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:00,632 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:00,732 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:00,833 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:00,935 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:01,036 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:01,136 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:01,237 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:01,340 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:01,442 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:01,543 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:01,646 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:01,747 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:01,848 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:01,949 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:02,050 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:02,152 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:02,253 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:02,353 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:02,454 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:02,555 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:02,657 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:02,760 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:02,860 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:02,963 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:03,066 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:03,167 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:03,270 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:03,372 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:03,474 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:03,576 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:03,677 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:03,777 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:03,878 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:03,978 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:04,080 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:04,183 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:04,287 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:04,389 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:04,489 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:04,593 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:04,693 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:04,794 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:04,897 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:05,000 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:05,102 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:05,204 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:05,305 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:05,406 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:05,506 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:05,606 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:05,707 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:05,809 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:05,910 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:06,012 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:06,114 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:06,215 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:06,315 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:06,416 INFO [main] VR [OpenXrManager.kt:236] Don't try to render
+2022-09-24 14:22:06,516 INFO [main] VR [SessionState.kt:43] Changing OpenXR session state from 1 to 2
+2022-09-24 14:22:06,516 INFO [main] VR [SessionState.kt:43] Changing OpenXR session state from 2 to 3
+2022-09-24 14:22:06,516 INFO [main] VR [SessionState.kt:65] Beginning OpenXR session...
+2022-09-24 14:22:06,526 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:22:06,541 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:22:06,555 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:22:06,569 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:22:06,583 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:22:06,597 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:22:06,610 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:22:06,625 INFO [main] VR [OpenXrManager.kt:229] Shouldn't render
+2022-09-24 14:22:06,625 INFO [main] VR [SessionState.kt:43] Changing OpenXR session state from 3 to 4
+2022-09-24 14:22:06,640 INFO [main] VR [Camera.kt:75] Skipping rendering because position is not tracked
+2022-09-24 14:22:06,652 INFO [main] VR [Camera.kt:75] Skipping rendering because position is not tracked
+2022-09-24 14:22:06,670 INFO [main] VR [Camera.kt:75] Skipping rendering because position is not tracked
+2022-09-24 14:22:06,686 ERROR [main] VR [Checks.kt:16] xrAcquireSwapchainImage returned -37 (XR_ERROR_CALL_ORDER_INVALID)

@@ -3,6 +3,8 @@ package dragons.plugins.standard.vulkan
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.plugins.standard.state.StandardPluginState
+import dragons.plugins.standard.vulkan.render.entity.EntityMeshTracker
+import dragons.plugins.standard.vulkan.vertex.BasicVertex
 import dragons.vulkan.memory.claim.BufferMemoryClaim
 import dragons.vulkan.memory.claim.StagingBufferMemoryClaim
 import org.lwjgl.vulkan.VK12.*
@@ -10,6 +12,7 @@ import org.lwjgl.vulkan.VkDrawIndexedIndirectCommand
 
 const val MAX_NUM_TRANSFORMATION_MATRICES = 100_000
 const val MAX_NUM_INDIRECT_DRAW_CALLS = 100_000
+const val ENTITY_MESH_BUFFER_SIZE = 64_000_000
 
 @Suppress("unused")
 class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
@@ -50,6 +53,23 @@ class StandardVulkanStaticMemory: VulkanStaticMemoryUser {
             // No special alignment is needed because the staging buffer is only used for copying
             alignment = 1,
             storeResult = preGraphics.transformationMatrixStagingBuffer
+        ))
+
+        // Entity mesh buffers
+        agent.claims.buffers.add(BufferMemoryClaim(
+            size = ENTITY_MESH_BUFFER_SIZE,
+            usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT or VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            alignment = EntityMeshTracker.ALIGNMENT.toInt(),
+            queueFamily = agent.queueManager.generalQueueFamily,
+            storeResult = preGraphics.entityMeshDeviceBuffer,
+            prefill = null
+        ))
+        agent.claims.stagingBuffers.add(StagingBufferMemoryClaim(
+            size = ENTITY_MESH_BUFFER_SIZE,
+            // TODO Try the transfer queue family
+            queueFamily = agent.queueManager.generalQueueFamily,
+            alignment = EntityMeshTracker.ALIGNMENT.toInt(),
+            storeResult = preGraphics.entityMeshStagingBuffer
         ))
 
         // Indirect drawing buffer

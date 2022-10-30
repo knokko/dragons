@@ -15,6 +15,4 @@ class SmallTile(
     val properties: TileProperties,
     val copyState: () -> TileState,
     val setState: (TileState) -> Unit
-) {
-
-}
+)

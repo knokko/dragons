@@ -12,6 +12,7 @@ import dragons.plugins.standard.vulkan.util.claimVertexAndIndexBuffer
 import dragons.space.Position
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
+import dragons.world.tile.SmallTile
 import dragons.world.tile.TileProperties
 import dragons.world.tile.TileState
 import kotlinx.coroutines.CompletableDeferred
@@ -21,18 +22,16 @@ class SkylandTestTile(position: Position): TileProperties(position) {
 
     override fun getPersistentClassID() = "standard-plugin:SkylandTestTile"
 
-    // TODO Use the state for something?
     class State: TileState
 
     @Suppress("unused")
     class Renderer(
-        private val position: Position,
         private val vertices: VulkanBufferRange,
         private val indices: VulkanBufferRange,
     ): TileRenderer {
 
-        override fun render(renderer: StandardSceneRenderer, state: TileState, cameraPosition: Position) {
-            val renderPosition = position - cameraPosition
+        override fun render(renderer: StandardSceneRenderer, tile: SmallTile, cameraPosition: Position) {
+            val renderPosition = tile.properties.position - cameraPosition
             val transformationMatrix = Matrix4f()
                 .translate(renderPosition.x.meters, renderPosition.y.meters, renderPosition.z.meters)
                 .scale(10f)
@@ -55,11 +54,10 @@ class SkylandTestTile(position: Position): TileProperties(position) {
                 val heightTexture = CompletableDeferred<VulkanImage>()
 
                 val graphics = agent.gameState.graphics
-                val mainMenuSkyland = generateSkylandModel({
-                    0.5f
-                }, agent.claimColorImageIndex(colorTexture), agent.claimHeightImageIndex(heightTexture))
                 claimVertexAndIndexBuffer(
-                    agent.claims, graphics.queueManager, vertices, indices, mainMenuSkyland, "standard plug-in:SkylandTestTile"
+                    agent.claims, graphics.queueManager, vertices, indices, generateSkylandModel { 0.5f },
+                    listOf(agent.claimColorImageIndex(colorTexture)), listOf(agent.claimHeightImageIndex(heightTexture)),
+                    "standard plug-in:SkylandTestTile"
                 )
                 claimColorImage(
                     agent.claims, graphics.queueManager, agent.gameState.classLoader, 1024, 1024, colorTexture,
@@ -73,7 +71,6 @@ class SkylandTestTile(position: Position): TileProperties(position) {
             }
 
             override suspend fun createRenderer() = Renderer(
-                position = tile.position,
                 vertices = this.vertices.await(),
                 indices = this.indices.await()
             )

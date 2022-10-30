@@ -6,19 +6,22 @@ import java.nio.IntBuffer
 class ModelGenerator(
     val numVertices: Int,
     val numIndices: Int,
-    val fillVertexBuffer: (Array<BasicVertex>) -> Unit,
+    val fillVertexBuffer: (Array<BasicVertex>, colorImageIndices: List<Int>, heightImageIndices: List<Int>) -> Unit,
     val fillIndexBuffer: (IntBuffer) -> Unit
 ) {
     companion object {
-        fun combine(models: Collection<ModelGenerator>): ModelGenerator {
+        fun combineWithSharedTextures(models: Collection<ModelGenerator>): ModelGenerator {
             val numVertices = models.sumOf { it.numVertices }
             val numIndices = models.sumOf { it.numIndices }
 
             val modelList = models.toList()
-            val fillVertexBuffer = { vertexBuffer: Array<BasicVertex> ->
+            val fillVertexBuffer = { vertexBuffer: Array<BasicVertex>, colorImageIndices: List<Int>, heightImageIndices: List<Int> ->
                 var nextVertexIndex = 0
                 for (model in modelList) {
-                    model.fillVertexBuffer(vertexBuffer.sliceArray(nextVertexIndex until nextVertexIndex + model.numVertices))
+                    model.fillVertexBuffer(
+                        vertexBuffer.sliceArray(nextVertexIndex until nextVertexIndex + model.numVertices),
+                        colorImageIndices, heightImageIndices
+                    )
                     nextVertexIndex += model.numVertices
                 }
             }

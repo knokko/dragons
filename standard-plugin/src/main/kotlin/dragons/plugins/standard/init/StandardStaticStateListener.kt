@@ -54,6 +54,9 @@ class StandardStaticStateListener: StaticStateListener {
             val (transformationMatrixHostBuffer, transformationMatrixStagingBuffer) = runBlocking {
                 state.preGraphics.transformationMatrixStagingBuffer.await()
             }
+            val (entityMeshHostBuffer, entityMeshStagingBuffer) = runBlocking {
+                state.preGraphics.entityMeshStagingBuffer.await()
+            }
             val (cameraHostBuffer, cameraStagingBuffer) = runBlocking {
                 state.preGraphics.cameraStagingBuffer.await()
             }
@@ -74,6 +77,9 @@ class StandardStaticStateListener: StaticStateListener {
                     transformationMatrixDevice = state.preGraphics.transformationMatrixDeviceBuffer.await(),
                     transformationMatrixStaging = transformationMatrixStagingBuffer,
                     transformationMatrixHost = transformationMatrixHostBuffer,
+                    entityMeshDevice = state.preGraphics.entityMeshDeviceBuffer.await(),
+                    entityMeshStaging = entityMeshStagingBuffer,
+                    entityMeshHost = entityMeshHostBuffer,
                     cameraDevice = state.preGraphics.cameraDeviceBuffer.await(),
                     cameraStaging = cameraStagingBuffer,
                     cameraHost = cameraHostBuffer,

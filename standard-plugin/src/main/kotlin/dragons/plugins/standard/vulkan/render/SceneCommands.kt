@@ -1,6 +1,7 @@
 package dragons.plugins.standard.vulkan.render
 
 import dragons.plugins.standard.vulkan.pipeline.BasicGraphicsPipeline
+import dragons.plugins.standard.vulkan.render.entity.StandardEntityRenderer
 import dragons.plugins.standard.vulkan.render.tile.StandardTileRenderer
 import dragons.vulkan.queue.QueueFamily
 import dragons.vulkan.util.assertVkSuccess
@@ -74,7 +75,8 @@ internal class SceneCommands(
     fun record(
         cameraBufferManager: CameraBufferManager,
         transformationMatrixManager: TransformationMatrixManager,
-        tileRenderer: StandardTileRenderer
+        tileRenderer: StandardTileRenderer,
+        entityRenderer: StandardEntityRenderer
     ) {
         stackPush().use { stack ->
 
@@ -137,6 +139,7 @@ internal class SceneCommands(
                 )
 
                 tileRenderer.recordCommands(this.commandBuffer, this.basicPipeline, this.staticDescriptorSet)
+                entityRenderer.recordCommands(this.commandBuffer, this.basicPipeline, this.staticDescriptorSet)
 
                 vkCmdEndRenderPass(this.commandBuffer)
             }

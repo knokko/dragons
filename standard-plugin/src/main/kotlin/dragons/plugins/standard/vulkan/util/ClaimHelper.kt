@@ -72,7 +72,7 @@ fun claimHeightImage(
 
 fun claimVertexBuffer(
     claims: MemoryScopeClaims, queueManager: QueueManager, vertices: CompletableDeferred<VulkanBufferRange>,
-    generator: ModelGenerator, sharingID: String?
+    generator: ModelGenerator, colorImageIndices: List<Int>, heightImageIndices: List<Int>, sharingID: String?
 ) {
     claims.buffers.add(BufferMemoryClaim(
         size = generator.numVertices * BasicVertex.SIZE,
@@ -85,7 +85,7 @@ fun claimVertexBuffer(
         sharingID = sharingID
     ) { destBuffer ->
         val vertexArray = BasicVertex.createArray(destBuffer, 0, generator.numVertices.toLong())
-        generator.fillVertexBuffer(vertexArray)
+        generator.fillVertexBuffer(vertexArray, colorImageIndices, heightImageIndices)
     })
 }
 
@@ -109,9 +109,13 @@ fun claimIndexBuffer(
 
 fun claimVertexAndIndexBuffer(
     claims: MemoryScopeClaims, queueManager: QueueManager, vertices: CompletableDeferred<VulkanBufferRange>,
-    indices: CompletableDeferred<VulkanBufferRange>, generator: ModelGenerator, sharingIdPrefix: String?
+    indices: CompletableDeferred<VulkanBufferRange>, generator: ModelGenerator,
+    colorImageIndices: List<Int>, heightImageIndices: List<Int>, sharingIdPrefix: String?
 ) {
-    claimVertexBuffer(claims, queueManager, vertices, generator, if (sharingIdPrefix == null) { null } else { "$sharingIdPrefix-vertices"})
+    claimVertexBuffer(
+        claims, queueManager, vertices, generator, colorImageIndices, heightImageIndices,
+        if (sharingIdPrefix == null) { null } else { "$sharingIdPrefix-vertices"}
+    )
     claimIndexBuffer(claims, queueManager, indices, generator, if (sharingIdPrefix == null) { null} else { "$sharingIdPrefix-indices" })
 }
 

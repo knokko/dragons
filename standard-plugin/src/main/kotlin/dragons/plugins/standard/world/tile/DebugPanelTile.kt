@@ -1,6 +1,6 @@
 package dragons.plugins.standard.world.tile
 
-import dragons.plugins.standard.vulkan.model.generator.generatePanelModel
+import dragons.plugins.standard.vulkan.model.generator.PANEL_MODEL_GENERATOR
 import dragons.plugins.standard.vulkan.panel.Panel
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.plugins.standard.vulkan.render.tile.TileMemoryClaimAgent
@@ -17,6 +17,7 @@ import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim
 import dragons.vulkan.util.assertVkSuccess
+import dragons.world.tile.SmallTile
 import dragons.world.tile.TileProperties
 import dragons.world.tile.TileState
 import graviks2d.core.GraviksInstance
@@ -36,38 +37,37 @@ class DebugPanelTile(
 ): TileProperties(position) {
     override fun getPersistentClassID() = "standard-plugin:DebugPanelTile"
 
-    class State: TileState {
-        internal var lastStandardOutputHistory = emptyList<String>()
-        internal var submissionMarker: CompletableDeferred<Unit>? = null
-    }
+    class State: TileState
 
     @Suppress("unused")
     class Renderer(
-        private val position: Position,
-        private val rotation: Angle,
         private val vertices: VulkanBufferRange,
         private val indices: VulkanBufferRange,
         private val panel: Panel,
         private val panelSemaphore: Long
     ): TileRenderer {
 
-        override fun render(renderer: StandardSceneRenderer, state: TileState, cameraPosition: Position) {
+        private var lastStandardOutputHistory = emptyList<String>()
+        private var submissionMarker: CompletableDeferred<Unit>? = null
+
+        override fun render(renderer: StandardSceneRenderer, tile: SmallTile, cameraPosition: Position) {
             val scaleX = 60f
             val aspectRatio = panel.width.toFloat() / panel.height.toFloat()
             val scaleY = scaleX / aspectRatio
 
-            val renderPosition = position - cameraPosition
+            val properties = tile.properties as DebugPanelTile
+
+            val renderPosition = properties.position - cameraPosition
 
             val transformationMatrix = Matrix4f()
                 .translate(renderPosition.x.meters, renderPosition.y.meters, renderPosition.z.meters)
-                .rotateY(rotation.radians).scale(scaleX, scaleY, 1f)
+                .rotateY(properties.rotation.radians).scale(scaleX, scaleY, 1f)
 
             renderer.drawTile(vertices, indices, arrayOf(transformationMatrix))
 
             val newStandardOutputHistory = getStandardOutputHistory(50)
-            val debugState = state as State
 
-            if (debugState.lastStandardOutputHistory != newStandardOutputHistory) {
+            if (lastStandardOutputHistory != newStandardOutputHistory) {
 
                 panel.execute {
                     val backgroundColor = Color.rgbInt(200, 0, 0)
@@ -102,21 +102,20 @@ class DebugPanelTile(
                     }
                 }
 
-                debugState.lastStandardOutputHistory = newStandardOutputHistory
+                lastStandardOutputHistory = newStandardOutputHistory
 
                 val submissionMarker = CompletableDeferred<Unit>()
                 panel.updateImage(panelSemaphore, submissionMarker)
-                debugState.submissionMarker = submissionMarker
+                this.submissionMarker = submissionMarker
             }
         }
 
-        override fun getWaitSemaphores(state: TileState): Collection<Pair<Long, Int>> {
-            val debugState = state as State
-            return if (debugState.submissionMarker != null) {
-                runBlocking { debugState.submissionMarker!!.await() }
+        override fun getWaitSemaphores(tile: SmallTile): Collection<Pair<Long, Int>> {
+            return if (submissionMarker != null) {
+                runBlocking { submissionMarker!!.await() }
                 val result: List<Pair<Long, Int>> = listOf(Pair(panelSemaphore, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT))
 
-                debugState.submissionMarker = null
+                submissionMarker = null
                 result
             } else {
                 emptyList()
@@ -166,13 +165,10 @@ class DebugPanelTile(
                     zeroHeightTexture, "standard plug-in: zero height"
                 ) { _, _ -> 0f }
 
-                val debugPanel = generatePanelModel(
-                    textureIndex = agent.claimColorImageIndex(panelImage),
-                    heightTextureIndex = agent.claimHeightImageIndex(zeroHeightTexture)
-                )
                 claimVertexAndIndexBuffer(
-                    agent.claims, agent.gameState.graphics.queueManager, vertices, indices,
-                    debugPanel, "standard plug-in: DebugPanelTile"
+                    agent.claims, agent.gameState.graphics.queueManager, vertices, indices, PANEL_MODEL_GENERATOR,
+                    listOf(agent.claimColorImageIndex(panelImage)), listOf(agent.claimHeightImageIndex(zeroHeightTexture)),
+                    "standard plug-in: DebugPanelTile"
                 )
 
                 this.panelSemaphore = stackPush().use { stack ->
@@ -191,8 +187,6 @@ class DebugPanelTile(
             override fun getMaxNumDrawTileCalls() = 1
 
             override suspend fun createRenderer() = Renderer(
-                position = tile.position,
-                rotation = tile.rotation,
                 vertices = vertices.await(),
                 indices = indices.await(),
                 panel = Panel(graviksInstance, panelImage.await()),

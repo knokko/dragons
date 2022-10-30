@@ -14,6 +14,8 @@ class StandardPreGraphicsState {
 
     val transformationMatrixDeviceBuffer = CompletableDeferred<VulkanBufferRange>()
     val transformationMatrixStagingBuffer = CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>()
+    val entityMeshDeviceBuffer = CompletableDeferred<VulkanBufferRange>()
+    val entityMeshStagingBuffer = CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>()
     val cameraDeviceBuffer = CompletableDeferred<VulkanBufferRange>()
     val cameraStagingBuffer = CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>()
     val indirectDrawingBuffer = CompletableDeferred<Pair<ByteBuffer, VulkanBufferRange>>()

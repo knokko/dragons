@@ -6,7 +6,7 @@ value class Distance private constructor(
      * The raw distance, in nanometers
      */
     private val raw: Long
-) {
+): Comparable<Distance> {
 
     val nanoMeters: Float
     get() = raw.toFloat()
@@ -49,6 +49,10 @@ value class Distance private constructor(
     operator fun div(right: Long) = Distance(raw / right)
 
     operator fun div(right: Float) = Distance((raw.toFloat() / right).toLong())
+
+    override fun compareTo(other: Distance) = this.raw.compareTo(other.raw)
+
+    override fun toString() = String.format("%.2f", this.meters)
 
     companion object {
         fun nanoMeters(distance: Long) = Distance(distance)

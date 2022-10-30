@@ -22,7 +22,7 @@ internal class StandardTileRenderer(
 
     private val chunkEntries = mutableMapOf<VulkanBuffer, ChunkTilesRenderEntry>()
 
-    var shouldRecordCommandsAgain = false
+    internal var shouldRecordCommandsAgain = false
         private set
     private var isAcceptingDrawCommands = false
 
@@ -71,7 +71,6 @@ internal class StandardTileRenderer(
     }
 
     fun startFrame() {
-        if (this.shouldRecordCommandsAgain) throw IllegalStateException("Call recordCommands() first")
         if (this.isAcceptingDrawCommands) throw IllegalStateException("Already started this frame")
 
         for (chunkEntry in this.chunkEntries.values) {
@@ -84,6 +83,7 @@ internal class StandardTileRenderer(
     fun endFrame() {
         if (!this.isAcceptingDrawCommands) throw IllegalStateException("Didn't start this frame yet")
         this.isAcceptingDrawCommands = false
+        if (this.shouldRecordCommandsAgain) throw IllegalStateException("Call recordCommands() first")
 
         for (chunkEntry in this.chunkEntries.values) {
             this.indirectDrawIntBuffer.put(chunkEntry.indirectCountIndex, chunkEntry.currentDrawCount)

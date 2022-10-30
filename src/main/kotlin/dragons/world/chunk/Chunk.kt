@@ -28,7 +28,7 @@ class Chunk internal constructor(
         return getTemporary().tiles.values.map(::constructStableTile)
     }
 
-    fun getTileState(id: UUID) = getTemporaryTile(id).state
+    fun getTile(id: UUID) = constructStableTile(getTemporaryTile(id))
 
     internal fun addTile(properties: TileProperties, initialState: TileState): SmallTile {
         if (!isInDesigner) throw UnsupportedOperationException("Adding tiles is only allowed in the designer")

@@ -13,4 +13,20 @@ class TestMathHelper {
         assertEquals(7, nextMultipleOf(7, 7))
         assertEquals(5, nextMultipleOf(5, 3))
     }
+
+    @Test
+    fun testNextPowerOf2() {
+        assertEquals(1, nextPowerOf2(0))
+        assertEquals(1, nextPowerOf2(1))
+        assertEquals(2, nextPowerOf2(2))
+        assertEquals(4, nextPowerOf2(3))
+        assertEquals(4, nextPowerOf2(4))
+        assertEquals(8, nextPowerOf2(5))
+        assertEquals(8, nextPowerOf2(6))
+        assertEquals(8, nextPowerOf2(7))
+        assertEquals(8, nextPowerOf2(8))
+        assertEquals(1024, nextPowerOf2(1024))
+        val largePowerOf2 = 1024L * 1024L * 1024L * 1024L * 1024L
+        assertEquals(largePowerOf2, nextPowerOf2(largePowerOf2 / 2 + 1))
+    }
 }

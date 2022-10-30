@@ -35,8 +35,7 @@ fun generateSkylandModel(
      *    - Ensure that the difference between `radiusFunction(a)` and `radiusFunction(b)` is small when the difference
      *    between `a` and `b` is small. This avoids sharp edges on the edge of the skyland.
      */
-    radiusFunction: (Float) -> Float,
-    colorTextureIndex: Int, heightTextureIndex: Int,
+    radiusFunction: (Float) -> Float
 ): ModelGenerator {
 
     // TODO Use more vertices for bigger skylands
@@ -48,7 +47,11 @@ fun generateSkylandModel(
 
     fun determineVertexIndex(radiusIndex: Int, angleIndex: Int) = 1 + radiusIndex * numVerticesPerCircle + angleIndex
 
-    val fillVertexBuffer = { vertices: Array<BasicVertex> ->
+    val fillVertexBuffer = { vertices: Array<BasicVertex>, colorTextureIndices: List<Int>, heightTextureIndices: List<Int> ->
+
+        if (colorTextureIndices.size != 1 || heightTextureIndices.size != 1) {
+            throw IllegalArgumentException("There must be exactly 1 color texture and 1 height texture")
+        }
 
         // Since this model is simple and flat, all vertices have these values in common
         for (vertex in vertices) {
@@ -60,8 +63,8 @@ fun generateSkylandModel(
             // colorTextureCoordinates and heightTextureCoordinates will be filled in per vertex
             vertex.matrixIndex = 0
             vertex.materialIndex = BasicVertex.MATERIAL_TERRAIN
-            vertex.colorTextureIndex = colorTextureIndex
-            vertex.heightTextureIndex = heightTextureIndex
+            vertex.colorTextureIndex = colorTextureIndices[0]
+            vertex.heightTextureIndex = heightTextureIndices[0]
         }
 
         // The center is a special vertex

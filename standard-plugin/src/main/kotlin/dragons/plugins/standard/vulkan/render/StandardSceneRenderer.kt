@@ -2,10 +2,12 @@ package dragons.plugins.standard.vulkan.render
 
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.render.chunk.ChunkRenderManager
+import dragons.plugins.standard.vulkan.render.entity.EntityMesh
+import dragons.plugins.standard.vulkan.render.entity.EntityRenderManager
+import dragons.plugins.standard.vulkan.render.entity.StandardEntityRenderer
 import dragons.plugins.standard.vulkan.render.tile.StandardTileRenderer
 import dragons.space.Position
 import dragons.state.StaticGameState
-import dragons.vulkan.memory.VulkanBuffer
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.world.realm.Realm
 import dragons.world.render.SceneRenderTarget
@@ -34,7 +36,9 @@ class StandardSceneRenderer internal constructor(
     private val cameraManager: CameraBufferManager
     private val transformationMatrixManager: TransformationMatrixManager
     private val tileRenderer: StandardTileRenderer
+    private val entityRenderer: StandardEntityRenderer
     private val chunkRenderManager: ChunkRenderManager
+    private val entityRenderManager: EntityRenderManager
 
     init {
         this.sceneCommands = SceneCommands(
@@ -61,8 +65,8 @@ class StandardSceneRenderer internal constructor(
             deviceBuffer = this.storageDeviceBuffer
         )
 
-        // TODO Once we have entities, the indirect draw buffer should be divided between tiles and entities
-        val indirectDrawTileSize = this.indirectDrawIntBuffer.limit()
+        val indirectDrawTileSize = this.indirectDrawIntBuffer.limit() * 3 / 4
+        val indirectDrawEntitySize = this.indirectDrawIntBuffer.limit() / 4
         this.tileRenderer = StandardTileRenderer(
             indirectDrawIntBuffer = this.indirectDrawIntBuffer.slice(0, indirectDrawTileSize),
             indirectDrawVulkanBuffer = VulkanBufferRange(
@@ -70,14 +74,31 @@ class StandardSceneRenderer internal constructor(
             ),
             transformationMatrixManager = this.transformationMatrixManager
         )
+        this.entityRenderer = StandardEntityRenderer(
+            graphicsState = gameState.graphics,
+            basicDynamicDescriptorSetLayout = pluginState.graphics.basicGraphicsPipeline.dynamicDescriptorSetLayout,
+            meshStagingBuffer = pluginState.graphics.buffers.entityMeshStaging,
+            meshDeviceBuffer = pluginState.graphics.buffers.entityMeshDevice,
+            meshHostBuffer = pluginState.graphics.buffers.entityMeshHost,
+            indirectDrawIntBuffer = this.indirectDrawIntBuffer.slice(indirectDrawTileSize, indirectDrawEntitySize),
+            indirectDrawVulkanBuffer = VulkanBufferRange(
+                this.indirectDrawVulkanBuffer.buffer,
+                this.indirectDrawVulkanBuffer.offset + indirectDrawTileSize * Int.SIZE_BYTES,
+                (indirectDrawEntitySize * Int.SIZE_BYTES).toLong()
+            ),
+            transformationMatrixManager = transformationMatrixManager,
+            maxNumPixels = 500_000_000L // TODO Find a better way to define this bound
+        )
         this.chunkRenderManager = ChunkRenderManager(gameState, pluginState, this.tileRenderer)
+        this.entityRenderManager = EntityRenderManager(gameState.pluginManager)
     }
 
     private fun recordCommands() {
         this.sceneCommands.record(
             this.cameraManager,
             this.transformationMatrixManager,
-            this.tileRenderer
+            this.tileRenderer,
+            this.entityRenderer
         )
     }
 
@@ -89,8 +110,9 @@ class StandardSceneRenderer internal constructor(
 
             this.startFrame(stack, leftCameraMatrix, rightCameraMatrix)
 
-            // TODO Render big tiles and entities as well
+            // TODO Render big tiles as well
             this.chunkRenderManager.renderChunks(this, realm, averageEyePosition)
+            this.entityRenderManager.renderEntities(this, realm, averageEyePosition)
 
             this.endFrame()
         }
@@ -103,15 +125,7 @@ class StandardSceneRenderer internal constructor(
         this.cameraManager.setCamera(leftCameraMatrix, rightCameraMatrix)
         this.transformationMatrixManager.startFrame()
         this.tileRenderer.startFrame()
-    }
-
-    fun addChunk(
-        vertexBuffer: VulkanBuffer,
-        indexBuffer: VulkanBuffer,
-        dynamicDescriptorSet: Long,
-        maxNumIndirectDrawCalls: Int
-    ) {
-        this.tileRenderer.addChunk(vertexBuffer, indexBuffer, dynamicDescriptorSet, maxNumIndirectDrawCalls)
+        this.entityRenderer.startFrame()
     }
 
     fun drawTile(
@@ -122,21 +136,35 @@ class StandardSceneRenderer internal constructor(
         this.tileRenderer.drawTile(vertices, indices, transformationMatrices)
     }
 
+    fun drawEntity(
+        mesh: EntityMesh,
+        transformationMatrices: Array<Matrix4f>
+    ) {
+        this.entityRenderer.drawMesh(mesh, transformationMatrices)
+    }
+
     private fun endFrame() {
+        this.entityRenderer.endFrame()
         this.tileRenderer.endFrame()
+
+        // The entity renderer only knows after endFrame() whether it needs to record the commands again
+        if (this.entityRenderer.shouldRecordCommandsAgain) this.recordCommands()
+
         this.transformationMatrixManager.endFrame()
     }
 
     override fun submit(realm: Realm, waitSemaphores: LongArray, waitStageMasks: IntArray, signalSemaphores: LongArray) {
-        val chunkSemaphores = this.chunkRenderManager.getWaitSemaphores(realm)
+        val realmSemaphores = this.chunkRenderManager.getWaitSemaphores(realm) + this.entityRenderManager.getWaitSemaphores(realm)
 
-        val combinedWaitSemaphores = waitSemaphores + chunkSemaphores.map { it.first }
-        val combinedWaitDstStageMasks = waitStageMasks + chunkSemaphores.map { it.second }
+        val combinedWaitSemaphores = waitSemaphores + realmSemaphores.map { it.first }
+        val combinedWaitDstStageMasks = waitStageMasks + realmSemaphores.map { it.second }
         this.sceneCommands.submit(combinedWaitSemaphores, combinedWaitDstStageMasks, signalSemaphores)
     }
 
     fun destroy(vkDevice: VkDevice) {
         this.sceneCommands.destroy()
         this.chunkRenderManager.destroy(vkDevice = vkDevice)
+        this.entityRenderManager.destroy(vkDevice = vkDevice)
+        this.entityRenderer.destroy()
     }
 }

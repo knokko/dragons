@@ -8,11 +8,11 @@ import org.lwjgl.system.MemoryStack.stackPush
 class TestModelGenerator {
 
     @Test
-    fun testCombine() {
+    fun testCombineWithSharedTextures() {
         val generator1 = ModelGenerator(
             numVertices = 4,
             numIndices = 6,
-            fillVertexBuffer = { vertexBuffer ->
+            fillVertexBuffer = { vertexBuffer, _, _->
                 vertexBuffer[0].matrixIndex = 1
                 vertexBuffer[1].matrixIndex = 2
                 vertexBuffer[2].matrixIndex = 3
@@ -31,7 +31,7 @@ class TestModelGenerator {
         val generator2 = ModelGenerator(
             numVertices = 3,
             numIndices = 3,
-            fillVertexBuffer = { vertexBuffer ->
+            fillVertexBuffer = { vertexBuffer, _, _ ->
                 vertexBuffer[0].matrixIndex = 5
                 vertexBuffer[1].matrixIndex = 6
                 vertexBuffer[2].matrixIndex = 7
@@ -43,13 +43,13 @@ class TestModelGenerator {
             }
         )
 
-        val combinedGenerator = ModelGenerator.combine(listOf(generator1, generator2, generator1, generator2))
+        val combinedGenerator = ModelGenerator.combineWithSharedTextures(listOf(generator1, generator2, generator1, generator2))
         assertEquals(14, combinedGenerator.numVertices)
         assertEquals(18, combinedGenerator.numIndices)
 
         stackPush().use { stack ->
             val vertexBuffer = BasicVertex.createArray(stack.calloc(14 * BasicVertex.SIZE), 0, 14)
-            combinedGenerator.fillVertexBuffer(vertexBuffer)
+            combinedGenerator.fillVertexBuffer(vertexBuffer, listOf(0), listOf(0))
 
             var expectedMatrixIndices = arrayOf(
                 1, 2, 3, 4, 5, 6, 7

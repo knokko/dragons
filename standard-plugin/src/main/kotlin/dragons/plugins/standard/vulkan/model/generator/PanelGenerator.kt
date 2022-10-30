@@ -2,9 +2,14 @@ package dragons.plugins.standard.vulkan.model.generator
 
 import dragons.plugins.standard.vulkan.vertex.BasicVertex.Companion.MATERIAL_TERRAIN
 
-fun generatePanelModel(textureIndex: Int, heightTextureIndex: Int) = ModelGenerator(
+val PANEL_MODEL_GENERATOR = ModelGenerator(
     numVertices = 4, numIndices = 6,
-    fillVertexBuffer = { vertexBuffer ->
+    fillVertexBuffer = { vertexBuffer, colorImageIndices, heightImageIndices ->
+
+        if (colorImageIndices.size != 1 || heightImageIndices.size != 1) {
+            throw IllegalArgumentException("There must be exactly 1 color image and 1 height image")
+        }
+
         for (vertex in vertexBuffer) {
             // The position differs per vertex, but the z-coordinate is always 0
             vertex.position.z = 0f
@@ -18,8 +23,8 @@ fun generatePanelModel(textureIndex: Int, heightTextureIndex: Int) = ModelGenera
             vertex.materialIndex = MATERIAL_TERRAIN // TODO Create a dedicated material for UI
             vertex.deltaFactor.x = 1f
             vertex.deltaFactor.y = 1f
-            vertex.colorTextureIndex = textureIndex
-            vertex.heightTextureIndex = heightTextureIndex
+            vertex.colorTextureIndex = colorImageIndices[0]
+            vertex.heightTextureIndex = heightImageIndices[0]
         }
 
         vertexBuffer[0].position.x = -0.5f

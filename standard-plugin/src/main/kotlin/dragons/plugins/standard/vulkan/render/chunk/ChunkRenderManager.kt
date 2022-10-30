@@ -58,7 +58,7 @@ internal class ChunkRenderManager(
             val chunk = realm.getChunk(location)
             val chunkEntry = loadedChunks[location]!!
             for ((tileID, tileRenderer) in chunkEntry.tiles) {
-                tileRenderer.render(sceneRenderer, chunk.getTileState(tileID), cameraPosition)
+                tileRenderer.render(sceneRenderer, chunk.getTile(tileID), cameraPosition)
             }
         }
     }
@@ -70,7 +70,7 @@ internal class ChunkRenderManager(
             val chunk = realm.getChunk(location)
             val chunkEntry = loadedChunks[location]!!
             for ((tileID, tileRenderer) in chunkEntry.tiles) {
-                waitSemaphores.addAll(tileRenderer.getWaitSemaphores(chunk.getTileState(tileID)))
+                waitSemaphores.addAll(tileRenderer.getWaitSemaphores(chunk.getTile(tileID)))
             }
         }
 

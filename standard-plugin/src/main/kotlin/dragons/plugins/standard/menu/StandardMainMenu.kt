@@ -12,6 +12,7 @@ import dragons.util.PerformanceStatistics
 import dragons.vulkan.util.assertVkSuccess
 import org.joml.Math.cos
 import org.joml.Math.sin
+import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.*
@@ -57,7 +58,7 @@ class StandardMainMenu: MainMenuManager {
         val debugPanelSemaphore = createSemaphore("main menu debug panel")
 
         // TODO Add more iterations (and eventually loop indefinitely)
-        var numIterationsLeft = 1500
+        var numIterationsLeft = 5
 
         var currentPosition = Position.meters(0, 0, 0)
         var extraRotation = 0f
@@ -101,6 +102,13 @@ class StandardMainMenu: MainMenuManager {
 
                 val averageEyePosition = Position.meters(eyeMatrices.averageVirtualEyePosition) + currentPosition
 
+                // TODO Render hands
+                if (currentInput.leftHandPosition != null) {
+                    val leftHandMatrix = Matrix4f().translation(currentInput.leftHandPosition)
+                    if (currentInput.leftHandOrientation != null) {
+                        leftHandMatrix.rotate(currentInput.leftHandOrientation)
+                    }
+                }
                 sceneRenderer.render(realm, averageEyePosition, eyeMatrices.leftEyeMatrix, eyeMatrices.rightEyeMatrix)
                 gameState.vrManager.markFirstFrameQueueSubmit()
                 sceneRenderer.submit(realm, longArrayOf(), intArrayOf(), longArrayOf(renderFinishedSemaphore))
