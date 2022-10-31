@@ -4,6 +4,7 @@ import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.menu.MainMenuManager
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
+import dragons.plugins.standard.world.entity.MainMenuPlayerEntity
 import dragons.state.StaticGameState
 import dragons.space.Angle
 import dragons.space.Distance
@@ -58,15 +59,17 @@ class StandardMainMenu: MainMenuManager {
         val debugPanelSemaphore = createSemaphore("main menu debug panel")
 
         // TODO Add more iterations (and eventually loop indefinitely)
-        var numIterationsLeft = 5
+        var numIterationsLeft = 500
 
         var currentPosition = Position.meters(0, 0, 0)
-        var extraRotation = 0f
+        var extraRotation = Angle.degrees(0f)
         val nearPlane = Distance.milliMeters(10)
         val farPlane = Distance.meters(500)
 
+        val playerEntity = realm.addEntity(MainMenuPlayerEntity(), MainMenuPlayerEntity.State(currentPosition))
+
         while (!gameState.vrManager.shouldStop()) {
-            val eyeMatrices = gameState.vrManager.prepareRender(nearPlane, farPlane, Angle.degrees(extraRotation))
+            val eyeMatrices = gameState.vrManager.prepareRender(nearPlane, farPlane, extraRotation)
             val currentInput = gameState.vrManager.getDragonControls()
 
             if (eyeMatrices != null) {
@@ -81,7 +84,7 @@ class StandardMainMenu: MainMenuManager {
                 var dy = 0f
                 val dz = 0.1f * (sin(currentRotation) * currentMovement.x - cos(currentRotation) * currentMovement.y)
 
-                extraRotation += currentInput.cameraTurnDirection * 2f
+                extraRotation += Angle.degrees(currentInput.cameraTurnDirection * 2f)
 
                 if (currentInput.isGrabbingLeft) {
                     dy -= 0.1f
@@ -102,13 +105,23 @@ class StandardMainMenu: MainMenuManager {
 
                 val averageEyePosition = Position.meters(eyeMatrices.averageVirtualEyePosition) + currentPosition
 
-                // TODO Render hands
+                val currentState = playerEntity.copyState() as MainMenuPlayerEntity.State
+                currentState.position = currentPosition
+
                 if (currentInput.leftHandPosition != null) {
-                    val leftHandMatrix = Matrix4f().translation(currentInput.leftHandPosition)
+                    val leftHandMatrix = Matrix4f().rotateY(-extraRotation.radians).translate(
+                        eyeMatrices.averageRealEyePosition.negate(Vector3f())
+                    ).translate(
+                        currentInput.leftHandPosition
+                    )
                     if (currentInput.leftHandOrientation != null) {
                         leftHandMatrix.rotate(currentInput.leftHandOrientation)
+                        currentState.leftHandMatrix = leftHandMatrix
                     }
                 }
+
+                playerEntity.setState(currentState)
+
                 sceneRenderer.render(realm, averageEyePosition, eyeMatrices.leftEyeMatrix, eyeMatrices.rightEyeMatrix)
                 gameState.vrManager.markFirstFrameQueueSubmit()
                 sceneRenderer.submit(realm, longArrayOf(), intArrayOf(), longArrayOf(renderFinishedSemaphore))

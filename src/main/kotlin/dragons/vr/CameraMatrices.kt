@@ -5,6 +5,10 @@ import org.joml.Vector3f
 
 class CameraMatrices(
     /**
+     * See documentation of averageVirtualEyePosition
+     */
+    val averageRealEyePosition: Vector3f,
+    /**
      * ## Expected position
      * There are 2 ways players can walk in VR:
      * - Use the left joystick

@@ -141,6 +141,7 @@ internal class XrCamera {
             lastVirtualPosition = Vector3f(averageVirtualEyePosition)
 
             return CameraMatrices(
+                averageRealEyePosition = averageRealEyePosition,
                 averageVirtualEyePosition = averageVirtualEyePosition,
                 averageViewMatrix = summedViewMatrix.mulComponentWise(Matrix4f().set(FloatArray(16) { 0.5f })),
                 leftEyeMatrix = leftEyeMatrix,

@@ -24,6 +24,10 @@ value class Angle private constructor(
 
     override fun toString() = "$degrees degrees"
 
+    operator fun plus(other: Angle) = Angle(this.raw + other.raw)
+
+    operator fun minus(right: Angle) = Angle(this.raw - right.raw)
+
     companion object {
         fun degrees(angle: Float) = Angle(toRadians(angle))
 

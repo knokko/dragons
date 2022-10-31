@@ -284,6 +284,7 @@ class OpenVrManager: VrManager {
                     )
                     val averageEyePosition = leftEyePosition.add(rightEyePosition).mul(0.5f)
                     result = CameraMatrices(
+                        averageRealEyePosition = averageEyePosition,
                         averageVirtualEyePosition = averageEyePosition,
                         averageViewMatrix = leftViewMatrix.add(rightViewMatrix).mulComponentWise(Matrix4f().set(FloatArray(16) { 0.5f })),
                         leftEyeMatrix = leftEyeMatrix,

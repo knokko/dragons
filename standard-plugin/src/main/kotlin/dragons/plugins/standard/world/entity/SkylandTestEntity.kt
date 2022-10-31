@@ -31,7 +31,7 @@ class SkylandTestEntity: EntityProperties() {
         }
 
         companion object {
-            private val MESH = EntityMesh(
+            internal val MESH = EntityMesh(
                 generator = generateSkylandModel { 0.5f },
                 colorImages = listOf(
                     ClasspathEntityColorImage("dragons/plugins/standard/images/testTerrain.jpg", 1024, 1024)

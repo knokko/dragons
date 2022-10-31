@@ -112,6 +112,7 @@ class DummyVrManager(
 
         lastRenderTime = currentTimeMillis()
         return CameraMatrices(
+            averageRealEyePosition = Vector3f(0f, 1.7f, 0f),
             averageVirtualEyePosition = Vector3f(0f, 1.7f, 0f),
             averageViewMatrix = viewMatrix,
             leftEyeMatrix = Matrix4f(combinedMatrix).translate(-0.04f, 0f, 0f),
