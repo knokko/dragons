@@ -22,11 +22,15 @@ internal class SceneCommands(
     private val commandBuffer: VkCommandBuffer
     private val submissionFence: Long
 
+    // Initializing this to true ensures that the commands are always recorded during the first frame
+    var shouldRecordCommandsAgain = true
+        private set
+
     init {
         stackPush().use { stack ->
             val ciCommandPool = VkCommandPoolCreateInfo.calloc(stack)
             ciCommandPool.`sType$Default`()
-            ciCommandPool.flags(0)
+            ciCommandPool.flags(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
             ciCommandPool.queueFamilyIndex(this.queueFamily.index)
 
             val pCommandPool = stack.callocLong(1)
@@ -96,6 +100,8 @@ internal class SceneCommands(
             cameraBufferManager.recordCommands(this.commandBuffer)
             transformationMatrixManager.recordCommands(this.commandBuffer)
 
+            entityRenderer.recordCommandsBeforeRenderPass(this.commandBuffer)
+
             val clearValues = VkClearValue.calloc(2, stack)
             val colorClearValue = clearValues[0]
             colorClearValue.color { color ->
@@ -138,14 +144,16 @@ internal class SceneCommands(
                     stack.ints(eyeIndex)
                 )
 
-                tileRenderer.recordCommands(this.commandBuffer, this.basicPipeline, this.staticDescriptorSet)
-                entityRenderer.recordCommands(this.commandBuffer, this.basicPipeline, this.staticDescriptorSet)
+                tileRenderer.recordCommandsDuringRenderPass(this.commandBuffer, this.basicPipeline, this.staticDescriptorSet)
+                entityRenderer.recordCommandsDuringRenderPass(this.commandBuffer, this.basicPipeline, this.staticDescriptorSet)
 
                 vkCmdEndRenderPass(this.commandBuffer)
             }
 
             assertVkSuccess(vkEndCommandBuffer(this.commandBuffer), "EndCommandBuffer", "SceneCommands")
         }
+
+        this.shouldRecordCommandsAgain = false
     }
 
     fun submit(waitSemaphores: LongArray, waitStageMasks: IntArray, signalSemaphores: LongArray) {

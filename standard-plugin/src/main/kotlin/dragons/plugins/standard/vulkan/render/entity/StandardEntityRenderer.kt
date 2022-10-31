@@ -100,10 +100,9 @@ internal class StandardEntityRenderer(
         this.didRenderAnything = true
     }
 
-    fun recordCommands(
-        commandBuffer: VkCommandBuffer, pipeline: BasicGraphicsPipeline, staticDescriptorSet: Long
+    fun recordCommandsBeforeRenderPass(
+        commandBuffer: VkCommandBuffer
     ) {
-
         if (!didRenderAnything) return
 
         val copyRanges = mutableListOf<Pair<Int, Int>>()
@@ -172,7 +171,10 @@ internal class StandardEntityRenderer(
 
                 // Copy the staging buffer to the device buffer
                 vkCmdCopyBuffer(
-                    commandBuffer, this.meshStagingBuffer.buffer.handle, this.meshDeviceBuffer.buffer.handle, pCopyRanges
+                    commandBuffer,
+                    this.meshStagingBuffer.buffer.handle,
+                    this.meshDeviceBuffer.buffer.handle,
+                    pCopyRanges
                 )
 
                 // Prepare the staging buffer to be filled with new meshes (for subsequent frames)
@@ -205,7 +207,15 @@ internal class StandardEntityRenderer(
                     this.imageTracker.getCurrentlyUsedHeightImages()
                 )
             }
+        }
+    }
 
+    fun recordCommandsDuringRenderPass(
+        commandBuffer: VkCommandBuffer, pipeline: BasicGraphicsPipeline, staticDescriptorSet: Long
+    ) {
+        if (!didRenderAnything) return
+
+        stackPush().use { stack ->
             vkCmdBindDescriptorSets(
                 commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pipeline.pipelineLayout,

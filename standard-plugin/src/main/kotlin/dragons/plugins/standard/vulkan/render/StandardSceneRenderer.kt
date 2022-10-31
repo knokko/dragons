@@ -148,7 +148,7 @@ class StandardSceneRenderer internal constructor(
         this.tileRenderer.endFrame()
 
         // The entity renderer only knows after endFrame() whether it needs to record the commands again
-        if (this.entityRenderer.shouldRecordCommandsAgain) this.recordCommands()
+        if (this.entityRenderer.shouldRecordCommandsAgain || this.sceneCommands.shouldRecordCommandsAgain) this.recordCommands()
 
         this.transformationMatrixManager.endFrame()
     }

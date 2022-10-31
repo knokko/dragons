@@ -5,7 +5,6 @@ import dragons.plugins.standard.world.tile.DebugPanelTile
 import dragons.plugins.standard.world.tile.SkylandTestTile
 import dragons.space.Angle
 import dragons.space.Position
-import dragons.world.entity.EntityState
 import dragons.world.realm.InMemoryRealm
 import dragons.world.realm.Realm
 import java.util.*
@@ -20,7 +19,6 @@ fun createStandardMainMenuRealm(): Realm {
         ))
     }
 
-    // TODO Investigate validation errors when not a single tile or entity is rendered
     for (chunkX in -4 .. 4) {
         for (chunkY in -1 .. 1) {
             for (chunkZ in -4 .. 4) {

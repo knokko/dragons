@@ -32,7 +32,7 @@ internal class StandardTileRenderer(
         }
     }
 
-    fun recordCommands(
+    fun recordCommandsDuringRenderPass(
         commandBuffer: VkCommandBuffer, pipeline: BasicGraphicsPipeline, staticDescriptorSet: Long
     ) {
         if (this.isAcceptingDrawCommands) throw IllegalStateException("Can't record commands between startFrame() and endFrame()")
