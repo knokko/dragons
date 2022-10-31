@@ -11,6 +11,7 @@ import dragons.vulkan.util.assertVkSuccess
 import org.joml.Matrix4f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memAddress
+import org.lwjgl.system.MemoryUtil.memIntBuffer
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.KHRDrawIndirectCount.vkCmdDrawIndexedIndirectCountKHR
 import org.lwjgl.vulkan.VK10.*
@@ -113,7 +114,7 @@ internal class StandardEntityRenderer(
             if (!location.hasBeenFilled) {
 
                 val vertexBuffer = BasicVertex.createArray(this.meshHostBuffer, location.vertexOffset, mesh.generator.numVertices.toLong())
-                val indexBuffer = this.meshHostBuffer.slice(location.indexOffset, mesh.generator.numIndices * Int.SIZE_BYTES).asIntBuffer()
+                val indexBuffer = memIntBuffer(memAddress(this.meshHostBuffer) + location.indexOffset, mesh.generator.numIndices)
                 val (colorImageIndices, heightImageIndices) = this.imageTracker.getDescriptorIndices(mesh)
 
                 // TODO Move this expensive function to the background
