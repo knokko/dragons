@@ -16,14 +16,22 @@ class MainMenuPlayerEntity: EntityProperties() {
         position: Position,
     ): EntityState(position) {
         var leftHandMatrix: Matrix4f? = null
+        var rightHandMatrix: Matrix4f? = null
     }
 
     @Suppress("unused")
     class Renderer: EntityRenderer {
         override fun render(renderer: StandardSceneRenderer, entity: Entity, cameraPosition: Position) {
-            val leftHandMatrix = (entity.copyState() as State).leftHandMatrix
+            val state = entity.copyState() as State
+
+            val leftHandMatrix = state.leftHandMatrix
             if (leftHandMatrix != null) {
                 renderer.drawEntity(SkylandTestEntity.Renderer.MESH, arrayOf(leftHandMatrix))
+            }
+
+            val rightHandMatrix = state.rightHandMatrix
+            if (rightHandMatrix != null) {
+                renderer.drawEntity(SkylandTestEntity.Renderer.MESH, arrayOf(rightHandMatrix))
             }
         }
 

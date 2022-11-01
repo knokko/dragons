@@ -120,6 +120,18 @@ class StandardMainMenu: MainMenuManager {
                     }
                 }
 
+                if (currentInput.rightHandPosition != null) {
+                    val rightHandMatrix = Matrix4f().rotateY(-extraRotation.radians).translate(
+                        eyeMatrices.averageRealEyePosition.negate(Vector3f())
+                    ).translate(
+                        currentInput.rightHandPosition
+                    )
+                    if (currentInput.rightHandOrientation != null) {
+                        rightHandMatrix.rotate(currentInput.rightHandOrientation)
+                        currentState.rightHandMatrix = rightHandMatrix
+                    }
+                }
+
                 playerEntity.setState(currentState)
 
                 sceneRenderer.render(realm, averageEyePosition, eyeMatrices.leftEyeMatrix, eyeMatrices.rightEyeMatrix)

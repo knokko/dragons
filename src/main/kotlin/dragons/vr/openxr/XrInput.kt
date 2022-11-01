@@ -1,5 +1,6 @@
 package dragons.vr.openxr
 
+import dragons.space.Angle
 import dragons.vr.controls.DragonControls
 import org.joml.Quaternionf
 import org.joml.Vector2f
@@ -292,8 +293,11 @@ class XrInput(
                     leftHandPosition = Vector3f(handPosition.x(), handPosition.y(), handPosition.z())
                 }
                 if ((handPose.locationFlags() and XR_SPACE_LOCATION_ORIENTATION_VALID_BIT.toLong()) != 0L) {
-                    leftHandOrientation =
-                        Quaternionf(handOrientation.x(), handOrientation.y(), handOrientation.z(), handOrientation.w())
+                    leftHandOrientation = Quaternionf(
+                        handOrientation.x(), handOrientation.y(), handOrientation.z(), handOrientation.w()
+                    ).rotateX(Angle.degrees(-90f).radians)
+                    // I'm not sure why the 90 degrees rotation around the X axis is needed (probably just some
+                    // coordinate system mismatch)
                 }
 
                 assertXrSuccess(
@@ -308,8 +312,9 @@ class XrInput(
                     rightHandPosition = Vector3f(handPosition.x(), handPosition.y(), handPosition.z())
                 }
                 if ((handPose.locationFlags() and XR_SPACE_LOCATION_ORIENTATION_VALID_BIT.toLong()) != 0L) {
-                    rightHandOrientation =
-                        Quaternionf(handOrientation.x(), handOrientation.y(), handOrientation.z(), handOrientation.w())
+                    rightHandOrientation = Quaternionf(
+                        handOrientation.x(), handOrientation.y(), handOrientation.z(), handOrientation.w()
+                    ).rotateX(Angle.degrees(-90f).radians)
                 }
             }
 
