@@ -84,8 +84,8 @@ fun claimVertexBuffer(
         storeResult = vertices,
         sharingID = sharingID
     ) { destBuffer ->
-        val vertexArray = BasicVertex.createArray(destBuffer, 0, generator.numVertices.toLong())
-        generator.fillVertexBuffer(vertexArray, colorImageIndices, heightImageIndices)
+        val vertexList = BasicVertex.createList(destBuffer, 0, generator.numVertices.toLong())
+        generator.fillVertexBuffer(vertexList, colorImageIndices, heightImageIndices)
     })
 }
 

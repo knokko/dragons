@@ -18,6 +18,12 @@ value class Vec3f(val address: Long) {
     get() = memGetFloat(address + OFFSET_Z)
     set(value) = memPutFloat(address + OFFSET_Z, value)
 
+    fun set(x: Float, y: Float, z: Float) {
+        this.x = x
+        this.y = y
+        this.z = z
+    }
+
     companion object {
         // 3 floats and each float is 4 bytes big
         const val SIZE = 3 * 4

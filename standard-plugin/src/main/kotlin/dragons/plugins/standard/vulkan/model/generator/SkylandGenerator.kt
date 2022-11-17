@@ -47,7 +47,7 @@ fun generateSkylandModel(
 
     fun determineVertexIndex(radiusIndex: Int, angleIndex: Int) = 1 + radiusIndex * numVerticesPerCircle + angleIndex
 
-    val fillVertexBuffer = { vertices: Array<BasicVertex>, colorTextureIndices: List<Int>, heightTextureIndices: List<Int> ->
+    val fillVertexBuffer = { vertices: List<BasicVertex>, colorTextureIndices: List<Int>, heightTextureIndices: List<Int> ->
 
         if (colorTextureIndices.size != 1 || heightTextureIndices.size != 1) {
             throw IllegalArgumentException("There must be exactly 1 color texture and 1 height texture")

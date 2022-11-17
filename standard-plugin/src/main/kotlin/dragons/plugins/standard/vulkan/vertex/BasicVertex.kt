@@ -59,7 +59,7 @@ value class BasicVertex(val address: Long) {
         const val MATERIAL_PLASTIC = 1
         const val MATERIAL_METAL = 2
 
-        fun createArray(buffer: ByteBuffer, position: Int, length: Long): Array<BasicVertex> {
+        fun createList(buffer: ByteBuffer, position: Int, length: Long): List<BasicVertex> {
             if (position < 0) throw IllegalArgumentException("position ($position) < 0")
             val boundIndex = position + length * SIZE
             if (length > 0 && boundIndex > buffer.capacity()) {
@@ -70,7 +70,7 @@ value class BasicVertex(val address: Long) {
             if (boundIndex < position) throw IllegalArgumentException("Size computation caused integer overflow")
 
             val startAddress = memAddress(buffer, position)
-            return Array(length.toInt()) { index -> BasicVertex(startAddress + index * SIZE) }
+            return List(length.toInt()) { index -> BasicVertex(startAddress + index * SIZE) }
         }
     }
 }

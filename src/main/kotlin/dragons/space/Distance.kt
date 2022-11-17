@@ -38,6 +38,8 @@ value class Distance private constructor(
     val kiloMetersInt: Long
     get() = metersInt / 1000
 
+    operator fun unaryMinus() = Distance(-raw)
+
     operator fun plus(other: Distance) = Distance(raw + other.raw)
 
     operator fun minus(right: Distance) = Distance(raw - right.raw)
@@ -49,6 +51,8 @@ value class Distance private constructor(
     operator fun div(right: Long) = Distance(raw / right)
 
     operator fun div(right: Float) = Distance((raw.toFloat() / right).toLong())
+
+    operator fun div(right: Distance) = raw.toFloat() / right.raw.toFloat()
 
     override fun compareTo(other: Distance) = this.raw.compareTo(other.raw)
 

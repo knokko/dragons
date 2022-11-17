@@ -48,7 +48,7 @@ class TestModelGenerator {
         assertEquals(18, combinedGenerator.numIndices)
 
         stackPush().use { stack ->
-            val vertexBuffer = BasicVertex.createArray(stack.calloc(14 * BasicVertex.SIZE), 0, 14)
+            val vertexBuffer = BasicVertex.createList(stack.calloc(14 * BasicVertex.SIZE), 0, 14)
             combinedGenerator.fillVertexBuffer(vertexBuffer, listOf(0), listOf(0))
 
             var expectedMatrixIndices = arrayOf(

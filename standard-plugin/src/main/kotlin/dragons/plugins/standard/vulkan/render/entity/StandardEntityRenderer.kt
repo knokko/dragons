@@ -112,7 +112,7 @@ internal class StandardEntityRenderer(
             val location = this.meshTracker.getLocation(mesh)
             if (!location.hasBeenFilled) {
 
-                val vertexBuffer = BasicVertex.createArray(this.meshHostBuffer, location.vertexOffset, mesh.generator.numVertices.toLong())
+                val vertexBuffer = BasicVertex.createList(this.meshHostBuffer, location.vertexOffset, mesh.generator.numVertices.toLong())
                 val indexBuffer = memSlice(this.meshHostBuffer, location.indexOffset, Int.SIZE_BYTES * mesh.generator.numIndices).asIntBuffer()
                 val (colorImageIndices, heightImageIndices) = this.imageTracker.getDescriptorIndices(mesh)
 

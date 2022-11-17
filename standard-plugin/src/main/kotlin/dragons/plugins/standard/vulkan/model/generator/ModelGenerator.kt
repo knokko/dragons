@@ -4,9 +4,26 @@ import dragons.plugins.standard.vulkan.vertex.BasicVertex
 import java.nio.IntBuffer
 
 class ModelGenerator(
+    /**
+     * The number of vertices needed by the model
+     */
     val numVertices: Int,
+    /**
+     * The number of indices needed by the model, should be a multiple of 3
+     */
     val numIndices: Int,
-    val fillVertexBuffer: (Array<BasicVertex>, colorImageIndices: List<Int>, heightImageIndices: List<Int>) -> Unit,
+    /**
+     * Stores the attributes of the `numVertices` vertices of this model in the given vertex buffer. This should be
+     * done by assigning the properties of the elements in the given vertex list.
+     *
+     * All `colorTextureIndex` and `heightTextureIndex` values are supposed to be assigned to an element of
+     * `colorImageIndices` and `heightImageIndices` respectively.
+     */
+    val fillVertexBuffer: (List<BasicVertex>, colorImageIndices: List<Int>, heightImageIndices: List<Int>) -> Unit,
+    /**
+     * Puts the `numIndices` indices of this model generator into the given index buffer. This function does **not**
+     * need to `flip` or `rewind` the buffer.
+     */
     val fillIndexBuffer: (IntBuffer) -> Unit
 ) {
     companion object {
@@ -15,11 +32,11 @@ class ModelGenerator(
             val numIndices = models.sumOf { it.numIndices }
 
             val modelList = models.toList()
-            val fillVertexBuffer = { vertexBuffer: Array<BasicVertex>, colorImageIndices: List<Int>, heightImageIndices: List<Int> ->
+            val fillVertexBuffer = { vertexBuffer: List<BasicVertex>, colorImageIndices: List<Int>, heightImageIndices: List<Int> ->
                 var nextVertexIndex = 0
                 for (model in modelList) {
                     model.fillVertexBuffer(
-                        vertexBuffer.sliceArray(nextVertexIndex until nextVertexIndex + model.numVertices),
+                        vertexBuffer.slice(nextVertexIndex until nextVertexIndex + model.numVertices),
                         colorImageIndices, heightImageIndices
                     )
                     nextVertexIndex += model.numVertices
@@ -50,4 +67,15 @@ class ModelGenerator(
             )
         }
     }
+}
+
+fun IntBuffer.putTriangle(i1: Int, i2: Int, i3: Int) {
+    put(i1)
+    put(i2)
+    put(i3)
+}
+
+fun IntBuffer.putQuad(bottomLeft: Int, bottomRight: Int, topRight: Int, topLeft: Int) {
+    putTriangle(bottomLeft, bottomRight, topRight)
+    putTriangle(topRight, topLeft, bottomLeft)
 }
