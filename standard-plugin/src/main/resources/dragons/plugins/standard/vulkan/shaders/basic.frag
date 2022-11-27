@@ -157,7 +157,7 @@ void main() {
 
     // TODO Stop hardcoding this
     vec3 toLight = normalize(vec3(100, 120, 10));
-    vec3 toView = normalize(camera.position - worldPosition);
+    vec3 toView = normalize(-worldPosition);
 
     float dotLightNormal = dot(toLight, transformedNormal);
     vec3 resultColor = ambientColor;
