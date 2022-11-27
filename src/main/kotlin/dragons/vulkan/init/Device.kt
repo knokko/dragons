@@ -55,20 +55,24 @@ fun choosePhysicalDevice(vkInstance: VkInstance, pluginManager: PluginManager, v
 
             logger.info("Device $deviceIndex is $deviceName and supports up to Vulkan $vulkanVersionString")
 
-            val pNumExtensions = stack.callocInt(1)
-            assertVkSuccess(
-                vkEnumerateDeviceExtensionProperties(physicalDevice, null as ByteBuffer?, pNumExtensions, null),
-                "EnumerateDeviceExtensionProperties", "count for $deviceName"
-            )
-            val numExtensions = pNumExtensions[0]
+            // Use an inner stack because the stack size is limited and the extension properties are rather large
+            val (numExtensions, availableExtensions) = stackPush().use { innerStack ->
+                val pNumExtensions = innerStack.callocInt(1)
+                assertVkSuccess(
+                    vkEnumerateDeviceExtensionProperties(physicalDevice, null as ByteBuffer?, pNumExtensions, null),
+                    "EnumerateDeviceExtensionProperties", "count for $deviceName"
+                )
+                val numExtensions = pNumExtensions[0]
 
-            val pExtensions = VkExtensionProperties.calloc(numExtensions, stack)
-            assertVkSuccess(
-                vkEnumerateDeviceExtensionProperties(physicalDevice, null as ByteBuffer?, pNumExtensions, pExtensions),
-                "EnumerateDeviceExtensionProperties", "extensions for $deviceName"
-            )
+                val pExtensions = VkExtensionProperties.calloc(numExtensions, innerStack)
+                assertVkSuccess(
+                    vkEnumerateDeviceExtensionProperties(physicalDevice, null as ByteBuffer?, pNumExtensions, pExtensions),
+                    "EnumerateDeviceExtensionProperties", "extensions for $deviceName"
+                )
 
-            val availableExtensions = extensionBufferToSet(pExtensions)
+                val availableExtensions = extensionBufferToSet(pExtensions)
+                Pair(numExtensions, availableExtensions)
+            }
 
             logger.info("$deviceName supports $numExtensions device extensions:")
             for (extension in availableExtensions) {
