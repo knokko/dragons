@@ -85,7 +85,7 @@ private fun generateNail(props: DragonWingProperties, matrixIndices: List<Int>, 
                 vertices[vertexIndex].heightTextureCoordinates.x = DragonTextures.Wing.Nail.minU
             }
 
-            // The end vertices also have the same X-position and U-coordinate
+            // The end vertices also have the same X-position and U-coordinate, but different normals
             for (vertexIndex in arrayOf(indexEndBack, indexEndFront)) {
                 vertices[vertexIndex].position.x = props.nailLength.meters
                 vertices[vertexIndex].colorTextureCoordinates.x = DragonTextures.Wing.Nail.maxU
@@ -123,9 +123,18 @@ private fun generateNail(props: DragonWingProperties, matrixIndices: List<Int>, 
                 position.z = -props.wingDepth.meters * 0.5f
                 normal.y = -halfSq2
                 normal.z = -halfSq2
-                // TODO Finish this
             }
-
+            vertices[indexBaseBackUp].run {
+                position.z = -props.wingDepth.meters * 0.5f
+                normal.y = halfSq2
+                normal.z = -halfSq2
+            }
+            vertices[indexEndBack].run {
+                position.z = props.wingDepth.meters * 0.5f
+                normal.x = halfSq2
+                normal.y = 0f
+                normal.z = -halfSq2
+            }
         },
         fillIndexBuffer = { indices ->
             indices.putTriangle(indexBaseFrontDown, indexEndFront, indexBaseFrontUp)
