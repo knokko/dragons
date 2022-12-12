@@ -77,17 +77,18 @@ private fun generateNail(props: DragonWingProperties, matrixIndices: List<Int>, 
                 }
             }
 
-            // The base vertices share the same X-position, X-normal and U-coordinate
+            // The base vertices share the same Z-position, Z-normal and U-coordinate
             for (vertexIndex in arrayOf(indexBaseFrontDown, indexBaseFrontUp, indexBaseBackUp, indexBaseBackDown)) {
-                vertices[vertexIndex].position.x = 0f
-                vertices[vertexIndex].normal.x = 0f
+                vertices[vertexIndex].position.z = 0f
+                vertices[vertexIndex].normal.z = 0f
                 vertices[vertexIndex].colorTextureCoordinates.x = DragonTextures.Wing.Nail.minU
                 vertices[vertexIndex].heightTextureCoordinates.x = DragonTextures.Wing.Nail.minU
             }
 
-            // The end vertices also have the same X-position and U-coordinate, but different normals
+            // The end vertices also have the same Y-position, Z-position, and U-coordinate, but different normals
             for (vertexIndex in arrayOf(indexEndBack, indexEndFront)) {
-                vertices[vertexIndex].position.x = props.nailLength.meters
+                vertices[vertexIndex].position.y = props.nailWidth.meters * relativeIndexY
+                vertices[vertexIndex].position.z = -props.nailLength.meters
                 vertices[vertexIndex].colorTextureCoordinates.x = DragonTextures.Wing.Nail.maxU
                 vertices[vertexIndex].heightTextureCoordinates.x = DragonTextures.Wing.Nail.maxU
             }
@@ -106,13 +107,13 @@ private fun generateNail(props: DragonWingProperties, matrixIndices: List<Int>, 
                 vertices[vertexIndex].heightTextureCoordinates.y = DragonTextures.Wing.Nail.maxV
             }
 
-            // The front vertices share Z-position and normal
+            // The front vertices share X-position and normal
             for (vertexIndex in arrayOf(indexBaseFrontDown, indexBaseFrontUp, indexEndFront)) {
                 vertices[vertexIndex].run {
-                    position.z = props.wingDepth.meters * 0.5f
-                    normal.x = 0f
+                    position.x = props.wingDepth.meters * 0.5f
+                    normal.x = 1f
                     normal.y = 0f
-                    normal.z = 1f
+                    normal.z = 0f
                 }
             }
 
@@ -120,18 +121,18 @@ private fun generateNail(props: DragonWingProperties, matrixIndices: List<Int>, 
 
             // The back vertices are more complicated...
             vertices[indexBaseBackDown].run {
-                position.z = -props.wingDepth.meters * 0.5f
+                position.x = -props.wingDepth.meters * 0.5f
+                normal.x = -halfSq2
                 normal.y = -halfSq2
-                normal.z = -halfSq2
             }
             vertices[indexBaseBackUp].run {
-                position.z = -props.wingDepth.meters * 0.5f
+                position.x = -props.wingDepth.meters * 0.5f
+                normal.x = -halfSq2
                 normal.y = halfSq2
-                normal.z = -halfSq2
             }
             vertices[indexEndBack].run {
-                position.z = props.wingDepth.meters * 0.5f
-                normal.x = halfSq2
+                position.x = props.wingDepth.meters * 0.5f
+                normal.x = -halfSq2
                 normal.y = 0f
                 normal.z = -halfSq2
             }
@@ -375,7 +376,7 @@ private fun generateInnerWing(props: DragonWingProperties, matrixIndices: List<I
             populateRowVertices(arrayOf(indexC0, indexC1, indexC2), -props.nailWidth * 1.5f - props.wingLaneWidth, props.wingLaneWidth)
             populateRowVertices(arrayOf(indexD1, indexD2, indexD3, indexD4), -props.nailWidth * 1.5f - props.wingLaneWidth * 2, Distance.meters(0))
 
-            // The x/u-coordinates and matrix indices of all vertices in the same column are identical
+            // The u-coordinates and matrix indices of all vertices in the same column are identical
             fun populateColumnVertices(indices: Array<Int>, distanceU: Distance, indirectMatrixIndex: Int) {
                 for (index in indices) {
                     vertices[index].run {

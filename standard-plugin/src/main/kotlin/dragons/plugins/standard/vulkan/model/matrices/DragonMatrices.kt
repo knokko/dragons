@@ -7,7 +7,7 @@ import org.joml.Matrix4f
 fun createDragonWingMatrices(baseMatrix: Matrix4f, props: DragonWingProperties): Array<Matrix4f> {
 
     fun createSubMatrix(distance: Distance): Matrix4f {
-        return baseMatrix.translate(-distance.meters, 0f, 0f, Matrix4f())
+        return baseMatrix.translate(0f, 0f, distance.meters, Matrix4f())
     }
 
     return arrayOf(
