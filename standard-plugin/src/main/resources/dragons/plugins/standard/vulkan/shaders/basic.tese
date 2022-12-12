@@ -18,11 +18,11 @@ layout(location = 0) out vec3 outWorldPosition;
 layout(location = 1) out vec3 outBaseNormal;
 layout(location = 2) out vec2 outColorTexCoordinates;
 layout(location = 3) out vec2 outHeightTexCoordinates;
-layout(location = 4) out int outMatrixIndex;
-layout(location = 5) out int outMaterialIndex;
-layout(location = 6) out vec2 outDeltaFactor;
-layout(location = 7) out int outColorTextureIndex;
-layout(location = 8) out int outHeightTextureIndex;
+layout(location = 4) out mat4 outTransformationMatrix;
+layout(location = 8) out int outMaterialIndex;
+layout(location = 9) out vec2 outDeltaFactor;
+layout(location = 10) out int outColorTextureIndex;
+layout(location = 11) out int outHeightTextureIndex;
 
 layout(set = 0, binding = 0) uniform Camera {
     mat4 eyeMatrices[2];
@@ -52,15 +52,16 @@ void main() {
     vec3 baseNormal = mixVec3(inBaseNormal);
     vec2 colorTexCoordinates = mixVec2(inColorTexCoordinates);
     vec2 heightTexCoordinates = mixVec2(inHeightTexCoordinates);
-    // For now, we will assume each vertex in the same patch will have the same matrix index and texture indices
-    int matrixIndex = inMatrixIndex[0];
+
+    // I can't think of any reason why the texture indices, materialIndex, or deltaFactor should differ per vertex
     int colorTextureIndex = inColorTextureIndex[0];
     int heightTextureIndex = inHeightTextureIndex[0];
-    // I can't think of any reason why the materialIndex or deltaFactor should differ per vertex
     int materialIndex = inMaterialIndex[0];
     vec2 deltaFactor = inDeltaFactor[0];
 
-    mat4 transformationMatrix = objects.transformationMatrices[matrixIndex];
+    mat4 transformationMatrix = gl_TessCoord.x * objects.transformationMatrices[inMatrixIndex[0]]
+            + gl_TessCoord.y * objects.transformationMatrices[inMatrixIndex[1]]
+            + gl_TessCoord.z * objects.transformationMatrices[inMatrixIndex[2]];
     float extraHeight = texture(sampler2D(heightTextures[heightTextureIndex], textureSampler), heightTexCoordinates).r;
     vec3 improvedPosition = basePosition + baseNormal * extraHeight;
     vec4 transformedPosition = transformationMatrix * vec4(improvedPosition, 1.0);
@@ -71,7 +72,7 @@ void main() {
     outBaseNormal = baseNormal;
     outColorTexCoordinates = colorTexCoordinates;
     outHeightTexCoordinates = heightTexCoordinates;
-    outMatrixIndex = matrixIndex;
+    outTransformationMatrix = transformationMatrix;
     outMaterialIndex = materialIndex;
     outDeltaFactor = deltaFactor;
     outColorTextureIndex = colorTextureIndex;

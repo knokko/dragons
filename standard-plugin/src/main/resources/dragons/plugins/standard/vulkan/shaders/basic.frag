@@ -6,11 +6,11 @@ layout(location = 0) in vec3 worldPosition;
 layout(location = 1) in vec3 baseNormal;
 layout(location = 2) in vec2 colorTexCoordinates;
 layout(location = 3) in vec2 heightTexCoordinates;
-layout(location = 4) flat in int matrixIndex;
-layout(location = 5) flat in int materialIndex;
-layout(location = 6) in vec2 deltaFactor;
-layout(location = 7) flat in int colorTextureIndex;
-layout(location = 8) flat in int heightTextureIndex;
+layout(location = 4) in mat4 transformationMatrix;
+layout(location = 8) flat in int materialIndex;
+layout(location = 9) in vec2 deltaFactor;
+layout(location = 10) flat in int colorTextureIndex;
+layout(location = 11) flat in int heightTextureIndex;
 
 layout(location = 0) out vec4 outColor;
 
@@ -143,7 +143,6 @@ void main() {
 
     vec3 combinedNormal = combineBaseWithHeightNormal(heightNormal);
 
-    mat4 transformationMatrix = objects.transformationMatrices[matrixIndex];
     vec3 transformedNormal = normalize((transformationMatrix * vec4(combinedNormal, 0.0)).xyz);
 
     MaterialProperties material = MATERIALS[materialIndex];
