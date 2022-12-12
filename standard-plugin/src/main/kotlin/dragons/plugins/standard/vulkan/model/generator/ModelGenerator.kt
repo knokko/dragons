@@ -51,7 +51,11 @@ class ModelGenerator(
 
                     // Increase all indices written by model.fillIndexBuffer to ensure they match the right vertex
                     for (indexToIncrease in nextIndexIndex until nextIndexIndex + model.numIndices) {
-                        indexBuffer.put(indexToIncrease, indexBuffer[indexToIncrease] + vertexOffset)
+                        val oldIndex = indexBuffer[indexToIncrease]
+                        if (oldIndex < 0 || oldIndex >= model.numVertices) {
+                            throw IllegalArgumentException("Index $oldIndex out of range for model with ${model.numVertices} vertices")
+                        }
+                        indexBuffer.put(indexToIncrease, oldIndex + vertexOffset)
                     }
 
                     vertexOffset += model.numVertices
