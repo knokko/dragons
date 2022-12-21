@@ -1,8 +1,11 @@
 package dragons.plugins.standard.world.entity
 
+import dragons.plugins.standard.vulkan.model.generator.dragon.DragonWingProperties
+import dragons.plugins.standard.vulkan.model.generator.dragon.createDragonWingGenerator
+import dragons.plugins.standard.vulkan.model.matrices.createDragonWingMatrices
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
-import dragons.plugins.standard.vulkan.render.entity.EntityRenderer
-import dragons.plugins.standard.vulkan.render.entity.EntityRendererFactory
+import dragons.plugins.standard.vulkan.render.entity.*
+import dragons.space.Distance
 import dragons.space.Position
 import dragons.world.entity.Entity
 import dragons.world.entity.EntityProperties
@@ -26,12 +29,12 @@ class MainMenuPlayerEntity: EntityProperties() {
 
             val leftHandMatrix = state.leftHandMatrix
             if (leftHandMatrix != null) {
-                renderer.drawEntity(SkylandTestEntity.Renderer.MESH, arrayOf(leftHandMatrix))
+                renderer.drawEntity(WING_MESH, createDragonWingMatrices(leftHandMatrix, WING_PROPS))
             }
 
             val rightHandMatrix = state.rightHandMatrix
             if (rightHandMatrix != null) {
-                renderer.drawEntity(SkylandTestEntity.Renderer.MESH, arrayOf(rightHandMatrix))
+                renderer.drawEntity(WING_MESH, createDragonWingMatrices(rightHandMatrix, WING_PROPS))
             }
         }
 
@@ -39,6 +42,28 @@ class MainMenuPlayerEntity: EntityProperties() {
             override fun getEntityType() = MainMenuPlayerEntity::class
 
             override fun createRenderer(entity: MainMenuPlayerEntity) = Renderer()
+        }
+
+        companion object {
+            val WING_PROPS = DragonWingProperties(
+                baseWingLength = Distance.meters(0.5f),
+                wingLaneWidth = Distance.meters(0.2f),
+                wingTopLength = Distance.meters(0.3f),
+                wingDepth = Distance.milliMeters(30),
+                nailLength = Distance.meters(0.3f),
+                nailWidth = Distance.meters(0.15f)
+            )
+
+            private val WING_MESH = EntityMesh(
+                generator = createDragonWingGenerator(WING_PROPS, listOf(0, 1, 2, 3, 4), false),
+                colorImages = listOf(
+                    ClasspathEntityColorImage("dragons/plugins/standard/images/testTerrain.jpg", 1024, 1024)
+                ),
+                heightImages = listOf(
+                    ClasspathEntityHeightImage("dragons/plugins/standard/images/testTerrainHeight.png", 0.0f, 128, 128)
+                ),
+                numTransformationMatrices = 5
+            )
         }
     }
 }
