@@ -107,6 +107,7 @@ class StandardMainMenu: MainMenuManager {
 
                 val currentState = playerEntity.copyState() as MainMenuPlayerEntity.State
                 currentState.position = currentPosition
+                currentState.regularRotation = Angle.radians(currentRotation)
 
                 if (currentInput.leftHandPosition != null) {
                     val leftHandMatrix = Matrix4f().rotateY(-extraRotation.radians).translate(
