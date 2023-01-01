@@ -16,6 +16,10 @@ class DragonControls(
     val isGrabbingRight: Boolean,
     val leftHandPosition: Vector3f?,
     val rightHandPosition: Vector3f?,
+    val leftHandAimPosition: Vector3f?,
+    val rightHandAimPosition: Vector3f?,
     val leftHandOrientation: Quaternionf?,
-    val rightHandOrientation: Quaternionf?
+    val rightHandOrientation: Quaternionf?,
+    val leftHandAimOrientation: Quaternionf?,
+    val rightHandAimOrientation: Quaternionf?
 )

@@ -108,7 +108,8 @@ interface VrManager {
             walkDirection = Vector2f(), cameraTurnDirection = 0f, isSpitting = false, isUsingPower = false,
             shouldToggleMenu = false, shouldToggleLeftWing = false, shouldToggleRightWing = false,
             isGrabbingLeft = false, isGrabbingRight = false,
-            leftHandPosition = null, rightHandPosition = null, leftHandOrientation = null, rightHandOrientation = null
+            leftHandPosition = null, rightHandPosition = null, leftHandOrientation = null, rightHandOrientation = null,
+            leftHandAimPosition = null, rightHandAimPosition = null, leftHandAimOrientation = null, rightHandAimOrientation = null
         )
     }
 

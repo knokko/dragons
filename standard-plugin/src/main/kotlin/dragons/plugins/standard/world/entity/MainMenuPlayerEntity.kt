@@ -12,6 +12,7 @@ import dragons.world.entity.Entity
 import dragons.world.entity.EntityProperties
 import dragons.world.entity.EntityState
 import org.joml.Matrix4f
+import org.joml.Vector3f
 
 class MainMenuPlayerEntity: EntityProperties() {
     override fun getPersistentClassID() = "standard-plugin:MainMenuPlayer"
@@ -22,6 +23,8 @@ class MainMenuPlayerEntity: EntityProperties() {
         var regularRotation = Angle.degrees(0f)
         var leftHandMatrix: Matrix4f? = null
         var rightHandMatrix: Matrix4f? = null
+        var leftHandAimMatrix: Matrix4f? = null
+        var rightHandAimMatrix: Matrix4f? = null
     }
 
     @Suppress("unused")
@@ -29,16 +32,29 @@ class MainMenuPlayerEntity: EntityProperties() {
         override fun render(renderer: StandardSceneRenderer, entity: Entity, cameraPosition: Position) {
             val state = entity.copyState() as State
 
+            val headToShoulderX = 0.2f
+            val headToShoulderY = -0.2f
+            val headToShoulderZ = 0.15f
+
             val leftHandMatrix = state.leftHandMatrix
             if (leftHandMatrix != null) {
                 val shoulderMatrix = Matrix4f()
                     .translation(
-                        -0.2f * state.regularRotation.cos - 0.3f * state.regularRotation.sin,
-                        -WING_PROPS.wingLaneWidth.meters * 2,
-                        -0.2f * state.regularRotation.sin - 0.3f * -state.regularRotation.cos
+                        -headToShoulderX * state.regularRotation.cos - headToShoulderZ * state.regularRotation.sin,
+                        headToShoulderY,
+                        -headToShoulderX * state.regularRotation.sin - headToShoulderZ * -state.regularRotation.cos
                     ).rotateY((Angle.degrees(90f) - state.regularRotation).radians)
 
                 renderer.drawEntity(WING_MESH, createDragonWingMatrices(leftHandMatrix, shoulderMatrix, WING_PROPS))
+            }
+
+            val leftHandAimMatrix = state.leftHandAimMatrix
+            if (leftHandAimMatrix != null) {
+                val forwardPosition = leftHandAimMatrix.translate(0f, 0f, -1f, Matrix4f()).getTranslation(Vector3f())
+                renderer.drawEntity(SkylandTestEntity.Renderer.MESH, arrayOf(Matrix4f().translate(forwardPosition).scale(0.1f)))
+
+                val forwardPosition2 = leftHandAimMatrix.translate(0f, 0f, -5f, Matrix4f()).getTranslation(Vector3f())
+                renderer.drawEntity(SkylandTestEntity.Renderer.MESH, arrayOf(Matrix4f().translate(forwardPosition2).scale(0.1f)))
             }
 
             val rightHandMatrix = state.rightHandMatrix
@@ -46,12 +62,21 @@ class MainMenuPlayerEntity: EntityProperties() {
 
                 val shoulderMatrix = Matrix4f()
                     .translation(
-                        0.2f * state.regularRotation.cos - 0.3f * state.regularRotation.sin,
-                        -WING_PROPS.wingLaneWidth.meters * 2,
-                        0.2f * state.regularRotation.sin - 0.3f * -state.regularRotation.cos
+                        headToShoulderX * state.regularRotation.cos - headToShoulderZ * state.regularRotation.sin,
+                        headToShoulderY,
+                        headToShoulderX * state.regularRotation.sin - headToShoulderZ * -state.regularRotation.cos
                     ).rotateY((Angle.degrees(270f) - state.regularRotation).radians)
 
                 renderer.drawEntity(WING_MESH, createDragonWingMatrices(rightHandMatrix, shoulderMatrix, WING_PROPS))
+            }
+
+            val rightHandAimMatrix = state.rightHandAimMatrix
+            if (rightHandAimMatrix != null) {
+                val forwardPosition = rightHandAimMatrix.translate(0f, 0f, -1f, Matrix4f()).getTranslation(Vector3f())
+                renderer.drawEntity(SkylandTestEntity.Renderer.MESH, arrayOf(Matrix4f().translate(forwardPosition).scale(0.1f)))
+
+                val forwardPosition2 = rightHandAimMatrix.translate(0f, 0f, -5f, Matrix4f()).getTranslation(Vector3f())
+                renderer.drawEntity(SkylandTestEntity.Renderer.MESH, arrayOf(Matrix4f().translate(forwardPosition2).scale(0.1f)))
             }
         }
 
@@ -63,9 +88,9 @@ class MainMenuPlayerEntity: EntityProperties() {
 
         companion object {
             val WING_PROPS = DragonWingProperties(
-                baseWingLength = Distance.meters(0.3f),
+                baseWingLength = Distance.meters(0.25f),
                 wingLaneWidth = Distance.meters(0.1f),
-                wingTopLength = Distance.meters(0.18f),
+                wingTopLength = Distance.meters(0.125f),
                 wingDepth = Distance.milliMeters(30),
                 nailLength = Distance.meters(0.15f),
                 nailWidth = Distance.meters(0.07f)

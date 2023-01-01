@@ -28,8 +28,14 @@ value class Angle private constructor(
 
     operator fun minus(right: Angle) = Angle(this.raw - right.raw)
 
+    operator fun unaryMinus() = Angle(-this.raw)
+
+    operator fun times(scalar: Float) = Angle(this.raw * scalar)
+
     companion object {
         fun degrees(angle: Float) = Angle(toRadians(angle))
+
+        fun degrees(angle: Int) = degrees(angle.toFloat())
 
         fun radians(angle: Float) = Angle(angle)
     }

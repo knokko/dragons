@@ -148,31 +148,42 @@ private fun generateNail(props: DragonWingProperties, matrixIndices: List<Int>, 
 
 private fun generateWingSides(props: DragonWingProperties, matrixIndices: List<Int>): ModelGenerator {
 
-    val indexInnerA4 = 0
-    val indexInnerA0 = 1
-    val indexOuterA0 = 2
-    val indexOuterA4 = 3
+    var nextIndex = 0
+    val indexInnerA4 = nextIndex++
+    val indexInnerA3 = nextIndex++
+    val indexInnerA2 = nextIndex++
+    val indexInnerA1 = nextIndex++
+    val indexInnerA0 = nextIndex++
+    val indexOuterA0 = nextIndex++
+    val indexOuterA1 = nextIndex++
+    val indexOuterA2 = nextIndex++
+    val indexOuterA3 = nextIndex++
+    val indexOuterA4 = nextIndex++
 
-    val indexInnerD4 = 4
-    val indexInnerD1 = 5
-    val indexOuterD1 = 6
-    val indexOuterD4 = 7
+    val indexInnerD4 = nextIndex++
+    val indexInnerD3 = nextIndex++
+    val indexInnerD2 = nextIndex++
+    val indexInnerD1 = nextIndex++
+    val indexOuterD1 = nextIndex++
+    val indexOuterD2 = nextIndex++
+    val indexOuterD3 = nextIndex++
+    val indexOuterD4 = nextIndex++
 
-    val indexInnerC2 = 8
-    val indexInnerC0 = 9
-    val indexOuterC0 = 10
-    val indexOuterC2 = 11
+    val indexInnerC2 = nextIndex++
+    val indexInnerC1 = nextIndex++
+    val indexInnerC0 = nextIndex++
+    val indexOuterC0 = nextIndex++
+    val indexOuterC1 = nextIndex++
+    val indexOuterC2 = nextIndex++
 
-    val indexInnerB1 = 12
-    val indexInnerB0 = 13
-    val indexOuterB0 = 14
-    val indexOuterB1 = 15
-
-    // TODO Add the sloped wing surfaces as well
+    val indexInnerB1 = nextIndex++
+    val indexInnerB0 = nextIndex++
+    val indexOuterB0 = nextIndex++
+    val indexOuterB1 = nextIndex++
 
     return ModelGenerator(
-        numVertices = 4 * 4,
-        numIndices = 4 * 6,
+        numVertices = nextIndex,
+        numIndices = 12 * 6,
         fillVertexBuffer = { vertices, colorTextureIndices, heightTextureIndices ->
 
             val texture = DragonTextures.Wing.Side
@@ -181,11 +192,8 @@ private fun generateWingSides(props: DragonWingProperties, matrixIndices: List<I
             for (vertex in vertices) {
                 // The z-coordinates will be controlled by the transformation matrix
                 vertex.position.z = 0f
-                vertex.heightTextureCoordinates.x = 0f
-                vertex.heightTextureCoordinates.y = 0f
                 // TODO Perhaps create a separate material for skin
                 vertex.materialIndex = BasicVertex.MATERIAL_TERRAIN
-                // TODO Perhaps use height textures on dragon models
                 vertex.deltaFactor.x = 1f
                 vertex.deltaFactor.y = 1f
                 vertex.colorTextureIndex = colorTextureIndices[texture.colorTexture]
@@ -194,18 +202,29 @@ private fun generateWingSides(props: DragonWingProperties, matrixIndices: List<I
 
             // Set position.x
             for (index in arrayOf(
-                indexInnerA0, indexInnerA4, indexInnerB0, indexInnerB1, indexInnerC0, indexInnerC2, indexInnerD1, indexInnerD4)
-            ) {
+                indexInnerA0, indexInnerA1, indexInnerA2, indexInnerA3, indexInnerA4,
+                indexInnerB0, indexInnerB1, indexInnerC0, indexInnerC1, indexInnerC2,
+                indexInnerD1, indexInnerD2, indexInnerD3, indexInnerD4
+            )) {
                 vertices[index].position.x = (props.wingDepth * 0.5f).meters
+                vertices[index].colorTextureCoordinates.y = texture.maxV
+                vertices[index].heightTextureCoordinates.y = texture.maxV
             }
             for (index in arrayOf(
-                indexOuterA0, indexOuterA4, indexOuterB0, indexOuterB1, indexOuterC0, indexOuterC2, indexOuterD1, indexOuterD4
+                indexOuterA0, indexOuterA1, indexOuterA2, indexOuterA3, indexOuterA4,
+                indexOuterB0, indexOuterB1, indexOuterC0, indexOuterC1, indexOuterC2,
+                indexOuterD1, indexOuterD2, indexOuterD3, indexOuterD4
             )) {
                 vertices[index].position.x = -(props.wingDepth * 0.5f).meters
+                vertices[index].colorTextureCoordinates.y = texture.minV
+                vertices[index].heightTextureCoordinates.y = texture.minV
             }
 
             // Set position.y and normal.xyz
-            for (index in arrayOf(indexInnerA0, indexOuterA0, indexInnerA4, indexOuterA4)) {
+            for (index in arrayOf(
+                indexInnerA0, indexOuterA0, indexInnerA1, indexOuterA1,
+                indexInnerA2, indexOuterA2, indexInnerA3, indexOuterA3, indexInnerA4, indexOuterA4
+            )) {
                 vertices[index].position.y = (props.nailWidth * 1.5f).meters
                 vertices[index].normal.set(0f, 1f, 0f)
             }
@@ -213,49 +232,66 @@ private fun generateWingSides(props: DragonWingProperties, matrixIndices: List<I
                 vertices[index].position.y = -(props.nailWidth * 1.5f).meters
                 vertices[index].normal.set(0f, -1f, 0f)
             }
-            for (index in arrayOf(indexInnerC0, indexOuterC0, indexInnerC2, indexOuterC2)) {
+            for (index in arrayOf(indexInnerC0, indexOuterC0, indexInnerC1, indexOuterC1, indexInnerC2, indexOuterC2)) {
                 vertices[index].position.y = (-props.nailWidth * 1.5f - props.wingLaneWidth).meters
                 vertices[index].normal.set(0f, -1f, 0f)
             }
-            for (index in arrayOf(indexInnerD1, indexOuterD1, indexInnerD4, indexOuterD4)) {
+            for (index in arrayOf(
+                indexInnerD1, indexOuterD1, indexInnerD2, indexOuterD2,
+                indexInnerD3, indexOuterD3, indexInnerD4, indexOuterD4
+            )) {
                 vertices[index].position.y = (-props.nailWidth * 1.5f - props.wingLaneWidth * 2).meters
                 vertices[index].normal.set(0f, -1f, 0f)
             }
 
+            val deltaU = texture.maxU - texture.minU
+
             for (index in arrayOf(indexInnerA0, indexInnerB0, indexInnerC0, indexOuterA0, indexOuterB0, indexOuterC0)) {
                 vertices[index].matrixIndex = matrixIndices[0]
+                vertices[index].colorTextureCoordinates.x = texture.maxU
+                vertices[index].heightTextureCoordinates.x = texture.maxU
             }
-            for (index in arrayOf(indexInnerB1, indexInnerD1, indexOuterB1, indexOuterD1)) {
+            for (index in arrayOf(
+                indexInnerA1, indexInnerB1, indexInnerC1, indexInnerD1,
+                indexOuterA1, indexOuterB1, indexOuterC1, indexOuterD1
+            )) {
                 vertices[index].matrixIndex = matrixIndices[1]
+                vertices[index].colorTextureCoordinates.x = texture.maxU - 0.25f * deltaU
+                vertices[index].heightTextureCoordinates.x = texture.maxU - 0.25f * deltaU
             }
-            vertices[indexInnerC2].matrixIndex = matrixIndices[2]
-            vertices[indexOuterC2].matrixIndex = matrixIndices[2]
+            for (index in arrayOf(indexInnerA2, indexInnerC2, indexInnerD2, indexOuterA2, indexOuterC2, indexOuterD2)) {
+                vertices[index].matrixIndex = matrixIndices[2]
+                vertices[index].colorTextureCoordinates.x = texture.maxU - 0.5f * deltaU
+                vertices[index].heightTextureCoordinates.x = texture.maxU - 0.5f * deltaU
+            }
+            for (index in arrayOf(indexInnerA3, indexInnerD3, indexOuterA3, indexOuterD3)) {
+                vertices[index].matrixIndex = matrixIndices[3]
+                vertices[index].colorTextureCoordinates.x = texture.minU + 0.25f * deltaU
+                vertices[index].heightTextureCoordinates.x = texture.minU + 0.25f * deltaU
+            }
             for (index in arrayOf(indexInnerA4, indexInnerD4, indexOuterA4, indexOuterD4)) {
-                vertices[index].matrixIndex = 4
-            }
-
-            // For now, each side part will have the same texture coordinates
-            for (index in arrayOf(indexInnerA4, indexOuterD4, indexOuterC2, indexOuterB1)) {
+                vertices[index].matrixIndex = matrixIndices[4]
                 vertices[index].colorTextureCoordinates.x = texture.minU
-                vertices[index].colorTextureCoordinates.y = texture.minV
-            }
-            for (index in arrayOf(indexOuterA4, indexInnerD4, indexInnerC2, indexInnerB1)) {
-                vertices[index].colorTextureCoordinates.x = texture.minU
-                vertices[index].colorTextureCoordinates.y = texture.maxV
-            }
-            for (index in arrayOf(indexInnerA0, indexOuterD1, indexOuterC0, indexOuterB0)) {
-                vertices[index].colorTextureCoordinates.x = texture.maxU
-                vertices[index].colorTextureCoordinates.y = texture.minV
-            }
-            for (index in arrayOf(indexOuterA0, indexInnerD1, indexInnerC0, indexInnerB0)) {
-                vertices[index].colorTextureCoordinates.x = texture.maxU
-                vertices[index].colorTextureCoordinates.y = texture.maxV
+                vertices[index].heightTextureCoordinates.x = texture.minU
             }
         },
         fillIndexBuffer = { indices ->
-            indices.putQuad(indexInnerA4, indexInnerA0, indexOuterA0, indexOuterA4)
-            indices.putQuad(indexOuterD4, indexOuterD1, indexInnerD1, indexInnerD4)
-            indices.putQuad(indexOuterC2, indexOuterC0, indexInnerC0, indexInnerC2)
+            indices.putQuad(indexInnerA4, indexInnerA3, indexOuterA3, indexOuterA4)
+            indices.putQuad(indexInnerA3, indexInnerA2, indexOuterA2, indexOuterA3)
+            indices.putQuad(indexInnerA2, indexInnerA1, indexOuterA1, indexOuterA2)
+            indices.putQuad(indexInnerA1, indexInnerA0, indexOuterA0, indexOuterA1)
+
+            indices.putQuad(indexOuterD4, indexOuterD3, indexInnerD3, indexInnerD4)
+            indices.putQuad(indexOuterD3, indexOuterD2, indexInnerD2, indexInnerD3)
+            indices.putQuad(indexOuterD2, indexOuterD1, indexInnerD1, indexInnerD2)
+
+            indices.putQuad(indexOuterC2, indexOuterD1, indexInnerD1, indexInnerC2)
+
+            indices.putQuad(indexOuterC2, indexOuterC1, indexInnerC1, indexInnerC2)
+            indices.putQuad(indexOuterC1, indexOuterC0, indexInnerC0, indexInnerC1)
+
+            indices.putQuad(indexOuterB1, indexOuterC0, indexInnerC0, indexInnerB1)
+
             indices.putQuad(indexOuterB1, indexOuterB0, indexInnerB0, indexInnerB1)
         }
     )

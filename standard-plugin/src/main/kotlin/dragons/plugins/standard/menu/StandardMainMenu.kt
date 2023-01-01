@@ -14,6 +14,7 @@ import dragons.vulkan.util.assertVkSuccess
 import org.joml.Math.cos
 import org.joml.Math.sin
 import org.joml.Matrix4f
+import org.joml.Quaternionf
 import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.*
@@ -109,28 +110,25 @@ class StandardMainMenu: MainMenuManager {
                 currentState.position = currentPosition
                 currentState.regularRotation = Angle.radians(currentRotation)
 
-                if (currentInput.leftHandPosition != null) {
-                    val leftHandMatrix = Matrix4f().rotateY(-extraRotation.radians).translate(
-                        eyeMatrices.averageRealEyePosition.negate(Vector3f())
-                    ).translate(
-                        currentInput.leftHandPosition
-                    )
-                    if (currentInput.leftHandOrientation != null) {
-                        leftHandMatrix.rotate(currentInput.leftHandOrientation)
-                        currentState.leftHandMatrix = leftHandMatrix
+                fun updatePose(position: Vector3f?, orientation: Quaternionf?, setMatrix: (Matrix4f) -> Unit) {
+                    if (position != null && orientation != null) {
+                        setMatrix(Matrix4f().rotateY(-extraRotation.radians).translate(
+                            eyeMatrices.averageRealEyePosition.negate(Vector3f())
+                        ).translate(position).rotate(orientation))
                     }
                 }
 
-                if (currentInput.rightHandPosition != null) {
-                    val rightHandMatrix = Matrix4f().rotateY(-extraRotation.radians).translate(
-                        eyeMatrices.averageRealEyePosition.negate(Vector3f())
-                    ).translate(
-                        currentInput.rightHandPosition
-                    )
-                    if (currentInput.rightHandOrientation != null) {
-                        rightHandMatrix.rotate(currentInput.rightHandOrientation)
-                        currentState.rightHandMatrix = rightHandMatrix
-                    }
+                updatePose(currentInput.leftHandPosition, currentInput.leftHandOrientation) {
+                    currentState.leftHandMatrix = it
+                }
+                updatePose(currentInput.rightHandPosition, currentInput.rightHandOrientation) {
+                    currentState.rightHandMatrix = it
+                }
+                updatePose(currentInput.leftHandAimPosition, currentInput.leftHandAimOrientation) {
+                    currentState.leftHandAimMatrix = it
+                }
+                updatePose(currentInput.rightHandAimPosition, currentInput.rightHandAimOrientation) {
+                    currentState.rightHandAimMatrix = it
                 }
 
                 playerEntity.setState(currentState)
