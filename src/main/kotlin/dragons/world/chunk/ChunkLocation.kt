@@ -18,4 +18,8 @@ class ChunkLocation(
     override fun hashCode() = chunkX + 31 * chunkY + 731 * chunkZ
 
     override fun toString() = "ChunkLocation($chunkX, $chunkY, $chunkZ)"
+
+    companion object {
+        val ZERO = ChunkLocation(0, 0, 0)
+    }
 }

@@ -1,5 +1,7 @@
 package dragons.world.entity
 
+import dragons.space.shape.Shape
+
 /**
  * Represents immutable properties of an `Entity`
  */
@@ -12,6 +14,8 @@ abstract class EntityProperties {
      * For non-persistent entities, this should return null.
      */
     abstract fun getPersistentClassID(): String?
+
+    abstract fun getShape(state: EntityState): Shape
 
     override fun toString() = "EntityProperties"
 }

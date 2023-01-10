@@ -1,5 +1,6 @@
 package dragons.world.realm
 
+import dragons.space.BoundingBox
 import dragons.space.Position
 import dragons.util.max
 import dragons.util.min
@@ -34,17 +35,7 @@ class InMemoryRealm(id: UUID, displayName: String, isInDesigner: Boolean) : Real
         return getEntity(tempEntity.id)
     }
 
-    override fun queryEntityIDsBetween(a: Position, b: Position): Collection<UUID> {
-        val minX = min(a.x, b.x)
-        val minY = min(a.y, b.y)
-        val minZ = min(a.z, b.z)
-        val maxX = max(a.x, b.x)
-        val maxY = max(a.y, b.y)
-        val maxZ = max(a.z, b.z)
-
-        return allEntities.filter {
-            val position = it.value.state.position
-            position.x in minX..maxX && position.y in minY..maxY && position.z in minZ..maxZ
-        }.map { it.key }
+    override fun queryEntityIDsBetween(bounds: BoundingBox): Collection<UUID> {
+        return allEntities.filter { bounds.contains(it.value.state.position) }.map { it.key }
     }
 }

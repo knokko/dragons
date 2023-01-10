@@ -5,6 +5,7 @@ import dragons.plugin.interfaces.menu.MainMenuManager
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.plugins.standard.world.entity.MainMenuPlayerEntity
+import dragons.plugins.standard.world.entity.SkylandTestEntity
 import dragons.state.StaticGameState
 import dragons.space.Angle
 import dragons.space.Distance
@@ -132,6 +133,14 @@ class StandardMainMenu: MainMenuManager {
                 }
 
                 playerEntity.setState(currentState)
+
+                val rightHandAimMatrix = currentState.rightHandAimMatrix
+                if (rightHandAimMatrix != null) {
+                    val rayStart = rightHandAimMatrix.translate(0f, 0f, -0.1f, Matrix4f()).getTranslation(Vector3f())
+                    val pointOnRay = rightHandAimMatrix.translate(0f, 0f, -1f, Matrix4f()).getTranslation(Vector3f())
+                    val rayDirection = pointOnRay.sub(rayStart, Vector3f())
+                    println(realm.raytrace(currentState.position + Position.meters(rayStart), rayDirection, Distance.meters(150)))
+                }
 
                 sceneRenderer.render(realm, averageEyePosition, eyeMatrices.leftEyeMatrix, eyeMatrices.rightEyeMatrix)
                 gameState.vrManager.markFirstFrameQueueSubmit()

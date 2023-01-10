@@ -1,5 +1,8 @@
 package dragons.world.chunk
 
+import dragons.space.BoundingBox
+import dragons.space.Distance
+import dragons.space.Position
 import dragons.world.tile.TemporaryTile
 import java.util.*
 
@@ -11,4 +14,46 @@ import java.util.*
 internal class TemporaryChunk {
 
     val tiles = mutableMapOf<UUID, TemporaryTile>()
+
+    var bounds: BoundingBox? = null
+        private set
+
+    init {
+        updateBounds()
+    }
+
+    // TODO Unit tests
+    fun updateBounds() {
+        var newMinX: Distance? = null
+        var newMinY: Distance? = null
+        var newMinZ: Distance? = null
+
+        fun updateMin(current: Distance?, candidate: Distance): Distance {
+            return if (current == null || current > candidate) candidate else current
+        }
+
+        var newMaxX: Distance? = null
+        var newMaxY: Distance? = null
+        var newMaxZ: Distance? = null
+
+        fun updateMax(current: Distance?, candidate: Distance): Distance {
+            return if (current == null || current < candidate) candidate else current
+        }
+
+        for (tile in tiles.values) {
+            val minTileBound = tile.properties.bounds.min
+            newMinX = updateMin(newMinX, minTileBound.x)
+            newMinY = updateMin(newMinY, minTileBound.y)
+            newMinZ = updateMin(newMinZ, minTileBound.z)
+
+            val maxTileBound = tile.properties.bounds.max
+            newMaxX = updateMax(newMaxX, maxTileBound.x)
+            newMaxY = updateMax(newMaxY, maxTileBound.y)
+            newMaxZ = updateMax(newMaxZ, maxTileBound.z)
+        }
+
+        if (newMinX != null) this.bounds = BoundingBox(
+            Position(newMinX, newMinY!!, newMinZ!!), Position(newMaxX!!, newMaxY!!, newMaxZ!!)
+        ) else this.bounds = null
+    }
 }

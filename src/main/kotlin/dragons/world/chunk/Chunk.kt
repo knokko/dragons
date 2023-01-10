@@ -34,13 +34,17 @@ class Chunk internal constructor(
         if (!isInDesigner) throw UnsupportedOperationException("Adding tiles is only allowed in the designer")
 
         val temporaryTile = TemporaryTile(UUID.randomUUID(), properties, initialState)
-        getTemporary().tiles[temporaryTile.id] = temporaryTile
+        val temporaryChunk = getTemporary()
+        temporaryChunk.tiles[temporaryTile.id] = temporaryTile
+        temporaryChunk.updateBounds()
         return constructStableTile(temporaryTile)
     }
 
     fun removeTile(tile: SmallTile) {
         if (!isInDesigner) throw UnsupportedOperationException("Removing tiles is only allowed in the designer")
-        if (getTemporary().tiles.remove(tile.id) == null) throw IllegalArgumentException("This tile didn't exist")
+        val temporaryChunk = getTemporary()
+        if (temporaryChunk.tiles.remove(tile.id) == null) throw IllegalArgumentException("This tile didn't exist")
+        temporaryChunk.updateBounds()
     }
 
     companion object {

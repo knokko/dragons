@@ -1,5 +1,7 @@
 package dragons.space
 
+import org.joml.Vector3f
+
 @JvmInline
 value class Distance private constructor(
     /**
@@ -47,6 +49,8 @@ value class Distance private constructor(
     operator fun times(scalar: Float) = Distance((raw.toFloat() * scalar).toLong())
 
     operator fun times(scalar: Long) = Distance(raw * scalar)
+
+    operator fun times(vector: Vector3f) = Position(this * vector.x, this * vector.y, this * vector.z)
 
     operator fun div(right: Long) = Distance(raw / right)
 

@@ -3,14 +3,20 @@ package dragons.plugins.standard.world.entity
 import dragons.plugins.standard.vulkan.model.generator.generateSkylandModel
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.plugins.standard.vulkan.render.entity.*
+import dragons.space.Distance
 import dragons.space.Position
+import dragons.space.shape.CylinderShape
 import dragons.world.entity.Entity
 import dragons.world.entity.EntityProperties
 import dragons.world.entity.EntityState
 import org.joml.Matrix4f
 
+private val SHAPE = CylinderShape(Distance.meters(0.3f), Distance.meters(5))
+
 class SkylandTestEntity: EntityProperties() {
     override fun getPersistentClassID() = "standard-plugin:SkylandTestEntity"
+
+    override fun getShape(state: EntityState) = SHAPE
 
     class State(position: Position): EntityState(position)
 

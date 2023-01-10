@@ -9,7 +9,9 @@ import dragons.plugins.standard.vulkan.render.tile.TileRendererFactory
 import dragons.plugins.standard.vulkan.util.claimColorImage
 import dragons.plugins.standard.vulkan.util.claimHeightImage
 import dragons.plugins.standard.vulkan.util.claimVertexAndIndexBuffer
+import dragons.space.Distance
 import dragons.space.Position
+import dragons.space.shape.CylinderShape
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
 import dragons.world.tile.SmallTile
@@ -18,7 +20,9 @@ import dragons.world.tile.TileState
 import kotlinx.coroutines.CompletableDeferred
 import org.joml.Matrix4f
 
-class SkylandTestTile(position: Position): TileProperties(position) {
+private val SHAPE = CylinderShape(Distance.meters(0.3f), Distance.meters(5))
+
+class SkylandTestTile(position: Position): TileProperties(position, SHAPE) {
 
     override fun getPersistentClassID() = "standard-plugin:SkylandTestTile"
 

@@ -8,14 +8,19 @@ import dragons.plugins.standard.vulkan.render.entity.*
 import dragons.space.Angle
 import dragons.space.Distance
 import dragons.space.Position
+import dragons.space.shape.CylinderShape
 import dragons.world.entity.Entity
 import dragons.world.entity.EntityProperties
 import dragons.world.entity.EntityState
 import org.joml.Matrix4f
 import org.joml.Vector3f
 
+private val SHAPE = CylinderShape(Distance.Companion.meters(0.9f), Distance.meters(0.25f))
+
 class MainMenuPlayerEntity: EntityProperties() {
     override fun getPersistentClassID() = "standard-plugin:MainMenuPlayer"
+
+    override fun getShape(state: EntityState) = SHAPE
 
     class State(
         position: Position,

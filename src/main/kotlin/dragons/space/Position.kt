@@ -14,6 +14,10 @@ class Position(val x: Distance, val y: Distance, val z: Distance) {
 
     operator fun plus(other: Position) = Position(x + other.x, y + other.y, z + other.z)
 
+    operator fun times(scalar: Float) = Position(x * scalar, y * scalar, z * scalar)
+
+    operator fun times(scalar: Long) = Position(x * scalar, y * scalar, z * scalar)
+
     companion object {
         fun nanoMeters(x: Long, y: Long, z: Long) = Position(
             Distance.nanoMeters(x),

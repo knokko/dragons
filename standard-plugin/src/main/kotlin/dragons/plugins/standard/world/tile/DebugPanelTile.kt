@@ -10,7 +10,9 @@ import dragons.plugins.standard.vulkan.render.tile.TileRendererFactory
 import dragons.plugins.standard.vulkan.util.claimHeightImage
 import dragons.plugins.standard.vulkan.util.claimVertexAndIndexBuffer
 import dragons.space.Angle
+import dragons.space.Distance
 import dragons.space.Position
+import dragons.space.shape.CylinderShape
 import dragons.util.PerformanceStatistics
 import dragons.util.getStandardOutputHistory
 import dragons.vulkan.memory.VulkanBufferRange
@@ -31,10 +33,16 @@ import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
 
+private const val PANEL_WIDTH = 4000
+private const val PANEL_HEIGHT = 5000
+
+// TODO Create BoxShape (or perhaps even PlaneShape) class to handle this
+private val SHAPE = CylinderShape(Distance.meters(30), Distance.meters(30))
+
 class DebugPanelTile(
     position: Position,
     private val rotation: Angle
-): TileProperties(position) {
+): TileProperties(position, SHAPE) {
     override fun getPersistentClassID() = "standard-plugin:DebugPanelTile"
 
     class State: TileState
@@ -52,7 +60,7 @@ class DebugPanelTile(
 
         override fun render(renderer: StandardSceneRenderer, tile: SmallTile, cameraPosition: Position) {
             val scaleX = 60f
-            val aspectRatio = panel.width.toFloat() / panel.height.toFloat()
+            val aspectRatio = PANEL_WIDTH.toFloat() / PANEL_HEIGHT.toFloat()
             val scaleY = scaleX / aspectRatio
 
             val properties = tile.properties as DebugPanelTile
@@ -149,7 +157,7 @@ class DebugPanelTile(
 
                 agent.claims.images.add(
                     ImageMemoryClaim(
-                        width = 4000, height = 5000,
+                        width = PANEL_WIDTH, height = PANEL_HEIGHT,
                         queueFamily = agent.gameState.graphics.queueManager.generalQueueFamily,
                         bytesPerPixel = 4, imageFormat = VK_FORMAT_R8G8B8A8_UNORM, tiling = VK_IMAGE_TILING_OPTIMAL,
                         imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
