@@ -6,7 +6,6 @@ import dragons.space.Position
 import org.joml.Vector2f
 import org.joml.Vector3f
 
-// TODO Unit test this class
 class CylinderShape(val halfHeight: Distance, val radius: Distance): Shape() {
 
     override fun createBoundingBox(ownPosition: Position) = BoundingBox(
@@ -51,7 +50,7 @@ class CylinderShape(val halfHeight: Distance, val radius: Distance): Shape() {
             return (ownMaxY - rayStart.y) / unitDirection.y
         }
 
-        // If we haven't returned yet, the ray starts inside this cylinder, so we should return 0
-        return Distance.meters(0)
+        // If we haven't returned yet, the first intersection is within this cylinder
+        return firstIntersectionDistance
     }
 }
