@@ -25,4 +25,6 @@ class BoundingBox(corner1: Position, corner2: Position) {
 
     fun intersects(other: BoundingBox) = min.x <= other.max.x && other.min.x <= max.x &&
             min.y <= other.max.y && other.min.y <= max.y && min.z <= other.max.z && other.min.z <= max.z
+
+    override fun toString() = "BoundingBox($min, $max)"
 }
