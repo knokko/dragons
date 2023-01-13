@@ -59,7 +59,6 @@ abstract class Realm(
 
     abstract fun queryEntityIDsBetween(bounds: BoundingBox): Collection<UUID>
 
-    // TODO Unit test this
     fun raytrace(rayStart: Position, direction: Vector3f, distance: Distance): Pair<Any, Position>? {
         val unitDirection = direction.normalize(Vector3f())
         if (!unitDirection.isFinite) return null

@@ -50,8 +50,8 @@ class TestTemporaryChunk {
     }
 }
 
-class TestTile(position: Position) : TileProperties(position, testShape) {
+private class TestTile(position: Position) : TileProperties(position, testShape) {
     override fun getPersistentClassID() = "TestTemporaryChunk:TestTile"
 }
 
-class TestTileState: TileState
+private class TestTileState: TileState
