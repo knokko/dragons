@@ -15,4 +15,10 @@ class SmallTile(
     val properties: TileProperties,
     val copyState: () -> TileState,
     val setState: (TileState) -> Unit
-)
+) {
+    override fun toString() = "SmallTile($id, $properties)"
+
+    override fun equals(other: Any?) = other is SmallTile && this.id == other.id
+
+    override fun hashCode() = id.hashCode()
+}
