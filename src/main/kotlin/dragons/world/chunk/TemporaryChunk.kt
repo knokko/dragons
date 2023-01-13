@@ -22,7 +22,6 @@ internal class TemporaryChunk {
         updateBounds()
     }
 
-    // TODO Unit tests
     fun updateBounds() {
         var newMinX: Distance? = null
         var newMinY: Distance? = null
