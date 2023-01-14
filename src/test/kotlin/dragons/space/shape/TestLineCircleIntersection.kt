@@ -129,7 +129,7 @@ class TestLineCircleIntersection {
     @Test
     fun testDetermineLineCircleIntersectionZeroDirection() {
         // Zero-direction line that starts inside the circle
-        assertHit(0f, 100_000f, determineLineCircleIntersections(
+        assertHit(-100_000f, 100_000f, determineLineCircleIntersections(
             centerX = -Distance.meters(50), centerY = -Distance.meters(100), radius = Distance.meters(5),
             lineX = -Distance.meters(51), lineY = -Distance.meters(100), direction = Vector2f()
         ))

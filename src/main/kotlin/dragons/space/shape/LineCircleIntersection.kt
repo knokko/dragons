@@ -4,45 +4,48 @@ import dragons.space.Distance
 import org.joml.Math.sqrt
 import org.joml.Vector2f
 
+/**
+ * Determines whether and where a given line intersects a given circle. The center of the circle is at
+ * `(centerX, centerY)` and its radius is `radius`. The line goes through `(lineX, lineY)` and has direction
+ * `direction`.
+ *
+ * If the line intersects the circle, this method returns a pair (a, b) such that a <= b and the line intersects
+ * the circle at `(lineX, lineY) + a * direction` and at `(lineX, lineY) + b * direction`.
+ *
+ * If the line does **not** intersect the circle, this method returns `null`.
+ *
+ * ### Special cases
+ * If the line touches the circle, floating point rounding errors will determine whether it returns `null` or a pair
+ * `(a, b)` with a ~= b.
+ *
+ * If `direction.length() ~= 0` and `(lineX, lineY)` is outside the circle, this method returns `null`.
+ *
+ * If `direction.length() ~= 0` and `(lineX, lineY)` is inside the circle, this method returns `(-100 kilometers, 100k)`.
+ * (This behavior makes some sense when you consider 100k to be 'infinity': if direction is (almost) 0, the 'line'
+ * would basically intersect the circle at `(lineX, lineY) +- infinity * direction`. I think this behavior is the
+ * most practical, and is very helpful for the ray-cylinder intersection test. If you don't like this behavior, then
+ * don't use the zero vector as direction.)
+ */
 fun determineLineCircleIntersections(
     centerX: Distance, centerY: Distance, radius: Distance, lineX: Distance, lineY: Distance, direction: Vector2f
 ): Pair<Distance, Distance>? {
+    val perpendicularDirection = Vector2f(direction).perpendicular()
+    val lineDirectionScale = determineLineLineIntersection(lineX, lineY, direction, centerX, centerY, perpendicularDirection)
 
-    // If direction ~= 0, we simply check whether the line start is inside the circle
-    if (direction.length() < 0.0001f) {
+    // lineDirectionScale will be null if and only if direction.length() ~= 0
+    // to handle this case, simple check whether the line starts inside the circle
+    if (lineDirectionScale == null) {
         val dx = (centerX - lineX).meters
         val dy = (centerY - lineY).meters
         return if (dx * dx + dy * dy <= radius.meters * radius.meters) {
-            // Returning (0, 100k) is kinda dirty, but useful in most cases
-            Pair(Distance.meters(0), Distance.kiloMeters(100))
+            // Returning (-100k, 100k) is kinda dirty, but useful in most cases
+            Pair(Distance.kiloMeters(-100), Distance.kiloMeters(100))
         } else null
     }
 
-    val perpendicularDirection = Vector2f(direction).perpendicular()
-
-    /*
-     * First, we need to find the closest point on the line to the center of the circle.
-     *
-     * Mathematics:
-     * ld = (line)direction, pd = perpendicularDirection, c = center, l = lineStart, r = radius,
-     * a * |pd| = distanceFromCenterToClosestPoint, b * |ld| = distanceFromLineStartToClosestPoint
-     *
-     * Closest point = c + a * pd = l + b * ld | with a and b unknown
-     * (1) c.x + a * pd.x = l.x + b * ld.x
-     *     a * pd.x = l.x - c.x + b * ld.x
-     *     a = (l.x - c.x + b * ld.x) / pd.x = (l.y - c.y + b * ld.y) / pd.y
-     *
-     * (2) (l.x - c.x + b * ld.x) / pd.x = (l.y - c.y + b * ld.y) / pd.y
-     *     (l.x - c.x + b * ld.x) * pd.y = (l.y - c.y + b * ld.y) * pd.x
-     *     b * ld.x * pd.y + (l.x - c.x) * pd.y = b * ld.y * pd.x + (l.y - c.y) * pd.x
-     *     b * (ld.x * pd.y - ld.y * pd.x) = (l.y - c.y) * pd.x - (l.x - c.x) * pd.y
-     *     b = ((l.y - c.y) * pd.x - (l.x - c.x) * pd.y)) / (ld.x * pd.y - ld.y * pd.x)
-     */
-    val b = ((lineY - centerY) * perpendicularDirection.x - (lineX - centerX) * perpendicularDirection.y) /
-            (direction.x * perpendicularDirection.y - direction.y * perpendicularDirection.x)
-    val distanceFromLineStartToClosestPoint = b * direction.length()
-    val closestPointX = lineX + b * direction.x
-    val closestPointY = lineY + b * direction.y
+    val distanceFromLineStartToClosestPoint = lineDirectionScale * direction.length()
+    val closestPointX = lineX + lineDirectionScale * direction.x
+    val closestPointY = lineY + lineDirectionScale * direction.y
 
     val distanceFromCenterToClosestPointSq = run {
         val dx = (centerX - closestPointX).meters
