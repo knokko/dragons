@@ -12,7 +12,7 @@ import dragons.plugins.standard.vulkan.util.claimVertexAndIndexBuffer
 import dragons.space.Angle
 import dragons.space.Distance
 import dragons.space.Position
-import dragons.space.shape.CylinderShape
+import dragons.space.shape.VerticalPlaneShape
 import dragons.util.PerformanceStatistics
 import dragons.util.getStandardOutputHistory
 import dragons.vulkan.memory.VulkanBufferRange
@@ -36,13 +36,10 @@ import org.lwjgl.vulkan.VkSemaphoreCreateInfo
 private const val PANEL_WIDTH = 4000
 private const val PANEL_HEIGHT = 5000
 
-// TODO Create BoxShape (or perhaps even PlaneShape) class to handle this
-private val SHAPE = CylinderShape(Distance.meters(30), Distance.meters(30))
-
 class DebugPanelTile(
     position: Position,
     private val rotation: Angle
-): TileProperties(position, SHAPE) {
+): TileProperties(position, VerticalPlaneShape(Distance.meters(30), Distance.meters(37.5f), rotation)) {
     override fun getPersistentClassID() = "standard-plugin:DebugPanelTile"
 
     class State: TileState
