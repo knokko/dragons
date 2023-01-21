@@ -12,6 +12,8 @@ import dragons.plugin.loading.PluginClassLoader
 import dragons.plugin.loading.scanDefaultPluginLocations
 import dragons.state.StaticGameState
 import dragons.state.StaticGraphicsState
+import dragons.profiling.PerformanceProfiler
+import dragons.profiling.PerformanceStorage
 import dragons.util.PerformanceStatistics
 import dragons.vr.initVr
 import dragons.vulkan.destroy.destroyVulkanDevice
@@ -36,9 +38,12 @@ import java.nio.file.Files
 import kotlin.io.path.absolutePathString
 
 fun main(args: Array<String>) {
+    val profiler = PerformanceProfiler(PerformanceStorage(), 1L)
+
     try {
         // Clear the old logs each time the game is started
         File("logs").deleteRecursively()
+        profiler.start()
 
         val logger = getLogger(ROOT_LOGGER_NAME)
         logger.info("Running with main arguments ${args.contentToString()}")
@@ -130,6 +135,9 @@ fun main(args: Array<String>) {
         getLogger(ROOT_LOGGER_NAME).error("Failed to start", startupProblem)
         showStartupTroubleWindow(startupProblem)
     }
+
+    profiler.stop()
+    profiler.storage.dump(File("performance.log"), 3, 0.1)
 }
 
 fun debugBuildProcess(process: Process): Int {
