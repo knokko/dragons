@@ -141,7 +141,7 @@ class StandardMainMenu: MainMenuManager {
                     val rawPointOnRay = rightHandAimMatrix.translate(0f, 0f, -1f, Matrix4f()).getTranslation(Vector3f())
                     val rayDirection = rawPointOnRay.sub(rawRayStart, Vector3f())
                     val rayStart = currentState.position + Position.meters(rawRayStart) + Position.meters(eyeMatrices.averageVirtualEyePosition)
-                    val rayHit = realm.raytrace(rayStart, rayDirection, Distance.meters(150))
+                    val rayHit = realm.raytrace(rayStart, rayDirection, Distance.meters(150), playerEntity.id)
                     if (rayHit != null) {
                         println("Ray hit at ${rayHit.second} and player position is ${currentState.position}")
                         println("And rayStart is $rayStart and real eye position is ${printVector(eyeMatrices.averageRealEyePosition)}")

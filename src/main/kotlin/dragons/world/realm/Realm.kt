@@ -59,7 +59,7 @@ abstract class Realm(
 
     abstract fun queryEntityIDsBetween(bounds: BoundingBox): Collection<UUID>
 
-    fun raytrace(rayStart: Position, direction: Vector3f, distance: Distance): Pair<Any, Position>? {
+    fun raytrace(rayStart: Position, direction: Vector3f, distance: Distance, toExclude: UUID?): Pair<Any, Position>? {
         val unitDirection = direction.normalize(Vector3f())
         if (!unitDirection.isFinite) return null
 
@@ -78,7 +78,7 @@ abstract class Realm(
             if (chunkBounds != null && chunkBounds.intersects(rayBounds)) {
 
                 for ((tileID, tile) in temporaryChunk.tiles) {
-                    if (tile.properties.bounds.intersects(rayBounds)) {
+                    if (tile.id != toExclude && tile.properties.bounds.intersects(rayBounds)) {
                         val rayTileDistance = tile.properties.shape.findRayIntersection(
                             tile.properties.position, rayStart, unitDirection, currentRayLength
                         )
@@ -97,7 +97,7 @@ abstract class Realm(
 
         for (entity in queryEntityIDsBetween(rayBounds).map(this::getTemporaryEntity)) {
             val shape = entity.properties.getShape(entity.state)
-            if (rayBounds.intersects(shape.createBoundingBox(entity.state.position))) {
+            if (entity.id != toExclude && rayBounds.intersects(shape.createBoundingBox(entity.state.position))) {
                 val rayEntityDistance = shape.findRayIntersection(
                     entity.state.position, rayStart, unitDirection, currentRayLength
                 )
