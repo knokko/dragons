@@ -130,33 +130,31 @@ internal fun placeText(
 
     for (charIndex in charsToDraw) {
         val codepoint = orderedChars[charIndex]
-        val glyphShape = font.getGlyphShape(codepoint)
+        font.borrowGlyphShape(codepoint) { glyphShape ->
+            val charHeight = pixelBoundY - pixelMinY
+            val (charWidth, extraAdvance) = charWidths[charIndex]
 
-        val charHeight = pixelBoundY - pixelMinY
-        val (charWidth, extraAdvance) = charWidths[charIndex]
+            currentPixelMinX += extraAdvance
 
-        currentPixelMinX += extraAdvance
+            val currentPixelBoundX = currentPixelMinX + charWidth
 
-        val currentPixelBoundX = currentPixelMinX + charWidth
+            val currentDrawMinX = currentPixelMinX.toFloat() / viewportWidth.toFloat()
+            val currentDrawMaxX = currentPixelBoundX.toFloat() / viewportWidth.toFloat()
 
-        val currentDrawMinX = currentPixelMinX.toFloat() / viewportWidth.toFloat()
-        val currentDrawMaxX = currentPixelBoundX.toFloat() / viewportWidth.toFloat()
-
-        if (glyphShape.ttfVertices != null) {
-            placedCharacters.add(PlacedCharacter(
-                codepoint = codepoint,
-                pixelWidth = charWidth,
-                pixelHeight = charHeight,
-                shouldMirror = shouldMirror[charIndex],
-                minX = currentDrawMinX,
-                minY = finalMinY,
-                maxX = currentDrawMaxX,
-                maxY = finalMaxY
-            ))
+            if (glyphShape.ttfVertices != null) {
+                placedCharacters.add(PlacedCharacter(
+                    codepoint = codepoint,
+                    pixelWidth = charWidth,
+                    pixelHeight = charHeight,
+                    shouldMirror = shouldMirror[charIndex],
+                    minX = currentDrawMinX,
+                    minY = finalMinY,
+                    maxX = currentDrawMaxX,
+                    maxY = finalMaxY
+                ))
+            }
+            currentPixelMinX = currentPixelBoundX
         }
-        currentPixelMinX = currentPixelBoundX
-
-        glyphShape.destroy()
     }
 
     return placedCharacters

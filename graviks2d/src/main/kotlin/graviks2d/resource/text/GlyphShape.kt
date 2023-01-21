@@ -7,8 +7,7 @@ import org.lwjgl.stb.STBTruetype.stbtt_FreeShape
 internal class GlyphShape(
     private val fontInfo: STBTTFontinfo,
     val ttfVertices: STBTTVertex.Buffer?,
-    val advanceWidth: Int,
-    val leftSideBearing: Int
+    val advanceWidth: Int
 ) {
     fun destroy() {
         if (this.ttfVertices != null) {

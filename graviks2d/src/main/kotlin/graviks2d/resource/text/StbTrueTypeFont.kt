@@ -21,7 +21,11 @@ class StbTrueTypeFont(ttfInput: InputStream, closeTtfInput: Boolean) {
     val descent: Int
     val lineGap: Int
 
-    private val codepointToGlyph = mutableMapOf<Int, Int>()
+    private val codepointToGlyph = IntCache(size = 300, numSlotsPerIndex = 5, numLocks = 50)
+
+    private val extraAdvanceCache = IntPairCache(size = 20_000, numSlotsPerIndex = 10, numLocks = 500)
+    private val advanceWidthCache = IntCache(size = 300, numSlotsPerIndex = 5, numLocks = 50)
+    private val glyphShapeCache = GlyphCache(size = 600, numSlotsPerIndex = 5, numLocks = 150)
 
     init {
         val ttfArray = ttfInput.readAllBytes()
@@ -51,13 +55,12 @@ class StbTrueTypeFont(ttfInput: InputStream, closeTtfInput: Boolean) {
     }
 
     internal fun getExtraAdvance(previousCodepoint: Int, nextCodepoint: Int): Int {
-        return stbtt_GetGlyphKernAdvance(this.fontInfo, this.getGlyph(previousCodepoint), this.getGlyph(nextCodepoint))
+        return extraAdvanceCache.getOrPut(previousCodepoint, nextCodepoint) {
+            stbtt_GetGlyphKernAdvance(this.fontInfo, this.getGlyph(previousCodepoint), this.getGlyph(nextCodepoint))
+        }
     }
 
-    private fun getGlyph(codepoint: Int): Int {
-        val cachedGlyph = this.codepointToGlyph[codepoint]
-        if (cachedGlyph != null) return cachedGlyph
-
+    private fun getGlyph(codepoint: Int): Int = this.codepointToGlyph.getOrPut(codepoint) {
         var glyph = stbtt_FindGlyphIndex(this.fontInfo, codepoint)
 
         // If this codepoint is not supported, use the '?' character as a fallback
@@ -65,37 +68,34 @@ class StbTrueTypeFont(ttfInput: InputStream, closeTtfInput: Boolean) {
             if (codepoint == '?'.code) throw IllegalStateException("Font doesn't have a glyph for '?'")
             glyph = this.getGlyph('?'.code)
         }
-
-        this.codepointToGlyph[codepoint] = glyph
-        return glyph
+        glyph
     }
 
     internal fun getAdvanceWidth(codepoint: Int): Int {
-        val glyph = this.getGlyph(codepoint)
+        return advanceWidthCache.getOrPut(codepoint) {
+            val glyph = this.getGlyph(codepoint)
 
-        return stackPush().use { stack ->
-            val pAdvanceWidth = stack.callocInt(1)
-            val pLeftSideBearing = stack.callocInt(1)
-            stbtt_GetGlyphHMetrics(this.fontInfo, glyph, pAdvanceWidth, pLeftSideBearing)
-            pAdvanceWidth[0]
+            stackPush().use { stack ->
+                val pAdvanceWidth = stack.mallocInt(1)
+                val pLeftSideBearing = stack.mallocInt(1)
+                stbtt_GetGlyphHMetrics(this.fontInfo, glyph, pAdvanceWidth, pLeftSideBearing)
+                pAdvanceWidth[0]
+            }
         }
     }
 
-    internal fun getGlyphShape(codepoint: Int): GlyphShape {
-        val glyph = this.getGlyph(codepoint)
+    internal fun borrowGlyphShape(codepoint: Int, useGlyph: (GlyphShape) -> Unit) {
+        glyphShapeCache.borrow(codepoint, {
+            val glyph = this.getGlyph(codepoint)
+            val shape = stbtt_GetGlyphShape(this.fontInfo, glyph)
+            val advanceWidth = this.getAdvanceWidth(codepoint)
 
-        val shape = stbtt_GetGlyphShape(this.fontInfo, glyph)
-        val (advanceWidth, leftSideBearing) = stackPush().use { stack ->
-            val pAdvanceWidth = stack.callocInt(1)
-            val pLeftSideBearing = stack.callocInt(1)
-            stbtt_GetGlyphHMetrics(this.fontInfo, glyph, pAdvanceWidth, pLeftSideBearing)
-            Pair(pAdvanceWidth[0], pLeftSideBearing[0])
-        }
-
-        return GlyphShape(this.fontInfo, shape, advanceWidth, leftSideBearing)
+            GlyphShape(this.fontInfo, shape, advanceWidth)
+        }, useGlyph)
     }
 
     fun destroy() {
+        this.glyphShapeCache.destroy()
         this.fontInfo.free()
         memFree(this.rawTtfBuffer)
     }
