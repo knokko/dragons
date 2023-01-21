@@ -18,6 +18,9 @@ internal class ContextCommands(
 
     private var hasDrawnBefore = false
 
+    private var isStillRecording = false
+    private var hasPendingSubmission = false
+
     init {
         stackPush().use { stack ->
 
@@ -62,6 +65,10 @@ internal class ContextCommands(
 
     private fun resetBeginCommandBuffer(stack: MemoryStack) {
 
+        if (isStillRecording) throw IllegalStateException("Already recording commands")
+
+        if (hasPendingSubmission) throw IllegalStateException("Can't reset command buffer with pending submission")
+
         assertSuccess(
             vkResetCommandPool(this.context.instance.device, this.commandPool, 0),
             "vkResetCommandPool"
@@ -75,9 +82,14 @@ internal class ContextCommands(
             vkBeginCommandBuffer(this.commandBuffer, biCommandBuffer),
             "vkBeginCommandBuffer"
         )
+
+        isStillRecording = true
     }
 
-    private fun endSubmitWaitCommandBuffer(stack: MemoryStack, signalSemaphore: Long?, submissionMarker: CompletableDeferred<Unit>?) {
+    private fun endSubmitCommandBuffer(stack: MemoryStack, signalSemaphore: Long?, submissionMarker: CompletableDeferred<Unit>?) {
+
+        if (!isStillRecording) throw IllegalStateException("No commands are recorded")
+
         assertSuccess(
             vkEndCommandBuffer(this.commandBuffer), "vkEndCommandBuffer"
         )
@@ -99,6 +111,13 @@ internal class ContextCommands(
         )
 
         submissionMarker?.complete(Unit)
+        isStillRecording = false
+        hasPendingSubmission = true
+    }
+
+    internal fun awaitPendingSubmission(stack: MemoryStack) {
+
+        if (!hasPendingSubmission) throw IllegalStateException("There is no pending submission to await")
 
         // If this simple command can't complete within this timeout, something is wrong
         val timeout = 10_000_000_000L
@@ -110,6 +129,13 @@ internal class ContextCommands(
             vkResetFences(this.context.instance.device, stack.longs(this.fence)),
             "vkResetFences"
         )
+
+        hasPendingSubmission = false
+    }
+
+    private fun endSubmitWaitCommandBuffer(stack: MemoryStack, signalSemaphore: Long?, submissionMarker: CompletableDeferred<Unit>?) {
+        endSubmitCommandBuffer(stack, signalSemaphore, submissionMarker)
+        awaitPendingSubmission(stack)
     }
 
     private fun initImageLayouts() {
@@ -224,11 +250,16 @@ internal class ContextCommands(
         destImage: Long?, destBuffer: Long?, destImageFormat: Int?,
         signalSemaphore: Long?, submissionMarker: CompletableDeferred<Unit>?,
         originalImageLayout: Int?, imageSrcAccessMask: Int?, imageSrcStageMask: Int?,
-        finalImageLayout: Int?, imageDstAccessMask: Int?, imageDstStageMask: Int?
+        finalImageLayout: Int?, imageDstAccessMask: Int?, imageDstStageMask: Int?,
+        shouldAwaitCompletion: Boolean
     ) {
 
         stackPush().use { stack ->
-            resetBeginCommandBuffer(stack)
+            if (hasPendingSubmission) throw IllegalStateException("Still has pending submission")
+
+            if (!isStillRecording) {
+                resetBeginCommandBuffer(stack)
+            }
 
             transitionColorImageLayout(
                 stack, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -337,11 +368,15 @@ internal class ContextCommands(
                 VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
             )
 
-            endSubmitWaitCommandBuffer(stack, signalSemaphore, submissionMarker)
+            if (shouldAwaitCompletion) {
+                endSubmitWaitCommandBuffer(stack, signalSemaphore, submissionMarker)
+            } else {
+                endSubmitCommandBuffer(stack, signalSemaphore, submissionMarker)
+            }
         }
     }
 
-    fun draw(drawCommands: List<DrawCommand>) {
+    fun draw(drawCommands: List<DrawCommand>, endSubmitAndWait: Boolean) {
         stackPush().use { stack ->
 
             if (hasDrawnBefore) {
@@ -433,11 +468,16 @@ internal class ContextCommands(
                 vkCmdEndRenderPass(this.commandBuffer)
             }
 
-            endSubmitWaitCommandBuffer(stack, null, null)
+            if (endSubmitAndWait) {
+                endSubmitWaitCommandBuffer(stack, null, null)
+            }
         }
     }
 
     fun destroy() {
+        if (isStillRecording && hasDrawnBefore) throw IllegalStateException("Can't destroy ContextCommands while commands are being recorded")
+        if (hasPendingSubmission) stackPush().use { stack -> awaitPendingSubmission(stack) }
+
         vkDestroyCommandPool(context.instance.device, this.commandPool, null)
         vkDestroyFence(context.instance.device, this.fence, null)
     }

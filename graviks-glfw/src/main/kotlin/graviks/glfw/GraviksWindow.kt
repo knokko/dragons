@@ -168,7 +168,9 @@ class GraviksWindow(
                 originalImageLayout = VK_IMAGE_LAYOUT_UNDEFINED, finalImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                 imageSrcAccessMask = 0, imageSrcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                 // There is no need to give proper destinations masks since vkQueuePresentKHR takes care of that
-                imageDstAccessMask = 0, imageDstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT
+                imageDstAccessMask = 0, imageDstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                // TODO Test this
+                shouldAwaitCompletion = false
             )
 
             val presentInfo = VkPresentInfoKHR.calloc(stack)

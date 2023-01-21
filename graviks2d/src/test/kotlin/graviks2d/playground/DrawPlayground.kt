@@ -186,7 +186,7 @@ fun main() {
             infoStyle.createChild(strokeColor = infoStyle.fillColor), backgroundColor
         )
         val time2 = System.currentTimeMillis()
-        graviks.copyColorImageTo(destImage = null, destBuffer = testBuffer, destImageFormat = null)
+        graviks.copyColorImageTo(destImage = null, destBuffer = testBuffer, destImageFormat = null, shouldAwaitCompletion = true)
         val time3 = System.currentTimeMillis()
         println("Took ${time2 - time1} ms and ${time3 - time2} ms")
         testHostImage.saveToDisk(File("test1.png"))

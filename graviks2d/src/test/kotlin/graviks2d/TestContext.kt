@@ -165,7 +165,7 @@ class TestContext {
             val testHostBuffer = memByteBuffer(testAllocationInfo.pMappedData(), context.width * context.height * 4)
 
             test({ context.copyColorImageTo(
-                destImage = null, destBuffer = testBuffer, destImageFormat = null
+                destImage = null, destBuffer = testBuffer, destImageFormat = null, shouldAwaitCompletion = true
             )}, HostImage(context.width, context.height, testHostBuffer, flipY))
 
             vmaDestroyBuffer(vmaAllocator, testBuffer, testAllocation)
@@ -698,7 +698,8 @@ class TestContext {
                 destImage = destImage, destBuffer = null, destImageFormat = VK_FORMAT_B8G8R8A8_UNORM,
                 originalImageLayout = VK_IMAGE_LAYOUT_UNDEFINED, finalImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 imageSrcAccessMask = 0, imageSrcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                imageDstAccessMask = VK_ACCESS_TRANSFER_READ_BIT, imageDstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT
+                imageDstAccessMask = VK_ACCESS_TRANSFER_READ_BIT, imageDstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                shouldAwaitCompletion = true
             )
 
             val ciDestBuffer = VkBufferCreateInfo.calloc(stack)

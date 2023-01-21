@@ -11,6 +11,7 @@ import org.lwjgl.vulkan.VK10.VK_MAKE_VERSION
 import org.lwjgl.vulkan.VK10.VK_NULL_HANDLE
 import java.lang.System.currentTimeMillis
 import java.lang.Thread.sleep
+import java.util.*
 
 fun main() {
     val window = GraviksWindow(
@@ -25,10 +26,23 @@ fun main() {
 
     fun drawFunction() {
         val graviks = window.graviksContext
+        val rng = Random()
         if (graviks != null) {
-            println("draw a frame")
             graviks.fillRect(0f, 0f, 0.5f, 0.5f, Color.rgbInt(255, 0, 0))
             graviks.fillRect(0.1f, 0.1f, 0.6f, 0.6f, Color.rgbInt(200, 200, 0))
+
+            val textStyle = TextStyle(
+                fillColor = Color.rgbInt(0, 0, 0), font = null
+            )
+            val backgroundColor = Color.rgbInt(250, 250, 250)
+            for (x in arrayOf(0f, 0.3f, 0.6f, 0.9f)) {
+                for (counter in 0 until 100) {
+                    graviks.drawString(
+                        x, 0.99f - counter * 0.01f, 1f, 1f - counter * 0.01f,
+                        "The random numbers are ${rng.nextLong()} and ${rng.nextLong()}", textStyle, backgroundColor
+                    )
+                }
+            }
         }
     }
 
@@ -78,11 +92,8 @@ fun main() {
     }
 
     glfwSetCharCallback(window.windowHandle) { _, charCode ->
-        val startTime = currentTimeMillis()
         typedString += String(Character.toChars(charCode))
         drawTypedString()
-        val endTime = currentTimeMillis()
-        println("Took ${endTime - startTime} ms")
     }
 
     glfwSetKeyCallback(window.windowHandle) { _, keyCode, _, action, _ ->

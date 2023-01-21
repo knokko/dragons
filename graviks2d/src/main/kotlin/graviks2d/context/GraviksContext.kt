@@ -16,6 +16,7 @@ import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
+import org.lwjgl.system.MemoryStack.stackPush
 import java.lang.IllegalStateException
 import java.lang.Integer.min
 import kotlin.math.roundToInt
@@ -136,6 +137,7 @@ class GraviksContext(
 
     private val queuedDrawCommands: MutableList<DrawCommand> = mutableListOf()
     private var clearDepthBeforeNextDrawCommand = false
+    private var hasPendingCommand = false
 
     init {
         // TODO Add support for more translucent policies
@@ -160,6 +162,8 @@ class GraviksContext(
     private fun encodeFloat(value: Float) = (1_000_000.toFloat() * value).roundToInt()
 
     private fun claimSpace(numVertices: Int, numOperationValues: Int): ContextSpaceClaim {
+        handlePendingCommand()
+
         var (operationIndex, didOperationFlush) = this.claimNextOperationIndex(numOperationValues)
         var depth = this.claimNextDepth()
 
@@ -191,7 +195,7 @@ class GraviksContext(
             )
         }
         if (this.currentVertexIndex + numVertices > this.buffers.vertexBufferSize) {
-            this.hardFlush()
+            this.hardFlush(true)
             didHardFlush = true
             // hardFlush() should set currentVertexIndex to 0
         }
@@ -209,7 +213,7 @@ class GraviksContext(
             )
         }
         if (this.currentOperationIndex + numIntValues > this.buffers.operationBufferSize) {
-            this.hardFlush()
+            this.hardFlush(true)
             didHardFlush = true
             // hardFlush() should set currentOperationIndex to 0
         }
@@ -252,7 +256,7 @@ class GraviksContext(
         this.currentVertexIndex = firstVertexIndex
     }
 
-    private fun hardFlush() {
+    private fun hardFlush(block: Boolean) {
         if (currentVertexIndex < 0) {
             throw IllegalStateException("Current vertex index ($currentVertexIndex) must be non-negative")
         }
@@ -271,17 +275,29 @@ class GraviksContext(
                 }
                 descriptors.updateDescriptors(imageViewsArray)
             }
-            commands.draw(queuedDrawCommands)
-            for (borrowedImage in currentImages.keys) {
-                instance.imageCache.returnImage(borrowedImage)
-            }
-            currentImages.clear()
+            commands.draw(queuedDrawCommands, endSubmitAndWait = block)
+            if (block) returnImages()
             queuedDrawCommands.clear()
         }
 
         currentVertexIndex = 0
         currentOperationIndex = 0
         textShapeCache.clear()
+    }
+
+    private fun returnImages() {
+        for (borrowedImage in currentImages.keys) {
+            instance.imageCache.returnImage(borrowedImage)
+        }
+        currentImages.clear()
+    }
+
+    private fun handlePendingCommand() {
+        if (hasPendingCommand) {
+            stackPush().use { stack -> commands.awaitPendingSubmission(stack) }
+            returnImages()
+            hasPendingCommand = false
+        }
     }
 
     private fun pushRect(
@@ -362,7 +378,7 @@ class GraviksContext(
         var imageIndex = this.currentImages[borrowedImage]
         if (imageIndex == null) {
             if (this.currentImages.size >= this.instance.maxNumDescriptorImages) {
-                this.hardFlush()
+                this.hardFlush(true)
             }
             imageIndex = this.currentImages.size
             this.currentImages[borrowedImage] = imageIndex
@@ -404,92 +420,90 @@ class GraviksContext(
         val font = this.instance.fontManager.getFont(style.font)
         val placedChars = placeText(minX, yBottom, maxX, yTop, string, style, font, this.width, this.height)
         for (placedChar in placedChars) {
-            val glyphShape = font.getGlyphShape(placedChar.codepoint)
-
-            val maxAntiAliasFactor = min(
-                this.textShapeCache.width / placedChar.pixelWidth,
-                this.textShapeCache.height / placedChar.pixelHeight
-            )
-            val antiAliasFactor = min(if (placedChar.pixelHeight < 15) {
-                4
-            } else if (placedChar.pixelHeight < 200) {
-                2
-            } else {
-                1
-            }, maxAntiAliasFactor)
-
-            val cachedWidth = placedChar.pixelWidth * antiAliasFactor
-            val cachedHeight = placedChar.pixelHeight * antiAliasFactor
-            if (glyphShape.ttfVertices != null) {
-
-                var textCacheArea = this.textShapeCache.prepareCharacter(
-                    placedChar.codepoint, font.ascent, font.descent,
-                    glyphShape, cachedWidth, cachedHeight
+            font.borrowGlyphShape(placedChar.codepoint) { glyphShape ->
+                val maxAntiAliasFactor = min(
+                    this.textShapeCache.width / placedChar.pixelWidth,
+                    this.textShapeCache.height / placedChar.pixelHeight
                 )
-                if (textCacheArea == null) {
-                    this.hardFlush()
-                    textCacheArea = this.textShapeCache.prepareCharacter(
+                val antiAliasFactor = min(if (placedChar.pixelHeight < 15) {
+                    4
+                } else if (placedChar.pixelHeight < 200) {
+                    2
+                } else {
+                    1
+                }, maxAntiAliasFactor)
+
+                val cachedWidth = placedChar.pixelWidth * antiAliasFactor
+                val cachedHeight = placedChar.pixelHeight * antiAliasFactor
+                if (glyphShape.ttfVertices != null) {
+
+                    var textCacheArea = this.textShapeCache.prepareCharacter(
                         placedChar.codepoint, font.ascent, font.descent,
                         glyphShape, cachedWidth, cachedHeight
                     )
                     if (textCacheArea == null) {
-                        throw IllegalArgumentException("Can't draw character with codepoint ${placedChar.codepoint}, not even after a hard flush")
+                        this.hardFlush(true)
+                        textCacheArea = this.textShapeCache.prepareCharacter(
+                            placedChar.codepoint, font.ascent, font.descent,
+                            glyphShape, cachedWidth, cachedHeight
+                        )
+                        if (textCacheArea == null) {
+                            throw IllegalArgumentException("Can't draw character with codepoint ${placedChar.codepoint}, not even after a hard flush")
+                        }
                     }
-                }
 
-                val strokeDeltaY = (yTop - yBottom) * style.strokeHeightFraction
-                val strokeDeltaX = strokeDeltaY * this.textShapeCache.height.toFloat() / this.textShapeCache.width.toFloat()
+                    val strokeDeltaY = (yTop - yBottom) * style.strokeHeightFraction
+                    val strokeDeltaX = strokeDeltaY * this.textShapeCache.height.toFloat() / this.textShapeCache.width.toFloat()
 
-                if (placedChar.shouldMirror) {
-                    textCacheArea = TextCacheArea(
-                        minX = textCacheArea.maxX,
-                        minY = textCacheArea.minY,
-                        maxX = textCacheArea.minX,
-                        maxY = textCacheArea.maxY
-                    )
-                }
-
-                val operationSize = 8
-                val claimedBufferSpace = this.claimSpace(numVertices = 6, numOperationValues = 4 * operationSize)
-                if (claimedBufferSpace.didHardFlush) {
-                    textCacheArea = this.textShapeCache.prepareCharacter(
-                        placedChar.codepoint, font.ascent, font.descent,
-                        glyphShape, cachedWidth, cachedHeight
-                    )
-                    if (textCacheArea == null) {
-                        throw IllegalArgumentException("Can't draw character with codepoint ${placedChar.codepoint} after a hard flush")
+                    if (placedChar.shouldMirror) {
+                        textCacheArea = TextCacheArea(
+                            minX = textCacheArea.maxX,
+                            minY = textCacheArea.minY,
+                            maxX = textCacheArea.minX,
+                            maxY = textCacheArea.maxY
+                        )
                     }
-                }
 
-                this.pushRect(
-                    placedChar.minX, placedChar.minY, placedChar.maxX, placedChar.maxY,
-                    claimedBufferSpace.vertexIndex, claimedBufferSpace.depth,
-                    claimedBufferSpace.operationIndex, claimedBufferSpace.operationIndex + operationSize,
-                    claimedBufferSpace.operationIndex + 2 * operationSize,
-                    claimedBufferSpace.operationIndex + 3 * operationSize
-                )
+                    val operationSize = 8
+                    val claimedBufferSpace = this.claimSpace(numVertices = 6, numOperationValues = 4 * operationSize)
+                    if (claimedBufferSpace.didHardFlush) {
+                        textCacheArea = this.textShapeCache.prepareCharacter(
+                            placedChar.codepoint, font.ascent, font.descent,
+                            glyphShape, cachedWidth, cachedHeight
+                        )
+                        if (textCacheArea == null) {
+                            throw IllegalArgumentException("Can't draw character with codepoint ${placedChar.codepoint} after a hard flush")
+                        }
+                    }
+
+                    this.pushRect(
+                        placedChar.minX, placedChar.minY, placedChar.maxX, placedChar.maxY,
+                        claimedBufferSpace.vertexIndex, claimedBufferSpace.depth,
+                        claimedBufferSpace.operationIndex, claimedBufferSpace.operationIndex + operationSize,
+                        claimedBufferSpace.operationIndex + 2 * operationSize,
+                        claimedBufferSpace.operationIndex + 3 * operationSize
+                    )
 
 
-                this.buffers.operationCpuBuffer.run {
-                    for ((startOperationIndex, texX, texY) in arrayOf(
-                        Triple(claimedBufferSpace.operationIndex, textCacheArea.minX, textCacheArea.minY),
-                        Triple(claimedBufferSpace.operationIndex + operationSize, textCacheArea.maxX, textCacheArea.minY),
-                        Triple(claimedBufferSpace.operationIndex + 2 * operationSize, textCacheArea.maxX, textCacheArea.maxY),
-                        Triple(claimedBufferSpace.operationIndex + 3 * operationSize, textCacheArea.minX, textCacheArea.maxY)
-                    )) {
-                        this.put(startOperationIndex, OP_CODE_DRAW_TEXT)
-                        this.put(startOperationIndex + 1, encodeFloat(texX))
-                        this.put(startOperationIndex + 2, encodeFloat(texY))
-                        this.put(startOperationIndex + 3, style.fillColor.rawValue)
-                        this.put(startOperationIndex + 4, backgroundColor.rawValue)
-                        this.put(startOperationIndex + 5, style.strokeColor.rawValue)
-                        this.put(startOperationIndex + 6, encodeFloat(strokeDeltaX))
-                        this.put(startOperationIndex + 7, encodeFloat(strokeDeltaY))
+                    this.buffers.operationCpuBuffer.run {
+                        for ((startOperationIndex, texX, texY) in arrayOf(
+                            Triple(claimedBufferSpace.operationIndex, textCacheArea.minX, textCacheArea.minY),
+                            Triple(claimedBufferSpace.operationIndex + operationSize, textCacheArea.maxX, textCacheArea.minY),
+                            Triple(claimedBufferSpace.operationIndex + 2 * operationSize, textCacheArea.maxX, textCacheArea.maxY),
+                            Triple(claimedBufferSpace.operationIndex + 3 * operationSize, textCacheArea.minX, textCacheArea.maxY)
+                        )) {
+                            this.put(startOperationIndex, OP_CODE_DRAW_TEXT)
+                            this.put(startOperationIndex + 1, encodeFloat(texX))
+                            this.put(startOperationIndex + 2, encodeFloat(texY))
+                            this.put(startOperationIndex + 3, style.fillColor.rawValue)
+                            this.put(startOperationIndex + 4, backgroundColor.rawValue)
+                            this.put(startOperationIndex + 5, style.strokeColor.rawValue)
+                            this.put(startOperationIndex + 6, encodeFloat(strokeDeltaX))
+                            this.put(startOperationIndex + 7, encodeFloat(strokeDeltaY))
+                        }
                     }
                 }
             }
-
-            glyphShape.destroy()
         }
     }
 
@@ -526,16 +540,21 @@ class GraviksContext(
         signalSemaphore: Long? = null, submissionMarker: CompletableDeferred<Unit>? = null,
         originalImageLayout: Int? = null, finalImageLayout: Int? = null,
         imageSrcAccessMask: Int? = null, imageSrcStageMask: Int? = null,
-        imageDstAccessMask: Int? = null, imageDstStageMask: Int? = null
+        imageDstAccessMask: Int? = null, imageDstStageMask: Int? = null,
+        shouldAwaitCompletion: Boolean
     ) {
-        hardFlush()
+        handlePendingCommand()
+        hardFlush(false)
         commands.copyColorImageTo(
             destImage = destImage, destBuffer = destBuffer, destImageFormat = destImageFormat,
             signalSemaphore = signalSemaphore, submissionMarker = submissionMarker,
             originalImageLayout = originalImageLayout, finalImageLayout = finalImageLayout,
             imageSrcAccessMask = imageSrcAccessMask, imageSrcStageMask = imageSrcStageMask,
-            imageDstAccessMask = imageDstAccessMask, imageDstStageMask = imageDstStageMask
+            imageDstAccessMask = imageDstAccessMask, imageDstStageMask = imageDstStageMask,
+            shouldAwaitCompletion = shouldAwaitCompletion
         )
+        hasPendingCommand = !shouldAwaitCompletion
+        if (shouldAwaitCompletion) returnImages()
     }
 
     fun destroy() {

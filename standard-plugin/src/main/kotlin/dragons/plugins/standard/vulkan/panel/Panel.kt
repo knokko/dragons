@@ -13,7 +13,8 @@ class Panel(
     val image: VulkanImage
 ) {
     private val graviks = GraviksContext(
-        instance = graviksInstance, width = this.width, height = this.height, translucentPolicy = TranslucentPolicy.Manual
+        instance = graviksInstance, width = this.width, height = this.height,
+        translucentPolicy = TranslucentPolicy.Manual, vertexBufferSize = 50_000, operationBufferSize = 250_000
     )
 
     val width: Int
@@ -51,7 +52,7 @@ class Panel(
                 finalImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 imageSrcAccessMask = VK_ACCESS_SHADER_READ_BIT, imageSrcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 imageDstAccessMask = VK_ACCESS_SHADER_READ_BIT, imageDstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                signalSemaphore = signalSemaphore, submissionMarker = submissionMarker
+                signalSemaphore = signalSemaphore, submissionMarker = submissionMarker, shouldAwaitCompletion = false
             )
         }
     }
