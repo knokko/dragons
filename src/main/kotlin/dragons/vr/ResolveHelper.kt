@@ -359,8 +359,8 @@ class ResolveHelper(
                     Triple(this.rightResolveImages[rightResolveIndex], rightScreenshotHostBuffer, "Right")
                 )) {
                     val screenshot = BufferedImage(resolvedImage.width, resolvedImage.height, TYPE_INT_ARGB)
-                    for (x in 0 until resolvedImage.width) {
-                        for (y in 0 until resolvedImage.height) {
+                    for (y in 0 until resolvedImage.height) {
+                        for (x in 0 until resolvedImage.width) {
                             val bufferIndex = 4 * (x + y * resolvedImage.width)
                             val red = screenshotHostBuffer[bufferIndex].toInt() and 0xFF
                             val green = screenshotHostBuffer[bufferIndex + 1].toInt() and 0xFF

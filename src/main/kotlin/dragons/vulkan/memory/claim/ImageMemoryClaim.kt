@@ -72,8 +72,8 @@ fun prefillBufferedImage(
             throw IllegalArgumentException("bytesPerPixel ($bytesPerPixel) must be a number between 1 and 4")
         }
 
-        for (x in 0 until width) {
-            for (y in 0 until height) {
+        for (y in 0 until height) {
+            for (x in 0 until width) {
                 val destIndex = bytesPerPixel * (x + width * y)
                 val sourceColor = Color(sourceImage.getRGB(x, y))
 
