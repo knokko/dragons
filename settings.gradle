@@ -1,2 +1,2 @@
 rootProject.name = 'dragons'
-include 'standard-plugin', 'debug-plugin', 'test-plugins', 'test-plugins:simple', 'test-plugins:twin-a', 'test-plugins:twin-b', 'graviks2d', 'gruviks', 'graviks-glfw', 'gruviks-glfw'
+include 'standard-plugin', 'debug-plugin', 'test-plugins', 'test-plugins:simple', 'test-plugins:twin-a', 'test-plugins:twin-b', 'graviks2d', 'gruviks', 'graviks-glfw', 'gruviks-glfw', 'fixie'

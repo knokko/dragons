@@ -100,6 +100,10 @@ project(':standard-plugin') {
     }
 }
 
+project(':fixie') {
+    // No dependencies yet I guess
+}
+
 project(':graviks2d') {
     dependencies {
         implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
