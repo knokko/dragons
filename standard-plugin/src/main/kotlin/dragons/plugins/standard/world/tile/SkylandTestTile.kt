@@ -9,9 +9,9 @@ import dragons.plugins.standard.vulkan.render.tile.TileRendererFactory
 import dragons.plugins.standard.vulkan.util.claimColorImage
 import dragons.plugins.standard.vulkan.util.claimHeightImage
 import dragons.plugins.standard.vulkan.util.claimVertexAndIndexBuffer
-import dragons.space.Distance
-import dragons.space.Position
-import dragons.space.shape.CylinderShape
+import dragons.geometry.Distance
+import dragons.geometry.Position
+import dragons.geometry.shape.CylinderShape
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
 import dragons.world.tile.SmallTile
@@ -37,7 +37,7 @@ class SkylandTestTile(position: Position): TileProperties(position, SHAPE) {
         override fun render(renderer: StandardSceneRenderer, tile: SmallTile, cameraPosition: Position) {
             val renderPosition = tile.properties.position - cameraPosition
             val transformationMatrix = Matrix4f()
-                .translate(renderPosition.x.meters, renderPosition.y.meters, renderPosition.z.meters)
+                .translate(renderPosition.x.meters.toFloat(), renderPosition.y.meters.toFloat(), renderPosition.z.meters.toFloat())
                 .scale(10f)
             renderer.drawTile(vertices, indices, arrayOf(transformationMatrix))
         }

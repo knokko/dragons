@@ -1,14 +1,14 @@
 package dragons.plugins.standard.vulkan.render.entity
 
+import dragons.geometry.*
+import dragons.geometry.Vector
 import dragons.plugin.PluginManager
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
-import dragons.space.BoundingBox
-import dragons.space.Distance
-import dragons.space.Position
 import dragons.world.entity.EntityProperties
 import dragons.world.realm.Realm
 import org.lwjgl.vulkan.VkDevice
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.reflect.KClass
 
 class EntityRenderManager(
@@ -30,10 +30,12 @@ class EntityRenderManager(
 
     fun renderEntities(sceneRenderer: StandardSceneRenderer, realm: Realm, cameraPosition: Position) {
         val renderDistance = Distance.meters(100)
-        val renderDistanceVector = Position(renderDistance, renderDistance, renderDistance)
-        this.chosenEntities = realm.queryEntityIDsBetween(BoundingBox(
+        val renderDistanceVector = Vector(renderDistance, renderDistance, renderDistance)
+        this.chosenEntities = realm.queryEntityIDsBetween(
+            BoundingBox(
             cameraPosition - renderDistanceVector, cameraPosition + renderDistanceVector
-        ))
+        )
+        )
 
         for (id in this.chosenEntities!!) {
 

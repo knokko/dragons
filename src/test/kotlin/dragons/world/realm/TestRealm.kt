@@ -1,8 +1,8 @@
 package dragons.world.realm
 
-import dragons.space.Distance
-import dragons.space.Position
-import dragons.space.shape.CylinderShape
+import dragons.geometry.Distance
+import dragons.geometry.Position
+import dragons.geometry.shape.CylinderShape
 import dragons.world.entity.EntityProperties
 import dragons.world.entity.EntityState
 import dragons.world.tile.TileProperties
@@ -86,7 +86,7 @@ class TestRealm {
 }
 
 private class TestTile(position: Position, halfHeight: Int, radius: Int): TileProperties(
-    position, CylinderShape(halfHeight = Distance.Companion.meters(halfHeight), radius = Distance.meters(radius))
+    position, CylinderShape(halfHeight = Distance.meters(halfHeight), radius = Distance.meters(radius))
 ) {
     override fun getPersistentClassID() = "TestRealm:TestTile"
 }

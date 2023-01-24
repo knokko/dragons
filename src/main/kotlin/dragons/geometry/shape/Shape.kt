@@ -1,8 +1,8 @@
-package dragons.space.shape
+package dragons.geometry.shape
 
-import dragons.space.BoundingBox
-import dragons.space.Distance
-import dragons.space.Position
+import dragons.geometry.BoundingBox
+import dragons.geometry.Distance
+import dragons.geometry.Position
 import org.joml.Vector3f
 
 sealed class Shape {

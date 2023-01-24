@@ -1,8 +1,8 @@
 package dragons.plugins.standard.vulkan.model.generator
 
 import dragons.plugins.standard.vulkan.vertex.BasicVertex.Companion.MATERIAL_TERRAIN
-import dragons.space.Angle
-import dragons.space.Distance
+import dragons.geometry.Angle
+import dragons.geometry.Distance
 import org.joml.Math.*
 import org.joml.Vector3f
 
@@ -41,9 +41,9 @@ private fun createFlowerStem(matrixIndex: Int, props: FlowerModelProperties): Mo
                     val currentHeight = props.stemLength * verticalProgress
                     val currentVertex = vertexBuffer[horizontalIndex + props.numHorizontalStemParts * verticalIndex]
 
-                    currentVertex.position.x = currentX.meters
-                    currentVertex.position.y = currentHeight.meters
-                    currentVertex.position.z = currentZ.meters
+                    currentVertex.position.x = currentX.meters.toFloat()
+                    currentVertex.position.y = currentHeight.meters.toFloat()
+                    currentVertex.position.z = currentZ.meters.toFloat()
 
                     currentVertex.normal.x = normalX
                     currentVertex.normal.y = 0f
@@ -51,8 +51,8 @@ private fun createFlowerStem(matrixIndex: Int, props: FlowerModelProperties): Mo
 
                     currentVertex.matrixIndex = matrixIndex
                     currentVertex.materialIndex = MATERIAL_TERRAIN
-                    currentVertex.deltaFactor.x = deltaFactorX
-                    currentVertex.deltaFactor.y = deltaFactorY
+                    currentVertex.deltaFactor.x = deltaFactorX.toFloat()
+                    currentVertex.deltaFactor.y = deltaFactorY.toFloat()
 
                     currentVertex.colorTextureCoordinates.x = horizontalProgress
                     currentVertex.colorTextureCoordinates.y = verticalProgress
@@ -143,7 +143,7 @@ fun leafRingTopShape(
                 // The center vertex
                 vertexBuffer[indexOffset].run {
                     position.x = 0f
-                    position.y = (props.stemLength + innerDepth * scaleY).meters
+                    position.y = (props.stemLength + innerDepth * scaleY).meters.toFloat()
                     position.z = 0f
 
                     normal.x = 0f
@@ -158,9 +158,9 @@ fun leafRingTopShape(
                 for (rawIndex in 0 until numInnerRingVertices) {
                     val angle = Angle.degrees(360f * rawIndex.toFloat() / numInnerRingVertices.toFloat())
                     vertexBuffer[indexOffset + rawIndex + 1].run {
-                        position.x = angle.sin * innerRadius.meters
-                        position.y = (props.stemLength + innerDepth * scaleY).meters
-                        position.z = angle.cos * innerRadius.meters
+                        position.x = angle.sin * innerRadius.meters.toFloat()
+                        position.y = (props.stemLength + innerDepth * scaleY).meters.toFloat()
+                        position.z = angle.cos * innerRadius.meters.toFloat()
 
                         normal.x = 0f
                         normal.y = scaleY
@@ -185,9 +185,9 @@ fun leafRingTopShape(
 
                     val horizontalAngle = Angle.degrees(360f * leafIndex.toFloat() / ring.numLeafs.toFloat())
 
-                    val baseX = horizontalAngle.sin * innerRadius.meters
-                    val baseY = props.stemLength.meters
-                    val baseZ = horizontalAngle.cos * innerRadius.meters
+                    val baseX = horizontalAngle.sin * innerRadius.meters.toFloat()
+                    val baseY = props.stemLength.meters.toFloat()
+                    val baseZ = horizontalAngle.cos * innerRadius.meters.toFloat()
                     val base = Vector3f(baseX, baseY, baseZ)
 
                     val flatLengthDirectionX = horizontalAngle.sin
@@ -213,12 +213,12 @@ fun leafRingTopShape(
 
                     fun addVertex(internalIndex: Int, lengthFactor: Float, positiveWidth: Boolean, positiveDepth: Boolean) {
                         val positiveWidthFactor = if (positiveWidth) 1f else -1f
-                        val halfWidth = leafWidthFunction(lengthFactor).meters * positiveWidthFactor
+                        val halfWidth = leafWidthFunction(lengthFactor).meters.toFloat() * positiveWidthFactor
 
                         val positiveDepthFactor = if (positiveDepth) 1f else -1f
-                        val halfDepth = leafDepthFunction(lengthFactor).meters * positiveDepthFactor
+                        val halfDepth = leafDepthFunction(lengthFactor).meters.toFloat() * positiveDepthFactor
 
-                        val length = lengthFactor * leafLength.meters
+                        val length = lengthFactor * leafLength.meters.toFloat()
 
                         vertexBuffer[firstLeafVertexIndex + internalIndex].run {
                             val positionVector = Vector3f(base)
@@ -271,8 +271,8 @@ fun leafRingTopShape(
             for (vertex in vertexBuffer) {
                 vertex.matrixIndex = matrixIndex
                 vertex.materialIndex = MATERIAL_TERRAIN
-                vertex.deltaFactor.x = deltaFactor
-                vertex.deltaFactor.y = deltaFactor
+                vertex.deltaFactor.x = deltaFactor.toFloat()
+                vertex.deltaFactor.y = deltaFactor.toFloat()
                 vertex.heightTextureCoordinates.x = vertex.colorTextureCoordinates.x
                 vertex.heightTextureCoordinates.y = vertex.colorTextureCoordinates.y
                 vertex.colorTextureIndex = colorImageIndices[1]
@@ -424,7 +424,7 @@ fun circleTopShape(
 
             // Some values are shared between all vertices
             for (vertex in vertexBuffer) {
-                vertex.position.y = props.stemLength.meters
+                vertex.position.y = props.stemLength.meters.toFloat()
 
                 vertex.normal.x = 0f
                 vertex.normal.y = 1f
@@ -433,8 +433,8 @@ fun circleTopShape(
                 vertex.matrixIndex = matrixIndex
                 vertex.materialIndex = MATERIAL_TERRAIN
 
-                vertex.deltaFactor.x = 2f * radius.meters
-                vertex.deltaFactor.y = 2f * radius.meters
+                vertex.deltaFactor.x = 2f * radius.meters.toFloat()
+                vertex.deltaFactor.y = 2f * radius.meters.toFloat()
 
                 vertex.colorTextureIndex = colorImageIndices[1]
                 vertex.heightTextureIndex = heightImageIndices[1]
@@ -458,8 +458,8 @@ fun circleTopShape(
                 val textureZ = 0.5f + angle.cos * 0.5f
 
                 vertexBuffer[1 + ringIndex].run {
-                    position.x = angle.sin * radius.meters
-                    position.z = angle.cos * radius.meters
+                    position.x = angle.sin * radius.meters.toFloat()
+                    position.z = angle.cos * radius.meters.toFloat()
 
                     colorTextureCoordinates.x = textureX
                     colorTextureCoordinates.y = textureZ

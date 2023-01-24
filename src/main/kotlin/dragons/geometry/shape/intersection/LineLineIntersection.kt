@@ -1,6 +1,7 @@
-package dragons.space.shape
+package dragons.geometry.shape.intersection
 
-import dragons.space.Distance
+import dragons.geometry.Coordinate
+import dragons.geometry.Distance
 import org.joml.Vector2f
 import kotlin.math.absoluteValue
 
@@ -16,8 +17,8 @@ import kotlin.math.absoluteValue
  * completely.
  */
 fun determineLineLineIntersection(
-    x1: Distance, y1: Distance, direction1: Vector2f,
-    x2: Distance, y2: Distance, direction2: Vector2f
+    x1: Coordinate, y1: Coordinate, direction1: Vector2f,
+    x2: Coordinate, y2: Coordinate, direction2: Vector2f
 ): Distance? {
     /*
      * Mathematics:

@@ -1,6 +1,6 @@
 package dragons.world.realm
 
-import dragons.space.BoundingBox
+import dragons.geometry.BoundingBox
 import dragons.world.chunk.ChunkLocation
 
 internal fun getPotentiallyIntersectingChunks(bounds: BoundingBox): Array<ChunkLocation> {

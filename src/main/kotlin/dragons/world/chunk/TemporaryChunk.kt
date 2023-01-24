@@ -1,8 +1,8 @@
 package dragons.world.chunk
 
-import dragons.space.BoundingBox
-import dragons.space.Distance
-import dragons.space.Position
+import dragons.geometry.BoundingBox
+import dragons.geometry.Coordinate
+import dragons.geometry.Position
 import dragons.world.tile.TemporaryTile
 import java.util.*
 
@@ -23,19 +23,19 @@ internal class TemporaryChunk {
     }
 
     fun updateBounds() {
-        var newMinX: Distance? = null
-        var newMinY: Distance? = null
-        var newMinZ: Distance? = null
+        var newMinX: Coordinate? = null
+        var newMinY: Coordinate? = null
+        var newMinZ: Coordinate? = null
 
-        fun updateMin(current: Distance?, candidate: Distance): Distance {
+        fun updateMin(current: Coordinate?, candidate: Coordinate): Coordinate {
             return if (current == null || current > candidate) candidate else current
         }
 
-        var newMaxX: Distance? = null
-        var newMaxY: Distance? = null
-        var newMaxZ: Distance? = null
+        var newMaxX: Coordinate? = null
+        var newMaxY: Coordinate? = null
+        var newMaxZ: Coordinate? = null
 
-        fun updateMax(current: Distance?, candidate: Distance): Distance {
+        fun updateMax(current: Coordinate?, candidate: Coordinate): Coordinate {
             return if (current == null || current < candidate) candidate else current
         }
 

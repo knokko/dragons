@@ -1,6 +1,6 @@
 package dragons.vr.openxr
 
-import dragons.space.Angle
+import dragons.geometry.Angle
 import dragons.vr.controls.DragonControls
 import org.joml.Quaternionf
 import org.joml.Vector2f

@@ -1,6 +1,6 @@
 package dragons.world.entity
 
-import dragons.space.shape.Shape
+import dragons.geometry.shape.Shape
 
 /**
  * Represents immutable properties of an `Entity`

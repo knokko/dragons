@@ -6,7 +6,7 @@ import dragons.plugins.standard.vulkan.render.entity.EntityMesh
 import dragons.plugins.standard.vulkan.render.entity.EntityRenderManager
 import dragons.plugins.standard.vulkan.render.entity.StandardEntityRenderer
 import dragons.plugins.standard.vulkan.render.tile.StandardTileRenderer
-import dragons.space.Position
+import dragons.geometry.Position
 import dragons.state.StaticGameState
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.world.realm.Realm

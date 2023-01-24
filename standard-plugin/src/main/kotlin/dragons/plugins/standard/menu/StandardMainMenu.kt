@@ -5,11 +5,11 @@ import dragons.plugin.interfaces.menu.MainMenuManager
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.plugins.standard.world.entity.MainMenuPlayerEntity
-import dragons.plugins.standard.world.entity.SkylandTestEntity
 import dragons.state.StaticGameState
-import dragons.space.Angle
-import dragons.space.Distance
-import dragons.space.Position
+import dragons.geometry.Angle
+import dragons.geometry.Distance
+import dragons.geometry.Position
+import dragons.geometry.Vector
 import dragons.util.PerformanceStatistics
 import dragons.util.printVector
 import dragons.vulkan.util.assertVkSuccess
@@ -96,7 +96,7 @@ class StandardMainMenu: MainMenuManager {
                     dy += 0.1f
                 }
 
-                currentPosition += Position.meters(dx, dy, dz)
+                currentPosition += Vector.meters(dx, dy, dz)
 
                 // Work around to let the user choose when to end the game
                 if (currentMovement.length() > 0f) {
@@ -106,7 +106,7 @@ class StandardMainMenu: MainMenuManager {
                     numIterationsLeft = 1
                 }
 
-                val averageEyePosition = Position.meters(eyeMatrices.averageVirtualEyePosition) + currentPosition
+                val averageEyePosition = Vector.meters(eyeMatrices.averageVirtualEyePosition) + currentPosition
 
                 val currentState = playerEntity.copyState() as MainMenuPlayerEntity.State
                 currentState.position = currentPosition
@@ -140,7 +140,7 @@ class StandardMainMenu: MainMenuManager {
                     val rawRayStart = rightHandAimMatrix.translate(0f, 0f, -0.1f, Matrix4f()).getTranslation(Vector3f())
                     val rawPointOnRay = rightHandAimMatrix.translate(0f, 0f, -1f, Matrix4f()).getTranslation(Vector3f())
                     val rayDirection = rawPointOnRay.sub(rawRayStart, Vector3f())
-                    val rayStart = currentState.position + Position.meters(rawRayStart) + Position.meters(eyeMatrices.averageVirtualEyePosition)
+                    val rayStart = currentState.position + Vector.meters(rawRayStart) + Vector.meters(eyeMatrices.averageVirtualEyePosition)
                     val rayHit = realm.raytrace(rayStart, rayDirection, Distance.meters(150), playerEntity.id)
                     if (rayHit != null) {
                         println("Ray hit at ${rayHit.second} and player position is ${currentState.position}")

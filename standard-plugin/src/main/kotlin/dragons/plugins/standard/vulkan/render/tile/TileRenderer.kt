@@ -2,7 +2,7 @@ package dragons.plugins.standard.vulkan.render.tile
 
 import dragons.plugin.interfaces.PluginInterface
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
-import dragons.space.Position
+import dragons.geometry.Position
 import dragons.world.tile.SmallTile
 import dragons.world.tile.TileProperties
 import org.lwjgl.vulkan.VkDevice

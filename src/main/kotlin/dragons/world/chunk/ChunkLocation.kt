@@ -1,15 +1,15 @@
 package dragons.world.chunk
 
-import dragons.space.Position
+import dragons.geometry.Position
 import java.lang.Math.floorDiv
 
 class ChunkLocation(
     val chunkX: Int, val chunkY: Int, val chunkZ: Int
 ) {
     constructor(position: Position) : this(
-        floorDiv(position.x.nanoMetersInt, Chunk.SIZE.nanoMetersInt).toInt(),
-        floorDiv(position.y.nanoMetersInt, Chunk.SIZE.nanoMetersInt).toInt(),
-        floorDiv(position.z.nanoMetersInt, Chunk.SIZE.nanoMetersInt).toInt()
+        floorDiv(position.x.rawValue.raw, Chunk.SIZE.rawValue.raw).toInt(),
+        floorDiv(position.y.rawValue.raw, Chunk.SIZE.rawValue.raw).toInt(),
+        floorDiv(position.z.rawValue.raw, Chunk.SIZE.rawValue.raw).toInt()
     )
 
     override fun equals(other: Any?) = other is ChunkLocation

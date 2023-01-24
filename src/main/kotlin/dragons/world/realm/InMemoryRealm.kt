@@ -1,9 +1,6 @@
 package dragons.world.realm
 
-import dragons.space.BoundingBox
-import dragons.space.Position
-import dragons.util.max
-import dragons.util.min
+import dragons.geometry.BoundingBox
 import dragons.world.chunk.ChunkLocation
 import dragons.world.chunk.TemporaryChunk
 import dragons.world.entity.Entity

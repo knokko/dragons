@@ -1,17 +1,16 @@
-package dragons.space.shape
+package dragons.geometry.shape
 
-import dragons.space.BoundingBox
-import dragons.space.Distance
-import dragons.space.Position
+import dragons.geometry.*
+import dragons.geometry.shape.intersection.determineLineCircleIntersections
 import org.joml.Vector2f
 import org.joml.Vector3f
 
 class CylinderShape(val halfHeight: Distance, val radius: Distance): Shape() {
 
-    override fun createBoundingBox(ownPosition: Position) = BoundingBox(
-        Position(ownPosition.x - radius, ownPosition.y - halfHeight, ownPosition.z - radius),
-        Position(ownPosition.x + radius, ownPosition.y + halfHeight, ownPosition.z + radius)
-    )
+    override fun createBoundingBox(ownPosition: Position): BoundingBox {
+        val sizeVector = Vector(radius, halfHeight, radius)
+        return BoundingBox(ownPosition - sizeVector, ownPosition + sizeVector)
+    }
 
     override fun findRayIntersection(
         ownPosition: Position, rayStart: Position, unitDirection: Vector3f, rayLength: Distance
@@ -22,11 +21,11 @@ class CylinderShape(val halfHeight: Distance, val radius: Distance): Shape() {
         ) ?: return null
 
         // If the ray goes in the opposite direction or the intersection is too far away, we should return null
-        if (secondIntersectionDistance.meters < 0f || firstIntersectionDistance > rayLength) return null
+        if (secondIntersectionDistance < Distance.ZERO || firstIntersectionDistance > rayLength) return null
 
         // If the first intersection distance is negative and the second is positive, the ray starts inside this
         // cylinder (if we ignore the Y coordinate)
-        if (firstIntersectionDistance.meters < 0f) firstIntersectionDistance = Distance.meters(0)
+        if (firstIntersectionDistance < Distance.ZERO) firstIntersectionDistance = Distance.ZERO
 
         val firstY = rayStart.y + firstIntersectionDistance * unitDirection.y
         val secondY = rayStart.y + secondIntersectionDistance * unitDirection.y

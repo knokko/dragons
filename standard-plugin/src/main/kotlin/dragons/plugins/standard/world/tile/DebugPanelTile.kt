@@ -9,10 +9,10 @@ import dragons.plugins.standard.vulkan.render.tile.TileRendererClaims
 import dragons.plugins.standard.vulkan.render.tile.TileRendererFactory
 import dragons.plugins.standard.vulkan.util.claimHeightImage
 import dragons.plugins.standard.vulkan.util.claimVertexAndIndexBuffer
-import dragons.space.Angle
-import dragons.space.Distance
-import dragons.space.Position
-import dragons.space.shape.VerticalPlaneShape
+import dragons.geometry.Angle
+import dragons.geometry.Distance
+import dragons.geometry.Position
+import dragons.geometry.shape.VerticalPlaneShape
 import dragons.util.PerformanceStatistics
 import dragons.util.getStandardOutputHistory
 import dragons.vulkan.memory.VulkanBufferRange
@@ -65,7 +65,7 @@ class DebugPanelTile(
             val renderPosition = properties.position - cameraPosition
 
             val transformationMatrix = Matrix4f()
-                .translate(renderPosition.x.meters, renderPosition.y.meters, renderPosition.z.meters)
+                .translate(renderPosition.x.meters.toFloat(), renderPosition.y.meters.toFloat(), renderPosition.z.meters.toFloat())
                 .rotateY(properties.rotation.radians).scale(scaleX, scaleY, 1f)
 
             renderer.drawTile(vertices, indices, arrayOf(transformationMatrix))

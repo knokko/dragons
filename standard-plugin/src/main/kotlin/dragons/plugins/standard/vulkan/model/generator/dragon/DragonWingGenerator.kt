@@ -4,7 +4,7 @@ import dragons.plugins.standard.vulkan.model.generator.ModelGenerator
 import dragons.plugins.standard.vulkan.model.generator.putQuad
 import dragons.plugins.standard.vulkan.model.generator.putTriangle
 import dragons.plugins.standard.vulkan.vertex.BasicVertex
-import dragons.space.Distance
+import dragons.geometry.Distance
 import org.joml.Math.sqrt
 import kotlin.math.absoluteValue
 
@@ -87,22 +87,22 @@ private fun generateNail(props: DragonWingProperties, matrixIndices: List<Int>, 
 
             // The end vertices also have the same Y-position, Z-position, and U-coordinate, but different normals
             for (vertexIndex in arrayOf(indexEndBack, indexEndFront)) {
-                vertices[vertexIndex].position.y = props.nailWidth.meters * relativeIndexY
-                vertices[vertexIndex].position.z = -props.nailLength.meters
+                vertices[vertexIndex].position.y = (props.nailWidth.meters * relativeIndexY).toFloat()
+                vertices[vertexIndex].position.z = -props.nailLength.meters.toFloat()
                 vertices[vertexIndex].colorTextureCoordinates.x = DragonTextures.Wing.Nail.maxU
                 vertices[vertexIndex].heightTextureCoordinates.x = DragonTextures.Wing.Nail.maxU
             }
 
             // The down vertices share the same Y-position and V-coordinate
             for (vertexIndex in arrayOf(indexBaseFrontDown, indexBaseBackDown)) {
-                vertices[vertexIndex].position.y = (props.nailWidth * (relativeIndexY - 0.5f)).meters
+                vertices[vertexIndex].position.y = (props.nailWidth * (relativeIndexY - 0.5f)).meters.toFloat()
                 vertices[vertexIndex].colorTextureCoordinates.y = DragonTextures.Wing.Nail.minV
                 vertices[vertexIndex].heightTextureCoordinates.y = DragonTextures.Wing.Nail.minV
             }
 
             // The up vertices also share the same Y-position and V-coordinate
             for (vertexIndex in arrayOf(indexBaseFrontUp, indexBaseBackUp)) {
-                vertices[vertexIndex].position.y = (props.nailWidth * (relativeIndexY + 0.5f)).meters
+                vertices[vertexIndex].position.y = (props.nailWidth * (relativeIndexY + 0.5f)).meters.toFloat()
                 vertices[vertexIndex].colorTextureCoordinates.y = DragonTextures.Wing.Nail.maxV
                 vertices[vertexIndex].heightTextureCoordinates.y = DragonTextures.Wing.Nail.maxV
             }
@@ -110,7 +110,7 @@ private fun generateNail(props: DragonWingProperties, matrixIndices: List<Int>, 
             // The front vertices share X-position and normal
             for (vertexIndex in arrayOf(indexBaseFrontDown, indexBaseFrontUp, indexEndFront)) {
                 vertices[vertexIndex].run {
-                    position.x = props.wingDepth.meters * 0.5f
+                    position.x = props.wingDepth.meters.toFloat() * 0.5f
                     normal.x = 1f
                     normal.y = 0f
                     normal.z = 0f
@@ -121,17 +121,17 @@ private fun generateNail(props: DragonWingProperties, matrixIndices: List<Int>, 
 
             // The back vertices are more complicated...
             vertices[indexBaseBackDown].run {
-                position.x = -props.wingDepth.meters * 0.5f
+                position.x = -props.wingDepth.meters.toFloat() * 0.5f
                 normal.x = -halfSq2
                 normal.y = -halfSq2
             }
             vertices[indexBaseBackUp].run {
-                position.x = -props.wingDepth.meters * 0.5f
+                position.x = -props.wingDepth.meters.toFloat() * 0.5f
                 normal.x = -halfSq2
                 normal.y = halfSq2
             }
             vertices[indexEndBack].run {
-                position.x = props.wingDepth.meters * 0.5f
+                position.x = props.wingDepth.meters.toFloat() * 0.5f
                 normal.x = -halfSq2
                 normal.y = 0f
                 normal.z = -halfSq2
@@ -206,7 +206,7 @@ private fun generateWingSides(props: DragonWingProperties, matrixIndices: List<I
                 indexInnerB0, indexInnerB1, indexInnerC0, indexInnerC1, indexInnerC2,
                 indexInnerD1, indexInnerD2, indexInnerD3, indexInnerD4
             )) {
-                vertices[index].position.x = (props.wingDepth * 0.5f).meters
+                vertices[index].position.x = (props.wingDepth * 0.5f).meters.toFloat()
                 vertices[index].colorTextureCoordinates.y = texture.maxV
                 vertices[index].heightTextureCoordinates.y = texture.maxV
             }
@@ -215,7 +215,7 @@ private fun generateWingSides(props: DragonWingProperties, matrixIndices: List<I
                 indexOuterB0, indexOuterB1, indexOuterC0, indexOuterC1, indexOuterC2,
                 indexOuterD1, indexOuterD2, indexOuterD3, indexOuterD4
             )) {
-                vertices[index].position.x = -(props.wingDepth * 0.5f).meters
+                vertices[index].position.x = -(props.wingDepth * 0.5f).meters.toFloat()
                 vertices[index].colorTextureCoordinates.y = texture.minV
                 vertices[index].heightTextureCoordinates.y = texture.minV
             }
@@ -225,22 +225,22 @@ private fun generateWingSides(props: DragonWingProperties, matrixIndices: List<I
                 indexInnerA0, indexOuterA0, indexInnerA1, indexOuterA1,
                 indexInnerA2, indexOuterA2, indexInnerA3, indexOuterA3, indexInnerA4, indexOuterA4
             )) {
-                vertices[index].position.y = (props.nailWidth * 1.5f).meters
+                vertices[index].position.y = (props.nailWidth * 1.5f).meters.toFloat()
                 vertices[index].normal.set(0f, 1f, 0f)
             }
             for (index in arrayOf(indexInnerB0, indexOuterB0, indexInnerB1, indexOuterB1)) {
-                vertices[index].position.y = -(props.nailWidth * 1.5f).meters
+                vertices[index].position.y = -(props.nailWidth * 1.5f).meters.toFloat()
                 vertices[index].normal.set(0f, -1f, 0f)
             }
             for (index in arrayOf(indexInnerC0, indexOuterC0, indexInnerC1, indexOuterC1, indexInnerC2, indexOuterC2)) {
-                vertices[index].position.y = (-props.nailWidth * 1.5f - props.wingLaneWidth).meters
+                vertices[index].position.y = (-props.nailWidth * 1.5f - props.wingLaneWidth).meters.toFloat()
                 vertices[index].normal.set(0f, -1f, 0f)
             }
             for (index in arrayOf(
                 indexInnerD1, indexOuterD1, indexInnerD2, indexOuterD2,
                 indexInnerD3, indexOuterD3, indexInnerD4, indexOuterD4
             )) {
-                vertices[index].position.y = (-props.nailWidth * 1.5f - props.wingLaneWidth * 2).meters
+                vertices[index].position.y = (-props.nailWidth * 1.5f - props.wingLaneWidth * 2).meters.toFloat()
                 vertices[index].normal.set(0f, -1f, 0f)
             }
 
@@ -318,7 +318,7 @@ private fun generateOuterWing(props: DragonWingProperties, matrixIndices: List<I
             innerGenerator.fillVertexBuffer(vertices, colorImageIndices, heightImageIndices)
 
             for (vertex in vertices) {
-                vertex.position.x = outerX
+                vertex.position.x = outerX.toFloat()
                 vertex.normal.x = -1f
                 // TODO Perhaps add height textures to dragon wing
                 vertex.colorTextureCoordinates.x += offsetU1
@@ -375,7 +375,7 @@ private fun generateInnerWing(props: DragonWingProperties, matrixIndices: List<I
 
             // To avoid code duplication, set all common vertex attributes first
             for (vertex in vertices) {
-                vertex.position.x = x.meters
+                vertex.position.x = x.meters.toFloat()
                 // The z-coordinates will be controlled by the transformation matrix
                 vertex.position.z = 0f
                 vertex.normal.x = 1f
@@ -401,8 +401,8 @@ private fun generateInnerWing(props: DragonWingProperties, matrixIndices: List<I
             fun populateRowVertices(indices: Array<Int>, y: Distance, distanceV: Distance) {
                 for (index in indices) {
                     vertices[index].run {
-                        position.y = y.meters
-                        colorTextureCoordinates.y = texture.minV + dv * (distanceV / totalWidth)
+                        position.y = y.meters.toFloat()
+                        colorTextureCoordinates.y = texture.minV + dv * (distanceV / totalWidth).toFloat()
                     }
                 }
             }
@@ -416,7 +416,7 @@ private fun generateInnerWing(props: DragonWingProperties, matrixIndices: List<I
             fun populateColumnVertices(indices: Array<Int>, distanceU: Distance, indirectMatrixIndex: Int) {
                 for (index in indices) {
                     vertices[index].run {
-                        colorTextureCoordinates.x = texture.minU + du * (distanceU / totalLength)
+                        colorTextureCoordinates.x = texture.minU + du * (distanceU / totalLength).toFloat()
                         matrixIndex = matrixIndices[indirectMatrixIndex]
                     }
                 }

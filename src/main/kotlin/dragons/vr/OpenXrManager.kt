@@ -2,8 +2,8 @@ package dragons.vr
 
 import dragons.init.GameInitProperties
 import dragons.state.StaticGraphicsState
-import dragons.space.Angle
-import dragons.space.Distance
+import dragons.geometry.Angle
+import dragons.geometry.Distance
 import dragons.vr.controls.DragonControls
 import dragons.vr.openxr.*
 import dragons.vr.openxr.createOpenXrInstance

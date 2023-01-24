@@ -7,7 +7,11 @@ import kotlin.math.roundToLong
 private const val RAW_ONE = 1024L * 1024L * 1024L
 
 @JvmInline
-value class FixNano64 private constructor(internal val raw: Long): Comparable<FixNano64> {
+value class FixNano64 private constructor(val raw: Long): Comparable<FixNano64> {
+
+    fun toInt() = Math.toIntExact(toLong())
+
+    fun toLong() = raw / RAW_ONE
 
     fun toFloat() = toDouble().toFloat()
 
@@ -97,6 +101,7 @@ value class FixNano64 private constructor(internal val raw: Long): Comparable<Fi
          * Unfortunately, I couldn't find a way that avoids BigInteger, so this will be rather slow.
          */
 
+        // TODO Optimize case when this.raw * 2^30 doesn't overflow
         val product = BigInteger.valueOf(this.raw) shl 30
         val bigResult = product / BigInteger.valueOf(other.raw)
         try {
@@ -178,6 +183,7 @@ value class FixNano64 private constructor(internal val raw: Long): Comparable<Fi
         fun fraction(numerator: Int, denominator: Int) = FixNano64(RAW_ONE * numerator / denominator)
 
         fun fraction(numerator: Long, denominator: Long): FixNano64 {
+            // TODO Optimize common case when RAW_ONE * numerator doesn't overflow
             try {
                 return FixNano64(
                     (BigInteger.valueOf(RAW_ONE) * BigInteger.valueOf(numerator) / BigInteger.valueOf(

@@ -1,8 +1,9 @@
 package dragons.world.realm
 
-import dragons.space.BoundingBox
-import dragons.space.Distance
-import dragons.space.Position
+import dragons.geometry.BoundingBox
+import dragons.geometry.Distance
+import dragons.geometry.Position
+import dragons.geometry.Vector
 import dragons.world.chunk.Chunk
 import dragons.world.chunk.ChunkLocation
 import dragons.world.chunk.TemporaryChunk
@@ -14,7 +15,7 @@ import dragons.world.tile.SmallTile
 import dragons.world.tile.TileProperties
 import dragons.world.tile.TileState
 import org.joml.Vector3f
-import java.util.*
+import java.util.UUID
 
 abstract class Realm(
     val id: UUID,
@@ -67,7 +68,7 @@ abstract class Realm(
         var currentChunkLocation: ChunkLocation? = null
         var currentTileID: UUID? = null
 
-        fun createRayBounds() = BoundingBox(rayStart, rayStart + currentRayLength * unitDirection)
+        fun createRayBounds() = BoundingBox(rayStart, rayStart + currentRayLength * Vector.meters(unitDirection))
         var rayBounds = createRayBounds()
 
         val chunkLocations = getPotentiallyIntersectingChunks(rayBounds)
@@ -112,11 +113,11 @@ abstract class Realm(
         }
 
         if (currentTileID != null) {
-            return Pair(getChunk(currentChunkLocation!!).getTile(currentTileID), rayStart + currentRayLength * unitDirection)
+            return Pair(getChunk(currentChunkLocation!!).getTile(currentTileID), rayStart + currentRayLength * Vector.meters(unitDirection))
         }
 
         if (currentEntityID != null) {
-            return Pair(getEntity(currentEntityID), rayStart + currentRayLength * unitDirection)
+            return Pair(getEntity(currentEntityID), rayStart + currentRayLength * Vector.meters(unitDirection))
         }
 
         return null

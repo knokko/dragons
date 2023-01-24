@@ -1,8 +1,9 @@
 package dragons.space.shape
 
-import dragons.space.Angle
-import dragons.space.Distance
-import dragons.space.Position
+import dragons.geometry.Angle
+import dragons.geometry.Distance
+import dragons.geometry.Position
+import dragons.geometry.shape.VerticalPlaneShape
 import org.joml.Math.sqrt
 import org.joml.Vector3f
 import org.junit.jupiter.api.Assertions.assertNull
@@ -19,8 +20,8 @@ class TestVerticalPlaneShape {
             minX: Float, minY: Float, minZ: Float, maxX: Float, maxY: Float, maxZ: Float
         ) {
             val box = planeShape.createBoundingBox(Position.meters(x, y, z))
-            assertTrue(Position.meters(minX, minY, minZ).distanceTo(box.min).milliMeters < 1f)
-            assertTrue(Position.meters(maxX, maxY, maxZ).distanceTo(box.max).milliMeters < 1f)
+            assertTrue(Position.meters(minX, minY, minZ).distanceTo(box.min) < Distance.milliMeters(1))
+            assertTrue(Position.meters(maxX, maxY, maxZ).distanceTo(box.max) < Distance.milliMeters(1))
         }
 
         // Positive X plane
@@ -144,7 +145,7 @@ class TestVerticalPlaneShape {
     }
 
     private fun assertHit(expected: Float, actual: Distance?) {
-        assertTrue((Distance.meters(expected) - actual!!).milliMeters.absoluteValue < 1f)
+        assertTrue((Distance.meters(expected) - actual!!).milliMeters.toFloat().absoluteValue < 1f)
     }
 
     @Test

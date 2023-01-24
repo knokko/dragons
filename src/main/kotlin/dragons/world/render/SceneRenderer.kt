@@ -1,6 +1,6 @@
 package dragons.world.render
 
-import dragons.space.Position
+import dragons.geometry.Position
 import dragons.world.realm.Realm
 import org.joml.Matrix4f
 

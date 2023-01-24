@@ -1,7 +1,7 @@
 package dragons.vr.openxr
 
-import dragons.space.Angle
-import dragons.space.Distance
+import dragons.geometry.Angle
+import dragons.geometry.Distance
 import dragons.vr.CameraMatrices
 import org.joml.Math.*
 import org.joml.Matrix4f
@@ -102,8 +102,8 @@ internal class XrCamera {
             val perEyeResults = (0 until 2).map { eyeIndex ->
                 val fov = pViews[eyeIndex].fov()
 
-                val nearZ = nearPlane.meters
-                val farZ = farPlane.meters
+                val nearZ = nearPlane.meters.toFloat()
+                val farZ = farPlane.meters.toFloat()
                 val projectionMatrix = Matrix4f().scale(1f, -1f, 1f).frustum(
                     tan(fov.angleLeft()) * nearZ, tan(fov.angleRight()) * nearZ,
                     tan(fov.angleDown()) * nearZ, tan(fov.angleUp()) * nearZ,

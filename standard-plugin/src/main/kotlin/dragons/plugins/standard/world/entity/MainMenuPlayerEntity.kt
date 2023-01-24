@@ -5,17 +5,17 @@ import dragons.plugins.standard.vulkan.model.generator.dragon.createDragonWingGe
 import dragons.plugins.standard.vulkan.model.matrices.createDragonWingMatrices
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.plugins.standard.vulkan.render.entity.*
-import dragons.space.Angle
-import dragons.space.Distance
-import dragons.space.Position
-import dragons.space.shape.CylinderShape
+import dragons.geometry.Angle
+import dragons.geometry.Distance
+import dragons.geometry.Position
+import dragons.geometry.shape.CylinderShape
 import dragons.world.entity.Entity
 import dragons.world.entity.EntityProperties
 import dragons.world.entity.EntityState
 import org.joml.Matrix4f
 import org.joml.Vector3f
 
-private val SHAPE = CylinderShape(Distance.Companion.meters(0.9f), Distance.meters(0.25f))
+private val SHAPE = CylinderShape(Distance.meters(0.9f), Distance.meters(0.25f))
 
 class MainMenuPlayerEntity: EntityProperties() {
     override fun getPersistentClassID() = "standard-plugin:MainMenuPlayer"
@@ -77,11 +77,14 @@ class MainMenuPlayerEntity: EntityProperties() {
 
             val rightHandAimMatrix = state.rightHandAimMatrix
             if (rightHandAimMatrix != null) {
-                val forwardPosition = rightHandAimMatrix.translate(0f, 0f, -1f, Matrix4f()).getTranslation(Vector3f())
-                renderer.drawEntity(SkylandTestEntity.Renderer.MESH, arrayOf(Matrix4f().translate(forwardPosition).scale(0.1f)))
-
-                val forwardPosition2 = rightHandAimMatrix.translate(0f, 0f, -5f, Matrix4f()).getTranslation(Vector3f())
-                renderer.drawEntity(SkylandTestEntity.Renderer.MESH, arrayOf(Matrix4f().translate(forwardPosition2).scale(0.1f)))
+                for (counter in 0 until 20) {
+                    val forwardPosition2 =
+                        rightHandAimMatrix.translate(0f, 0f, -0.5f * counter, Matrix4f()).getTranslation(Vector3f())
+                    renderer.drawEntity(
+                        SkylandTestEntity.Renderer.MESH,
+                        arrayOf(Matrix4f().translate(forwardPosition2).scale(0.02f))
+                    )
+                }
             }
         }
 

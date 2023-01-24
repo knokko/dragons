@@ -3,9 +3,9 @@ package dragons.plugins.standard.world.entity
 import dragons.plugins.standard.vulkan.model.generator.generateSkylandModel
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.plugins.standard.vulkan.render.entity.*
-import dragons.space.Distance
-import dragons.space.Position
-import dragons.space.shape.CylinderShape
+import dragons.geometry.Distance
+import dragons.geometry.Position
+import dragons.geometry.shape.CylinderShape
 import dragons.world.entity.Entity
 import dragons.world.entity.EntityProperties
 import dragons.world.entity.EntityState
@@ -25,7 +25,7 @@ class SkylandTestEntity: EntityProperties() {
         override fun render(renderer: StandardSceneRenderer, entity: Entity, cameraPosition: Position) {
             val renderPosition = entity.copyState().position - cameraPosition
             val transformationMatrix = Matrix4f()
-                .translate(renderPosition.x.meters, renderPosition.y.meters, renderPosition.z.meters)
+                .translate(renderPosition.x.meters.toFloat(), renderPosition.y.meters.toFloat(), renderPosition.z.meters.toFloat())
                 .scale(10f)
             renderer.drawEntity(MESH, arrayOf(transformationMatrix))
         }

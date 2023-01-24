@@ -1,7 +1,8 @@
-package dragons.space.shape
+package dragons.geometry.shape.intersection
 
-import dragons.space.Distance
-import org.joml.Math.sqrt
+import dragons.geometry.Area
+import dragons.geometry.Coordinate
+import dragons.geometry.Distance
 import org.joml.Vector2f
 
 /**
@@ -27,7 +28,7 @@ import org.joml.Vector2f
  * don't use the zero vector as direction.)
  */
 fun determineLineCircleIntersections(
-    centerX: Distance, centerY: Distance, radius: Distance, lineX: Distance, lineY: Distance, direction: Vector2f
+    centerX: Coordinate, centerY: Coordinate, radius: Distance, lineX: Coordinate, lineY: Coordinate, direction: Vector2f
 ): Pair<Distance, Distance>? {
     val perpendicularDirection = Vector2f(direction).perpendicular()
     val lineDirectionScale = determineLineLineIntersection(lineX, lineY, direction, centerX, centerY, perpendicularDirection)
@@ -48,8 +49,8 @@ fun determineLineCircleIntersections(
     val closestPointY = lineY + lineDirectionScale * direction.y
 
     val distanceFromCenterToClosestPointSq = run {
-        val dx = (centerX - closestPointX).meters
-        val dy = (centerY - closestPointY).meters
+        val dx = centerX - closestPointX
+        val dy = centerY - closestPointY
         dx * dx + dy * dy
     }
 
@@ -74,11 +75,11 @@ fun determineLineCircleIntersections(
      * b - c = b + c) or a miss.
      */
 
-    val radiusSq = radius.meters * radius.meters
+    val radiusSq = radius * radius
     val distanceFromCircleOutlineToClosestPointSq = radiusSq - distanceFromCenterToClosestPointSq
-    if (distanceFromCircleOutlineToClosestPointSq < 0f) return null
+    if (distanceFromCircleOutlineToClosestPointSq < Area.squareMeters(0)) return null
 
-    val distanceFromCircleOutlineToClosestPoint = Distance.meters(sqrt(distanceFromCircleOutlineToClosestPointSq))
+    val distanceFromCircleOutlineToClosestPoint = distanceFromCircleOutlineToClosestPointSq.squareRoot()
     return Pair(
         (distanceFromLineStartToClosestPoint - distanceFromCircleOutlineToClosestPoint) / direction.length(),
         (distanceFromLineStartToClosestPoint + distanceFromCircleOutlineToClosestPoint) / direction.length()

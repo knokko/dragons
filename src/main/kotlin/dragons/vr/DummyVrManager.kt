@@ -2,8 +2,8 @@ package dragons.vr
 
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.state.StaticGraphicsState
-import dragons.space.Angle
-import dragons.space.Distance
+import dragons.geometry.Angle
+import dragons.geometry.Distance
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim
@@ -101,7 +101,7 @@ class DummyVrManager(
         val projectionMatrix = Matrix4f().scale(1f, -1f, 1f).perspective(
             toRadians(70f),
             getWidth().toFloat() / getHeight().toFloat(),
-            nearPlane.meters, farPlane.meters, true
+            nearPlane.meters.toFloat(), farPlane.meters.toFloat(), true
         )
 
         // Let the camera rotate slowly

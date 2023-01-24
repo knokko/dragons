@@ -1,7 +1,7 @@
 package dragons.world.tile
 
-import dragons.space.Position
-import dragons.space.shape.Shape
+import dragons.geometry.Position
+import dragons.geometry.shape.Shape
 
 /**
  * Represents immutable properties of either a `SmallTile` or a `BigTile`.

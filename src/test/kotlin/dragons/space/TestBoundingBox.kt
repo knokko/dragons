@@ -1,5 +1,7 @@
 package dragons.space
 
+import dragons.geometry.BoundingBox
+import dragons.geometry.Position
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 

@@ -1,6 +1,6 @@
 package dragons.world.entity
 
-import dragons.space.Position
+import dragons.geometry.Position
 
 abstract class EntityState(
     var position: Position

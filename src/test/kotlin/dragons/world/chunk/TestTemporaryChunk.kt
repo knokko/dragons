@@ -1,8 +1,8 @@
 package dragons.world.chunk
 
-import dragons.space.Distance
-import dragons.space.Position
-import dragons.space.shape.CylinderShape
+import dragons.geometry.Distance
+import dragons.geometry.Position
+import dragons.geometry.shape.CylinderShape
 import dragons.world.tile.TemporaryTile
 import dragons.world.tile.TileProperties
 import dragons.world.tile.TileState
@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import java.util.*
 
-val testShape = CylinderShape(halfHeight = Distance.Companion.meters(50), radius = Distance.meters(100))
+val testShape = CylinderShape(halfHeight = Distance.meters(50), radius = Distance.meters(100))
 
 class TestTemporaryChunk {
 

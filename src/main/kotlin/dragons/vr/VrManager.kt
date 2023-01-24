@@ -2,8 +2,8 @@ package dragons.vr
 
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.state.StaticGraphicsState
-import dragons.space.Angle
-import dragons.space.Distance
+import dragons.geometry.Angle
+import dragons.geometry.Distance
 import dragons.vr.controls.DragonControls
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.queue.QueueManager

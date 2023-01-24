@@ -4,8 +4,8 @@ import dragons.init.GameInitProperties
 import dragons.init.trouble.SimpleStartupException
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.state.StaticGraphicsState
-import dragons.space.Angle
-import dragons.space.Distance
+import dragons.geometry.Angle
+import dragons.geometry.Distance
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim
@@ -229,7 +229,10 @@ class OpenVrManager: VrManager {
         val pfTop = stack.callocFloat(1)
         val pfBottom = stack.callocFloat(1)
         VRSystem_GetProjectionRaw(leftOrRight, pfLeft, pfRight, pfTop, pfBottom)
-        val projectionMatrix = composeProjection(pfLeft[0], pfRight[0], pfTop[0], pfBottom[0], nearPlane.meters, farPlane.meters).scale(1f, -1f, 1f)
+        val projectionMatrix = composeProjection(
+            pfLeft[0], pfRight[0], pfTop[0], pfBottom[0],
+            nearPlane.meters.toFloat(), farPlane.meters.toFloat()
+        ).scale(1f, -1f, 1f)
 
         val transformToDeviceMatrix = vrToJomlMatrix(pose.mDeviceToAbsoluteTracking()).rotateY(extraRotationY.radians).invert()
         val deviceToEyeMatrix = vrToJomlMatrix(VRSystem_GetEyeToHeadTransform(leftOrRight, matrixBuffer)).invert()

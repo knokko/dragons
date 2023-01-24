@@ -4,7 +4,7 @@ import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.plugins.standard.vulkan.render.tile.*
 import dragons.plugins.standard.vulkan.render.tile.StandardTileRenderer
-import dragons.space.Position
+import dragons.geometry.Position
 import dragons.state.StaticGameState
 import dragons.vulkan.memory.scope.MemoryScope
 import dragons.world.chunk.ChunkLocation

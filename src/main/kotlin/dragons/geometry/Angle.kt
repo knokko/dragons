@@ -1,7 +1,8 @@
-package dragons.space
+package dragons.geometry
 
 import org.joml.Math.*
 
+// TODO Replace with fixed point angle
 @JvmInline
 value class Angle private constructor(
     /**

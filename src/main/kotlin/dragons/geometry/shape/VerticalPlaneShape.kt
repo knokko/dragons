@@ -1,9 +1,7 @@
-package dragons.space.shape
+package dragons.geometry.shape
 
-import dragons.space.Angle
-import dragons.space.BoundingBox
-import dragons.space.Distance
-import dragons.space.Position
+import dragons.geometry.*
+import dragons.geometry.shape.intersection.determineLineLineIntersection
 import org.joml.Vector2f
 import org.joml.Vector3f
 
@@ -18,7 +16,7 @@ class VerticalPlaneShape(
     override fun createBoundingBox(ownPosition: Position): BoundingBox {
         val sizeX = halfWidth * angle.cos
         val sizeZ = halfWidth * angle.sin
-        val sizeVector = Position(sizeX, halfHeight, sizeZ)
+        val sizeVector = Vector(sizeX, halfHeight, sizeZ)
         return BoundingBox(ownPosition + sizeVector, ownPosition - sizeVector)
     }
 
@@ -37,9 +35,9 @@ class VerticalPlaneShape(
             ?: return null
 
         // If the intersection is behind the ray or too far away, return null
-        if (flatIntersectionDistance < Distance.meters(0) || flatIntersectionDistance > rayLength) return null
+        if (flatIntersectionDistance < Distance.ZERO || flatIntersectionDistance > rayLength) return null
 
-        val intersectionPoint = rayStart + flatIntersectionDistance * unitDirection
+        val intersectionPoint = rayStart + flatIntersectionDistance * Vector.meters(unitDirection)
 
         // If the intersection happens above or below this plane, return null
         if (intersectionPoint.y < ownPosition.y - halfHeight || intersectionPoint.y > ownPosition.y + halfHeight) return null

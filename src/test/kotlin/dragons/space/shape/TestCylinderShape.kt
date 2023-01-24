@@ -1,7 +1,9 @@
 package dragons.space.shape
 
-import dragons.space.Distance
-import dragons.space.Position
+import dragons.geometry.Distance
+import dragons.geometry.Position
+import dragons.geometry.Vector
+import dragons.geometry.shape.CylinderShape
 import org.joml.Math.sqrt
 import org.joml.Vector3f
 import org.junit.jupiter.api.Assertions.*
@@ -74,7 +76,7 @@ class TestCylinderShape {
     }
 
     private fun assertHit(expected: Float, actual: Distance?) {
-        assertTrue((expected - actual!!.meters).absoluteValue < 0.001f)
+        assertTrue((expected - actual!!.meters.toFloat()).absoluteValue < 0.001f)
     }
 
     @Test
@@ -99,7 +101,7 @@ class TestCylinderShape {
 
         // Diagonal line that enters at the bottom and exits at the side
         assertHit(sqrt(2f), cylinder.findRayIntersection(
-            position, position + Position.meters(8, -51, 0),
+            position, position + Vector.meters(8, -51, 0),
             Vector3f(0.5f * sqrt(2f), 0.5f * sqrt(2f), 0f), Distance.meters(100)
         ))
     }
@@ -126,7 +128,7 @@ class TestCylinderShape {
 
         // Diagonal line that enters at the top and exits at the side
         assertHit(sqrt(2f), cylinder.findRayIntersection(
-            position, position + Position.meters(8, 51, 0),
+            position, position + Vector.meters(8, 51, 0),
             Vector3f(0.5f * sqrt(2f), -0.5f * sqrt(2f), 0f), Distance.meters(100)
         ))
     }

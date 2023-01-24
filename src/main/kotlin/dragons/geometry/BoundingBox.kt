@@ -1,4 +1,4 @@
-package dragons.space
+package dragons.geometry
 
 import dragons.util.max
 import dragons.util.min
