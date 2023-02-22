@@ -32,12 +32,12 @@ class RootCursorTracker(
     override fun getAllCursors() = rawEventAdapter.getAllCursors()
 
     override fun getHoveringCursors(): Collection<Cursor> {
-        val lastRenderResult = this.getLastRenderResult() ?: return Collections.emptyList()
+        val drawnRegion = this.getLastRenderResult()?.drawnRegion ?: return Collections.emptyList()
 
         return getAllCursors().filter { cursor ->
             val cursorState = rawEventAdapter.getCursorState(cursor) ?: return@filter false
             val position = cursorState.localPosition
-            lastRenderResult.drawnRegion.isInside(position.x, position.y)
+            drawnRegion.isInside(position.x, position.y)
         }
     }
 

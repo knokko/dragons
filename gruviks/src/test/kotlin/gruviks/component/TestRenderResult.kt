@@ -103,4 +103,26 @@ class TestRenderResult {
         assertFalse(region.isInside(4f, 0.5f))
         assertFalse(region.isWithinBounds(4f, 0.5f))
     }
+
+    @Test
+    fun testTransformedDrawnRegion() {
+        val margin = 0.001f
+        val region = TransformedDrawnRegion(
+            RectangularDrawnRegion(0.1f, 0.5f, 0.9f, 1f),
+            0.5f, 1.5f, 1f, 2f
+        )
+
+        assertEquals(0.55f, region.minX, margin)
+        assertEquals(1.75f, region.minY, margin)
+        assertEquals(0.95f, region.maxX, margin)
+        assertEquals(2f, region.maxY, margin)
+
+        assertTrue(region.isInside(0.56f, 1.76f))
+        assertFalse(region.isInside(0.54f, 1.76f))
+        assertFalse(region.isInside(0.56f, 1.74f))
+
+        assertTrue(region.isInside(0.94f, 1.99f))
+        assertFalse(region.isInside(0.96f, 1.99f))
+        assertFalse(region.isInside(0.94f, 2.01f))
+    }
 }

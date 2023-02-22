@@ -62,7 +62,12 @@ enum class TextAlignment {
     /**
      * The text will be aligned to the right, regardless of the language.
      */
-    Right
+    Right,
+
+    /**
+     * The text will be centered
+     */
+    Centered
 }
 
 enum class TextOverflowPolicy {

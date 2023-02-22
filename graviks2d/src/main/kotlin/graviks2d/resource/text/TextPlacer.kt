@@ -53,23 +53,28 @@ internal fun placeText(
     val pixelAvailableBoundX = (maxX * viewportWidth.toFloat()).roundToInt()
     val availableWidth = pixelAvailableBoundX - pixelAvailableMinX
 
-    val startAtLeft = if (style.alignment == TextAlignment.Left) {
-        true
+    // TODO Add center support
+    val textPosition = if (style.alignment == TextAlignment.Left) {
+        -1
     } else if (style.alignment == TextAlignment.Right) {
-        false
+        1
     } else if (style.alignment == TextAlignment.Natural) {
-        isPrimarilyLeftToRight
+        if (isPrimarilyLeftToRight) -1 else 1
     } else if (style.alignment == TextAlignment.ReversedNatural) {
-        !isPrimarilyLeftToRight
+        if (isPrimarilyLeftToRight) 1 else -1
+    } else if (style.alignment == TextAlignment.Centered) {
+        0
     } else {
         throw UnsupportedOperationException("Unsupported text alignment: ${style.alignment}")
     }
 
     val (pixelUsedMinX, charsToDraw) = if (totalWidth <= availableWidth) {
-        if (startAtLeft) {
+        if (textPosition == -1) {
             Pair(pixelAvailableMinX, orderedChars.indices)
-        } else {
+        } else if (textPosition == 1) {
             Pair(pixelAvailableBoundX - totalWidth, orderedChars.indices)
+        } else {
+            Pair(pixelAvailableMinX + (availableWidth - totalWidth) / 2, orderedChars.indices)
         }
     } else {
         if (style.overflowPolicy == TextOverflowPolicy.Downscale) {
@@ -84,7 +89,7 @@ internal fun placeText(
             charWidths = determineCharWidths(true)
             totalWidth = charWidths.sumOf { it.first + it.second }
 
-            val pixelMinX = if (startAtLeft) { pixelAvailableMinX } else { pixelAvailableBoundX - totalWidth }
+            val pixelMinX = if (textPosition <= 0) { pixelAvailableMinX } else { pixelAvailableBoundX - totalWidth }
             Pair(pixelMinX, orderedChars.indices)
         } else {
             val discardRight = if (style.overflowPolicy == TextOverflowPolicy.DiscardRight) {
@@ -117,10 +122,12 @@ internal fun placeText(
                 orderedChars.size - numCharsToDraw until orderedChars.size
             }
             val reducedWidth = availableWidth - remainingWidth
-            if (startAtLeft) {
+            if (textPosition == -1) {
                 Pair(pixelAvailableMinX, charsToDraw)
-            } else {
+            } else if (textPosition == 1) {
                 Pair(pixelAvailableBoundX - reducedWidth, charsToDraw)
+            } else {
+                Pair(pixelAvailableMinX + reducedWidth / 2, charsToDraw)
             }
         }
     }

@@ -45,7 +45,7 @@ class ColorShuffleComponent : Component() {
             currentColor = Color.rgbInt(0, 0, 200)
             agent.didRequestRender = true
         } else if (event is CursorLeaveEvent) {
-            currentColor = Color.rgbInt(255, 255, 255)
+            currentColor = Color.WHITE
             agent.didRequestRender = true
         } else {
             throw IllegalArgumentException("Unexpected event ${event::class.java}")

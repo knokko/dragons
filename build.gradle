@@ -94,6 +94,7 @@ project(':standard-plugin') {
         compileOnly project(':')
         compileOnly project(':fixie')
         compileOnly project(':graviks2d')
+        implementation project(':gruviks')
 
         testImplementation project(':')
         testImplementation project(':fixie')

@@ -38,7 +38,7 @@ abstract class Component {
      * can override this to improve the performance. This is most useful for big components like menus because
      * a lot of redrawing can be avoided.
      */
-    fun regionsToRedrawBeforeNextRender(): Collection<BackgroundRegion> = listOf(
+    open fun regionsToRedrawBeforeNextRender(): Collection<BackgroundRegion> = listOf(
         BackgroundRegion(0f, 0f, 1f, 1f)
     )
 

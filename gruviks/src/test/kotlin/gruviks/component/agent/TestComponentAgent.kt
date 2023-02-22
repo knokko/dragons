@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.lang.IllegalStateException
+import kotlin.IllegalStateException
 
 class TestComponentAgent {
 
@@ -24,5 +24,18 @@ class TestComponentAgent {
         assertFalse(agent.isSubscribed(CursorMoveEvent::class))
         assertThrows<IllegalStateException> { agent.subscribe(CursorMoveEvent::class) }
         assertFalse(agent.isSubscribed(CursorMoveEvent::class))
+    }
+
+    @Test
+    fun testSubscribeAll() {
+        val agent = ComponentAgent(DummyCursorTracker())
+        assertFalse(agent.isSubscribed(CursorClickEvent::class))
+
+        agent.subscribeToAllEvents()
+        assertTrue(agent.isSubscribed(CursorClickEvent::class))
+
+        agent.forbidFutureSubscriptions()
+        assertTrue(agent.isSubscribed(CursorMoveEvent::class))
+        assertThrows<IllegalStateException> { agent.subscribeToAllEvents() }
     }
 }

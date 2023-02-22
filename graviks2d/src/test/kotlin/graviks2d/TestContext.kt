@@ -243,7 +243,7 @@ class TestContext {
             graviks.fillRect(0.7f, 0.4f, 0.25f, 0.2f, Color.rgbInt(0, 100, 50))
             graviks.fillRect(0.8f, 0.3f, 0.85f, 0.9f, Color.rgbInt(0, 150, 250))
             graviks.fillRect(0f, 0.85f, 0.5f, 0.7f, Color.rgbInt(200, 200, 0))
-            graviks.fillRect(0.95f, 0.85f, 0.3f, 0.9f, Color.rgbInt(0, 0, 0))
+            graviks.fillRect(0.95f, 0.85f, 0.3f, 0.9f, Color.BLACK)
             graviks.fillRect(0.4f, 0.55f, 0.45f, 0.6f, Color.rgbInt(200, 0, 200))
             update()
             assertImageEquals("fillRectangle.png", hostImage)
@@ -322,7 +322,7 @@ class TestContext {
 
     @Test
     fun testDrawImage() {
-        val backgroundColor = Color.rgbInt(255, 255, 255)
+        val backgroundColor = Color.WHITE
         val graviks = GraviksContext(
             this.graviksInstance, 50, 50,
             TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
@@ -350,7 +350,7 @@ class TestContext {
 
     @Test
     fun testDrawString() {
-        val backgroundColor = Color.rgbInt(255, 255, 255)
+        val backgroundColor = Color.WHITE
         val graviks = GraviksContext(
             this.graviksInstance, 300, 600,
             TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
@@ -490,7 +490,7 @@ class TestContext {
 
     @Test
     fun testDrawImageDescriptorManagement() {
-        val backgroundColor = Color.rgbInt(255, 255, 255)
+        val backgroundColor = Color.WHITE
 
         val graviksInstance = GraviksInstance(
             vkInstance, vkPhysicalDevice, vkDevice, vmaAllocator,

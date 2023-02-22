@@ -36,7 +36,6 @@ class TextButton(
 
         val targetAspectRatio = target.getAspectRatio()
         val textAspectRatio = target.getStringAspectRatio(text, textStyle.font)
-        val iconHeightFraction = 0.8f
         val icon = this.icon
         var iconAspectRatio = 0f
 
@@ -46,7 +45,7 @@ class TextButton(
         }
 
         // The width if the height of the button were 1.0
-        val referenceWidth = (1f + textAspectRatio + iconHeightFraction * iconAspectRatio) / targetAspectRatio
+        val referenceWidth = (1f + textAspectRatio + style.iconHeight * iconAspectRatio) / targetAspectRatio
 
         val cornerRadiusY = if (referenceWidth <= 1f) { 0.5f } else { 0.5f / referenceWidth }
         val cornerRadiusX = cornerRadiusY / targetAspectRatio
@@ -58,13 +57,11 @@ class TextButton(
         val borderColor = if (isHovering) { style.hoverBorderColor } else { style.baseBorderColor }
         val backgroundColor = if (isHovering) { style.hoverBackgroundColor } else { style.baseBackgroundColor }
 
-        val normalizedLineWidth = 0.05f
-
         if (backgroundColor.alpha > 0) {
             target.fillRoundedRect(minX, minY, maxX, maxY, cornerRadiusX, backgroundColor)
         }
         if (borderColor.alpha > 0) {
-            target.drawRoundedRect(minX, minY, maxX, maxY, cornerRadiusX, normalizedLineWidth, borderColor)
+            target.drawRoundedRect(minX, minY, maxX, maxY, cornerRadiusX, style.lineWidth, borderColor)
         }
 
         var textMinX = minX + cornerRadiusX
@@ -73,8 +70,8 @@ class TextButton(
         if (icon != null) {
             val deltaY = maxY - minY
             val iconMinX = minX + cornerRadiusX * 0.6f
-            val iconMinY = minY + deltaY * 0.5f * (1f - iconHeightFraction)
-            val iconMaxY = maxY - deltaY * 0.5f * (1f - iconHeightFraction)
+            val iconMinY = minY + deltaY * 0.5f * (1f - style.iconHeight)
+            val iconMaxY = maxY - deltaY * 0.5f * (1f - style.iconHeight)
             val finalIconHeight = iconMaxY - iconMinY
             val iconMaxX = iconMinX + finalIconHeight / targetAspectRatio
             target.drawImage(iconMinX, iconMinY, iconMaxX, iconMaxY, icon)
@@ -85,8 +82,8 @@ class TextButton(
         val dy = maxY - minY
 
         target.drawString(
-            textMinX, minY + dy * normalizedLineWidth * 0.5f,
-            textMaxX, maxY - dy * normalizedLineWidth * 0.5f,
+            textMinX, minY + dy * style.lineWidth * 0.5f,
+            textMaxX, maxY - dy * style.lineWidth * 0.5f,
             text, textStyle, backgroundColor
         )
 

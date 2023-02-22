@@ -12,7 +12,7 @@ class PerformanceProfiler(val storage: PerformanceStorage, private val sleepTime
     private lateinit var ownThread: Thread
     private var shouldStop = false
 
-    internal fun start() {
+    fun start() {
         
         ownThread = Thread {
             var sampleCounter = 0
@@ -46,7 +46,7 @@ class PerformanceProfiler(val storage: PerformanceStorage, private val sleepTime
         }
     }
 
-    internal fun stop() {
+    fun stop() {
         shouldStop = true
         ownThread.join()
     }

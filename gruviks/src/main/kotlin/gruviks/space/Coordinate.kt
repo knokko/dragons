@@ -3,9 +3,9 @@ package gruviks.space
 private const val RAW_ONE = 1_000_000L
 
 @JvmInline
-value class Coordinate private constructor(private val rawValue: Long) {
+value class Coordinate private constructor(private val rawValue: Long) : Comparable<Coordinate> {
 
-    operator fun compareTo(other: Coordinate) = this.rawValue.compareTo(other.rawValue)
+    override operator fun compareTo(other: Coordinate) = this.rawValue.compareTo(other.rawValue)
 
     override fun toString() = String.format("%.3f", this.rawValue.toDouble() / RAW_ONE.toDouble())
 
@@ -22,7 +22,13 @@ value class Coordinate private constructor(private val rawValue: Long) {
 
     operator fun div(right: Long) = Coordinate(divideRounded(this.rawValue, right))
 
+    fun toFloat() = rawValue.toFloat() / RAW_ONE.toFloat()
+
     companion object {
+
+        val ZERO = Coordinate(0L)
+        val SMALLEST_POSITIVE_VALUE = Coordinate(1L)
+
         fun percentage(percentage: Int) = fraction(percentage.toLong(), 100)
 
         fun fraction(numerator: Long, denominator: Long): Coordinate {
@@ -37,5 +43,7 @@ value class Coordinate private constructor(private val rawValue: Long) {
                 Coordinate(divideRounded(numerator * RAW_ONE, denominator))
             }
         }
+
+        fun fromFloat(value: Float) = Coordinate((value * RAW_ONE).toLong())
     }
 }

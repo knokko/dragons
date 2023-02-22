@@ -1,5 +1,7 @@
 package gruviks.space
 
+import gruviks.component.RectangularDrawnRegion
+
 class RectRegion(
     val minX: Coordinate,
     val minY: Coordinate,
@@ -9,6 +11,45 @@ class RectRegion(
     init {
         if (minX > boundX) throw IllegalArgumentException("minX ($minX) can be at most boundX ($boundX)")
         if (minY > boundY) throw IllegalArgumentException("minY ($minY) can be at most boundY ($boundY)")
+    }
+
+    fun overlaps(other: RectRegion) = this.minX < other.boundX && this.minY < other.boundY
+            && other.minX < this.boundX && other.minY < this.boundY
+
+    override fun toString() = "RectRegion($minX, $minY, $boundX, $boundY)"
+
+    // TODO Test precision of this
+    fun transform(x: Float, y: Float) = Pair(
+        minX.toFloat() + x * (boundX - minX).toFloat(),
+        minY.toFloat() + y * (boundY - minY).toFloat()
+    )
+
+    fun transform(point: Point) = transform(point.x.toFloat(), point.y.toFloat())
+
+    fun transform(child: RectRegion): RectangularDrawnRegion {
+        val (transformedMinX, transformedMinY) = this.transform(Point(child.minX, child.minY))
+        val (transformedBoundX, transformedBoundY) = this.transform(Point(child.boundX, child.boundY))
+        return RectangularDrawnRegion(
+            transformedMinX, transformedMinY, transformedBoundX, transformedBoundY
+        )
+    }
+
+    fun transformBack(x: Float, y: Float) = Pair(
+        (x - minX.toFloat()) / (boundX - minX).toFloat(),
+        (y - minY.toFloat()) / (boundY - minY).toFloat()
+    )
+
+    fun transformBack(point: Point) = Pair(
+        (point.x - minX).toFloat() / (boundX - minX).toFloat(),
+        (point.y - minY).toFloat() / (boundY - minY).toFloat()
+    )
+
+    fun transformBack(child: RectRegion): RectangularDrawnRegion {
+        val (transformedMinX, transformedMinY) = this.transformBack(Point(child.minX, child.minY))
+        val (transformedBoundX, transformedBoundY) = this.transformBack(Point(child.boundX, child.boundY))
+        return RectangularDrawnRegion(
+            transformedMinX, transformedMinY, transformedBoundX, transformedBoundY
+        )
     }
 
     companion object {
@@ -24,6 +65,13 @@ class RectRegion(
             Coordinate.fraction(minY, denominator),
             Coordinate.fraction(boundX, denominator),
             Coordinate.fraction(boundY, denominator)
+        )
+
+        fun fromFloat(minX: Float, minY: Float, maxX: Float, maxY: Float) = RectRegion(
+            Coordinate.fromFloat(minX),
+            Coordinate.fromFloat(minY),
+            Coordinate.fromFloat(maxX),
+            Coordinate.fromFloat(maxY)
         )
     }
 }

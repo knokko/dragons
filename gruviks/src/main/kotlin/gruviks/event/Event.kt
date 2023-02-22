@@ -4,7 +4,9 @@ import kotlin.math.absoluteValue
 
 abstract class Event
 
-abstract class PositionedEvent(val position: EventPosition): Event()
+abstract class PositionedEvent(val position: EventPosition): Event() {
+    abstract fun copyWitChangedPosition(newPosition: EventPosition): PositionedEvent
+}
 
 /**
  * Represents a point in component domain coordinates (so (0, 0) is the bottom-left corner of the component domain and

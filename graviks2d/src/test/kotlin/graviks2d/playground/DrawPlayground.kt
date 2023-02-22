@@ -141,13 +141,13 @@ fun main() {
         )
 
         val fillColor = Color.rgbInt(0, 200, 0)
-        val strokeColor = Color.rgbInt(0, 0, 0)
+        val strokeColor = Color.BLACK
         val backgroundColor = Color.rgbInt(200, 0, 0)
         val time1 = System.currentTimeMillis()
         val minX = 0.05f
-        graviks.fillRect(0f, 0f, minX, 1f, Color.rgbInt(0, 0, 0))
-        graviks.fillRect(0.8f, 0f, 1f, 1f, Color.rgbInt(0, 0, 0))
-        graviks.fillRect(0f, 0.99f, 1f, 1f, Color.rgbInt(255, 255, 255))
+        graviks.fillRect(0f, 0f, minX, 1f, Color.BLACK)
+        graviks.fillRect(0.8f, 0f, 1f, 1f, Color.BLACK)
+        graviks.fillRect(0f, 0.99f, 1f, 1f, Color.WHITE)
 
         val infoStyle = TextStyle(
             font = null, fillColor = fillColor, strokeColor = strokeColor,

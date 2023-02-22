@@ -10,6 +10,8 @@ class CursorPressEvent(
     position: EventPosition,
     val button: Int
 ): PositionedEvent(position) {
+    override fun copyWitChangedPosition(newPosition: EventPosition) = CursorPressEvent(cursor, newPosition, button)
+
     override fun equals(other: Any?): Boolean {
         return if (other is CursorPressEvent) {
             this.cursor == other.cursor && this.position == other.position && this.button == other.button
@@ -31,6 +33,8 @@ class CursorReleaseEvent(
     position: EventPosition,
     val button: Int
 ): PositionedEvent(position) {
+    override fun copyWitChangedPosition(newPosition: EventPosition) = CursorReleaseEvent(cursor, newPosition, button)
+
     override fun equals(other: Any?): Boolean {
         return if (other is CursorReleaseEvent) {
             this.cursor == other.cursor && this.position == other.position && this.button == other.button
@@ -52,6 +56,8 @@ class CursorClickEvent(
     position: EventPosition,
     val button: Int
 ): PositionedEvent(position) {
+    override fun copyWitChangedPosition(newPosition: EventPosition) = CursorClickEvent(cursor, newPosition, button)
+
     override fun equals(other: Any?): Boolean {
         return if (other is CursorClickEvent) {
             this.cursor == other.cursor && this.position == other.position && this.button == other.button
@@ -69,12 +75,16 @@ class CursorClickEvent(
 }
 
 class CursorEnterEvent(val cursor: Cursor, position: EventPosition): PositionedEvent(position) {
+    override fun copyWitChangedPosition(newPosition: EventPosition) = CursorEnterEvent(cursor, newPosition)
+
     override fun equals(other: Any?) = other is CursorEnterEvent && this.cursor == other.cursor && this.position == other.position
 
     override fun hashCode() = cursor.hashCode() + 31 * position.hashCode()
 }
 
 class CursorLeaveEvent(val cursor: Cursor, position: EventPosition): PositionedEvent(position) {
+    override fun copyWitChangedPosition(newPosition: EventPosition) = CursorLeaveEvent(cursor, newPosition)
+
     override fun equals(other: Any?) = other is CursorLeaveEvent && this.cursor == other.cursor && this.position == other.position
 
     override fun hashCode() = cursor.hashCode() + 31 * position.hashCode()

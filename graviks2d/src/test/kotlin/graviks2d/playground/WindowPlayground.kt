@@ -28,11 +28,11 @@ fun main() {
         val graviks = window.graviksContext
         val rng = Random()
         if (graviks != null) {
-            graviks.fillRect(0f, 0f, 0.5f, 0.5f, Color.rgbInt(255, 0, 0))
+            graviks.fillRect(0f, 0f, 0.5f, 0.5f, Color.RED)
             graviks.fillRect(0.1f, 0.1f, 0.6f, 0.6f, Color.rgbInt(200, 200, 0))
 
             val textStyle = TextStyle(
-                fillColor = Color.rgbInt(0, 0, 0), font = null
+                fillColor = Color.BLACK, font = null
             )
             val backgroundColor = Color.rgbInt(250, 250, 250)
             for (x in arrayOf(0f, 0.3f, 0.6f, 0.9f)) {
@@ -71,7 +71,7 @@ fun main() {
         if (graviks != null) {
             val backgroundColor = Color.rgbInt(250, 250, 250)
             val textStyle = TextStyle(
-                fillColor = Color.rgbInt(0, 0, 0), font = null
+                fillColor = Color.BLACK, font = null
             )
             graviks.fillRect(0f, 0f, 1f, 1f, backgroundColor)
 

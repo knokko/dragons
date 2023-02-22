@@ -40,13 +40,13 @@ class GruviksWindow(
             if (force) {
 
                 // When the render is forced, we should invalidate any previously drawn content
-                target.fillRect(0f, 0f, 1f, 1f, Color.rgbInt(0, 0, 0))
+                target.fillRect(0f, 0f, 1f, 1f, Color.BLACK)
             } else {
                 // If the render is not forced, we should only redraw the background areas requested by the component
                 for (backgroundRegion in this.rootComponent.regionsToRedrawBeforeNextRender()) {
                     target.fillRect(
                         backgroundRegion.minX, backgroundRegion.minY, backgroundRegion.maxX, backgroundRegion.maxY,
-                        Color.rgbInt(0, 0, 0)
+                        Color.BLACK
                     )
                 }
             }

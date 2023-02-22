@@ -34,6 +34,21 @@ class TestCoordinate {
     }
 
     @Test
+    fun testFromFloat() {
+        val margin = 0.001f
+        for (value in arrayOf(-1.7f, -0.15f, 0f, 0.53f, 1f, 10.4f)) {
+            assertEquals(value, Coordinate.fromFloat(value).toFloat(), margin)
+        }
+    }
+
+    @Test
+    fun testToFloat() {
+        val margin = 0.001f
+        assertEquals(0.35f, Coordinate.percentage(35).toFloat(), margin)
+        assertEquals(-0.7f, Coordinate.percentage(-70).toFloat(), margin)
+    }
+
+    @Test
     fun testMultiplication() {
         assertEquals(
             Coordinate.fraction(3, 5),

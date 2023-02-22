@@ -18,6 +18,7 @@ class ComponentAgent(
     private var allowSubscriptions = true
 
     private val subscribedEvents = HashSet<KClass<out Event>>()
+    private var subscribedToAllEvents = false
 
     fun subscribe(eventClass: KClass<out Event>) {
         if (!this.allowSubscriptions) throw IllegalStateException("New subscriptions are no longer allowed")
@@ -25,7 +26,13 @@ class ComponentAgent(
         this.subscribedEvents.add(eventClass)
     }
 
-    fun isSubscribed(eventClass: KClass<out Event>) = this.subscribedEvents.contains(eventClass)
+    fun subscribeToAllEvents() {
+        if (!this.allowSubscriptions) throw IllegalStateException("New subscriptions are no longer allowed")
+
+        this.subscribedToAllEvents = true
+    }
+
+    fun isSubscribed(eventClass: KClass<out Event>) = this.subscribedToAllEvents || this.subscribedEvents.contains(eventClass)
 
     fun forbidFutureSubscriptions() {
         this.allowSubscriptions = false

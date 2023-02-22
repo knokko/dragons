@@ -82,7 +82,7 @@ class DebugPanelTile(
                     it.fillRect(0f, 0f, 0.1f, 1f, Color.rgbInt(0, 0, 100))
                     it.fillRect(0.9f, 0f, 1f, 1f, Color.rgbInt(0, 0, 255))
 
-                    val style = TextStyle(fillColor = Color.rgbInt(0, 0, 0), font = null)
+                    val style = TextStyle(fillColor = Color.BLACK, font = null)
                     for ((index, line) in newStandardOutputHistory.withIndex()) {
                         it.drawString(
                             0.11f, 0.885f - index * 0.015f, 0.89f, 0.9f - index * 0.015f,
