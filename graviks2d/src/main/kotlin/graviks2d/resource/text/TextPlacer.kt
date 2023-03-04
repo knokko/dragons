@@ -53,7 +53,6 @@ internal fun placeText(
     val pixelAvailableBoundX = (maxX * viewportWidth.toFloat()).roundToInt()
     val availableWidth = pixelAvailableBoundX - pixelAvailableMinX
 
-    // TODO Add center support
     val textPosition = if (style.alignment == TextAlignment.Left) {
         -1
     } else if (style.alignment == TextAlignment.Right) {
@@ -127,7 +126,7 @@ internal fun placeText(
             } else if (textPosition == 1) {
                 Pair(pixelAvailableBoundX - reducedWidth, charsToDraw)
             } else {
-                Pair(pixelAvailableMinX + reducedWidth / 2, charsToDraw)
+                Pair((pixelAvailableMinX + pixelAvailableBoundX - reducedWidth) / 2, charsToDraw)
             }
         }
     }
