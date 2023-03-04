@@ -13,6 +13,7 @@ import gruviks.component.text.TextButton
 import gruviks.component.text.TextButtonStyle
 import gruviks.component.text.TextComponent
 import gruviks.glfw.createAndControlGruviksWindow
+import gruviks.space.Coordinate
 import gruviks.space.RectRegion
 import gruviks.space.SpaceLayout
 import org.lwjgl.vulkan.VK10.VK_MAKE_VERSION
@@ -84,8 +85,10 @@ fun main() {
     }, RectRegion.percentage(20, 46, 80, 56))
     menu.addComponent(TextButton("Edit Item Set", null, baseButtonStyle) {
         println("Edit item set")
+        menu.shiftCamera(Coordinate.percentage(10), Coordinate.percentage(10))
     }, RectRegion.percentage(20, 33, 80, 43))
     menu.addComponent(TextButton("Combine Item Sets", null, baseButtonStyle) {
+        menu.shiftCamera(Coordinate.percentage(-10), Coordinate.percentage(-10))
         println("Combine item sets")
     }, RectRegion.percentage(20, 20, 80, 30))
     menu.addComponent(TextButton("Exit Editor", null, exitButtonStyle) {

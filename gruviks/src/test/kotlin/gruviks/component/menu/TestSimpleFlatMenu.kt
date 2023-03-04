@@ -8,6 +8,8 @@ import gruviks.component.agent.CursorTracker
 import gruviks.component.agent.DummyCursorTracker
 import gruviks.component.agent.TrackedCursor
 import gruviks.event.*
+import gruviks.space.Coordinate
+import gruviks.space.Point
 import gruviks.space.RectRegion
 import gruviks.space.SpaceLayout
 import gruviks.util.DummyGraviksTarget
@@ -19,7 +21,61 @@ import kotlin.math.abs
 
 class TestSimpleFlatMenu {
 
-    // TODO Test getVisibleRegion
+    @Test
+    fun testGetVisibleRegionSimple() {
+        val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLUE)
+        menu.initAgent(ComponentAgent(DummyCursorTracker()))
+        menu.subscribeToEvents()
+
+        assertEquals(RectRegion.percentage(0, 0, 100, 100), menu.getVisibleRegion())
+        menu.moveCamera(Point.percentage(30, -20))
+        assertEquals(RectRegion.percentage(30, -20, 130, 80), menu.getVisibleRegion())
+    }
+
+    @Test
+    fun testGetVisibleRegionGrowUp() {
+        val menu = SimpleFlatMenu(SpaceLayout.GrowUp, Color.BLUE)
+        menu.initAgent(ComponentAgent(DummyCursorTracker()))
+        menu.subscribeToEvents()
+
+        // Before rendering, the aspect ratio is assumed to be 1
+        assertEquals(RectRegion.percentage(0, 0, 100, 100), menu.getVisibleRegion())
+        menu.moveCamera(Point.percentage(30, -20))
+        assertEquals(RectRegion.percentage(30, -20, 130, 80), menu.getVisibleRegion())
+
+        menu.render(DummyGraviksTarget(dummyAspectRatio = 2f), false)
+        assertEquals(RectRegion.percentage(30, -20, 130, 30), menu.getVisibleRegion())
+    }
+
+    @Test
+    fun testGetVisibleRegionGrowDown() {
+        val menu = SimpleFlatMenu(SpaceLayout.GrowDown, Color.BLUE)
+        menu.initAgent(ComponentAgent(DummyCursorTracker()))
+        menu.subscribeToEvents()
+
+        // Before rendering, the aspect ratio is assumed to be 1
+        assertEquals(RectRegion.percentage(0, 0, 100, 100), menu.getVisibleRegion())
+        menu.moveCamera(Point.percentage(30, -20))
+        assertEquals(RectRegion.percentage(30, -20, 130, 80), menu.getVisibleRegion())
+
+        menu.render(DummyGraviksTarget(dummyAspectRatio = 2f), false)
+        assertEquals(RectRegion.percentage(30, 30, 130, 80), menu.getVisibleRegion())
+    }
+
+    @Test
+    fun testGetVisibleRegionGrowRight() {
+        val menu = SimpleFlatMenu(SpaceLayout.GrowRight, Color.BLUE)
+        menu.initAgent(ComponentAgent(DummyCursorTracker()))
+        menu.subscribeToEvents()
+
+        // Before rendering, the aspect ratio is assumed to be 1
+        assertEquals(RectRegion.percentage(0, 0, 100, 100), menu.getVisibleRegion())
+        menu.moveCamera(Point.percentage(30, -20))
+        assertEquals(RectRegion.percentage(30, -20, 130, 80), menu.getVisibleRegion())
+
+        menu.render(DummyGraviksTarget(dummyAspectRatio = 2f), false)
+        assertEquals(RectRegion.percentage(30, -20, 230, 80), menu.getVisibleRegion())
+    }
 
     @Test
     fun testProcessPositionedEvents() {
@@ -96,6 +152,18 @@ class TestSimpleFlatMenu {
             assertEquals(cursor, event.cursor)
             checkPosition(event.position)
         }
+
+        // Shift the camera such that the same event should touch the 'unused' component instead
+        menu.shiftCamera(Coordinate.percentage(-20), Coordinate.percentage(-50))
+        menu.processEvent(CursorEnterEvent(cursor, centerPosition))
+        menu.processEvent(CursorPressEvent(cursor, centerPosition, button))
+        menu.processEvent(CursorReleaseEvent(cursor, centerPosition, button))
+        menu.processEvent(CursorClickEvent(cursor, centerPosition, button))
+        menu.processEvent(CursorLeaveEvent(cursor, centerPosition))
+
+        // After which both components should have received 5 events
+        assertEquals(5, usedComponent.log.size)
+        assertEquals(5, unusedComponent.log.size)
     }
 
     @Test
@@ -127,7 +195,11 @@ class TestSimpleFlatMenu {
         }
 
         menu.processEvent(CursorEnterEvent(cursor, fullEvent.oldPosition))
+        assertEquals(0, leftComponent.log.size)
+
+        // Fire a CursorMoveEvent that goes straight through both the right component and the left component
         menu.processEvent(fullEvent)
+
         assertEquals(2, leftComponent.log.size)
         leftComponent.log[0].let {
             val event = it as CursorEnterEvent
@@ -171,13 +243,29 @@ class TestSimpleFlatMenu {
 
         assertEquals(2, rightComponent.log.size)
 
-        menu.processEvent(CursorMoveEvent(cursor, leftPosition1, EventPosition(0.25f, 0.15f)))
+        val leftPosition2 = EventPosition(0.25f, 0.15f)
+        menu.processEvent(CursorMoveEvent(cursor, leftPosition1, leftPosition2))
         assertEquals(5, leftComponent.log.size)
         leftComponent.log[4].let {
             val event = it as CursorMoveEvent
             checkPosition(EventPosition(0.5f, 5f / 6f), event.oldPosition)
             checkPosition(EventPosition(0.5f, 0.5f), event.newPosition)
             assertEquals(cursor, event.cursor)
+        }
+
+        // Shift the camera such that the leftPosition2 (0.25, 0.15) will be inside the right component
+        menu.shiftCamera(Coordinate.percentage(20), Coordinate.percentage(10))
+        menu.processEvent(CursorMoveEvent(cursor, leftPosition2, EventPosition(0.5f, leftPosition2.y)))
+
+        assertEquals(4, rightComponent.log.size)
+        rightComponent.log[2].let {
+            val event = it as CursorMoveEvent
+            checkPosition(EventPosition(0.25f, 0.5f), event.oldPosition)
+            checkPosition(EventPosition(0.9f, 0.5f), event.newPosition)
+        }
+        rightComponent.log[3].let {
+            val event = it as CursorLeaveEvent
+            checkPosition(EventPosition(0.9f, 0.5f), event.position)
         }
     }
 
@@ -193,10 +281,12 @@ class TestSimpleFlatMenu {
         fun checkResults(expected: Set<BackgroundRegion>, actual: Collection<BackgroundRegion>) {
             assertEquals(expected.size, actual.size)
             for (region in expected) {
-                assertTrue(actual.any {
-                    abs(it.minX - region.minX) + abs(it.minY - region.minY) + abs(it.maxX - region.maxX)
-                    + abs(it.maxY - region.maxY) < 0.01f
-                })
+                val equalActual = actual.filter {
+                    val absDifference = abs(it.minX - region.minX) + abs(it.minY - region.minY) + abs(it.maxX - region.maxX) +
+                            abs(it.maxY - region.maxY)
+                    absDifference < 0.0001f
+                }
+                assertTrue(equalActual.isNotEmpty())
             }
         }
 
@@ -219,6 +309,24 @@ class TestSimpleFlatMenu {
         // After rendering, both components should be satisfied
         menu.render(DummyGraviksTarget(), false)
         assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
+
+        // When we shift the camera, the old regions should be redrawn
+        menu.shiftCamera(Coordinate.percentage(40), Coordinate.percentage(30))
+        checkResults(setOf(
+            BackgroundRegion(0.55f, 0.05f, 0.95f, 0.45f),
+            BackgroundRegion(0.55f, 0.55f, 0.95f, 0.95f)
+        ), menu.regionsToRedrawBeforeNextRender())
+
+        menu.render(DummyGraviksTarget(), false)
+        assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
+
+        // When we shift back, the new regions should be redrawn
+        menu.shiftCamera(Coordinate.percentage(-40), Coordinate.percentage(-30))
+        checkResults(setOf(
+            // Note that the minY of the first region is clamped to 0
+            BackgroundRegion(0.15f, 0f, 0.55f, 0.15f),
+            BackgroundRegion(0.15f, 0.25f, 0.55f, 0.65f)
+        ), menu.regionsToRedrawBeforeNextRender())
     }
 
     @Test
@@ -240,6 +348,9 @@ class TestSimpleFlatMenu {
         assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
 
         menu.render(DummyGraviksTarget(), false)
+        assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
+
+        menu.shiftCamera(Coordinate.percentage(12), Coordinate.percentage(34))
         assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
     }
 
@@ -313,6 +424,20 @@ class TestSimpleFlatMenu {
         )
 
         // If we redraw again after doing nothing, nothing should be redrawn
+        checkRenderResult(menu.render(target, false))
+        checkFillRectCalls()
+
+        // When we shift the camera, the background should be redrawn, and the components should be drawn
+        // at their new relative position
+        menu.shiftCamera(Coordinate.percentage(40), Coordinate.percentage(20))
+        checkRenderResult(menu.render(target, false))
+        checkFillRectCalls(
+            FillRectCall(0f, 0f, 1f, 1f, backgroundColor),
+            FillRectCall(-0.35f, -0.15f, 0.05f, 0.25f, Color.RED),
+            FillRectCall(-0.35f, 0.35f, 0.05f, 0.75f, Color.RED)
+        )
+
+        // If we render again, nothing should happen
         checkRenderResult(menu.render(target, false))
         checkFillRectCalls()
     }
@@ -403,10 +528,36 @@ class TestSimpleFlatMenu {
 
         // If we redraw again after doing nothing, nothing should be redrawn
         checkRenderResult(menu.render(target, false), hasComponent1 = true, true)
-        checkFillRectCalls()       
-    }
+        checkFillRectCalls()
 
-    // TODO add more tests for everything once the visibleRegion can be changed
+        fun checkNewRenderResult(result: RenderResult) {
+            (result.drawnRegion as CompositeDrawnRegion).regions.sortedBy { it.minY }[1].let { region ->
+                assertEquals(-0.35f, region.minX, margin)
+                assertEquals(0.35f, region.minY, margin)
+                assertEquals(0.05f, region.maxX, margin)
+                assertEquals(0.75f, region.maxY, margin)
+            }
+
+            (result.drawnRegion as CompositeDrawnRegion).regions.sortedBy { it.minY }[0].let { region ->
+                assertEquals(-0.35f, region.minX, margin)
+                assertEquals(-0.15f, region.minY, margin)
+                assertEquals(0.05f, region.maxX, margin)
+                assertEquals(0.25f, region.maxY, margin)
+            }
+        }
+
+        // When we shift the camera, the components should be drawn at their new position
+        menu.shiftCamera(Coordinate.percentage(40), Coordinate.percentage(20))
+        checkNewRenderResult(menu.render(target, false))
+        checkFillRectCalls(
+            FillRectCall(-0.35f, -0.15f, 0.05f, 0.25f, Color.RED),
+            FillRectCall(-0.35f, 0.35f, 0.05f, 0.75f, Color.RED)
+        )
+
+        // If we render again, nothing should happen
+        checkNewRenderResult(menu.render(target, false))
+        checkFillRectCalls()
+    }
 
     @Test
     fun testCursorTracker() {
@@ -446,12 +597,18 @@ class TestSimpleFlatMenu {
 
                 assertTrue(agent.cursorTracker.getAllCursors().contains(cursor1))
                 assertTrue(agent.cursorTracker.getAllCursors().contains(cursor2))
-                assertEquals(TrackedCursor(
-                    EventPosition(0.2f, 6f / 7f), setOf(5)
-                ), agent.cursorTracker.getCursorState(cursor1))
-                assertEquals(TrackedCursor(
-                    EventPosition(-0.6f, -1f / 7f), emptySet()
-                ), agent.cursorTracker.getCursorState(cursor2))
+                if (state != 3) {
+                    assertEquals(
+                        TrackedCursor(
+                            EventPosition(0.2f, 6f / 7f), setOf(5)
+                        ), agent.cursorTracker.getCursorState(cursor1)
+                    )
+                    assertEquals(
+                        TrackedCursor(
+                            EventPosition(-0.6f, -1f / 7f), emptySet()
+                        ), agent.cursorTracker.getCursorState(cursor2)
+                    )
+                }
 
                 if (state == 0) {
                     assertTrue(agent.cursorTracker.getHoveringCursors().isEmpty())
@@ -467,6 +624,11 @@ class TestSimpleFlatMenu {
                 } else if (state == 2) {
                     assertTrue(agent.cursorTracker.getHoveringCursors().isEmpty())
                     state = 3
+                } else if (state == 3) {
+                    assertEquals(TrackedCursor(
+                        EventPosition(0.4f, 0.4f / 0.7f - 1f / 7f), emptySet()
+                    ), agent.cursorTracker.getCursorState(cursor2))
+                    state = 4
                 } else {
                     throw IllegalStateException("Unexpected state $state")
                 }
@@ -489,5 +651,8 @@ class TestSimpleFlatMenu {
         assertEquals(2, state)
         menu.render(DummyGraviksTarget(), false)
         assertEquals(3, state)
+        menu.shiftCamera(Coordinate.percentage(50), Coordinate.percentage(40))
+        menu.render(DummyGraviksTarget(), false)
+        assertEquals(4, state)
     }
 }

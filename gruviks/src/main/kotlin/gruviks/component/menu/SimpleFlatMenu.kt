@@ -20,16 +20,21 @@ class SimpleFlatMenu(
     var backgroundColor: Color
 ): Component() {
 
+    private var aspectRatio = 1f
+
     private val componentTree = RectTree<ComponentNode>()
     private val componentsToAdd = mutableListOf<Pair<Component, RectRegion>>()
 
-    // We consider the 'initial background' to be transparent
-    private var didChangeBackground = backgroundColor.alpha != 0
+    private var cameraPosition = Point.percentage(0, 0)
+    private var lastVisibleRegion: RectRegion? = null
+
+    // The first draw should always draw all components
+    private var shouldDoFullDraw = true
 
     private fun updateComponentTree() {
         while (componentsToAdd.isNotEmpty()) {
             val (component, region) = componentsToAdd.removeLast()
-            val childCursorTracker = NodeCursorTracker(agent.cursorTracker, region)
+            val childCursorTracker = NodeCursorTracker(agent.cursorTracker, region, this::getVisibleRegion)
             val childAgent = ComponentAgent(childCursorTracker)
             childCursorTracker.getLastRenderResult = { childAgent.lastRenderResult }
             val node = ComponentNode(component, childAgent)
@@ -42,7 +47,52 @@ class SimpleFlatMenu(
         }
     }
 
-    private fun getVisibleRegion() = RectRegion.percentage(0, 0, 100, 100) // TODO Respect layout
+    fun shiftCamera(deltaX: Coordinate, deltaY: Coordinate) {
+        cameraPosition = Point(cameraPosition.x + deltaX, cameraPosition.y + deltaY)
+        agent.didRequestRender = true
+        shouldDoFullDraw = true
+    }
+
+    fun moveCamera(destination: Point) {
+        cameraPosition = destination
+        agent.didRequestRender = true
+        shouldDoFullDraw = true
+    }
+
+    fun getVisibleRegion(): RectRegion {
+        val baseRegion = if (layout == SpaceLayout.Simple) RectRegion.percentage(0, 0, 100, 100)
+        else if (layout == SpaceLayout.GrowDown) {
+            RectRegion(
+                Coordinate.percentage(0),
+                Coordinate.fromFloat(1f - 1f / aspectRatio),
+                Coordinate.percentage(100),
+                Coordinate.percentage(100)
+            )
+        } else if (layout == SpaceLayout.GrowUp) {
+            RectRegion(
+                Coordinate.percentage(0),
+                Coordinate.percentage(0),
+                Coordinate.percentage(100),
+                Coordinate.fromFloat(1f / aspectRatio)
+            )
+        } else if (layout == SpaceLayout.GrowRight) {
+            RectRegion(
+                Coordinate.percentage(0),
+                Coordinate.percentage(0),
+                Coordinate.fromFloat(aspectRatio),
+                Coordinate.percentage(100)
+            )
+        } else {
+            throw IllegalStateException("Unsupported layout: $layout")
+        }
+
+        return RectRegion(
+            baseRegion.minX + cameraPosition.x,
+            baseRegion.minY + cameraPosition.y,
+            baseRegion.boundX + cameraPosition.x,
+            baseRegion.boundY + cameraPosition.y
+        )
+    }
 
     override fun subscribeToEvents() {
         agent.subscribeToAllEvents()
@@ -54,7 +104,6 @@ class SimpleFlatMenu(
         componentsToAdd.add(Pair(component, region))
     }
 
-    // TODO Test this
     override fun processEvent(event: Event) {
         updateComponentTree()
 
@@ -176,41 +225,53 @@ class SimpleFlatMenu(
         // There is no need to redraw anything behind the menu when the background color is solid
         if (backgroundColor.alpha == 255) return emptyList()
 
+        // When lastVisibleRegion is null, no render has occurred yet, so there is no need to redraw anything
+        if (lastVisibleRegion == null) return emptyList()
+
         val result = mutableListOf<BackgroundRegion>()
-        val visibleRegion = getVisibleRegion()
-        val potentialComponents = componentTree.findBetween(visibleRegion)
+
+        val currentVisibleRegion = getVisibleRegion()
+        val oldVisibleRegion = lastVisibleRegion!!
+        val changedVisibleRegion = currentVisibleRegion != oldVisibleRegion
+
+        val potentialComponents = componentTree.findBetween(oldVisibleRegion)
         for ((region, node) in potentialComponents) {
-            if (node.agent.didRequestRender && node.agent.lastRenderResult != null) {
+            if ((node.agent.didRequestRender || changedVisibleRegion) && node.agent.lastRenderResult != null) {
                 for (childRegion in node.component.regionsToRedrawBeforeNextRender()) {
                     val absoluteMin = region.transform(childRegion.minX, childRegion.minY)
                     val absoluteBounds = region.transform(childRegion.maxX, childRegion.maxY)
-                    val visibleMin = visibleRegion.transformBack(absoluteMin.first, absoluteMin.second)
-                    val visibleMax = visibleRegion.transformBack(absoluteBounds.first, absoluteBounds.second)
+                    val visibleMin = oldVisibleRegion.transformBack(absoluteMin.first, absoluteMin.second)
+                    val visibleMax = oldVisibleRegion.transformBack(absoluteBounds.first, absoluteBounds.second)
                     result.add(BackgroundRegion(
                         visibleMin.first, visibleMin.second, visibleMax.first, visibleMax.second
                     ))
                 }
             }
         }
-        return result
+
+        return result.filter { it.minX < 1f && it.minY < 1f && it.maxX > 0f && it.maxY > 0f }.map {
+            BackgroundRegion(max(0f, it.minX), max(0f, it.minY), min(1f, it.maxX), min(1f, it.maxY))
+        }
     }
 
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {
+        this.aspectRatio = target.getAspectRatio()
         updateComponentTree()
+
+        if (force) shouldDoFullDraw = true
 
         val drawnRegions = mutableListOf<DrawnRegion>()
         if (backgroundColor.alpha > 0) drawnRegions.add(RectangularDrawnRegion(0f, 0f, 1f, 1f))
 
-        val shouldDrawBackground = (force || didChangeBackground) && backgroundColor.alpha > 0
+        val shouldDrawBackground = shouldDoFullDraw && backgroundColor.alpha > 0
         if (shouldDrawBackground) target.fillRect(0f, 0f, 1f, 1f, backgroundColor)
-        didChangeBackground = false
 
         val visibleRegion = getVisibleRegion()
         val visibleComponents = componentTree.findBetween(visibleRegion)
 
         for ((region, node) in visibleComponents) {
             val transformedRegion = visibleRegion.transformBack(region)
-            if (force || node.agent.didRequestRender) {
+            if (shouldDoFullDraw || node.agent.didRequestRender) {
                 val childTarget = ChildTarget(
                     target, transformedRegion.minX, transformedRegion.minY, transformedRegion.maxX, transformedRegion.maxY
                 )
@@ -226,7 +287,7 @@ class SimpleFlatMenu(
                 }
 
                 node.agent.didRequestRender = false
-                val childRenderResult = node.component.render(childTarget, force)
+                val childRenderResult = node.component.render(childTarget, shouldDoFullDraw)
                 if (node.agent.didRequestRender) this.agent.didRequestRender = true
                 node.agent.lastRenderResult = childRenderResult
             }
@@ -243,6 +304,9 @@ class SimpleFlatMenu(
             }
         }
 
+        shouldDoFullDraw = false
+        lastVisibleRegion = visibleRegion
+
         return RenderResult(
             drawnRegion = if (drawnRegions.isEmpty()) null else if (drawnRegions.size == 1) drawnRegions[0] else CompositeDrawnRegion(drawnRegions),
             propagateMissedCursorEvents = true
@@ -257,7 +321,8 @@ private class ComponentNode(
 
 private class NodeCursorTracker(
     private val parentTracker: CursorTracker,
-    private val region: RectRegion
+    private val region: RectRegion,
+    private val getVisibleRegion: () -> RectRegion
 ): CursorTracker {
 
     lateinit var getLastRenderResult: () -> RenderResult?
@@ -276,7 +341,8 @@ private class NodeCursorTracker(
 
     override fun getCursorState(cursor: Cursor): TrackedCursor? {
         val parentState = parentTracker.getCursorState(cursor) ?: return null
-        val (localX, localY) = region.transformBack(parentState.localPosition.x, parentState.localPosition.y)
+        val (visibleX, visibleY) = getVisibleRegion().transform(parentState.localPosition.x, parentState.localPosition.y)
+        val (localX, localY) = region.transformBack(visibleX, visibleY)
         return TrackedCursor(EventPosition(localX, localY), parentState.pressedButtons)
     }
 }

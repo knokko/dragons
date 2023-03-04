@@ -18,6 +18,9 @@ class RectRegion(
 
     override fun toString() = "RectRegion($minX, $minY, $boundX, $boundY)"
 
+    override fun equals(other: Any?) = other is RectRegion && this.minX == other.minX && this.minY == other.minY &&
+            this.boundX == other.boundX && this.boundY == other.boundY
+
     // TODO Test precision of this
     fun transform(x: Float, y: Float) = Pair(
         minX.toFloat() + x * (boundX - minX).toFloat(),
@@ -50,6 +53,14 @@ class RectRegion(
         return RectangularDrawnRegion(
             transformedMinX, transformedMinY, transformedBoundX, transformedBoundY
         )
+    }
+
+    override fun hashCode(): Int {
+        var result = minX.hashCode()
+        result = 31 * result + minY.hashCode()
+        result = 31 * result + boundX.hashCode()
+        result = 31 * result + boundY.hashCode()
+        return result
     }
 
     companion object {

@@ -6,7 +6,9 @@ import graviks2d.resource.text.TextStyle
 import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 
-class DummyGraviksTarget: GraviksTarget {
+class DummyGraviksTarget(
+    private val dummyAspectRatio: Float = 1f
+): GraviksTarget {
 
     var fillRectCounter = 0
     var drawRoundedRectCounter = 0
@@ -49,5 +51,5 @@ class DummyGraviksTarget: GraviksTarget {
 
     override fun getStringAspectRatio(string: String, fontReference: FontReference?) = 10f
 
-    override fun getAspectRatio() = 1f
+    override fun getAspectRatio() = dummyAspectRatio
 }
