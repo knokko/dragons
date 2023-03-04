@@ -15,6 +15,10 @@ import org.lwjgl.vulkan.KHRBindMemory2.VK_KHR_BIND_MEMORY_2_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRDedicatedAllocation.VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRGetMemoryRequirements2.VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRGetPhysicalDeviceProperties2.VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
+import org.lwjgl.vulkan.KHRGetPhysicalDeviceProperties2.vkGetPhysicalDeviceFeatures2KHR
+import org.lwjgl.vulkan.KHRIncrementalPresent.VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME
+import org.lwjgl.vulkan.KHRPresentId.VK_KHR_PRESENT_ID_EXTENSION_NAME
+import org.lwjgl.vulkan.KHRPresentWait.VK_KHR_PRESENT_WAIT_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRSurface.*
 import org.lwjgl.vulkan.KHRSwapchain.*
 import org.lwjgl.vulkan.VK10.*
@@ -277,10 +281,19 @@ internal fun createVulkanDevice(chosenPhysicalDevice: VkPhysicalDevice, chosenQu
 
     val extensions = HashSet<String>()
     for (desiredExtension in arrayOf(
+
+        // These extensions are useful for VMA
         VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
         VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
         VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
-        VK_EXT_MEMORY_BUDGET_EXTENSION_NAME
+        VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
+
+        // These extensions are useful for present timing
+        VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
+        VK_KHR_PRESENT_ID_EXTENSION_NAME,
+
+        // This extension potentially optimizes power usage
+        VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME
     )) {
         if (availableExtensions.contains(desiredExtension)) {
             extensions.add(desiredExtension)
@@ -289,6 +302,27 @@ internal fun createVulkanDevice(chosenPhysicalDevice: VkPhysicalDevice, chosenQu
 
     // The physical device selection procedure will only choose devices that support this extension
     extensions.add(VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+
+    val presentIdSupport = if (extensions.contains(VK_KHR_PRESENT_WAIT_EXTENSION_NAME)) {
+        val presentWaitSupport = VkPhysicalDevicePresentWaitFeaturesKHR.calloc(stack)
+        presentWaitSupport.`sType$Default`()
+
+        val presentIdSupport = VkPhysicalDevicePresentIdFeaturesKHR.calloc(stack)
+        presentIdSupport.`sType$Default`()
+        presentIdSupport.pNext(presentWaitSupport.address())
+
+        val supportedFeatures2 = VkPhysicalDeviceFeatures2.calloc(stack)
+        supportedFeatures2.`sType$Default`()
+        supportedFeatures2.pNext(presentIdSupport.address())
+
+        vkGetPhysicalDeviceFeatures2KHR(chosenPhysicalDevice, supportedFeatures2)
+
+        if (presentWaitSupport.presentWait() && presentIdSupport.presentId()) presentIdSupport else {
+            extensions.remove(VK_KHR_PRESENT_WAIT_EXTENSION_NAME)
+            extensions.remove(VK_KHR_PRESENT_ID_EXTENSION_NAME)
+            null
+        }
+    } else null
 
     val pExtensions = stack.callocPointer(extensions.size)
     for ((index, extension) in extensions.withIndex()) {
@@ -303,6 +337,7 @@ internal fun createVulkanDevice(chosenPhysicalDevice: VkPhysicalDevice, chosenQu
 
     val ciDevice = VkDeviceCreateInfo.calloc(stack)
     ciDevice.`sType$Default`()
+    if (presentIdSupport != null) ciDevice.pNext(presentIdSupport.address())
     ciDevice.pQueueCreateInfos(ciQueues)
     ciDevice.ppEnabledExtensionNames(pExtensions)
 

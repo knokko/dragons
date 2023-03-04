@@ -7,14 +7,14 @@ import org.lwjgl.glfw.GLFWVulkan.glfwCreateWindowSurface
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.NULL
 import org.lwjgl.util.vma.Vma.vmaDestroyAllocator
+import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.EXTDebugUtils.vkDestroyDebugUtilsMessengerEXT
+import org.lwjgl.vulkan.KHRPresentWait.VK_KHR_PRESENT_WAIT_EXTENSION_NAME
+import org.lwjgl.vulkan.KHRPresentWait.vkWaitForPresentKHR
 import org.lwjgl.vulkan.KHRSurface.vkDestroySurfaceKHR
 import org.lwjgl.vulkan.KHRSwapchain.*
 import org.lwjgl.vulkan.VK10.*
-import org.lwjgl.vulkan.VkFenceCreateInfo
-import org.lwjgl.vulkan.VkPresentInfoKHR
-import org.lwjgl.vulkan.VkQueue
-import org.lwjgl.vulkan.VkSemaphoreCreateInfo
+import java.lang.System.nanoTime
 
 class GraviksWindow(
     initialWidth: Int,
@@ -37,6 +37,8 @@ class GraviksWindow(
     private val acquireFence: Long
     private val copySemaphore: Long
     private val debugMessenger: Long
+    val canAwaitPresent: Boolean
+    private var lastPresentId = 0
 
     // Swapchain-dependant variables
     private var swapchain: Long? = null
@@ -54,7 +56,7 @@ class GraviksWindow(
         if (windowHandle == NULL) throw RuntimeException("Failed to create window")
 
         glfwSetWindowRefreshCallback(windowHandle) {
-            presentFrame()
+            presentFrame(false)
         }
 
         glfwSetFramebufferSizeCallback(windowHandle) { _, _, _->
@@ -71,6 +73,8 @@ class GraviksWindow(
 
         val (vkPhysicalDevice, queueFamilyIndex) = chooseVulkanPhysicalDevice(vkInstance, windowSurface, preferPowerfulDevice)
         val (vkDevice, deviceExtensions, queue) = createVulkanDevice(vkPhysicalDevice, queueFamilyIndex)
+        this.canAwaitPresent = deviceExtensions.contains(VK_KHR_PRESENT_WAIT_EXTENSION_NAME)
+
         this.queue = queue
         val vmaAllocator = createVulkanMemoryAllocator(vkInstance, vkPhysicalDevice, vkDevice, deviceExtensions)
 
@@ -134,7 +138,11 @@ class GraviksWindow(
         shouldResize = false
     }
 
-    fun presentFrame() {
+    fun presentFrame(waitUntilVisible: Boolean) {
+        if (waitUntilVisible && !canAwaitPresent) {
+            throw UnsupportedOperationException("Waiting until presentation is not supported by the Vulkan implementation")
+        }
+
         // The swapchain will be null when the window is minified. In this case, we should not do anything
         if (swapchain == null) return
 
@@ -169,12 +177,19 @@ class GraviksWindow(
                 imageSrcAccessMask = 0, imageSrcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                 // There is no need to give proper destinations masks since vkQueuePresentKHR takes care of that
                 imageDstAccessMask = 0, imageDstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                // TODO Test this
                 shouldAwaitCompletion = false
             )
 
+            val pPresentId = stack.longs(lastPresentId + 1L)
+
+            val presentIdInfo = VkPresentIdKHR.calloc(stack)
+            presentIdInfo.`sType$Default`()
+            presentIdInfo.swapchainCount(1)
+            presentIdInfo.pPresentIds(pPresentId)
+
             val presentInfo = VkPresentInfoKHR.calloc(stack)
             presentInfo.`sType$Default`()
+            if (waitUntilVisible) presentInfo.pNext(presentIdInfo.address())
             presentInfo.pWaitSemaphores(stack.longs(copySemaphore))
             presentInfo.swapchainCount(1)
             presentInfo.pSwapchains(stack.longs(swapchain!!))
@@ -185,6 +200,13 @@ class GraviksWindow(
                 shouldResize = true
             } else if (presentResult != VK_SUCCESS) {
                 throw RuntimeException("vkQueuePresentKHR returned $presentResult")
+            }
+
+            if (waitUntilVisible) {
+                val startTime = nanoTime()
+                assertSuccess(vkWaitForPresentKHR(graviksInstance.device, swapchain!!, pPresentId[0], 1_000_000_000L))
+                println("presentation took ${(nanoTime() - startTime) / 1000} microseconds")
+                lastPresentId += 1
             }
         }
     }

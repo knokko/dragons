@@ -9,7 +9,6 @@ import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK10.VK_MAKE_VERSION
 import org.lwjgl.vulkan.VK10.VK_NULL_HANDLE
-import java.lang.System.currentTimeMillis
 import java.lang.Thread.sleep
 import java.util.*
 
@@ -112,10 +111,10 @@ fun main() {
         if (window.shouldResize()) {
             window.resize()
             drawFunction()
-            window.presentFrame()
+            window.presentFrame(false)
         } else if (shouldPresentAgain) {
             shouldPresentAgain = false
-            window.presentFrame()
+            window.presentFrame(false)
         }
 
         sleep(1)
