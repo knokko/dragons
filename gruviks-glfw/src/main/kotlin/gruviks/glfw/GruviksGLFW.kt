@@ -43,7 +43,7 @@ fun createAndControlGruviksWindow(graviksWindow: GraviksWindow, rootComponent: C
         }
     }
     
-    while (!glfwWindowShouldClose(graviksWindow.windowHandle)) {
+    while (!glfwWindowShouldClose(graviksWindow.windowHandle) && !gruviksWindow.shouldExit()) {
         glfwPollEvents()
 
         var forceRender = false

@@ -1,8 +1,13 @@
 package gruviks.core
 
+import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
+import gruviks.component.Component
 import gruviks.component.EventLogComponent
+import gruviks.component.RectangularDrawnRegion
+import gruviks.component.RenderResult
 import gruviks.component.agent.ComponentAgent
+import gruviks.component.agent.DUMMY_FEEDBACK
 import gruviks.component.agent.DummyCursorTracker
 import gruviks.component.fill.SimpleColorFillComponent
 import gruviks.component.text.TextButton
@@ -12,6 +17,8 @@ import gruviks.event.raw.CLICK_DURATION_THRESHOLD
 import gruviks.event.raw.RawCursorMoveEvent
 import gruviks.event.raw.RawCursorPressEvent
 import gruviks.event.raw.RawCursorReleaseEvent
+import gruviks.feedback.ExitFeedback
+import gruviks.feedback.ReplaceMeFeedback
 import gruviks.util.DummyGraviksTarget
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -30,14 +37,14 @@ class TestGruviksWindow {
 
         var pressedButton: Int? = null
 
-        val nextComponent = TextButton("test", null, textButtonStyle) { event ->
+        val nextComponent = TextButton("test", null, textButtonStyle) { event, _ ->
             pressedButton = event.button
         }
         window.setRootComponent(nextComponent)
 
         // window.setRootComponent should initialize the component agent, so attempting to initialize it again
         // should throw an IllegalStateException
-        assertThrows<IllegalStateException> { nextComponent.initAgent(ComponentAgent(DummyCursorTracker())) }
+        assertThrows<IllegalStateException> { nextComponent.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK)) }
 
         assertTrue(window.render(DummyGraviksTarget(), false))
 
@@ -95,7 +102,7 @@ class TestGruviksWindow {
 
     @Test
     fun testRender() {
-        val window = GruviksWindow(TextButton("test1234", null, textButtonStyle) {})
+        val window = GruviksWindow(TextButton("test1234", null, textButtonStyle) { _, _ -> })
 
         val target = DummyGraviksTarget()
 
@@ -136,5 +143,74 @@ class TestGruviksWindow {
         // But only once after the component requested it
         assertFalse(window.render(target, false))
         assertRenderCalls(3)
+    }
+
+    @Test
+    fun testExitFeedback() {
+        class TestComponent : Component() {
+            override fun subscribeToEvents() {
+                agent.subscribe(CursorPressEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                agent.giveFeedback(ExitFeedback())
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean) = RenderResult(
+                drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f),
+                propagateMissedCursorEvents = false
+            )
+        }
+
+        val window = GruviksWindow(TestComponent())
+        window.render(DummyGraviksTarget(), false)
+        window.fireEvent(RawCursorMoveEvent(Cursor(1), EventPosition(0.4f, 0.6f)))
+
+        assertFalse(window.shouldExit())
+        window.fireEvent(RawCursorPressEvent(Cursor(1), 4))
+        assertTrue(window.shouldExit())
+    }
+
+    @Test
+    fun testReplaceMeFeedback() {
+        var renderedSecondComponent = false
+
+        class SecondComponent : Component() {
+            override fun subscribeToEvents() {}
+
+            override fun processEvent(event: Event) {}
+
+            override fun render(target: GraviksTarget, force: Boolean): RenderResult {
+                renderedSecondComponent = true
+                return RenderResult(
+                    drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f),
+                    propagateMissedCursorEvents = true
+                )
+            }
+        }
+
+        class FirstComponent : Component() {
+            override fun subscribeToEvents() {
+                agent.subscribe(CursorPressEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                agent.giveFeedback(ReplaceMeFeedback { SecondComponent() })
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean) = RenderResult(
+                drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f),
+                propagateMissedCursorEvents = false
+            )
+        }
+
+        val window = GruviksWindow(FirstComponent())
+        window.render(DummyGraviksTarget(), false)
+        window.fireEvent(RawCursorMoveEvent(Cursor(1), EventPosition(0.4f, 0.6f)))
+        window.fireEvent(RawCursorPressEvent(Cursor(1), 4))
+
+        assertFalse(renderedSecondComponent)
+        window.render(DummyGraviksTarget(), true)
+        assertTrue(renderedSecondComponent)
     }
 }

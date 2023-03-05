@@ -3,11 +3,10 @@ package gruviks.component.menu
 import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 import gruviks.component.*
-import gruviks.component.agent.ComponentAgent
-import gruviks.component.agent.CursorTracker
-import gruviks.component.agent.DummyCursorTracker
-import gruviks.component.agent.TrackedCursor
+import gruviks.component.agent.*
+import gruviks.component.test.ColorShuffleComponent
 import gruviks.event.*
+import gruviks.feedback.*
 import gruviks.space.Coordinate
 import gruviks.space.Point
 import gruviks.space.RectRegion
@@ -17,6 +16,7 @@ import gruviks.util.FillRectCall
 import gruviks.util.LoggedGraviksTarget
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import java.util.*
 import kotlin.math.abs
 
 class TestSimpleFlatMenu {
@@ -24,7 +24,7 @@ class TestSimpleFlatMenu {
     @Test
     fun testGetVisibleRegionSimple() {
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLUE)
-        menu.initAgent(ComponentAgent(DummyCursorTracker()))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
         menu.subscribeToEvents()
 
         assertEquals(RectRegion.percentage(0, 0, 100, 100), menu.getVisibleRegion())
@@ -35,7 +35,7 @@ class TestSimpleFlatMenu {
     @Test
     fun testGetVisibleRegionGrowUp() {
         val menu = SimpleFlatMenu(SpaceLayout.GrowUp, Color.BLUE)
-        menu.initAgent(ComponentAgent(DummyCursorTracker()))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
         menu.subscribeToEvents()
 
         // Before rendering, the aspect ratio is assumed to be 1
@@ -50,7 +50,7 @@ class TestSimpleFlatMenu {
     @Test
     fun testGetVisibleRegionGrowDown() {
         val menu = SimpleFlatMenu(SpaceLayout.GrowDown, Color.BLUE)
-        menu.initAgent(ComponentAgent(DummyCursorTracker()))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
         menu.subscribeToEvents()
 
         // Before rendering, the aspect ratio is assumed to be 1
@@ -65,7 +65,7 @@ class TestSimpleFlatMenu {
     @Test
     fun testGetVisibleRegionGrowRight() {
         val menu = SimpleFlatMenu(SpaceLayout.GrowRight, Color.BLUE)
-        menu.initAgent(ComponentAgent(DummyCursorTracker()))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
         menu.subscribeToEvents()
 
         // Before rendering, the aspect ratio is assumed to be 1
@@ -90,7 +90,7 @@ class TestSimpleFlatMenu {
         val button = 1
 
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLACK)
-        val agent = ComponentAgent(DummyCursorTracker())
+        val agent = ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK)
         menu.initAgent(agent)
         menu.subscribeToEvents()
         for (event in arrayOf(
@@ -173,7 +173,7 @@ class TestSimpleFlatMenu {
         val cursor = Cursor(3)
         val fullEvent = CursorMoveEvent(cursor, EventPosition(0.7f, 0.25f), EventPosition(0f, 0.25f))
 
-        val agent = ComponentAgent(DummyCursorTracker())
+        val agent = ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK)
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLACK)
         menu.initAgent(agent)
         menu.subscribeToEvents()
@@ -272,7 +272,7 @@ class TestSimpleFlatMenu {
     @Test
     fun testRegionsToRedrawBeforeNextRenderTransparent() {
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.TRANSPARENT)
-        menu.initAgent(ComponentAgent(DummyCursorTracker()))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
         menu.subscribeToEvents()
 
         // Should be empty when there are no components to be drawn
@@ -332,7 +332,7 @@ class TestSimpleFlatMenu {
     @Test
     fun testRegionsToRedrawBeforeNextRenderSolid() {
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.WHITE)
-        menu.initAgent(ComponentAgent(DummyCursorTracker()))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
         menu.subscribeToEvents()
 
         // When the menu has a solid background, it should never need to redraw the background
@@ -377,7 +377,7 @@ class TestSimpleFlatMenu {
 
         val backgroundColor = Color.rgbInt(1, 2, 3)
         val menu = SimpleFlatMenu(SpaceLayout.Simple, backgroundColor)
-        menu.initAgent(ComponentAgent(DummyCursorTracker()))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
         menu.subscribeToEvents()
 
         menu.addComponent(ClickDrawComponent(), RectRegion.percentage(0, 50, 50, 100))
@@ -483,7 +483,7 @@ class TestSimpleFlatMenu {
         }
 
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.TRANSPARENT)
-        menu.initAgent(ComponentAgent(DummyCursorTracker()))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
         menu.subscribeToEvents()
 
         checkRenderResult(menu.render(target, false), hasComponent1 = false, false)
@@ -589,7 +589,7 @@ class TestSimpleFlatMenu {
             }
 
             override fun render(target: GraviksTarget, force: Boolean): RenderResult {
-                agent.didRequestRender = true
+                agent.giveFeedback(RenderFeedback())
 
                 assertFalse(agent.cursorTracker.getAllCursors().contains(cursor3))
                 assertFalse(agent.cursorTracker.getHoveringCursors().contains(cursor3))
@@ -641,7 +641,7 @@ class TestSimpleFlatMenu {
         }
 
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLUE)
-        menu.initAgent(ComponentAgent(FakeCursorTracker()))
+        menu.initAgent(ComponentAgent(FakeCursorTracker(), DUMMY_FEEDBACK))
         menu.subscribeToEvents()
 
         menu.addComponent(CursorCheckComponent(), RectRegion.percentage(50, 20, 100, 90))
@@ -654,5 +654,129 @@ class TestSimpleFlatMenu {
         menu.shiftCamera(Coordinate.percentage(50), Coordinate.percentage(40))
         menu.render(DummyGraviksTarget(), false)
         assertEquals(4, state)
+    }
+
+    @Test
+    fun testRenderFeedback() {
+        val feedbackList = mutableListOf<Feedback>()
+
+        val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.RED)
+        menu.addComponent(ClickDrawComponent(), RectRegion.percentage(0, 0, 10, 10))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), feedbackList::add))
+        menu.subscribeToEvents()
+
+        assertTrue(feedbackList.isEmpty())
+        menu.addComponent(ClickDrawComponent(), RectRegion.percentage(20, 20, 80, 80))
+        assertEquals(1, feedbackList.size)
+        assertTrue(feedbackList[0] is RenderFeedback)
+        feedbackList.clear()
+
+        menu.render(DummyGraviksTarget(), false)
+        assertTrue(feedbackList.isEmpty())
+
+        menu.processEvent(CursorClickEvent(Cursor(1), EventPosition(0.5f, 0.5f), 1))
+        assertEquals(1, feedbackList.size)
+        assertTrue(feedbackList[0] is RenderFeedback)
+    }
+
+    @Test
+    fun testAddressedFeedback() {
+        val feedbackList = mutableListOf<Feedback>()
+
+        val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLUE)
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), feedbackList::add))
+        menu.subscribeToEvents()
+
+        class TestComponent : Component() {
+            override fun subscribeToEvents() {
+                agent.subscribe(CursorClickEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                agent.giveFeedback(AddressedFeedback(null, RenderFeedback()))
+                agent.giveFeedback(AddressedFeedback(UUID.randomUUID(), RenderFeedback()))
+                // TODO Give feedback to the menu itself
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean) = RenderResult(
+                drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f),
+                propagateMissedCursorEvents = false
+            )
+        }
+
+        menu.addComponent(TestComponent(), RectRegion.percentage(0, 0, 100, 100))
+        assertEquals(1, feedbackList.size)
+        assertTrue(feedbackList[0] is RenderFeedback)
+        feedbackList.clear()
+        menu.render(DummyGraviksTarget(), false)
+        assertTrue(feedbackList.isEmpty())
+
+        menu.processEvent(CursorClickEvent(Cursor(0), EventPosition(0.1f, 0.2f), 3))
+        assertEquals(2, feedbackList.size)
+        assertNull((feedbackList[0] as AddressedFeedback).targetID)
+        assertTrue((feedbackList[0] as AddressedFeedback).targetFeedback is RenderFeedback)
+        assertNotNull((feedbackList[1] as AddressedFeedback).targetID)
+        assertTrue((feedbackList[1] as AddressedFeedback).targetFeedback is RenderFeedback)
+    }
+
+    @Test
+    fun testCameraFeedback() {
+        val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.RED)
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
+        menu.subscribeToEvents()
+
+        class TestComponent : Component() {
+            override fun subscribeToEvents() {
+                agent.subscribe(CursorClickEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                menu.moveCamera(Point.percentage(20, 10))
+                menu.shiftCamera(Coordinate.percentage(50), Coordinate.percentage(60))
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean) = RenderResult(
+                drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f),
+                propagateMissedCursorEvents = false
+            )
+        }
+
+        menu.addComponent(TestComponent(), RectRegion.percentage(0, 0, 100, 100))
+        menu.render(DummyGraviksTarget(), false)
+        assertEquals(RectRegion.percentage(0, 0, 100, 100), menu.getVisibleRegion())
+        menu.processEvent(CursorClickEvent(Cursor(1), EventPosition(0.2f, 0.3f), 4))
+        assertEquals(RectRegion.percentage(70, 70, 170, 170), menu.getVisibleRegion())
+    }
+
+    @Test
+    fun testReplaceYouFeedback() {
+        val feedbackList = mutableListOf<Feedback>()
+
+        val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.GREEN)
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), feedbackList::add))
+        menu.subscribeToEvents()
+
+        class TestComponent : Component() {
+            override fun subscribeToEvents() {
+                agent.subscribe(CursorClickEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                agent.giveFeedback(ReplaceYouFeedback { ColorShuffleComponent() })
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean) = RenderResult(
+                drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f),
+                propagateMissedCursorEvents = false
+            )
+        }
+
+        menu.addComponent(TestComponent(), RectRegion.percentage(50, 50, 100, 100))
+        menu.render(DummyGraviksTarget(), false)
+        feedbackList.clear()
+        menu.processEvent(CursorClickEvent(Cursor(0), EventPosition(0.7f, 0.9f), 5))
+
+        assertEquals(1, feedbackList.size)
+        assertTrue(feedbackList[0] is ReplaceMeFeedback)
     }
 }

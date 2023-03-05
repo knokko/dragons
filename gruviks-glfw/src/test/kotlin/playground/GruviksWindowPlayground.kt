@@ -12,20 +12,30 @@ import gruviks.component.menu.SimpleFlatMenu
 import gruviks.component.text.TextButton
 import gruviks.component.text.TextButtonStyle
 import gruviks.component.text.TextComponent
+import gruviks.feedback.*
 import gruviks.glfw.createAndControlGruviksWindow
 import gruviks.space.Coordinate
+import gruviks.space.Point
 import gruviks.space.RectRegion
 import gruviks.space.SpaceLayout
 import org.lwjgl.vulkan.VK10.VK_MAKE_VERSION
 
-fun main() {
-    val graviksWindow = GraviksWindow(
-        1000, 800, "Gruviks Tester", true, "Gruviks Tester",
-        VK_MAKE_VERSION(0, 1, 0), true
-    ) { instance, width, height ->
-        GraviksContext(instance, width, height, TranslucentPolicy.Manual)
-    }
+private val baseButtonStyle = TextButtonStyle(
+    baseTextStyle = TextStyle(
+        fillColor = Color.WHITE, font = null, alignment = TextAlignment.Centered
+    ),
+    baseBackgroundColor = Color.TRANSPARENT,
+    baseBorderColor = Color.WHITE,
+    hoverTextStyle = TextStyle(
+        fillColor = Color.rgbInt(127, 127, 127), font = null, alignment = TextAlignment.Centered
+    ),
+    hoverBackgroundColor = Color.WHITE,
+    hoverBorderColor = Color.WHITE,
+    horizontalAlignment = HorizontalComponentAlignment.Middle,
+    verticalAlignment = VerticalComponentAlignment.Middle
+)
 
+private fun createTitleScreen(): SimpleFlatMenu {
     val backgroundColor = Color.rgbInt(72, 72, 72)
     val menu = SimpleFlatMenu(SpaceLayout.Simple, backgroundColor)
     //val testIcon = ImageReference.classLoaderPath("test-icon.png", false)
@@ -39,21 +49,6 @@ fun main() {
         fillColor = Color.WHITE,
         font = null,
         alignment = TextAlignment.Centered
-    )
-
-    val baseButtonStyle = TextButtonStyle(
-        baseTextStyle = TextStyle(
-            fillColor = Color.WHITE, font = null, alignment = TextAlignment.Centered
-        ),
-        baseBackgroundColor = Color.TRANSPARENT,
-        baseBorderColor = Color.WHITE,
-        hoverTextStyle = TextStyle(
-            fillColor = Color.rgbInt(127, 127, 127), font = null, alignment = TextAlignment.Centered
-        ),
-        hoverBackgroundColor = Color.WHITE,
-        hoverBorderColor = Color.WHITE,
-        horizontalAlignment = HorizontalComponentAlignment.Middle,
-        verticalAlignment = VerticalComponentAlignment.Middle
     )
 
     val exitButtonStyle = TextButtonStyle(
@@ -80,20 +75,40 @@ fun main() {
         RectRegion.percentage(20, 83, 80, 87)
     )
 
-    menu.addComponent(TextButton("New Item Set", null, baseButtonStyle) {
-        println("New item set")
+    menu.addComponent(TextButton("New Item Set", null, baseButtonStyle) { _, giveFeedback ->
+        giveFeedback(ReplaceYouFeedback(::createNewItemSetMenu))
     }, RectRegion.percentage(20, 46, 80, 56))
-    menu.addComponent(TextButton("Edit Item Set", null, baseButtonStyle) {
-        println("Edit item set")
-        menu.shiftCamera(Coordinate.percentage(10), Coordinate.percentage(10))
+    menu.addComponent(TextButton("Edit Item Set", null, baseButtonStyle) { _, giveFeedback ->
+        giveFeedback(ShiftCameraFeedback(Coordinate.percentage(-10), Coordinate.percentage(-10)))
     }, RectRegion.percentage(20, 33, 80, 43))
-    menu.addComponent(TextButton("Combine Item Sets", null, baseButtonStyle) {
-        menu.shiftCamera(Coordinate.percentage(-10), Coordinate.percentage(-10))
-        println("Combine item sets")
+    menu.addComponent(TextButton("Combine Item Sets", null, baseButtonStyle) { _, giveFeedback ->
+        giveFeedback(ShiftCameraFeedback(Coordinate.percentage(10), Coordinate.percentage(10)))
     }, RectRegion.percentage(20, 20, 80, 30))
-    menu.addComponent(TextButton("Exit Editor", null, exitButtonStyle) {
-        println("Exit editor")
+    menu.addComponent(TextButton("Exit Editor", null, exitButtonStyle) { _, giveFeedback ->
+        giveFeedback(AddressedFeedback(null, ExitFeedback()))
     }, RectRegion.percentage(20, 7, 80, 17))
 
-    createAndControlGruviksWindow(graviksWindow, menu)
+    return menu
+}
+
+fun createNewItemSetMenu(): SimpleFlatMenu {
+    val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLUE)
+    menu.addComponent(TextButton(
+        "Back", null, baseButtonStyle
+    ) { _, giveFeedback ->
+        giveFeedback(ReplaceYouFeedback(::createTitleScreen))
+    }, RectRegion.percentage
+    (10, 40, 90, 60))
+    return menu
+}
+
+fun main() {
+    val graviksWindow = GraviksWindow(
+        1000, 800, "Gruviks Tester", true, "Gruviks Tester",
+        VK_MAKE_VERSION(0, 1, 0), true
+    ) { instance, width, height ->
+        GraviksContext(instance, width, height, TranslucentPolicy.Manual)
+    }
+
+    createAndControlGruviksWindow(graviksWindow, createTitleScreen())
 }

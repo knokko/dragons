@@ -7,6 +7,8 @@ import gruviks.event.Event
 abstract class Component {
     protected lateinit var agent: ComponentAgent
 
+    protected fun didInitAgent() = this::agent.isInitialized
+
     fun initAgent(agent: ComponentAgent) {
         if (this::agent.isInitialized) throw IllegalStateException("Agent is already initialized")
         this.agent = agent

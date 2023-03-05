@@ -6,6 +6,7 @@ import gruviks.component.Component
 import gruviks.component.RectangularDrawnRegion
 import gruviks.component.RenderResult
 import gruviks.event.*
+import gruviks.feedback.RenderFeedback
 import java.util.*
 
 private fun generateColor(): Color {
@@ -29,24 +30,24 @@ class ColorShuffleComponent : Component() {
         if (event is CursorClickEvent) {
             if (event.button == 0) {
                 currentColor = generateColor()
-                agent.didRequestRender = true
+                agent.giveFeedback(RenderFeedback())
             }
         } else if (event is CursorPressEvent) {
             if (event.button != 0) {
                 currentColor = Color.rgbInt(200, 0, 0)
-                agent.didRequestRender = true
+                agent.giveFeedback(RenderFeedback())
             }
         } else if (event is CursorReleaseEvent) {
             if (event.button != 0) {
                 currentColor = Color.rgbInt(0, 200, 0)
-                agent.didRequestRender = true
+                agent.giveFeedback(RenderFeedback())
             }
         } else if (event is CursorEnterEvent) {
             currentColor = Color.rgbInt(0, 0, 200)
-            agent.didRequestRender = true
+            agent.giveFeedback(RenderFeedback())
         } else if (event is CursorLeaveEvent) {
             currentColor = Color.WHITE
-            agent.didRequestRender = true
+            agent.giveFeedback(RenderFeedback())
         } else {
             throw IllegalArgumentException("Unexpected event ${event::class.java}")
         }

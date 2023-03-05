@@ -7,12 +7,14 @@ import gruviks.event.CursorClickEvent
 import gruviks.event.CursorEnterEvent
 import gruviks.event.CursorLeaveEvent
 import gruviks.event.Event
+import gruviks.feedback.Feedback
+import gruviks.feedback.RenderFeedback
 
 class TextButton(
     private var text: String,
     private var icon: ImageReference?,
     private var style: TextButtonStyle,
-    var clickAction: (CursorClickEvent) -> Unit
+    var clickAction: (CursorClickEvent, (Feedback) -> Unit) -> Unit
 ) : Component() {
     override fun subscribeToEvents() {
         agent.subscribe(CursorClickEvent::class)
@@ -22,9 +24,9 @@ class TextButton(
 
     override fun processEvent(event: Event) {
         if (event is CursorClickEvent) {
-            clickAction(event)
+            clickAction(event, agent.giveFeedback)
         } else if (event is CursorEnterEvent || event is CursorLeaveEvent) {
-            agent.didRequestRender = true
+            agent.giveFeedback(RenderFeedback())
         } else {
             throw IllegalArgumentException("Unexpected event ${event::class.java}")
         }

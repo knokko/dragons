@@ -8,34 +8,67 @@ import gruviks.component.agent.RootCursorTracker
 import gruviks.event.*
 import gruviks.event.raw.RawEventAdapter
 import gruviks.event.raw.RawEvent
+import gruviks.feedback.*
 
 class GruviksWindow(
     private var rootComponent: Component
 ) {
     private lateinit var rootAgent: ComponentAgent
+    private var didRequestRender = true
+    private var didRequestExit = false
+    private var nextComponent: (() -> Component)? = null
     private val eventAdapter = RawEventAdapter()
 
     init {
         this.setRootComponent(rootComponent)
     }
 
+    fun shouldExit() = this.didRequestExit
+
+    private fun processFeedback(feedback: Feedback) {
+        if (feedback is RenderFeedback) {
+            this.didRequestRender = true
+        } else if (feedback is AddressedFeedback) {
+            if (feedback.targetID != null) throw IllegalArgumentException("Received missed feedback $feedback")
+            processFeedback(feedback.targetFeedback)
+        } else if (feedback is ExitFeedback) {
+            this.didRequestExit = true
+        } else if (feedback is ReplaceMeFeedback) {
+            this.nextComponent = feedback.createReplacement
+        } else {
+            throw UnsupportedOperationException("Unexpected feedback $feedback")
+        }
+    }
+
     fun setRootComponent(newComponent: Component) {
         this.rootComponent = newComponent
-        this.rootAgent = ComponentAgent(RootCursorTracker(eventAdapter) { this.rootAgent.lastRenderResult })
+        this.rootAgent = ComponentAgent(RootCursorTracker(eventAdapter) { this.rootAgent.lastRenderResult }, this::processFeedback)
+        this.didRequestRender = true
 
         this.rootComponent.initAgent(this.rootAgent)
         this.rootComponent.subscribeToEvents()
         this.rootAgent.forbidFutureSubscriptions()
     }
 
+    private fun checkNextComponent() {
+        val nextComponent = this.nextComponent
+        if (nextComponent != null) {
+            this.nextComponent = null
+            this.setRootComponent(nextComponent())
+        }
+    }
+
     fun fireEvent(rawEvent: RawEvent) {
+        this.checkNextComponent()
+
         for (event in this.eventAdapter.convertRawEvent(rawEvent)) {
             propagateEvent(event, rootComponent, rootAgent)
         }
     }
 
     fun render(target: GraviksTarget, force: Boolean): Boolean {
-        return if (force || this.rootAgent.didRequestRender) {
+        this.checkNextComponent()
+        return if (force || this.didRequestRender) {
 
             if (force) {
 
@@ -51,11 +84,10 @@ class GruviksWindow(
                 }
             }
 
-            this.rootAgent.didRequestRender = false
-
+            this.didRequestRender = false
             this.rootAgent.lastRenderResult = this.rootComponent.render(target, force)
 
-            // TODO Work after events
+            checkNextComponent()
             true
         } else {
             false

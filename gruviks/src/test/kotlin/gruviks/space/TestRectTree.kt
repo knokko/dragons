@@ -103,7 +103,7 @@ class TestRectTree {
                 10 * counter, 10 * counter, 10 * (counter + 1), 10 * (counter + 1)
             )
             tree.insert(counter, newRect)
-            for (counter in 0 until 10) assertEquals(1, tree.findBetween(newRect).size)
+            for (innerCounter in 0 until 10) assertEquals(1, tree.findBetween(newRect).size)
             assertEquals(counter + 1, tree.size)
             assertTrue(tree.depth < 50)
         }

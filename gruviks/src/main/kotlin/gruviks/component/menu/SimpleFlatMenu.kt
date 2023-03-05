@@ -8,6 +8,7 @@ import gruviks.component.agent.ComponentAgent
 import gruviks.component.agent.CursorTracker
 import gruviks.component.agent.TrackedCursor
 import gruviks.event.*
+import gruviks.feedback.*
 import gruviks.space.*
 import java.lang.Float.max
 import java.lang.Float.min
@@ -31,31 +32,32 @@ class SimpleFlatMenu(
     // The first draw should always draw all components
     private var shouldDoFullDraw = true
 
-    private fun updateComponentTree() {
+    private fun updateComponentTree(giveRenderFeedback: Boolean) {
         while (componentsToAdd.isNotEmpty()) {
             val (component, region) = componentsToAdd.removeLast()
             val childCursorTracker = NodeCursorTracker(agent.cursorTracker, region, this::getVisibleRegion)
-            val childAgent = ComponentAgent(childCursorTracker)
+            val childFeedback = mutableListOf<Feedback>()
+            val childAgent = ComponentAgent(childCursorTracker, childFeedback::add)
             childCursorTracker.getLastRenderResult = { childAgent.lastRenderResult }
-            val node = ComponentNode(component, childAgent)
+            val node = ComponentNode(component, childAgent, childFeedback)
             component.initAgent(childAgent)
             component.subscribeToEvents()
             childAgent.forbidFutureSubscriptions()
 
             componentTree.insert(node, region)
-            agent.didRequestRender = true
+            if (giveRenderFeedback) agent.giveFeedback(RenderFeedback())
         }
     }
 
     fun shiftCamera(deltaX: Coordinate, deltaY: Coordinate) {
         cameraPosition = Point(cameraPosition.x + deltaX, cameraPosition.y + deltaY)
-        agent.didRequestRender = true
+        agent.giveFeedback(RenderFeedback())
         shouldDoFullDraw = true
     }
 
     fun moveCamera(destination: Point) {
         cameraPosition = destination
-        agent.didRequestRender = true
+        agent.giveFeedback(RenderFeedback())
         shouldDoFullDraw = true
     }
 
@@ -97,15 +99,18 @@ class SimpleFlatMenu(
     override fun subscribeToEvents() {
         agent.subscribeToAllEvents()
 
-        updateComponentTree()
+        updateComponentTree(false)
     }
 
     fun addComponent(component: Component, region: RectRegion) {
         componentsToAdd.add(Pair(component, region))
+        if (didInitAgent()) agent.giveFeedback(RenderFeedback())
     }
 
     override fun processEvent(event: Event) {
-        updateComponentTree()
+        updateComponentTree(true)
+
+        val visitedNodes = mutableSetOf<ComponentNode>()
 
         val visibleRegion = getVisibleRegion()
         if (event is PositionedEvent) {
@@ -125,7 +130,7 @@ class SimpleFlatMenu(
                     if (renderResult?.drawnRegion != null && renderResult.drawnRegion.isInside(componentX, componentY)) {
                         val transformedEvent = event.copyWitChangedPosition(EventPosition(componentX, componentY))
                         targetNode.component.processEvent(transformedEvent)
-                        if (targetNode.agent.didRequestRender) this.agent.didRequestRender = true
+                        visitedNodes.add(targetNode)
                     }
                 }
             }
@@ -208,19 +213,21 @@ class SimpleFlatMenu(
                     }
                 }
 
-                for ((_, node) in targetComponents) {
-                    if (node.agent.didRequestRender) this.agent.didRequestRender = true
-                }
+                visitedNodes.addAll(targetComponents.map { it.second })
             }
         } else {
             throw UnsupportedOperationException("Unknown event $event")
         }
 
-        updateComponentTree()
+        for (node in visitedNodes) {
+            updateNode(node)
+        }
+
+        updateComponentTree(true)
     }
 
     override fun regionsToRedrawBeforeNextRender(): Collection<BackgroundRegion> {
-        updateComponentTree()
+        updateComponentTree(true)
 
         // There is no need to redraw anything behind the menu when the background color is solid
         if (backgroundColor.alpha == 255) return emptyList()
@@ -236,7 +243,7 @@ class SimpleFlatMenu(
 
         val potentialComponents = componentTree.findBetween(oldVisibleRegion)
         for ((region, node) in potentialComponents) {
-            if ((node.agent.didRequestRender || changedVisibleRegion) && node.agent.lastRenderResult != null) {
+            if ((node.didRequestRender || changedVisibleRegion) && node.agent.lastRenderResult != null) {
                 for (childRegion in node.component.regionsToRedrawBeforeNextRender()) {
                     val absoluteMin = region.transform(childRegion.minX, childRegion.minY)
                     val absoluteBounds = region.transform(childRegion.maxX, childRegion.maxY)
@@ -256,7 +263,7 @@ class SimpleFlatMenu(
 
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {
         this.aspectRatio = target.getAspectRatio()
-        updateComponentTree()
+        updateComponentTree(false)
 
         if (force) shouldDoFullDraw = true
 
@@ -271,7 +278,7 @@ class SimpleFlatMenu(
 
         for ((region, node) in visibleComponents) {
             val transformedRegion = visibleRegion.transformBack(region)
-            if (shouldDoFullDraw || node.agent.didRequestRender) {
+            if (shouldDoFullDraw || node.didRequestRender) {
                 val childTarget = ChildTarget(
                     target, transformedRegion.minX, transformedRegion.minY, transformedRegion.maxX, transformedRegion.maxY
                 )
@@ -286,10 +293,8 @@ class SimpleFlatMenu(
                     }
                 }
 
-                node.agent.didRequestRender = false
-                val childRenderResult = node.component.render(childTarget, shouldDoFullDraw)
-                if (node.agent.didRequestRender) this.agent.didRequestRender = true
-                node.agent.lastRenderResult = childRenderResult
+                node.didRequestRender = false
+                node.agent.lastRenderResult = node.component.render(childTarget, shouldDoFullDraw)
             }
 
             val childRenderResult = node.agent.lastRenderResult
@@ -304,6 +309,10 @@ class SimpleFlatMenu(
             }
         }
 
+        for ((_, node) in visibleComponents) {
+            updateNode(node)
+        }
+
         shouldDoFullDraw = false
         lastVisibleRegion = visibleRegion
 
@@ -312,12 +321,37 @@ class SimpleFlatMenu(
             propagateMissedCursorEvents = true
         )
     }
+
+    private fun updateNode(node: ComponentNode) {
+        for (feedback in node.feedback) {
+            if (feedback is RenderFeedback) {
+                node.didRequestRender = true
+                agent.giveFeedback(RenderFeedback())
+            } else if (feedback is AddressedFeedback) {
+                // TODO Check whether it's addressed to me
+                agent.giveFeedback(feedback)
+            } else if (feedback is ShiftCameraFeedback) {
+                shiftCamera(feedback.deltaX, feedback.deltaY)
+            } else if (feedback is MoveCameraFeedback) {
+                moveCamera(feedback.newPosition)
+            } else if (feedback is ReplaceYouFeedback) {
+                // TODO Add support for ReplaceMeFeedback
+                agent.giveFeedback(ReplaceMeFeedback(feedback.createReplacement))
+            } else {
+                throw UnsupportedOperationException("Unexpected feedback $feedback")
+            }
+        }
+        node.feedback.clear()
+    }
 }
 
 private class ComponentNode(
     val component: Component,
-    val agent: ComponentAgent
-)
+    val agent: ComponentAgent,
+    val feedback: MutableList<Feedback>
+) {
+    var didRequestRender = true
+}
 
 private class NodeCursorTracker(
     private val parentTracker: CursorTracker,

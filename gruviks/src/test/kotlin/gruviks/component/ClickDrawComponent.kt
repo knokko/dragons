@@ -4,6 +4,7 @@ import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 import gruviks.event.CursorClickEvent
 import gruviks.event.Event
+import gruviks.feedback.RenderFeedback
 
 class ClickDrawComponent: Component() {
     override fun subscribeToEvents() {
@@ -11,7 +12,7 @@ class ClickDrawComponent: Component() {
     }
 
     override fun processEvent(event: Event) {
-        agent.didRequestRender = true
+        agent.giveFeedback(RenderFeedback())
     }
 
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {

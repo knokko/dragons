@@ -2,17 +2,13 @@ package gruviks.component.agent
 
 import gruviks.component.RenderResult
 import gruviks.event.Event
+import gruviks.feedback.Feedback
 import kotlin.reflect.KClass
 
 class ComponentAgent(
-    val cursorTracker: CursorTracker
+    val cursorTracker: CursorTracker,
+    val giveFeedback: (Feedback) -> Unit
 ) {
-
-    /**
-     * This is true by default since every component should be rendered as soon as it is placed
-     */
-    var didRequestRender = true
-
     internal var lastRenderResult: RenderResult? = null
 
     private var allowSubscriptions = true

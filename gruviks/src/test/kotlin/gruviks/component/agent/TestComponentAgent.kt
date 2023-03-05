@@ -12,7 +12,7 @@ class TestComponentAgent {
 
     @Test
     fun testSubscribe() {
-        val agent = ComponentAgent(DummyCursorTracker())
+        val agent = ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK)
         assertFalse(agent.isSubscribed(CursorClickEvent::class))
 
         agent.subscribe(CursorClickEvent::class)
@@ -28,7 +28,7 @@ class TestComponentAgent {
 
     @Test
     fun testSubscribeAll() {
-        val agent = ComponentAgent(DummyCursorTracker())
+        val agent = ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK)
         assertFalse(agent.isSubscribed(CursorClickEvent::class))
 
         agent.subscribeToAllEvents()
