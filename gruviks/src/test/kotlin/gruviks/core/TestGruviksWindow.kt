@@ -174,11 +174,17 @@ class TestGruviksWindow {
     @Test
     fun testReplaceMeFeedback() {
         var renderedSecondComponent = false
+        var receivedCursorEnter = false
 
         class SecondComponent : Component() {
-            override fun subscribeToEvents() {}
+            override fun subscribeToEvents() {
+                agent.subscribe(CursorEnterEvent::class)
+            }
 
-            override fun processEvent(event: Event) {}
+            override fun processEvent(event: Event) {
+                assertTrue(event is CursorEnterEvent)
+                receivedCursorEnter = true
+            }
 
             override fun render(target: GraviksTarget, force: Boolean): RenderResult {
                 renderedSecondComponent = true
@@ -210,7 +216,9 @@ class TestGruviksWindow {
         window.fireEvent(RawCursorPressEvent(Cursor(1), 4))
 
         assertFalse(renderedSecondComponent)
+        assertFalse(receivedCursorEnter)
         window.render(DummyGraviksTarget(), true)
         assertTrue(renderedSecondComponent)
+        assertTrue(receivedCursorEnter)
     }
 }

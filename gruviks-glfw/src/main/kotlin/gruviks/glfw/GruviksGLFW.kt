@@ -60,7 +60,7 @@ fun createAndControlGruviksWindow(graviksWindow: GraviksWindow, rootComponent: C
 
         if (shouldPresentAgain) {
             shouldPresentAgain = false
-            graviksWindow.presentFrame(true)
+            graviksWindow.presentFrame(false)
         }
 
         sleep(1)

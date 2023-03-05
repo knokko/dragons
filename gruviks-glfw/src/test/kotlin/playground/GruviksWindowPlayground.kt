@@ -15,7 +15,6 @@ import gruviks.component.text.TextComponent
 import gruviks.feedback.*
 import gruviks.glfw.createAndControlGruviksWindow
 import gruviks.space.Coordinate
-import gruviks.space.Point
 import gruviks.space.RectRegion
 import gruviks.space.SpaceLayout
 import org.lwjgl.vulkan.VK10.VK_MAKE_VERSION

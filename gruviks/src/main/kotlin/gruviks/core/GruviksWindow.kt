@@ -18,6 +18,9 @@ class GruviksWindow(
     private var didRequestExit = false
     private var nextComponent: (() -> Component)? = null
     private val eventAdapter = RawEventAdapter()
+    private val cursorTracker = RootCursorTracker(eventAdapter) { this.rootAgent.lastRenderResult }
+
+    private var isFirstRenderOfRootComponent = true
 
     init {
         this.setRootComponent(rootComponent)
@@ -42,12 +45,14 @@ class GruviksWindow(
 
     fun setRootComponent(newComponent: Component) {
         this.rootComponent = newComponent
-        this.rootAgent = ComponentAgent(RootCursorTracker(eventAdapter) { this.rootAgent.lastRenderResult }, this::processFeedback)
+        this.rootAgent = ComponentAgent(cursorTracker, this::processFeedback)
         this.didRequestRender = true
 
         this.rootComponent.initAgent(this.rootAgent)
         this.rootComponent.subscribeToEvents()
         this.rootAgent.forbidFutureSubscriptions()
+
+        this.isFirstRenderOfRootComponent = true
     }
 
     private fun checkNextComponent() {
@@ -86,6 +91,13 @@ class GruviksWindow(
 
             this.didRequestRender = false
             this.rootAgent.lastRenderResult = this.rootComponent.render(target, force)
+
+            if (this.isFirstRenderOfRootComponent) {
+                for (cursor in this.cursorTracker.getHoveringCursors()) {
+                    this.rootComponent.processEvent(CursorEnterEvent(cursor, this.cursorTracker.getCursorState(cursor)!!.localPosition))
+                }
+                this.isFirstRenderOfRootComponent = false
+            }
 
             checkNextComponent()
             true
