@@ -31,10 +31,13 @@ import org.opentest4j.AssertionFailedError
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_INT_ARGB
 import java.io.File
+import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.util.*
 import javax.imageio.ImageIO
 import kotlin.math.absoluteValue
+
+const val VALIDATION_LAYER_NAME = "VK_LAYER_KHRONOS_validation"
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestContext {
@@ -48,12 +51,59 @@ class TestContext {
     private val graviksInstance: GraviksInstance
 
     init {
+        val hasDebugUtils = stackPush().use { stack ->
+            val pNumAvailableExtensions = stack.callocInt(1)
+            assertSuccess(
+                    vkEnumerateInstanceExtensionProperties(null as ByteBuffer?, pNumAvailableExtensions, null),
+                    "vkEnumerateInstanceExtensionProperties"
+            )
+
+            val availableExtensions = VkExtensionProperties.calloc(pNumAvailableExtensions[0], stack)
+            assertSuccess(
+                    vkEnumerateInstanceExtensionProperties(null as ByteBuffer?, pNumAvailableExtensions, availableExtensions),
+                    "vkEnumerateInstanceExtensionProperties"
+            )
+
+            for (extension in availableExtensions) {
+                if (extension.extensionNameString() == EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME) {
+                    return@use true
+                }
+            }
+
+            false
+        }
+
+        val hasValidationLayer = stackPush().use { stack ->
+            val pNumAvailableLayers = stack.callocInt(1)
+            assertSuccess(
+                    vkEnumerateInstanceLayerProperties(pNumAvailableLayers, null),
+                    "vkEnumerateInstanceLayerProperties"
+            )
+
+            val availableLayers = VkLayerProperties.calloc(pNumAvailableLayers[0], stack)
+            assertSuccess(
+                    vkEnumerateInstanceLayerProperties(pNumAvailableLayers, availableLayers),
+                    "vkEnumerateInstanceLayerProperties"
+            )
+
+            for (layer in availableLayers) {
+                if (layer.layerNameString() == VALIDATION_LAYER_NAME) {
+                    return@use true
+                }
+            }
+
+            false
+        }
+
+        val enableDebug = hasDebugUtils && hasValidationLayer
+
         stackPush().use { stack ->
             val ciInstance = VkInstanceCreateInfo.calloc(stack)
             ciInstance.`sType$Default`()
-            ciInstance.ppEnabledLayerNames(stack.pointers(stack.UTF8("VK_LAYER_KHRONOS_validation")))
-            ciInstance.ppEnabledExtensionNames(stack.pointers(stack.UTF8(EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME)))
-
+            if (enableDebug) {
+                ciInstance.ppEnabledLayerNames(stack.pointers(stack.UTF8(VALIDATION_LAYER_NAME)))
+                ciInstance.ppEnabledExtensionNames(stack.pointers(stack.UTF8(EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME)))
+            }
             val pInstance = stack.callocPointer(1)
             assertSuccess(
                 vkCreateInstance(ciInstance, null, pInstance),
