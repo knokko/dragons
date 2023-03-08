@@ -68,7 +68,7 @@ internal fun createOpenXrInstance(
 
         val pInstance = stack.callocPointer(1)
         val xrCreateInstanceResult = xrCreateInstance(ciInstance, pInstance)
-        if (xrCreateInstanceResult == XR_ERROR_INITIALIZATION_FAILED) {
+        if (xrCreateInstanceResult == XR_ERROR_INITIALIZATION_FAILED || xrCreateInstanceResult == XR_ERROR_RUNTIME_FAILURE) {
             // Some OpenXR runtimes will return this when no HMD is connected
             return Pair(null, null)
         }
