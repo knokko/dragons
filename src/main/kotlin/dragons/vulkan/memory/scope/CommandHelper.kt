@@ -452,19 +452,27 @@ internal class FamiliesCommands(
                 )
             }
 
-            // The general queue family is needed for depth-stencil transfers
-            familyMap[queueManager.generalQueueFamily]!!.performStagingCopy(
-                tempStagingBuffer, stagingPlacements.queueFamilies, claimsToImageMap, {
-                        claim -> requiresGraphicsFamily(claim)
-                }, false, queueFamilyToBufferMap, queueManager.generalQueueFamily, description
-            )
+            // Depending on whether there is a transfer-only queue, we proceed slightly differently
+            if (queueManager.generalQueueFamily === queueManager.getTransferQueueFamily()) {
+                familyMap[queueManager.generalQueueFamily]!!.performStagingCopy(
+                        tempStagingBuffer, stagingPlacements.queueFamilies, claimsToImageMap, { true },
+                        true, queueFamilyToBufferMap, queueManager.generalQueueFamily, description
+                )
+            } else {
+                // The general queue family is needed for depth-stencil transfers
+                familyMap[queueManager.generalQueueFamily]!!.performStagingCopy(
+                        tempStagingBuffer, stagingPlacements.queueFamilies, claimsToImageMap,
+                        { claim -> requiresGraphicsFamily(claim) }, false, queueFamilyToBufferMap,
+                        queueManager.generalQueueFamily, description
+                )
 
-            // The transfer queue family should be used for everything else.
-            familyMap[queueManager.getTransferQueueFamily()]!!.performStagingCopy(
-                tempStagingBuffer, stagingPlacements.queueFamilies, claimsToImageMap, {
-                        claim -> !requiresGraphicsFamily(claim)
-                }, true, queueFamilyToBufferMap, queueManager.getTransferQueueFamily(), description
-            )
+                // The transfer queue family should be used for everything else.
+                familyMap[queueManager.getTransferQueueFamily()]!!.performStagingCopy(
+                        tempStagingBuffer, stagingPlacements.queueFamilies, claimsToImageMap,
+                        { claim -> !requiresGraphicsFamily(claim) }, true, queueFamilyToBufferMap,
+                        queueManager.getTransferQueueFamily(), description
+                )
+            }
 
             // Note: we use a Set because the general queue family *could* also be the transfer queue family
             val pTransferFences = collectionToBuffer(setOf(
