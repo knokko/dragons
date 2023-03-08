@@ -62,7 +62,7 @@ class DummyVrManager(
                     // These images are only used as resolve target and as the source of an image to buffer copy
                     imageUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT or VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                     initialLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, accessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, accessMask = VK_ACCESS_TRANSFER_READ_BIT,
                     dstPipelineStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT, prefill = null, storeResult = resolveImage
                 )
             )

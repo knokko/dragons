@@ -216,7 +216,7 @@ internal class ContextCommands(
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             0,
-            VK_ACCESS_TRANSFER_READ_BIT
+            VK_ACCESS_TRANSFER_WRITE_BIT
         )
 
         val clearRanges = VkImageSubresourceRange.calloc(1, stack)
@@ -241,7 +241,7 @@ internal class ContextCommands(
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-            VK_ACCESS_TRANSFER_READ_BIT,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
         )
     }

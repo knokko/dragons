@@ -71,7 +71,7 @@ internal fun rasterizeTextAtlas(
             imageBarrier.`sType$Default`()
             imageBarrier.srcAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
             imageBarrier.dstAccessMask(VK_ACCESS_SHADER_READ_BIT)
-            imageBarrier.oldLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+            imageBarrier.oldLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
             imageBarrier.newLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
             imageBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
             imageBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
