@@ -2,16 +2,25 @@ package dragons.plugin.interfaces.vulkan
 
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.PluginInterface
+import org.lwjgl.system.MemoryStack
 
 interface VulkanInstanceActor: PluginInterface {
 
     /**
-     * Plug-ins that implement this method can influence the Vulkan instance extensions and layers that will be
-     * enabled. See the documentation of the properties of *Agent* for more information.
+     * Plug-ins that implement this method can influence the Vulkan (instance) layers that will be
+     * enabled. See the documentation of the properties of *LayerAgent* for more information.
      */
-    fun manipulateVulkanInstance(pluginInstance: PluginInstance, agent: Agent)
+    fun manipulateVulkanInstanceLayers(pluginInstance: PluginInstance, agent: LayerAgent) {}
 
-    class Agent(
+    /**
+     * Plug-ins that implement this method can influence the Vulkan instance extensions that will be
+     * enabled. See the documentation of the properties of *ExtensionAgent* for more information.
+     */
+    fun manipulateVulkanInstanceExtensions(pluginInstance: PluginInstance, agent: ExtensionAgent) {}
+
+    fun extendVulkanInstanceNextChain(pluginInstance: PluginInstance, agent: NextChainAgent) {}
+
+    class ExtensionAgent(
         /**
          * The set of available Vulkan instance extensions (this will be queried using
          * vkEnumerateInstanceExtensionProperties).
@@ -32,12 +41,15 @@ interface VulkanInstanceActor: PluginInterface {
          * This set will be initially empty and the plug-in should add extensions to this set during
          * manipulateVulkanInstance.
          */
-        val requiredExtensions: MutableSet<String>,
+        val requiredExtensions: MutableSet<String>
+    )
 
+    class LayerAgent(
         /**
          * The set of available Vulkan (instance) layers (this will be queried using vkEnumerateInstanceLayerProperties).
          */
         val availableLayers: Set<String>,
+
         /**
          * The set of layers that this plug-in would like to enable, but doesn't require. These layers will be
          * enabled if they are available and ignored if they are not available.
@@ -46,6 +58,7 @@ interface VulkanInstanceActor: PluginInterface {
          * manipulateVulkanInstance.
          */
         val desiredLayers: MutableSet<String>,
+
         /**
          * The set of layers that this plug-in requires to be enabled. These layers will be enabled if they are
          * available and the game will abort and show an error prompt if any layer in this set is not available.
@@ -54,5 +67,12 @@ interface VulkanInstanceActor: PluginInterface {
          * manipulateVulkanInstance.
          */
         val requiredLayers: MutableSet<String>
+    )
+
+    class NextChainAgent(
+            val enabledLayers: Set<String>,
+            val enabledExtensions: Set<String>,
+            val stack: MemoryStack,
+            var pNext: Long
     )
 }
