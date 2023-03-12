@@ -35,11 +35,10 @@ internal fun placeText(
         val advanceWidth = font.getAdvanceWidth(codepoint)
 
         val charHeight = pixelBoundY - pixelMinY
-        val shapeAspectRatio = advanceWidth.toFloat() / (font.ascent - font.descent).toFloat()
-        val unroundedWidth = (charHeight.toFloat() * shapeAspectRatio)
+        val scale = charHeight.toFloat() / (font.ascent - font.descent)
+        val unroundedWidth = advanceWidth.toFloat() * scale
         val unroundedExtra = if (index > 0) {
-            val rawExtra = font.getExtraAdvance(orderedChars.chars[index - 1], codepoint)
-            unroundedWidth * (rawExtra.toFloat() / advanceWidth.toFloat())
+            font.getExtraAdvance(orderedChars.chars[index - 1], codepoint) * scale
         } else {
             0f
         }
