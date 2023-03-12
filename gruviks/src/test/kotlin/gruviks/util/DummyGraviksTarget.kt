@@ -1,6 +1,7 @@
 package gruviks.util
 
 import graviks2d.resource.image.ImageReference
+import graviks2d.resource.text.CharacterPosition
 import graviks2d.resource.text.FontReference
 import graviks2d.resource.text.TextStyle
 import graviks2d.target.GraviksTarget
@@ -45,8 +46,15 @@ class DummyGraviksTarget(
         string: String,
         style: TextStyle,
         backgroundColor: Color
-    ) {
+    ): List<CharacterPosition> {
         drawStringCounter += 1
+        val numCodepoints = string.codePointCount(0, string.length)
+        return (0 until numCodepoints).map { CharacterPosition(
+            minX = it.toFloat() / numCodepoints.toFloat(),
+            minY = 0f,
+            maxX = (it + 1).toFloat() / numCodepoints.toFloat(),
+            maxY = 1f
+        ) }
     }
 
     override fun getStringAspectRatio(string: String, fontReference: FontReference?) = 10f

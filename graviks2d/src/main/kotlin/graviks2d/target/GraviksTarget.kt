@@ -1,6 +1,7 @@
 package graviks2d.target
 
 import graviks2d.resource.image.ImageReference
+import graviks2d.resource.text.CharacterPosition
 import graviks2d.resource.text.FontReference
 import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
@@ -25,7 +26,7 @@ interface GraviksTarget {
     fun drawString(
         minX: Float, yBottom: Float, maxX: Float, yTop: Float,
         string: String, style: TextStyle, backgroundColor: Color,
-    )
+    ): List<CharacterPosition>
 
     fun getStringAspectRatio(string: String, fontReference: FontReference?): Float
 

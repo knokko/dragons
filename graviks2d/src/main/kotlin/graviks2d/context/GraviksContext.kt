@@ -416,7 +416,7 @@ class GraviksContext(
     override fun drawString(
         minX: Float, yBottom: Float, maxX: Float, yTop: Float,
         string: String, style: TextStyle, backgroundColor: Color,
-    ) {
+    ): List<CharacterPosition> {
         val font = this.instance.fontManager.getFont(style.font)
         val placedChars = placeText(minX, yBottom, maxX, yTop, string, style, font, this.width, this.height)
         for (placedChar in placedChars) {
@@ -477,7 +477,7 @@ class GraviksContext(
                     }
 
                     this.pushRect(
-                        placedChar.minX, placedChar.minY, placedChar.maxX, placedChar.maxY,
+                        placedChar.position.minX, placedChar.position.minY, placedChar.position.maxX, placedChar.position.maxY,
                         claimedBufferSpace.vertexIndex, claimedBufferSpace.depth,
                         claimedBufferSpace.operationIndex, claimedBufferSpace.operationIndex + operationSize,
                         claimedBufferSpace.operationIndex + 2 * operationSize,
@@ -505,6 +505,7 @@ class GraviksContext(
                 }
             }
         }
+        return placedChars.sortedBy { it.originalIndex }.map { it.position }
     }
 
     override fun getStringAspectRatio(string: String, fontReference: FontReference?): Float {

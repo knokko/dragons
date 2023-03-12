@@ -20,31 +20,31 @@ class TestTextPlacer {
     fun testOrderChars() {
         testOrderChars(charArrayOf(
             't', 'e', 's', 't'
-        ), intArrayOf(), "test", listOf(
+        ), intArrayOf(0, 1, 2, 3), intArrayOf(), "test", listOf(
             DirectionGroup(0, 4, TextDirection.LeftToRight)
         ), true)
 
         testOrderChars(charArrayOf(
             '1', '2', '3', '4'
-        ), intArrayOf(), "1234", listOf(
+        ), intArrayOf(0, 1, 2, 3), intArrayOf(), "1234", listOf(
             DirectionGroup(0, 4, TextDirection.Number)
         ), true)
 
         testOrderChars(charArrayOf(
             'ט', 'ל', 'א'
-        ), intArrayOf(), "אלט", listOf(
+        ), intArrayOf(2, 1, 0), intArrayOf(), "אלט", listOf(
             DirectionGroup(0, 3, TextDirection.RightToLeft)
         ), false)
 
         testOrderChars(charArrayOf(
             '.', ',', ';'
-        ), intArrayOf(), ".,;", listOf(
+        ), intArrayOf(0, 1, 2), intArrayOf(), ".,;", listOf(
             DirectionGroup(0, 3, TextDirection.LeftToRight)
         ), true)
 
         testOrderChars(charArrayOf(
             't', 'e', 's', 't', '1', '2', '3', '4'
-        ), intArrayOf(), "test1234", listOf(
+        ), intArrayOf(0, 1, 2, 3, 4, 5, 6, 7), intArrayOf(), "test1234", listOf(
             DirectionGroup(0, 4, TextDirection.LeftToRight),
             DirectionGroup(4, 8, TextDirection.Number)
         ), true)
@@ -52,7 +52,8 @@ class TestTextPlacer {
         testOrderChars(charArrayOf(
             '(', 'O', 'n', 'l', 'y', ')', ' ', '1', ' ', 'w', 'o', 'r', 'd', ' ',
             '(', '(', 'ט', 'ל', 'א', ')', ' ', 'i', 's', ' ', 'H', 'e', 'b', 'r', 'e', 'w'
-        ), intArrayOf(), "(Only) 1 word ((אלט) is Hebrew", listOf(
+        ), (0 until 16).toList().toIntArray() + intArrayOf(18, 17, 16) + (19 until 30).toList().toIntArray(),
+            intArrayOf(), "(Only) 1 word ((אלט) is Hebrew", listOf(
             DirectionGroup(0, 7, TextDirection.LeftToRight),
             DirectionGroup(7, 8, TextDirection.Number),
             DirectionGroup(8, 16, TextDirection.LeftToRight),
@@ -68,7 +69,9 @@ class TestTextPlacer {
             ')', '5', '2', ' ', 'ט', 'ל', 'א', '(', ' ', ')', 'ש', 'י', 'נ', 'א', 'י',
             'ל', 'ו', 'י', '(', ' ', '1', '6', '1', '6', ' ', 'ל', 'י', 'ר', 'פ', 'א',
             ' ', '2', '3'
-        ), intArrayOf(
+        ), intArrayOf(32, 30, 31) + (13 until 30).reversed().toList().toIntArray()
+                + intArrayOf(9, 10, 11, 12) + (2 until 9).reversed().toList().toIntArray() + intArrayOf(0, 1),
+        intArrayOf(
             0, 7, 9, 18
         ), "23 אפריל 1616 (יוליאניש) (אלט 52)", listOf(
             DirectionGroup(0, 2, TextDirection.Number),
@@ -84,7 +87,8 @@ class TestTextPlacer {
             'מ', 'ע', 'ש', '(', 'ט', ' ', 'ד', 'ר', 'א', 'ל', '(', '(', ' ', 'L', 'o',
             'r', 'd', ' ', 'C', 'h', 'a', 'm', 'b', 'e', 'r', 'l', 'a', 'i', 'n', '\'',
             's', ' ', 'M', 'e', 'n', ' ', 'י', 'ד', ' ', 'ן', 'ס', 'י', 'י', 'ה', 'ע', 'ג'
-        ), intArrayOf(
+        ), (33 until 62).reversed().toList().toIntArray() + (11 until 33).toList().toIntArray() +
+                (0 until 11).reversed().toList().toIntArray(), intArrayOf(
             0, 1, 2, 13, 19, 26, 27
         ), "געהייסן די Lord Chamberlain's Men ((לארד ט(שעמבע)רליינס מען)))", listOf(
             DirectionGroup(0, 11, TextDirection.RightToLeft),
@@ -95,7 +99,8 @@ class TestTextPlacer {
         testOrderChars(charArrayOf(
             'ד', 'ר', 'א', 'ל', '(', '(', ' ', 'L', 'o', 'r', 'd', ' ', 'C', 'h', 'a', 'm',
             'b', 'e', 'r', 'l', 'a', 'i', 'n', '\'', 's', ' ', 'M', 'e', 'n', ' ', 'ר'
-        ), intArrayOf(
+        ), (24 until 31).reversed().toList().toIntArray() + (2 until 24).toList().toIntArray() + intArrayOf(1, 0),
+            intArrayOf(
             4, 5
         ), "ר Lord Chamberlain's Men ((לארד", listOf(
             DirectionGroup(0, 2, TextDirection.RightToLeft),
@@ -105,6 +110,8 @@ class TestTextPlacer {
 
         testOrderChars(charArrayOf(
             ')', 'a', '(', ')', 'b', ' ', '5', '2', ' ', 'ל', ')', '(', 'ט', 'א', '('
+        ), intArrayOf(
+            14, 10, 11, 12, 13, 9, 7, 8, 6, 5, 4, 3, 2, 1, 0
         ), intArrayOf(
             0, 10, 11, 14
         ), "(אט()ל 52 a()b)", listOf(
@@ -117,21 +124,22 @@ class TestTextPlacer {
     }
 
     private fun testOrderChars(
-        expected: CharArray, expectedMirrorIndices: IntArray, inputString: String,
+        expected: CharArray, expectedOriginalIndices: IntArray, expectedMirrorIndices: IntArray, inputString: String,
         expectedGroups: List<DirectionGroup>, expectPrimarilyLeftToRight: Boolean
     ) {
         val codepoints = inputString.codePoints().toArray()
         assertEquals(expectedGroups, groupText(codepoints, getPrimaryDirection(codepoints)))
 
-        val (orderedChars, shouldMirror, isPrimarilyLeftToRight) = orderChars(codepoints)
-        assertArrayEquals(expected.map { it.code }.toIntArray(), orderedChars)
+        val orderedChars = orderChars(codepoints)
+        assertArrayEquals(expected.map { it.code }.toIntArray(), orderedChars.chars)
+        assertArrayEquals(expectedOriginalIndices, orderedChars.originalIndices)
 
         val exportedMirror = BooleanArray(expected.size)
         for (expectedMirrorIndex in expectedMirrorIndices) {
             exportedMirror[expectedMirrorIndex] = true
         }
-        assertArrayEquals(exportedMirror, shouldMirror)
+        assertArrayEquals(exportedMirror, orderedChars.shouldMirror)
 
-        assertEquals(expectPrimarilyLeftToRight, isPrimarilyLeftToRight)
+        assertEquals(expectPrimarilyLeftToRight, orderedChars.isPrimarilyLeftToRight)
     }
 }

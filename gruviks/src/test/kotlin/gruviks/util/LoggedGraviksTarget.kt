@@ -1,6 +1,7 @@
 package gruviks.util
 
 import graviks2d.resource.image.ImageReference
+import graviks2d.resource.text.CharacterPosition
 import graviks2d.resource.text.FontReference
 import graviks2d.resource.text.TextStyle
 import graviks2d.target.GraviksTarget
@@ -50,7 +51,7 @@ class LoggedGraviksTarget: GraviksTarget {
         string: String,
         style: TextStyle,
         backgroundColor: Color
-    ) {
+    ): List<CharacterPosition> {
         TODO("Not yet implemented")
     }
 
