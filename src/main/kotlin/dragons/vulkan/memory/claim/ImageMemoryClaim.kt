@@ -3,8 +3,7 @@ package dragons.vulkan.memory.claim
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.queue.QueueFamily
 import kotlinx.coroutines.CompletableDeferred
-import org.lwjgl.vulkan.VK12.VK_IMAGE_LAYOUT_UNDEFINED
-import org.lwjgl.vulkan.VK12.VK_SAMPLE_COUNT_1_BIT
+import org.lwjgl.vulkan.VK12.*
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.nio.ByteBuffer

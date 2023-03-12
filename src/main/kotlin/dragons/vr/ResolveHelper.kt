@@ -343,6 +343,7 @@ class ResolveHelper(
 
             if (takeScreenshot) {
                 pSubmitInfo.waitSemaphoreCount(0)
+                pSubmitInfo.pWaitSemaphores(null)
                 pSubmitInfo.pCommandBuffers(stack.pointers(this.screenshotCommandBuffers[rawResolveIndex].address()))
 
                 queueManager.generalQueueFamily.getRandomPriorityQueue().submit(pSubmitInfo, this.fence)

@@ -54,6 +54,7 @@ class DebugPanelTile(
 
         private var lastStandardOutputHistory = emptyList<String>()
         private var submissionMarker: CompletableDeferred<Unit>? = null
+        private var isFirstRender = true
 
         override fun render(renderer: StandardSceneRenderer, tile: SmallTile, cameraPosition: Position) {
             val scaleX = 60f
@@ -72,7 +73,7 @@ class DebugPanelTile(
 
             val newStandardOutputHistory = getStandardOutputHistory(50)
 
-            if (lastStandardOutputHistory != newStandardOutputHistory) {
+            if (lastStandardOutputHistory != newStandardOutputHistory || isFirstRender) {
 
                 panel.execute {
                     val backgroundColor = Color.rgbInt(200, 0, 0)
@@ -113,6 +114,8 @@ class DebugPanelTile(
                 panel.updateImage(panelSemaphore, submissionMarker)
                 this.submissionMarker = submissionMarker
             }
+
+            isFirstRender = false
         }
 
         override fun getWaitSemaphores(tile: SmallTile): Collection<Pair<Long, Int>> {
@@ -158,9 +161,7 @@ class DebugPanelTile(
                         queueFamily = agent.gameState.graphics.queueManager.generalQueueFamily,
                         bytesPerPixel = 4, imageFormat = VK_FORMAT_R8G8B8A8_UNORM, tiling = VK_IMAGE_TILING_OPTIMAL,
                         imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
-                        initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                        accessMask = VK_ACCESS_SHADER_READ_BIT, aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                        dstPipelineStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                        initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                         storeResult = panelImage, sharingID = null, prefill = null
                     )
                 )

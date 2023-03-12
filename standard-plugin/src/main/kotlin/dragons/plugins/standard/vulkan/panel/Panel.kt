@@ -17,6 +17,8 @@ class Panel(
         translucentPolicy = TranslucentPolicy.Manual, vertexBufferSize = 50_000, operationBufferSize = 250_000
     )
 
+    private var imageLayout = VK_IMAGE_LAYOUT_UNDEFINED
+
     val width: Int
     get() = this.image.width
 
@@ -48,12 +50,13 @@ class Panel(
         this.execute {
             this.graviks.copyColorImageTo(
                 destImage = this.image.handle, destBuffer = null, destImageFormat = VK_FORMAT_R8G8B8A8_UNORM,
-                originalImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                originalImageLayout = this.imageLayout,
                 finalImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 imageSrcAccessMask = VK_ACCESS_SHADER_READ_BIT, imageSrcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 imageDstAccessMask = VK_ACCESS_SHADER_READ_BIT, imageDstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 signalSemaphore = signalSemaphore, submissionMarker = submissionMarker, shouldAwaitCompletion = false
             )
+            this.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         }
     }
 

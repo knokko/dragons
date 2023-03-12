@@ -13,53 +13,93 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.LoggerFactory.getLogger
-import java.nio.ByteBuffer
 import kotlin.jvm.Throws
 
 @Throws(StartupException::class)
 fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkInstance {
     try {
         val logger = getLogger("Vulkan")
-        val (layersToEnable, extensionsToEnable) = stackPush().use { stack ->
+        val pluginPairs = pluginManager.getImplementations(VulkanInstanceActor::class)
 
-            val pNumAvailableExtensions = stack.callocInt(1)
-            assertVkSuccess(
-                vkEnumerateInstanceExtensionProperties(null as ByteBuffer?, pNumAvailableExtensions, null),
-                "enumerateInstanceExtensionProperties", "count"
-            )
-            val numAvailableExtensions = pNumAvailableExtensions[0]
-
-            val pAvailableExtensions = VkExtensionProperties.calloc(numAvailableExtensions, stack)
-            assertVkSuccess(
-                vkEnumerateInstanceExtensionProperties(
-                    null as ByteBuffer?,
-                    pNumAvailableExtensions,
-                    pAvailableExtensions
-                ),
-                "EnumerateInstanceExtensionProperties", "extensions"
-            )
-
-            val availableExtensions = extensionBufferToSet(pAvailableExtensions)
-            logger.info("There are ${availableExtensions.size} Vulkan instance extensions available:")
-            for (extension in availableExtensions) {
-                logger.info(extension)
-            }
+        val layersToEnable = stackPush().use { stack ->
 
             val pNumAvailableLayers = stack.callocInt(1)
             assertVkSuccess(
-                vkEnumerateInstanceLayerProperties(pNumAvailableLayers, null),
-                "EnumerateInstanceLayerProperties", "count"
+                    vkEnumerateInstanceLayerProperties(pNumAvailableLayers, null),
+                    "EnumerateInstanceLayerProperties", "count"
             )
             val numAvailableLayers = pNumAvailableLayers[0]
             val pAvailableLayers = VkLayerProperties.calloc(numAvailableLayers, stack)
             assertVkSuccess(
-                vkEnumerateInstanceLayerProperties(pNumAvailableLayers, pAvailableLayers),
-                "EnumerateInstanceLayerProperties", "layers"
+                    vkEnumerateInstanceLayerProperties(pNumAvailableLayers, pAvailableLayers),
+                    "EnumerateInstanceLayerProperties", "layers"
             )
             val availableLayers = layerBufferToSet(pAvailableLayers)
             logger.info("There are ${availableLayers.size} available Vulkan instance layers:")
             for (layer in availableLayers) {
                 logger.info(layer)
+            }
+
+            val layersToEnable = mutableSetOf<String>()
+            for (pluginPair in pluginPairs) {
+                val pluginAgent = VulkanInstanceActor.LayerAgent(
+                        availableLayers = availableLayers,
+                        desiredLayers = mutableSetOf(),
+                        requiredLayers = mutableSetOf()
+                )
+                pluginPair.first.manipulateVulkanInstanceLayers(pluginPair.second, pluginAgent)
+                val pluginName = pluginPair.second.info.name
+
+                if (!availableLayers.containsAll(pluginAgent.requiredLayers)) {
+                    logger.error("Plug-in $pluginName requires the following layers, but not all are available: ${pluginAgent.requiredLayers}")
+                    throw ExtensionStartupException(
+                            "Missing required Vulkan layers",
+                            "The $pluginName plug-in requires the following Vulkan layers to work, but not all of them are available.",
+                            availableLayers, pluginAgent.requiredLayers, "layers"
+                    )
+                }
+                layersToEnable.addAll(pluginAgent.requiredLayers)
+                logger.info("Plug-in $pluginName requires the following layers: ${pluginAgent.requiredLayers}")
+                for (layer in pluginAgent.desiredLayers) {
+                    if (availableLayers.contains(layer)) {
+                        layersToEnable.add(layer)
+                    }
+                }
+                logger.info("Plug-in $pluginName requested the following layers: ${pluginAgent.desiredLayers}")
+            }
+
+            layersToEnable
+        }
+
+        val extensionsToEnable = stackPush().use { stack ->
+
+            val availableExtensions = mutableSetOf<String>()
+
+            for (layerName in setOf<String?>(null) + layersToEnable) {
+                val pNumAvailableExtensions = stack.callocInt(1)
+                val pLayerName = if (layerName == null) null else stack.UTF8(layerName)
+                assertVkSuccess(
+                        vkEnumerateInstanceExtensionProperties(pLayerName, pNumAvailableExtensions, null),
+                        "enumerateInstanceExtensionProperties", "count"
+                )
+                val numAvailableExtensions = pNumAvailableExtensions[0]
+
+                val pAvailableExtensions = VkExtensionProperties.calloc(numAvailableExtensions, stack)
+                assertVkSuccess(
+                        vkEnumerateInstanceExtensionProperties(
+                                pLayerName,
+                                pNumAvailableExtensions,
+                                pAvailableExtensions
+                        ),
+                        "EnumerateInstanceExtensionProperties", "extensions"
+                )
+
+                availableExtensions.addAll(extensionBufferToSet(pAvailableExtensions))
+            }
+
+            logger.info("There are ${availableExtensions.size} Vulkan instance extensions available:")
+            for (extension in availableExtensions) {
+                logger.info(extension)
             }
 
             val vrExtensions = vrManager.getVulkanInstanceExtensions(availableExtensions)
@@ -77,20 +117,13 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
             val extensionsToEnable = mutableSetOf<String>()
             extensionsToEnable.addAll(vrExtensions)
 
-            val layersToEnable = mutableSetOf<String>()
-
-            val pluginPairs = pluginManager.getImplementations(VulkanInstanceActor::class)
             for (pluginPair in pluginPairs) {
-                val pluginAgent = VulkanInstanceActor.Agent(
+                val pluginAgent = VulkanInstanceActor.ExtensionAgent(
                     availableExtensions = availableExtensions,
                     desiredExtensions = mutableSetOf(),
                     requiredExtensions = mutableSetOf(),
-
-                    availableLayers = availableLayers,
-                    desiredLayers = mutableSetOf(),
-                    requiredLayers = mutableSetOf()
                 )
-                pluginPair.first.manipulateVulkanInstance(pluginPair.second, pluginAgent)
+                pluginPair.first.manipulateVulkanInstanceExtensions(pluginPair.second, pluginAgent)
                 val pluginName = pluginPair.second.info.name
 
                 if (!availableExtensions.containsAll(pluginAgent.requiredExtensions)) {
@@ -109,26 +142,9 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
                     }
                 }
                 logger.info("Plug-in $pluginName requested the following instance extensions: ${pluginAgent.desiredExtensions}")
-
-                if (!availableLayers.containsAll(pluginAgent.requiredLayers)) {
-                    logger.error("Plug-in $pluginName requires the following layers, but not all are available: ${pluginAgent.requiredLayers}")
-                    throw ExtensionStartupException(
-                        "Missing required Vulkan layers",
-                        "The $pluginName plug-in requires the following Vulkan layers to work, but not all of them are available.",
-                        availableLayers, pluginAgent.requiredLayers, "layers"
-                    )
-                }
-                layersToEnable.addAll(pluginAgent.requiredLayers)
-                logger.info("Plug-in $pluginName requires the following layers: ${pluginAgent.requiredLayers}")
-                for (layer in pluginAgent.desiredLayers) {
-                    if (availableLayers.contains(layer)) {
-                        layersToEnable.add(layer)
-                    }
-                }
-                logger.info("Plug-in $pluginName requested the following layers: ${pluginAgent.desiredLayers}")
             }
 
-            Pair(layersToEnable, extensionsToEnable)
+            extensionsToEnable
         }
 
         logger.info("The following ${extensionsToEnable.size} instance extensions will be enabled:")
@@ -153,6 +169,26 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
             ciInstance.pApplicationInfo(appInfo)
             ciInstance.ppEnabledExtensionNames(encodeStrings(extensionsToEnable, stack))
             ciInstance.ppEnabledLayerNames(encodeStrings(layersToEnable, stack))
+
+            var endOfNextChain = VkBaseInStructure.create(ciInstance.address())
+            val nextChainAgent = VulkanInstanceActor.NextChainAgent(
+                    enabledLayers = layersToEnable,
+                    enabledExtensions = extensionsToEnable,
+                    stack = stack,
+                    pNext = 0L
+            )
+            for (pluginPair in pluginPairs) {
+                pluginPair.first.extendVulkanInstanceNextChain(pluginPair.second, nextChainAgent)
+
+                if (nextChainAgent.pNext != 0L) {
+                    endOfNextChain.pNext(VkBaseInStructure.create(nextChainAgent.pNext))
+                    while (endOfNextChain.pNext() != null) {
+                        endOfNextChain = endOfNextChain.pNext()!!
+                    }
+
+                    nextChainAgent.pNext = 0L
+                }
+            }
 
             logger.info("Creating instance...")
             val pInstance = stack.callocPointer(1)

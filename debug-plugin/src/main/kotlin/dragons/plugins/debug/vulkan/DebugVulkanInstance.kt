@@ -7,20 +7,42 @@ import dragons.plugin.interfaces.vulkan.VulkanInstanceDestructionListener
 import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.EXTDebugUtils.*
+import org.lwjgl.vulkan.EXTValidationFeatures.*
 import org.lwjgl.vulkan.VK12.VK_FALSE
 import org.lwjgl.vulkan.VkDebugUtilsMessengerCallbackDataEXT
 import org.lwjgl.vulkan.VkDebugUtilsMessengerCreateInfoEXT
+import org.lwjgl.vulkan.VkValidationFeaturesEXT
 import org.slf4j.LoggerFactory.getLogger
 
 class DebugVulkanInstance: VulkanInstanceActor, VulkanInstanceCreationListener, VulkanInstanceDestructionListener {
 
     private var debugMessenger: Long? = null
 
-    override fun manipulateVulkanInstance(pluginInstance: PluginInstance, agent: VulkanInstanceActor.Agent) {
+    override fun manipulateVulkanInstanceExtensions(pluginInstance: PluginInstance, agent: VulkanInstanceActor.ExtensionAgent) {
+        if (!pluginInstance.gameInitProps.mainParameters.forbidDebug) {
+            agent.requiredExtensions.add(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
+            agent.requiredExtensions.add(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)
+        }
+    }
+
+    override fun manipulateVulkanInstanceLayers(pluginInstance: PluginInstance, agent: VulkanInstanceActor.LayerAgent) {
         if (!pluginInstance.gameInitProps.mainParameters.forbidDebug) {
             agent.requiredLayers.add("VK_LAYER_KHRONOS_validation")
-            agent.requiredExtensions.add(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
         }
+    }
+
+    override fun extendVulkanInstanceNextChain(pluginInstance: PluginInstance, agent: VulkanInstanceActor.NextChainAgent) {
+        val validationFeatures = VkValidationFeaturesEXT.calloc(agent.stack)
+        validationFeatures.`sType$Default`()
+        validationFeatures.pEnabledValidationFeatures(agent.stack.ints(
+                VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+                VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
+                VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+                VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
+        ))
+        validationFeatures.pDisabledValidationFeatures(null)
+
+        agent.pNext = validationFeatures.address()
     }
 
     override fun afterVulkanInstanceCreation(

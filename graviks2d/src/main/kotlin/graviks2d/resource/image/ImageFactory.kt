@@ -205,7 +205,7 @@ internal fun createImagePair(
         val postCopyBarriers = VkImageMemoryBarrier.calloc(1, stack)
         val postCopyBarrier = postCopyBarriers[0]
         postCopyBarrier.`sType$Default`()
-        postCopyBarrier.srcAccessMask(VK_ACCESS_TRANSFER_READ_BIT)
+        postCopyBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
         postCopyBarrier.dstAccessMask(VK_ACCESS_SHADER_READ_BIT)
         postCopyBarrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
         postCopyBarrier.newLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
