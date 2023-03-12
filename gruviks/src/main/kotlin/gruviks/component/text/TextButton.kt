@@ -9,6 +9,7 @@ import gruviks.event.CursorLeaveEvent
 import gruviks.event.Event
 import gruviks.feedback.Feedback
 import gruviks.feedback.RenderFeedback
+import java.lang.Float.min
 
 class TextButton(
     private var text: String,
@@ -46,12 +47,12 @@ class TextButton(
             iconAspectRatio = iconWidth.toFloat() / iconHeight.toFloat()
         }
 
-        // The width if the height of the button were 1.0
-        val referenceWidth = (1f + textAspectRatio + style.iconHeight * iconAspectRatio) / targetAspectRatio
+        // The width of the text + icon if the height of the button were 1.0
+        val referenceInnerWidth = (textAspectRatio + style.iconHeight * iconAspectRatio) / targetAspectRatio * (1f - 2f * style.lineWidth)
 
-        val cornerRadiusY = if (referenceWidth <= 1f) { 0.5f } else { 0.5f / referenceWidth }
+        val cornerRadiusY = if (referenceInnerWidth <= 1f) { 0.5f } else { 0.5f / referenceInnerWidth }
         val cornerRadiusX = cornerRadiusY / targetAspectRatio
-        val finalWidth = if (referenceWidth <= 1f) { referenceWidth } else { 1f }
+        val finalWidth = min(referenceInnerWidth + 2 * cornerRadiusX, 1f)
 
         val (minX, maxX) = computeBoundsX(0f, 1f, finalWidth, style.horizontalAlignment)
         val (minY, maxY) = computeBoundsY(0f, 1f, 2f * cornerRadiusY, style.verticalAlignment)
@@ -66,8 +67,8 @@ class TextButton(
             target.drawRoundedRect(minX, minY, maxX, maxY, cornerRadiusX, style.lineWidth, borderColor)
         }
 
-        var textMinX = minX + cornerRadiusX
-        val textMaxX = maxX - cornerRadiusX
+        var textMinX = minX + cornerRadiusX * 0.7f
+        val textMaxX = maxX - cornerRadiusX * 0.7f
 
         if (icon != null) {
             val deltaY = maxY - minY
@@ -82,12 +83,10 @@ class TextButton(
         }
 
         val dy = maxY - minY
+        val textMinY = minY + dy * style.lineWidth
+        val textMaxY = maxY - dy * style.lineWidth
 
-        target.drawString(
-            textMinX, minY + dy * style.lineWidth * 0.5f,
-            textMaxX, maxY - dy * style.lineWidth * 0.5f,
-            text, textStyle, backgroundColor
-        )
+        target.drawString(textMinX, textMinY, textMaxX, textMaxY, text, textStyle, backgroundColor)
 
         return RenderResult(
             drawnRegion = RoundedRectangularDrawnRegion(minX, minY, maxX, maxY, cornerRadiusX, cornerRadiusY),
