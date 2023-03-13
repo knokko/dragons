@@ -5,7 +5,7 @@ import graviks2d.pipeline.createGraviksPipelineInputAssembly
 import graviks2d.pipeline.createGraviksPipelineRasterization
 import graviks2d.pipeline.createGraviksPipelineViewport
 import graviks2d.util.assertSuccess
-import org.lwjgl.system.MemoryStack
+import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkGraphicsPipelineCreateInfo
@@ -23,7 +23,8 @@ internal class TextPipeline(
     val vkRenderPass: Long
 
     init {
-        MemoryStack.stackPush().use { stack ->
+        // TODO Pipeline cache
+        stackPush().use { stack ->
 
             this.countPipelineLayout = createTextCountPipelineLayout(vkDevice, stack)
             val (oddPipelineLayout, oddDescriptorSetLayout) = createTextOddPipelineLayout(vkDevice, stack)
@@ -45,7 +46,6 @@ internal class TextPipeline(
             ciCountPipeline.pDynamicState(createGraviksPipelineDynamics(stack))
             ciCountPipeline.pRasterizationState(createGraviksPipelineRasterization(stack))
             ciCountPipeline.pMultisampleState(createTextPipelineMultisampleState(stack))
-            ciCountPipeline.pDepthStencilState(createTextPipelineDepthState(stack))
             ciCountPipeline.pColorBlendState(createTextCountPipelineColorBlend(stack))
             ciCountPipeline.layout(this.countPipelineLayout)
             ciCountPipeline.renderPass(vkRenderPass)
@@ -60,7 +60,6 @@ internal class TextPipeline(
             ciOddPipeline.pDynamicState(createGraviksPipelineDynamics(stack))
             ciOddPipeline.pRasterizationState(createGraviksPipelineRasterization(stack))
             ciOddPipeline.pMultisampleState(createTextPipelineMultisampleState(stack))
-            ciOddPipeline.pDepthStencilState(createTextPipelineDepthState(stack))
             ciOddPipeline.pColorBlendState(createTextOddPipelineColorBlend(stack))
             ciOddPipeline.layout(this.oddPipelineLayout)
             ciOddPipeline.renderPass(this.vkRenderPass)

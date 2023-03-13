@@ -148,11 +148,6 @@ internal class ContextCommands(
                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 0, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
             )
-            transitionDepthImageLayout(
-                stack, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
-            )
         }
     }
 
@@ -161,26 +156,13 @@ internal class ContextCommands(
         srcStageMask: Int, dstStageMask: Int, srcAccessMask: Int, dstAccessMask: Int
     ) {
         transitionImageLayout(
-            stack, this.context.targetImages.colorImage, VK_IMAGE_ASPECT_COLOR_BIT,
-            currentLayout, desiredLayout,
-            srcStageMask, dstStageMask, srcAccessMask, dstAccessMask
-        )
-    }
-
-    private fun transitionDepthImageLayout(
-        stack: MemoryStack, currentLayout: Int, desiredLayout: Int,
-        srcStageMask: Int, dstStageMask: Int, srcAccessMask: Int, dstAccessMask: Int
-    ) {
-        transitionImageLayout(
-            stack, this.context.targetImages.depthImage, VK_IMAGE_ASPECT_DEPTH_BIT,
-            currentLayout, desiredLayout,
+            stack, this.context.targetImages.colorImage, currentLayout, desiredLayout,
             srcStageMask, dstStageMask, srcAccessMask, dstAccessMask
         )
     }
 
     private fun transitionImageLayout(
-        stack: MemoryStack, image: Long, aspectBit: Int,
-        currentLayout: Int, desiredLayout: Int,
+        stack: MemoryStack, image: Long, currentLayout: Int, desiredLayout: Int,
         srcStageMask: Int, dstStageMask: Int, srcAccessMask: Int, dstAccessMask: Int
     ) {
 
@@ -195,7 +177,7 @@ internal class ContextCommands(
         imageBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
         imageBarrier.image(image)
         imageBarrier.subresourceRange {
-            it.aspectMask(aspectBit)
+            it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
             it.baseMipLevel(0)
             it.baseArrayLayer(0)
             it.levelCount(1)
@@ -205,44 +187,6 @@ internal class ContextCommands(
         vkCmdPipelineBarrier(
             this.commandBuffer, srcStageMask, dstStageMask, 0,
             null, null, imageBarriers
-        )
-    }
-
-    private fun clearDepthImageNow(stack: MemoryStack) {
-        transitionDepthImageLayout(
-            stack,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            0,
-            VK_ACCESS_TRANSFER_WRITE_BIT
-        )
-
-        val clearRanges = VkImageSubresourceRange.calloc(1, stack)
-        val clearRange = clearRanges[0]
-        clearRange.aspectMask(VK_IMAGE_ASPECT_DEPTH_BIT)
-        clearRange.baseMipLevel(0)
-        clearRange.baseArrayLayer(0)
-        clearRange.levelCount(1)
-        clearRange.layerCount(1)
-
-        vkCmdClearDepthStencilImage(
-            this.commandBuffer,
-            this.context.targetImages.depthImage,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VkClearDepthStencilValue.calloc(stack).set(1f, 0),
-            clearRanges
-        )
-
-        transitionDepthImageLayout(
-            stack,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
         )
     }
 
@@ -290,7 +234,7 @@ internal class ContextCommands(
 
                 if (originalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
                     transitionImageLayout(
-                        stack, destImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                        stack, destImage,
                         currentLayout = originalImageLayout!!, desiredLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         srcStageMask = imageSrcStageMask!!, dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
                         srcAccessMask = imageSrcAccessMask!!, dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT
@@ -337,7 +281,7 @@ internal class ContextCommands(
 
                 if (finalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
                     transitionImageLayout(
-                        stack, destImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                        stack, destImage,
                         currentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, desiredLayout = finalImageLayout!!,
                         srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask = imageDstStageMask!!,
                         srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT, dstAccessMask = imageDstAccessMask!!
@@ -402,8 +346,6 @@ internal class ContextCommands(
             viewport.y(0f)
             viewport.width(this.context.width.toFloat())
             viewport.height(this.context.height.toFloat())
-            viewport.minDepth(0f)
-            viewport.maxDepth(1f)
 
             val scissors = VkRect2D.calloc(1, stack)
             val scissor = scissors[0]
@@ -413,13 +355,6 @@ internal class ContextCommands(
             var isInsideRenderPass = false
 
             for (drawCommand in drawCommands) {
-                if (drawCommand.preDepthClear) {
-                    if (isInsideRenderPass) {
-                        vkCmdEndRenderPass(this.commandBuffer)
-                        isInsideRenderPass = false
-                    }
-                    this.clearDepthImageNow(stack)
-                }
                 if (drawCommand.numVertices > 0) {
                     if (!isInsideRenderPass) {
                         vkCmdBeginRenderPass(this.commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
@@ -432,14 +367,6 @@ internal class ContextCommands(
 
                         vkCmdSetViewport(this.commandBuffer, 0, viewports)
                         vkCmdSetScissor(this.commandBuffer, 0, scissors)
-
-                        vkCmdPushConstants(
-                            this.commandBuffer,
-                            this.context.instance.pipeline.vkPipelineLayout,
-                            VK_SHADER_STAGE_VERTEX_BIT,
-                            0,
-                            stack.ints(this.context.maxDepth)
-                        )
 
                         vkCmdBindVertexBuffers(
                             this.commandBuffer,

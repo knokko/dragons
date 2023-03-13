@@ -16,10 +16,6 @@ internal value class GraviksVertex(val address: Long) {
     get() = writeOnly()
     set(value) = memPutFloat(address + OFFSET_Y, value)
 
-    var depth: Int
-    get() = writeOnly()
-    set(value) = memPutInt(address + OFFSET_DEPTH, value)
-
     var operationIndex: Int
     get() = writeOnly()
     set(value) = memPutInt(address + OFFSET_OPERATION_INDEX, value)
@@ -27,8 +23,7 @@ internal value class GraviksVertex(val address: Long) {
     companion object {
         const val OFFSET_X = 0
         const val OFFSET_Y = OFFSET_X + 4
-        const val OFFSET_DEPTH = OFFSET_Y + 4
-        const val OFFSET_OPERATION_INDEX = OFFSET_DEPTH + 4
+        const val OFFSET_OPERATION_INDEX = OFFSET_Y + 4
 
         const val BYTE_SIZE = OFFSET_OPERATION_INDEX + 4
     }

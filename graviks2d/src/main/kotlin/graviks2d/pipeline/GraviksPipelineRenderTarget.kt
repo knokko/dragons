@@ -21,21 +21,6 @@ internal fun createGraviksPipelineRasterization(
     return ciRasterization
 }
 
-internal fun createGraviksPipelineDepthState(
-    stack: MemoryStack
-): VkPipelineDepthStencilStateCreateInfo {
-
-    val ciDepth = VkPipelineDepthStencilStateCreateInfo.calloc(stack)
-    ciDepth.`sType$Default`()
-    ciDepth.depthTestEnable(true)
-    ciDepth.depthWriteEnable(true)
-    ciDepth.depthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
-    ciDepth.depthBoundsTestEnable(false)
-    ciDepth.stencilTestEnable(false)
-
-    return ciDepth
-}
-
 internal fun createGraviksPipelineColorBlend(
     stack: MemoryStack
 ): VkPipelineColorBlendStateCreateInfo {

@@ -17,19 +17,16 @@ internal class GraviksPipeline(
     val vkDescriptorSetLayout: Long
     val vkRenderPass: Long
 
-    val depthStencilFormat: Int
-
     init {
         stackPush().use { stack ->
 
             val (pipelineLayout, descriptorSetLayout) = createGraviksPipelineLayout(instance.device, stack, instance.maxNumDescriptorImages)
             this.vkPipelineLayout = pipelineLayout
             this.vkDescriptorSetLayout = descriptorSetLayout
-            val (renderPass, depthFormat) = createGraviksRenderPass(
-                instance.physicalDevice, instance.device, TARGET_COLOR_FORMAT, stack
+            val renderPass = createGraviksRenderPass(
+                instance.device, TARGET_COLOR_FORMAT, stack
             )
             this.vkRenderPass = renderPass
-            this.depthStencilFormat = depthFormat
 
             val ciPipelines = VkGraphicsPipelineCreateInfo.calloc(1, stack)
             val ciPipeline = ciPipelines[0]
@@ -41,7 +38,6 @@ internal class GraviksPipeline(
             ciPipeline.pDynamicState(createGraviksPipelineDynamics(stack))
             ciPipeline.pRasterizationState(createGraviksPipelineRasterization(stack))
             ciPipeline.pMultisampleState(createGraviksPipelineMultisampleState(stack))
-            ciPipeline.pDepthStencilState(createGraviksPipelineDepthState(stack))
             ciPipeline.pColorBlendState(createGraviksPipelineColorBlend(stack))
             ciPipeline.layout(pipelineLayout)
             ciPipeline.renderPass(vkRenderPass)

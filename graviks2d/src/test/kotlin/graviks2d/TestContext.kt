@@ -1,8 +1,6 @@
 package graviks2d
 
-import graviks2d.context.DepthPolicy
 import graviks2d.context.GraviksContext
-import graviks2d.context.TranslucentPolicy
 import graviks2d.core.GraviksInstance
 import graviks2d.resource.image.ImageCache
 import graviks2d.resource.image.ImageReference
@@ -284,8 +282,7 @@ class TestContext {
     fun testFillRectangle() {
         val backgroundColor = Color.rgbInt(100, 0, 0)
         val graviks = GraviksContext(
-            this.graviksInstance, 20, 20,
-            TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
+            this.graviksInstance, 20, 20, initialBackgroundColor = backgroundColor
         )
 
         withTestImage(graviks, false) { update, hostImage ->
@@ -306,8 +303,7 @@ class TestContext {
     fun testFillRoundedRect() {
         val backgroundColor = Color.rgbInt(100, 0, 0)
         val graviks = GraviksContext(
-            this.graviksInstance, 100, 100,
-            TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
+            this.graviksInstance, 100, 100, initialBackgroundColor = backgroundColor
         )
 
         withTestImage(graviks, true) { update, hostImage ->
@@ -337,10 +333,7 @@ class TestContext {
     @Test
     fun testDrawRoundedRect() {
         val backgroundColor = Color.rgbInt(100, 0, 0)
-        val graviks = GraviksContext(
-            this.graviksInstance, 100, 100,
-            TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
-        )
+        val graviks = GraviksContext(this.graviksInstance, 100, 100, initialBackgroundColor = backgroundColor)
 
         withTestImage(graviks, true) { update, hostImage ->
             val rectColor = Color.rgbInt(0, 100, 0)
@@ -373,10 +366,7 @@ class TestContext {
     @Test
     fun testDrawImage() {
         val backgroundColor = Color.WHITE
-        val graviks = GraviksContext(
-            this.graviksInstance, 50, 50,
-            TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
-        )
+        val graviks = GraviksContext(this.graviksInstance, 50, 50, initialBackgroundColor = backgroundColor)
 
         val image1 = ImageReference.classLoaderPath("graviks2d/images/test1.png", false)
         val image2 = ImageReference.classLoaderPath("graviks2d/images/test2.png", false)
@@ -401,10 +391,7 @@ class TestContext {
     @Test
     fun testDrawString() {
         val backgroundColor = Color.WHITE
-        val graviks = GraviksContext(
-            this.graviksInstance, 300, 600,
-            TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
-        )
+        val graviks = GraviksContext(this.graviksInstance, 300, 600, initialBackgroundColor = backgroundColor)
 
         val style = TextStyle(
             fillColor = Color.rgbInt(0, 0, 150),
@@ -485,11 +472,12 @@ class TestContext {
 
     @Test
     fun testImageCache() {
+        val testImageFile = Files.createTempFile(null, null).toFile()
+        ImageIO.write(BufferedImage(4, 6, TYPE_INT_ARGB), "PNG", testImageFile)
+
         runBlocking {
             val cache = ImageCache(graviksInstance, softImageLimit = 2)
 
-            val testImageFile = Files.createTempFile(null, null).toFile()
-            ImageIO.write(BufferedImage(4, 6, TYPE_INT_ARGB), "PNG", testImageFile)
             val image10 = ImageReference.file(testImageFile)
             val image11 = ImageReference.file(testImageFile)
 
@@ -568,10 +556,7 @@ class TestContext {
             }
         )
 
-        val graviks = GraviksContext(
-            graviksInstance, 20, 20,
-            TranslucentPolicy.Manual, initialBackgroundColor = backgroundColor
-        )
+        val graviks = GraviksContext(graviksInstance, 20, 20, initialBackgroundColor = backgroundColor)
 
         val colors = (0 until 20).map { Color.rgbInt(10 * it, 5 * it, it) }
         val images = colors.map { color ->
@@ -607,7 +592,7 @@ class TestContext {
     fun testGetImageSize() {
         val graviks = GraviksContext(
             this.graviksInstance, 50, 50,
-            TranslucentPolicy.Manual, initialBackgroundColor = Color.rgbInt(1, 2, 3)
+            initialBackgroundColor = Color.rgbInt(1, 2, 3)
         )
 
         assertEquals(
@@ -628,7 +613,7 @@ class TestContext {
     fun testGetStringAspectRatio() {
         val graviks = GraviksContext(
             this.graviksInstance, 50, 50,
-            TranslucentPolicy.Manual, initialBackgroundColor = Color.rgbInt(1, 2, 3)
+            initialBackgroundColor = Color.rgbInt(1, 2, 3)
         )
 
         val aspectHelloWorld = graviks.getStringAspectRatio("Hello, World!", null)
@@ -643,9 +628,7 @@ class TestContext {
     @Test
     fun testAutomaticDepth() {
         val colors = (0 until 10).map { Color.rgbInt(10 * it, 10 * it, 10 * it) }
-        val graviks = GraviksContext(
-            this.graviksInstance, 1, 1, TranslucentPolicy.Manual, maxDepth = 2
-        )
+        val graviks = GraviksContext(this.graviksInstance, 1, 1)
 
         withTestImage(graviks, true) { update, hostImage ->
             for (color in colors) {
@@ -665,74 +648,10 @@ class TestContext {
     }
 
     @Test
-    fun testDefaultDepthPrecision() {
-        val rng = Random(12345)
-        val size = 3000
-        val invSize = 1f / size
-        val numSquaresPerRow = (size - 2) / 2
-        var totalNumSquares = numSquaresPerRow * numSquaresPerRow
-
-        val graviks = GraviksContext(
-            this.graviksInstance, size, size,
-            TranslucentPolicy.Manual, depthPolicy = DepthPolicy.Manual,
-            vertexBufferSize = 6 * totalNumSquares + 100,
-            operationBufferSize = 2 * totalNumSquares + 100
-        )
-
-        if (totalNumSquares > graviks.maxDepth) {
-            totalNumSquares = graviks.maxDepth
-        }
-
-        val depthFactor = graviks.maxDepth / totalNumSquares
-
-        val colors = (0 until totalNumSquares).map { Color.rgbInt(rng.nextInt(255), rng.nextInt(255), rng.nextInt(255)) }
-
-        withTestImage(graviks, true) { update, hostImage ->
-            val time1 = System.currentTimeMillis()
-            for (y in 0 until numSquaresPerRow) {
-                for (x in (0 until numSquaresPerRow).reversed()) {
-                    val colorIndex = x + numSquaresPerRow * y
-                    if (colorIndex < colors.size) {
-                        val factor = 2f * invSize
-                        graviks.setManualDepth(1 + x + y * depthFactor * numSquaresPerRow)
-                        graviks.fillRect(
-                            factor * x,
-                            factor * y,
-                            factor * (x + 2),
-                            factor * (y + 2),
-                            colors[colorIndex]
-                        )
-                    }
-                }
-            }
-            val time2 = System.currentTimeMillis()
-            update()
-            val time3 = System.currentTimeMillis()
-            for (x in 0 until numSquaresPerRow) {
-                for (y in 0 until numSquaresPerRow) {
-                    val colorIndex = x + numSquaresPerRow * y
-                    if (colorIndex < colors.size) {
-                        val expectedColor = colors[colorIndex]
-                        assertColorEquals(expectedColor, hostImage.getPixel(2 * x, 2 * y))
-                        assertColorEquals(expectedColor, hostImage.getPixel(2 * x + 1, 2 * y))
-                        assertColorEquals(expectedColor, hostImage.getPixel(2 * x, 2 * y + 1))
-                        assertColorEquals(expectedColor, hostImage.getPixel(2 * x + 1, 2 * y + 1))
-                    }
-                }
-            }
-            val time4 = System.currentTimeMillis()
-
-            println("Performance of depth precision test: ${time2 - time1}, ${time3 - time2}, ${time4 - time3}")
-        }
-
-        graviks.destroy()
-    }
-
-    @Test
     fun testBlitColorImageTo() {
         val graviks = GraviksContext(
             this.graviksInstance, 50, 50,
-            TranslucentPolicy.Manual, initialBackgroundColor = Color.rgbInt(10, 20, 30)
+            initialBackgroundColor = Color.rgbInt(10, 20, 30)
         )
 
         stackPush().use { stack ->

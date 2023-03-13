@@ -15,21 +15,15 @@ internal fun createGraviksPipelineVertexInput(
     binding.stride(GraviksVertex.BYTE_SIZE)
     binding.inputRate(VK_VERTEX_INPUT_RATE_VERTEX)
 
-    val attributes = VkVertexInputAttributeDescription.calloc(3, stack)
+    val attributes = VkVertexInputAttributeDescription.calloc(2, stack)
     val attributePosition = attributes[0]
     attributePosition.location(0)
     attributePosition.binding(0)
     attributePosition.format(VK_FORMAT_R32G32_SFLOAT)
     attributePosition.offset(GraviksVertex.OFFSET_X)
 
-    val attributeDepth = attributes[1]
-    attributeDepth.location(1)
-    attributeDepth.binding(0)
-    attributeDepth.format(VK_FORMAT_R32_SINT)
-    attributeDepth.offset(GraviksVertex.OFFSET_DEPTH)
-
-    val attributeOperationIndex = attributes[2]
-    attributeOperationIndex.location(2)
+    val attributeOperationIndex = attributes[1]
+    attributeOperationIndex.location(1)
     attributeOperationIndex.binding(0)
     attributeOperationIndex.format(VK_FORMAT_R32_SINT)
     attributeOperationIndex.offset(GraviksVertex.OFFSET_OPERATION_INDEX)
@@ -90,16 +84,9 @@ internal fun createGraviksPipelineLayout(
         "CreateDescriptorSetLayout"
     )
 
-    val pushConstants = VkPushConstantRange.calloc(1, stack)
-    val pcMaxDepth = pushConstants[0]
-    pcMaxDepth.stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
-    pcMaxDepth.offset(0)
-    pcMaxDepth.size(4)
-
     val ciLayout = VkPipelineLayoutCreateInfo.calloc(stack)
     ciLayout.`sType$Default`()
     ciLayout.pSetLayouts(pSetLayout)
-    ciLayout.pPushConstantRanges(pushConstants)
 
     val pLayout = stack.callocLong(1)
     assertSuccess(

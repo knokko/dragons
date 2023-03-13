@@ -1,8 +1,7 @@
 #version 450
 
 layout(location = 0) in vec2 inPosition;
-layout(location = 1) in int inDepth;
-layout(location = 2) in int inOperationIndex;
+layout(location = 1) in int inOperationIndex;
 
 layout(location = 0) out int outOperationIndex;
 layout(location = 1) out vec2 outQuadCoordinates;
@@ -14,10 +13,6 @@ layout(location = 5) out vec2 outStrokeDelta;
 layout(set = 0, binding = 0) readonly buffer ShaderStorage {
     int operations[];
 } shaderStorage;
-
-layout(push_constant) uniform PushConstants {
-    int maxDepth;
-} pushConstants;
 
 const int OP_CODE_FILL_RECT = 1;
 const int OP_CODE_DRAW_IMAGE_BOTTOM_LEFT = 2;
@@ -47,8 +42,7 @@ float decodeFloat(int rawValue) {
 }
 
 void main() {
-    float z = 0.99 - 0.98 * (float(inDepth) / float(pushConstants.maxDepth));
-    gl_Position = vec4(inPosition.x * 2.0 - 1.0, inPosition.y * -2.0 + 1.0, z, 1.0);
+    gl_Position = vec4(inPosition.x * 2.0 - 1.0, inPosition.y * -2.0 + 1.0, 0.0, 1.0);
 
     int operationCode = shaderStorage.operations[inOperationIndex];
 

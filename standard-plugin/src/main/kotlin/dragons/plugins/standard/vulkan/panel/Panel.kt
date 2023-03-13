@@ -2,7 +2,6 @@ package dragons.plugins.standard.vulkan.panel
 
 import dragons.vulkan.memory.VulkanImage
 import graviks2d.context.GraviksContext
-import graviks2d.context.TranslucentPolicy
 import graviks2d.core.GraviksInstance
 import kotlinx.coroutines.CompletableDeferred
 import org.lwjgl.vulkan.VK10.*
@@ -14,7 +13,7 @@ class Panel(
 ) {
     private val graviks = GraviksContext(
         instance = graviksInstance, width = this.width, height = this.height,
-        translucentPolicy = TranslucentPolicy.Manual, vertexBufferSize = 50_000, operationBufferSize = 250_000
+        vertexBufferSize = 50_000, operationBufferSize = 250_000
     )
 
     private var imageLayout = VK_IMAGE_LAYOUT_UNDEFINED

@@ -1,7 +1,6 @@
 package graviks2d.playground
 
 import graviks2d.context.GraviksContext
-import graviks2d.context.TranslucentPolicy
 import graviks2d.core.GraviksInstance
 import graviks2d.resource.text.TextAlignment
 import graviks2d.resource.text.TextOverflowPolicy
@@ -135,9 +134,7 @@ fun main() {
         )
 
         val graviks = GraviksContext(
-            graviksInstance, width, height,
-            TranslucentPolicy.Manual,
-            initialBackgroundColor = Color.rgbInt(200, 100, 150),
+            graviksInstance, width, height, initialBackgroundColor = Color.rgbInt(200, 100, 150),
         )
 
         val fillColor = Color.rgbInt(0, 200, 0)

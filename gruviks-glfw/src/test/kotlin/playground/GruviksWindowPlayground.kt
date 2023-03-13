@@ -2,7 +2,6 @@ package playground
 
 import graviks.glfw.GraviksWindow
 import graviks2d.context.GraviksContext
-import graviks2d.context.TranslucentPolicy
 import graviks2d.resource.text.TextAlignment
 import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
@@ -106,7 +105,7 @@ fun main() {
         1000, 800, "Gruviks Tester", true, "Gruviks Tester",
         VK_MAKE_VERSION(0, 1, 0), true
     ) { instance, width, height ->
-        GraviksContext(instance, width, height, TranslucentPolicy.Manual)
+        GraviksContext(instance, width, height)
     }
 
     createAndControlGruviksWindow(graviksWindow, createTitleScreen())

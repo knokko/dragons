@@ -2,7 +2,6 @@ package graviks2d.playground
 
 import graviks.glfw.GraviksWindow
 import graviks2d.context.GraviksContext
-import graviks2d.context.TranslucentPolicy
 import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
 import org.lwjgl.glfw.GLFW.*
@@ -18,7 +17,7 @@ fun main() {
         enableValidation = true, applicationName = "TestGraviksWindow", applicationVersion = VK_MAKE_VERSION(0, 1, 0),
         preferPowerfulDevice = false, monitor = VK_NULL_HANDLE, shareWindow = VK_NULL_HANDLE
     ) { instance, width, height -> GraviksContext(
-        instance = instance, width = width, height = height, translucentPolicy = TranslucentPolicy.Manual
+        instance = instance, width = width, height = height
     )}
 
     var shouldPresentAgain = true

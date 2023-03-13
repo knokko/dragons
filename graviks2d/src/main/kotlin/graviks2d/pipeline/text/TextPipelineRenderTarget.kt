@@ -4,22 +4,7 @@ import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkPipelineColorBlendAttachmentState
 import org.lwjgl.vulkan.VkPipelineColorBlendStateCreateInfo
-import org.lwjgl.vulkan.VkPipelineDepthStencilStateCreateInfo
 import org.lwjgl.vulkan.VkPipelineMultisampleStateCreateInfo
-
-internal fun createTextPipelineDepthState(
-    stack: MemoryStack
-): VkPipelineDepthStencilStateCreateInfo {
-
-    val ciDepth = VkPipelineDepthStencilStateCreateInfo.calloc(stack)
-    ciDepth.`sType$Default`()
-    ciDepth.depthTestEnable(false)
-    ciDepth.depthWriteEnable(false)
-    ciDepth.depthBoundsTestEnable(false)
-    ciDepth.stencilTestEnable(false)
-
-    return ciDepth
-}
 
 internal fun createTextCountPipelineColorBlend(
     stack: MemoryStack
