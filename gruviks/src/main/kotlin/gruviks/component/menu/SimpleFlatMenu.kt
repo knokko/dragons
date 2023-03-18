@@ -268,10 +268,14 @@ class SimpleFlatMenu(
         if (force) shouldDoFullDraw = true
 
         val drawnRegions = mutableListOf<DrawnRegion>()
+        val recentDrawnRegions = mutableListOf<DrawnRegion>()
         if (backgroundColor.alpha > 0) drawnRegions.add(RectangularDrawnRegion(0f, 0f, 1f, 1f))
 
         val shouldDrawBackground = shouldDoFullDraw && backgroundColor.alpha > 0
-        if (shouldDrawBackground) target.fillRect(0f, 0f, 1f, 1f, backgroundColor)
+        if (shouldDrawBackground) {
+            target.fillRect(0f, 0f, 1f, 1f, backgroundColor)
+            recentDrawnRegions.add(RectangularDrawnRegion(0f, 0f, 1f, 1f))
+        }
 
         val visibleRegion = getVisibleRegion()
         val visibleComponents = componentTree.findBetween(visibleRegion)
@@ -290,11 +294,32 @@ class SimpleFlatMenu(
                             backgroundRegion.maxX, backgroundRegion.maxY,
                             backgroundColor
                         )
+                        recentDrawnRegions.add(TransformedDrawnRegion(
+                                RectangularDrawnRegion(
+                                        backgroundRegion.minX, backgroundRegion.minY,
+                                        backgroundRegion.maxX, backgroundRegion.maxY
+                                ),
+                                transformedRegion.minX,
+                                transformedRegion.minY,
+                                transformedRegion.maxX,
+                                transformedRegion.maxY
+                        ))
                     }
                 }
 
                 node.didRequestRender = false
                 node.agent.lastRenderResult = node.component.render(childTarget, shouldDoFullDraw)
+
+                val recentDrawnRegion = node.agent.lastRenderResult?.recentDrawnRegion
+                if (recentDrawnRegion != null && !shouldDrawBackground) {
+                    recentDrawnRegions.add(TransformedDrawnRegion(
+                            recentDrawnRegion,
+                            transformedRegion.minX,
+                            transformedRegion.minY,
+                            transformedRegion.maxX,
+                            transformedRegion.maxY
+                    ))
+                }
             }
 
             val childRenderResult = node.agent.lastRenderResult
@@ -318,6 +343,7 @@ class SimpleFlatMenu(
 
         return RenderResult(
             drawnRegion = if (drawnRegions.isEmpty()) null else if (drawnRegions.size == 1) drawnRegions[0] else CompositeDrawnRegion(drawnRegions),
+                recentDrawnRegion = if (recentDrawnRegions.isEmpty()) null else if (recentDrawnRegions.size == 1) recentDrawnRegions[0] else CompositeDrawnRegion(recentDrawnRegions),
             propagateMissedCursorEvents = true
         )
     }

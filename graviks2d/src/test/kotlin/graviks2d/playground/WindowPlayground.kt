@@ -110,10 +110,10 @@ fun main() {
         if (window.shouldResize()) {
             window.resize()
             drawFunction()
-            window.presentFrame(false)
+            window.presentFrame(false, null)
         } else if (shouldPresentAgain) {
             shouldPresentAgain = false
-            window.presentFrame(false)
+            window.presentFrame(false, null)
         }
 
         sleep(1)

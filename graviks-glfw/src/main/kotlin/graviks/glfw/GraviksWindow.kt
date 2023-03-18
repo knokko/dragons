@@ -4,11 +4,13 @@ import graviks2d.context.GraviksContext
 import graviks2d.core.GraviksInstance
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.glfw.GLFWVulkan.glfwCreateWindowSurface
+import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.NULL
 import org.lwjgl.util.vma.Vma.vmaDestroyAllocator
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.EXTDebugUtils.vkDestroyDebugUtilsMessengerEXT
+import org.lwjgl.vulkan.KHRIncrementalPresent.VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRPresentWait.VK_KHR_PRESENT_WAIT_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRPresentWait.vkWaitForPresentKHR
 import org.lwjgl.vulkan.KHRSurface.vkDestroySurfaceKHR
@@ -39,6 +41,7 @@ class GraviksWindow(
     private val debugMessenger: Long
     val canAwaitPresent: Boolean
     private var lastPresentId = 0
+    val hasIncrementalPresent: Boolean
 
     // Swapchain-dependant variables
     private var swapchain: Long? = null
@@ -56,7 +59,7 @@ class GraviksWindow(
         if (windowHandle == NULL) throw RuntimeException("Failed to create window")
 
         glfwSetWindowRefreshCallback(windowHandle) {
-            presentFrame(false)
+            presentFrame(false, null)
         }
 
         glfwSetFramebufferSizeCallback(windowHandle) { _, _, _->
@@ -74,6 +77,7 @@ class GraviksWindow(
         val (vkPhysicalDevice, queueFamilyIndex) = chooseVulkanPhysicalDevice(vkInstance, windowSurface, preferPowerfulDevice)
         val (vkDevice, deviceExtensions, queue) = createVulkanDevice(vkPhysicalDevice, queueFamilyIndex)
         this.canAwaitPresent = deviceExtensions.contains(VK_KHR_PRESENT_WAIT_EXTENSION_NAME)
+        this.hasIncrementalPresent = deviceExtensions.contains(VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME)
 
         this.queue = queue
         val vmaAllocator = createVulkanMemoryAllocator(vkInstance, vkPhysicalDevice, vkDevice, deviceExtensions)
@@ -138,7 +142,7 @@ class GraviksWindow(
         shouldResize = false
     }
 
-    fun presentFrame(waitUntilVisible: Boolean) {
+    fun presentFrame(waitUntilVisible: Boolean, fillPresentRegions: ((MemoryStack) -> VkRectLayerKHR.Buffer)?) {
         if (waitUntilVisible && !canAwaitPresent) {
             throw UnsupportedOperationException("Waiting until presentation is not supported by the Vulkan implementation")
         }
@@ -180,16 +184,37 @@ class GraviksWindow(
                 shouldAwaitCompletion = false
             )
 
+            val incrementalPresentAddress = if (hasIncrementalPresent && fillPresentRegions != null) {
+                val presentRectangles = fillPresentRegions(stack)
+
+                val presentRegions = VkPresentRegionKHR.calloc(1, stack)
+                presentRegions.rectangleCount(presentRectangles.capacity())
+                presentRegions.pRectangles(presentRectangles)
+
+                val incrementalPresent = VkPresentRegionsKHR.calloc(stack)
+                incrementalPresent.`sType$Default`()
+                incrementalPresent.swapchainCount(1)
+                incrementalPresent.pRegions(presentRegions)
+
+                incrementalPresent.address()
+            } else 0L
+
             val pPresentId = stack.longs(lastPresentId + 1L)
 
-            val presentIdInfo = VkPresentIdKHR.calloc(stack)
-            presentIdInfo.`sType$Default`()
-            presentIdInfo.swapchainCount(1)
-            presentIdInfo.pPresentIds(pPresentId)
+            val presentIdAddress = if (canAwaitPresent) {
+                val presentIdInfo = VkPresentIdKHR.calloc(stack)
+                presentIdInfo.`sType$Default`()
+                presentIdInfo.pNext(incrementalPresentAddress)
+                presentIdInfo.swapchainCount(1)
+                presentIdInfo.pPresentIds(pPresentId)
+
+                presentIdInfo.address()
+            } else 0L
 
             val presentInfo = VkPresentInfoKHR.calloc(stack)
             presentInfo.`sType$Default`()
-            if (waitUntilVisible) presentInfo.pNext(presentIdInfo.address())
+            if (waitUntilVisible) presentInfo.pNext(presentIdAddress)
+            else presentInfo.pNext(incrementalPresentAddress)
             presentInfo.pWaitSemaphores(stack.longs(copySemaphore))
             presentInfo.swapchainCount(1)
             presentInfo.pSwapchains(stack.longs(swapchain!!))

@@ -46,7 +46,7 @@ class TestGruviksWindow {
         // should throw an IllegalStateException
         assertThrows<IllegalStateException> { nextComponent.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK)) }
 
-        assertTrue(window.render(DummyGraviksTarget(), false))
+        window.render(DummyGraviksTarget(), false, null)
 
         val cursor = Cursor(5)
         window.fireEvent(RawCursorMoveEvent(cursor, EventPosition(0.5f, 0.5f)))
@@ -62,7 +62,7 @@ class TestGruviksWindow {
         ))
         val window = GruviksWindow(component)
 
-        assertTrue(window.render(DummyGraviksTarget(), false))
+        window.render(DummyGraviksTarget(), false, null)
 
         val cursor1 = Cursor(1)
         window.fireEvent(RawCursorMoveEvent(cursor1, EventPosition(0.05f, 0.2f)))
@@ -106,6 +106,18 @@ class TestGruviksWindow {
 
         val target = DummyGraviksTarget()
 
+        val presentRegions = mutableListOf<RectangularDrawnRegion>()
+        val presentMargin = 0.001f
+
+        fun assertPresentEntireRegion() {
+            assertEquals(1, presentRegions.size)
+            assertEquals(0f, presentRegions[0].minX, presentMargin)
+            assertEquals(0f, presentRegions[0].minY, presentMargin)
+            assertEquals(1f, presentRegions[0].maxX, presentMargin)
+            assertEquals(1f, presentRegions[0].maxY, presentMargin)
+            presentRegions.clear()
+        }
+
         /*
          * During each render:
          * 1 fillRect call should be made by the window
@@ -119,30 +131,38 @@ class TestGruviksWindow {
             assertEquals(numCalls, target.drawStringCounter)
         }
 
-        // The first render call should always cause a render
-        assertTrue(window.render(target, false))
+        // The first render call should be forced and always cause a render
+        window.render(target, true, presentRegions)
         assertRenderCalls(1)
+        assertPresentEntireRegion()
 
         // The second render call should only cause a render if it is forced, or if the component requested it
-        assertFalse(window.render(target, false))
+        window.render(target, false, presentRegions)
         assertRenderCalls(1)
+        assertEquals(0, presentRegions.size)
 
         // Forcing the render should work
-        assertTrue(window.render(target, true))
+        window.render(target, true, presentRegions)
+        assertPresentEntireRegion()
         assertRenderCalls(2)
 
         // But not during the next render call
-        assertFalse(window.render(target, false))
+        window.render(target, false, presentRegions)
         assertRenderCalls(2)
+        assertEquals(0, presentRegions.size)
 
         // Rendering should happen if the component requests it
         window.fireEvent(RawCursorMoveEvent(Cursor(1), EventPosition(0.5f, 0.5f)))
-        assertTrue(window.render(target, false))
+        window.render(target, false, presentRegions)
         assertRenderCalls(3)
+        // 2 present regions: 1 for the background clear and 1 for the component
+        assertEquals(2, presentRegions.size)
+        presentRegions.clear()
 
         // But only once after the component requested it
-        assertFalse(window.render(target, false))
+        window.render(target, false, presentRegions)
         assertRenderCalls(3)
+        assertEquals(0, presentRegions.size)
     }
 
     @Test
@@ -163,7 +183,7 @@ class TestGruviksWindow {
         }
 
         val window = GruviksWindow(TestComponent())
-        window.render(DummyGraviksTarget(), false)
+        window.render(DummyGraviksTarget(), false, null)
         window.fireEvent(RawCursorMoveEvent(Cursor(1), EventPosition(0.4f, 0.6f)))
 
         assertFalse(window.shouldExit())
@@ -211,13 +231,13 @@ class TestGruviksWindow {
         }
 
         val window = GruviksWindow(FirstComponent())
-        window.render(DummyGraviksTarget(), false)
+        window.render(DummyGraviksTarget(), false, null)
         window.fireEvent(RawCursorMoveEvent(Cursor(1), EventPosition(0.4f, 0.6f)))
         window.fireEvent(RawCursorPressEvent(Cursor(1), 4))
 
         assertFalse(renderedSecondComponent)
         assertFalse(receivedCursorEnter)
-        window.render(DummyGraviksTarget(), true)
+        window.render(DummyGraviksTarget(), true, null)
         assertTrue(renderedSecondComponent)
         assertTrue(receivedCursorEnter)
     }

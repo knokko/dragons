@@ -359,12 +359,39 @@ class TestSimpleFlatMenu {
         val target = LoggedGraviksTarget()
         val margin = 0.001f
 
-        fun checkRenderResult(result: RenderResult) {
+        fun checkRenderResult(result: RenderResult, checkDrawnRegion: (DrawnRegion?) -> Unit) {
             val renderedRegion = result.drawnRegion as RectangularDrawnRegion
             assertEquals(0f, renderedRegion.minX, margin)
             assertEquals(0f, renderedRegion.minY, margin)
             assertEquals(1f, renderedRegion.maxX, margin)
             assertEquals(1f, renderedRegion.maxY, margin)
+            checkDrawnRegion(result.recentDrawnRegion)
+        }
+
+        fun checkEntireDrawnRegion(renderedRegion: DrawnRegion?) {
+            val rectRegion = renderedRegion as RectangularDrawnRegion
+            assertEquals(0f, rectRegion.minX, margin)
+            assertEquals(0f, rectRegion.minY, margin)
+            assertEquals(1f, rectRegion.maxX, margin)
+            assertEquals(1f, rectRegion.maxY, margin)
+        }
+
+        fun checkComponent1DrawnRegion(renderedRegion: DrawnRegion?) {
+            for (rectRegion in (renderedRegion as CompositeDrawnRegion).regions) {
+                assertEquals(0.05f, rectRegion.minX, margin)
+                assertEquals(0.55f, rectRegion.minY, margin)
+                assertEquals(0.45f, rectRegion.maxX, margin)
+                assertEquals(0.95f, rectRegion.maxY, margin)
+            }
+        }
+
+        fun checkComponent2DrawnRegion(renderedRegion: DrawnRegion?) {
+            for (rectRegion in (renderedRegion as CompositeDrawnRegion).regions) {
+                assertEquals(0.05f, rectRegion.minX, margin)
+                assertEquals(0.05f, rectRegion.minY, margin)
+                assertEquals(0.45f, rectRegion.maxX, margin)
+                assertEquals(0.45f, rectRegion.maxY, margin)
+            }
         }
 
         fun checkFillRectCalls(vararg expected: FillRectCall) {
@@ -381,7 +408,7 @@ class TestSimpleFlatMenu {
         menu.subscribeToEvents()
 
         menu.addComponent(ClickDrawComponent(), RectRegion.percentage(0, 50, 50, 100))
-        checkRenderResult(menu.render(target, false))
+        checkRenderResult(menu.render(target, true), ::checkEntireDrawnRegion)
 
         // The menu should have used 1 fillRect call to draw its background and the component should
         // also have called fillRect once
@@ -391,19 +418,19 @@ class TestSimpleFlatMenu {
         )
 
         // If we draw again without forcing, nothing should happen
-        checkRenderResult(menu.render(target, false))
+        checkRenderResult(menu.render(target, false), ::assertNull)
         checkFillRectCalls()
 
         // If we add another component, only that component should be drawn, as well as the requested region behind it
         menu.addComponent(ClickDrawComponent(), RectRegion.percentage(0, 0, 50, 50))
-        checkRenderResult(menu.render(target, false))
+        checkRenderResult(menu.render(target, false), ::checkComponent2DrawnRegion)
         checkFillRectCalls(
             FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, backgroundColor),
             FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, Color.RED)
         )
 
         // If we force a draw, both components and the background should be rendered
-        checkRenderResult(menu.render(target, true))
+        checkRenderResult(menu.render(target, true), ::checkEntireDrawnRegion)
         checkFillRectCalls(
             FillRectCall(0f, 0f, 1f, 1f, backgroundColor),
             FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, Color.RED),
@@ -411,26 +438,26 @@ class TestSimpleFlatMenu {
         )
 
         // If we redraw after doing nothing, nothing should be redrawn
-        checkRenderResult(menu.render(target, false))
+        checkRenderResult(menu.render(target, false), ::assertNull)
         checkFillRectCalls()
 
         // If we click one of the components, only that component should be redrawn,
         // but the menu should also clear the region behind it
         menu.processEvent(CursorClickEvent(Cursor(5), EventPosition(0.25f, 0.75f), 3))
-        checkRenderResult(menu.render(target, false))
+        checkRenderResult(menu.render(target, false), ::checkComponent1DrawnRegion)
         checkFillRectCalls(
             FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, backgroundColor),
             FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED)
         )
 
         // If we redraw again after doing nothing, nothing should be redrawn
-        checkRenderResult(menu.render(target, false))
+        checkRenderResult(menu.render(target, false), ::assertNull)
         checkFillRectCalls()
 
         // When we shift the camera, the background should be redrawn, and the components should be drawn
         // at their new relative position
         menu.shiftCamera(Coordinate.percentage(40), Coordinate.percentage(20))
-        checkRenderResult(menu.render(target, false))
+        checkRenderResult(menu.render(target, false), ::checkEntireDrawnRegion)
         checkFillRectCalls(
             FillRectCall(0f, 0f, 1f, 1f, backgroundColor),
             FillRectCall(-0.35f, -0.15f, 0.05f, 0.25f, Color.RED),
@@ -438,7 +465,7 @@ class TestSimpleFlatMenu {
         )
 
         // If we render again, nothing should happen
-        checkRenderResult(menu.render(target, false))
+        checkRenderResult(menu.render(target, false), ::assertNull)
         checkFillRectCalls()
     }
 
@@ -447,7 +474,10 @@ class TestSimpleFlatMenu {
         val target = LoggedGraviksTarget()
         val margin = 0.001f
 
-        fun checkRenderResult(result: RenderResult, hasComponent1: Boolean, hasComponent2: Boolean) {
+        fun checkRenderResult(
+                result: RenderResult, hasComponent1: Boolean, hasComponent2: Boolean,
+                didDrawComponent1: Boolean, didDrawComponent2: Boolean
+        ) {
             fun checkRegion1(region: DrawnRegion) {
                 assertEquals(0.05f, region.minX, margin)
                 assertEquals(0.55f, region.minY, margin)
@@ -460,6 +490,18 @@ class TestSimpleFlatMenu {
                 assertEquals(0.05f, region.minY, margin)
                 assertEquals(0.45f, region.maxX, margin)
                 assertEquals(0.45f, region.maxY, margin)
+            }
+
+            if (didDrawComponent1 && didDrawComponent2) {
+                val recentDrawnRegions = (result.recentDrawnRegion as CompositeDrawnRegion).regions.sortedBy { it.minY }
+                checkRegion1(recentDrawnRegions[1])
+                checkRegion2(recentDrawnRegions[0])
+            } else if (didDrawComponent1) {
+                checkRegion1(result.recentDrawnRegion as TransformedDrawnRegion)
+            } else if (didDrawComponent2) {
+                checkRegion2(result.recentDrawnRegion as TransformedDrawnRegion)
+            } else {
+                assertNull(result.recentDrawnRegion)
             }
             
             if (hasComponent2) {
@@ -486,11 +528,17 @@ class TestSimpleFlatMenu {
         menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
         menu.subscribeToEvents()
 
-        checkRenderResult(menu.render(target, false), hasComponent1 = false, false)
+        checkRenderResult(
+                menu.render(target, false), hasComponent1 = false, hasComponent2 = false,
+                didDrawComponent1 = false, didDrawComponent2 = false
+        )
         checkFillRectCalls()
 
         menu.addComponent(ClickDrawComponent(), RectRegion.percentage(0, 50, 50, 100))
-        checkRenderResult(menu.render(target, false), hasComponent1 = true, false)
+        checkRenderResult(
+                menu.render(target, false), hasComponent1 = true, hasComponent2 = false,
+                didDrawComponent1 = true, didDrawComponent2 = false
+        )
 
         // The menu should have drawn its only component
         checkFillRectCalls(
@@ -498,64 +546,95 @@ class TestSimpleFlatMenu {
         )
 
         // If we draw again without forcing, nothing should happen
-        checkRenderResult(menu.render(target, false), hasComponent1 = true, false)
+        checkRenderResult(
+                menu.render(target, false), hasComponent1 = true, hasComponent2 = false,
+                didDrawComponent1 = false, didDrawComponent2 = false
+        )
         checkFillRectCalls()
 
         // If we add another component, only that new component should be drawn
         menu.addComponent(ClickDrawComponent(), RectRegion.percentage(0, 0, 50, 50))
-        checkRenderResult(menu.render(target, false), hasComponent1 = true, true)
+        checkRenderResult(
+                menu.render(target, false), hasComponent1 = true, hasComponent2 = true,
+                didDrawComponent1 = false, didDrawComponent2 = true
+        )
         checkFillRectCalls(
             FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, Color.RED)
         )
 
         // If we force a draw, both components should be rendered
-        checkRenderResult(menu.render(target, true), hasComponent1 = true, true)
+        checkRenderResult(
+                menu.render(target, true), hasComponent1 = true, hasComponent2 = true,
+                didDrawComponent1 = true, didDrawComponent2 = true
+        )
         checkFillRectCalls(
             FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, Color.RED),
             FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED)
         )
 
         // If we redraw after doing nothing, nothing should be redrawn
-        checkRenderResult(menu.render(target, false), hasComponent1 = true, true)
+        checkRenderResult(
+                menu.render(target, false), hasComponent1 = true, hasComponent2 = true,
+                didDrawComponent1 = false, didDrawComponent2 = false
+        )
         checkFillRectCalls()
 
         // If we click one of the components, only that component should be redrawn
         menu.processEvent(CursorClickEvent(Cursor(5), EventPosition(0.25f, 0.75f), 3))
-        checkRenderResult(menu.render(target, false), hasComponent1 = true, true)
+        checkRenderResult(
+                menu.render(target, false), hasComponent1 = true, hasComponent2 = true,
+                didDrawComponent1 = true, didDrawComponent2 = false
+        )
         checkFillRectCalls(
             FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED)
         )
 
         // If we redraw again after doing nothing, nothing should be redrawn
-        checkRenderResult(menu.render(target, false), hasComponent1 = true, true)
+        checkRenderResult(
+                menu.render(target, false), hasComponent1 = true, hasComponent2 = true,
+                didDrawComponent1 = false, didDrawComponent2 = false
+        )
         checkFillRectCalls()
 
-        fun checkNewRenderResult(result: RenderResult) {
-            (result.drawnRegion as CompositeDrawnRegion).regions.sortedBy { it.minY }[1].let { region ->
+        fun checkNewRenderResult(result: RenderResult, didDrawComponents: Boolean) {
+
+            fun checkShiftedRegion1(region: DrawnRegion) {
                 assertEquals(-0.35f, region.minX, margin)
                 assertEquals(0.35f, region.minY, margin)
                 assertEquals(0.05f, region.maxX, margin)
                 assertEquals(0.75f, region.maxY, margin)
             }
 
-            (result.drawnRegion as CompositeDrawnRegion).regions.sortedBy { it.minY }[0].let { region ->
+            fun checkShiftedRegion2(region: DrawnRegion) {
                 assertEquals(-0.35f, region.minX, margin)
                 assertEquals(-0.15f, region.minY, margin)
                 assertEquals(0.05f, region.maxX, margin)
                 assertEquals(0.25f, region.maxY, margin)
             }
+
+            (result.drawnRegion as CompositeDrawnRegion).regions.sortedBy { it.minY }[1].let(::checkShiftedRegion1)
+
+            (result.drawnRegion as CompositeDrawnRegion).regions.sortedBy { it.minY }[0].let(::checkShiftedRegion2)
+
+            if (didDrawComponents) {
+                val drawnRegions = (result.recentDrawnRegion as CompositeDrawnRegion).regions.sortedBy { it.minY }
+                drawnRegions[1].let(::checkShiftedRegion1)
+                drawnRegions[0].let(::checkShiftedRegion2)
+            } else {
+                assertNull(result.recentDrawnRegion)
+            }
         }
 
         // When we shift the camera, the components should be drawn at their new position
         menu.shiftCamera(Coordinate.percentage(40), Coordinate.percentage(20))
-        checkNewRenderResult(menu.render(target, false))
+        checkNewRenderResult(menu.render(target, false), true)
         checkFillRectCalls(
             FillRectCall(-0.35f, -0.15f, 0.05f, 0.25f, Color.RED),
             FillRectCall(-0.35f, 0.35f, 0.05f, 0.75f, Color.RED)
         )
 
         // If we render again, nothing should happen
-        checkNewRenderResult(menu.render(target, false))
+        checkNewRenderResult(menu.render(target, false), false)
         checkFillRectCalls()
     }
 

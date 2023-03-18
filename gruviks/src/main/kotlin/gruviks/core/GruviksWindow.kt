@@ -3,6 +3,7 @@ package gruviks.core
 import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 import gruviks.component.Component
+import gruviks.component.RectangularDrawnRegion
 import gruviks.component.agent.ComponentAgent
 import gruviks.component.agent.RootCursorTracker
 import gruviks.event.*
@@ -71,14 +72,15 @@ class GruviksWindow(
         }
     }
 
-    fun render(target: GraviksTarget, force: Boolean): Boolean {
+    fun render(target: GraviksTarget, force: Boolean, outDrawnRegions: MutableCollection<RectangularDrawnRegion>?) {
         this.checkNextComponent()
-        return if (force || this.didRequestRender) {
+        if (force || this.didRequestRender) {
 
             if (force) {
 
                 // When the render is forced, we should invalidate any previously drawn content
                 target.fillRect(0f, 0f, 1f, 1f, Color.BLACK)
+                outDrawnRegions?.add(RectangularDrawnRegion(0f, 0f, 1f, 1f))
             } else {
                 // If the render is not forced, we should only redraw the background areas requested by the component
                 for (backgroundRegion in this.rootComponent.regionsToRedrawBeforeNextRender()) {
@@ -86,11 +88,17 @@ class GruviksWindow(
                         backgroundRegion.minX, backgroundRegion.minY, backgroundRegion.maxX, backgroundRegion.maxY,
                         Color.BLACK
                     )
+                    outDrawnRegions?.add(RectangularDrawnRegion(
+                            backgroundRegion.minX, backgroundRegion.minY, backgroundRegion.maxX, backgroundRegion.maxY
+                    ))
                 }
             }
 
             this.didRequestRender = false
             this.rootAgent.lastRenderResult = this.rootComponent.render(target, force)
+            if (!force && outDrawnRegions != null) {
+                this.rootAgent.lastRenderResult?.recentDrawnRegion?.pushRectangles(outDrawnRegions)
+            }
 
             if (this.isFirstRenderOfRootComponent) {
                 for (cursor in this.cursorTracker.getHoveringCursors()) {
@@ -100,9 +108,6 @@ class GruviksWindow(
             }
 
             checkNextComponent()
-            true
-        } else {
-            false
         }
     }
 }

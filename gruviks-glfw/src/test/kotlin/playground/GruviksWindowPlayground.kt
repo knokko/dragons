@@ -8,6 +8,7 @@ import graviks2d.util.Color
 import gruviks.component.HorizontalComponentAlignment
 import gruviks.component.VerticalComponentAlignment
 import gruviks.component.menu.SimpleFlatMenu
+import gruviks.component.test.DiscoComponent
 import gruviks.component.text.TextButton
 import gruviks.component.text.TextButtonStyle
 import gruviks.component.text.TextComponent
@@ -85,6 +86,13 @@ private fun createTitleScreen(): SimpleFlatMenu {
     menu.addComponent(TextButton("Exit Editor", null, exitButtonStyle) { _, giveFeedback ->
         giveFeedback(AddressedFeedback(null, ExitFeedback()))
     }, RectRegion.percentage(20, 7, 80, 17))
+
+    menu.addComponent(DiscoComponent(), RectRegion.percentage(10, 80, 20, 90))
+    menu.addComponent(DiscoComponent(), RectRegion.percentage(10, 60, 20, 70))
+    menu.addComponent(DiscoComponent(), RectRegion.percentage(80, 80, 90, 90))
+    menu.addComponent(DiscoComponent(), RectRegion.percentage(90, 0, 100, 10))
+    menu.addComponent(DiscoComponent(), RectRegion.percentage(90, 10, 100, 20))
+    menu.addComponent(DiscoComponent(), RectRegion.percentage(90, 20, 100, 30))
 
     return menu
 }

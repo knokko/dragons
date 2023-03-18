@@ -9,6 +9,11 @@ class RenderResult(
     val drawnRegion: DrawnRegion?,
 
     /**
+     * The region where anything has been drawn **during the last call to render()**
+     */
+    val recentDrawnRegion: DrawnRegion? = drawnRegion,
+
+    /**
      * This variable determines what happens when a cursor event happens inside the rectangular *domain* of the
      * component, but outside the *drawnRegion*. If true, the cursor event will be propagated to the component behind
      * it. If false, the event will be discarded.
@@ -26,6 +31,10 @@ abstract class DrawnRegion(
     abstract fun isInside(x: Float, y: Float): Boolean
 
     fun isWithinBounds(x: Float, y: Float) = x >= this.minX && x <= this.maxX && y >= this.minY && y <= this.maxY
+
+    open fun pushRectangles(destination: MutableCollection<RectangularDrawnRegion>) {
+        destination.add(RectangularDrawnRegion(minX, minY, maxX, maxY))
+    }
 }
 
 class RectangularDrawnRegion(
@@ -34,6 +43,15 @@ class RectangularDrawnRegion(
     override fun isInside(x: Float, y: Float) = this.isWithinBounds(x, y)
 
     override fun toString() = "RectangularDrawnRegion($minX, $minY, $maxX, $maxY)"
+
+    override fun pushRectangles(destination: MutableCollection<RectangularDrawnRegion>) {
+        destination.add(this)
+    }
+
+    override fun equals(other: Any?) = other is RectangularDrawnRegion
+            && this.minX == other.minX && this.minY == other.minY && this.maxX == other.maxX && this.maxY == other.maxY
+
+    override fun hashCode() = minX.hashCode() + minY.hashCode() + maxX.hashCode() + maxY.hashCode()
 }
 
 class RoundedRectangularDrawnRegion(
@@ -80,6 +98,17 @@ class TransformedDrawnRegion(
         transform(x, refMinX, refMaxX),
         transform(y, refMinY, refMaxY)
     )
+
+    override fun pushRectangles(destination: MutableCollection<RectangularDrawnRegion>) {
+        val childRectangles = mutableListOf<RectangularDrawnRegion>()
+        region.pushRectangles(childRectangles)
+        destination.addAll(childRectangles.map { RectangularDrawnRegion(
+                transformBack(it.minX, refMinX, refMaxX),
+                transformBack(it.minY, refMinY, refMaxY),
+                transformBack(it.maxX, refMinX, refMaxX),
+                transformBack(it.maxY, refMinY, refMaxY)
+        ) })
+    }
 }
 
 class CompositeDrawnRegion(
@@ -91,4 +120,8 @@ class CompositeDrawnRegion(
     regions.maxOf { it.maxY }
 ) {
     override fun isInside(x: Float, y: Float) = this.regions.any { it.isInside(x, y) }
+
+    override fun pushRectangles(destination: MutableCollection<RectangularDrawnRegion>) {
+        for (region in regions) region.pushRectangles(destination)
+    }
 }

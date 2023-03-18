@@ -124,5 +124,13 @@ class TestRenderResult {
         assertTrue(region.isInside(0.94f, 1.99f))
         assertFalse(region.isInside(0.96f, 1.99f))
         assertFalse(region.isInside(0.94f, 2.01f))
+
+        val rectangles = mutableListOf<RectangularDrawnRegion>()
+        region.pushRectangles(rectangles)
+        assertEquals(1, rectangles.size)
+        assertEquals(0.55f, rectangles[0].minX, margin)
+        assertEquals(1.75f, rectangles[0].minY, margin)
+        assertEquals(0.95f, rectangles[0].maxX, margin)
+        assertEquals(2f, rectangles[0].maxY, margin)
     }
 }
