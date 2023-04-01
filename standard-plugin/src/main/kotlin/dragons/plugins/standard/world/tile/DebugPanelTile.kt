@@ -87,7 +87,7 @@ class DebugPanelTile(
                     for ((index, line) in newStandardOutputHistory.withIndex()) {
                         it.drawString(
                             0.11f, 0.885f - index * 0.015f, 0.89f, 0.9f - index * 0.015f,
-                            line, style, backgroundColor
+                            line, style
                         )
                     }
 
@@ -103,7 +103,7 @@ class DebugPanelTile(
                     for ((index, infoLine) in infoLines.withIndex()) {
                         it.drawString(
                             0.4f, 0.89f - index * 0.015f, 1f, 0.9f - index * 0.015f,
-                            infoLine, style, backgroundColor
+                            infoLine, style
                         )
                     }
                 }
