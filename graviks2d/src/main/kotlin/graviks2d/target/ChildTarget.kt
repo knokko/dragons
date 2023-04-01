@@ -63,14 +63,14 @@ class ChildTarget(
         yTop: Float,
         string: String,
         style: TextStyle,
-        backgroundColor: Color
+        dryRun: Boolean
     ): List<CharacterPosition> {
         val result = mutableListOf<CharacterPosition>()
         this.transform(minX, yBottom, maxX, yTop) { tMinX, tBottom, tMaxX, tTop ->
-            val childResult = this.parent.drawString(tMinX, tBottom, tMaxX, tTop, string, style, backgroundColor)
+            val childResult = this.parent.drawString(tMinX, tBottom, tMaxX, tTop, string, style, dryRun)
             for (childArea in childResult) {
                 transformBack(childArea.minX, childArea.minY, childArea.maxX, childArea.maxY) { bMinX, bMinY, bMaxX, bMaxY ->
-                    result.add(CharacterPosition(bMinX, bMinY, bMaxX, bMaxY))
+                    result.add(CharacterPosition(bMinX, bMinY, bMaxX, bMaxY, childArea.isLeftToRight))
                 }
             }
         }

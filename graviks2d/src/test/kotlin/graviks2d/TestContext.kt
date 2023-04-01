@@ -31,7 +31,6 @@ import java.awt.image.BufferedImage.TYPE_INT_ARGB
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.file.Files
-import java.util.*
 import javax.imageio.ImageIO
 import kotlin.math.absoluteValue
 
@@ -337,27 +336,25 @@ class TestContext {
 
         withTestImage(graviks, true) { update, hostImage ->
             val rectColor = Color.rgbInt(0, 100, 0)
-            graviks.drawRoundedRect(0.1f, 0.2f, 0.6f, 0.4f, 0.1f, 0.55f, rectColor)
+            graviks.drawRoundedRect(0.1f, 0.2f, 0.6f, 0.4f, 0.1f, 0.95f, rectColor)
             update()
 
             // Left side
             assertColorEquals(backgroundColor, hostImage.getPixel(11, 21))
             assertColorEquals(backgroundColor, hostImage.getPixel(11, 38))
-            assertColorEquals(rectColor, hostImage.getPixel(11, 30))
-            for (x in 16 until 23) assertColorEquals(backgroundColor, hostImage.getPixel(x, 30))
+            assertColorEquals(rectColor, hostImage.getPixel(14, 30))
 
             // Middle
             assertColorEquals(backgroundColor, hostImage.getPixel(35, 18))
-            assertColorEquals(rectColor, hostImage.getPixel(35, 21))
+            assertColorEquals(rectColor, hostImage.getPixel(35, 24))
             assertColorEquals(backgroundColor, hostImage.getPixel(35, 30))
-            assertColorEquals(rectColor, hostImage.getPixel(35, 38))
+            assertColorEquals(rectColor, hostImage.getPixel(35, 35))
             assertColorEquals(backgroundColor, hostImage.getPixel(35, 41))
 
             // Right
             assertColorEquals(backgroundColor, hostImage.getPixel(58, 21))
             assertColorEquals(backgroundColor, hostImage.getPixel(58, 38))
-            assertColorEquals(rectColor, hostImage.getPixel(58, 30))
-            for (x in 48 until 54) assertColorEquals(backgroundColor, hostImage.getPixel(x, 30))
+            assertColorEquals(rectColor, hostImage.getPixel(55, 30))
         }
 
         graviks.destroy()
@@ -400,7 +397,7 @@ class TestContext {
 
         withTestImage(graviks, true) { update, hostImage ->
             // Test that drawing an empty string won't crash and has no effect
-            assertTrue(graviks.drawString(0.1f, 0.2f, 0.3f, 0.4f, "", style, backgroundColor).isEmpty())
+            assertTrue(graviks.drawString(0.1f, 0.2f, 0.3f, 0.4f, "", style).isEmpty())
             update()
             for (x in 0 until hostImage.width) {
                 for (y in 0 until hostImage.height) {
@@ -408,7 +405,7 @@ class TestContext {
                 }
             }
 
-            val characterPositions = graviks.drawString(0.1f, 0.1f, 0.9f, 0.4f, "T E", style, backgroundColor)
+            val characterPositions = graviks.drawString(0.1f, 0.1f, 0.9f, 0.4f, "T E", style)
             assertEquals(3, characterPositions.size)
             for (position in characterPositions) {
                 assertTrue(position.maxX - position.minX > 0.1f)

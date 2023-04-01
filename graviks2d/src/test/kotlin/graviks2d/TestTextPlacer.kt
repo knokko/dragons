@@ -22,32 +22,32 @@ class TestTextPlacer {
             't', 'e', 's', 't'
         ), intArrayOf(0, 1, 2, 3), intArrayOf(), "test", listOf(
             DirectionGroup(0, 4, TextDirection.LeftToRight)
-        ), true)
+        ), BooleanArray(4) { true}, true)
 
         testOrderChars(charArrayOf(
             '1', '2', '3', '4'
         ), intArrayOf(0, 1, 2, 3), intArrayOf(), "1234", listOf(
             DirectionGroup(0, 4, TextDirection.Number)
-        ), true)
+        ), BooleanArray(4) { true }, true)
 
         testOrderChars(charArrayOf(
             'ט', 'ל', 'א'
         ), intArrayOf(2, 1, 0), intArrayOf(), "אלט", listOf(
             DirectionGroup(0, 3, TextDirection.RightToLeft)
-        ), false)
+        ), BooleanArray(3) { false }, false)
 
         testOrderChars(charArrayOf(
             '.', ',', ';'
         ), intArrayOf(0, 1, 2), intArrayOf(), ".,;", listOf(
             DirectionGroup(0, 3, TextDirection.LeftToRight)
-        ), true)
+        ), BooleanArray(3) { true }, true)
 
         testOrderChars(charArrayOf(
             't', 'e', 's', 't', '1', '2', '3', '4'
         ), intArrayOf(0, 1, 2, 3, 4, 5, 6, 7), intArrayOf(), "test1234", listOf(
             DirectionGroup(0, 4, TextDirection.LeftToRight),
             DirectionGroup(4, 8, TextDirection.Number)
-        ), true)
+        ), BooleanArray(8) { true }, true)
 
         testOrderChars(charArrayOf(
             '(', 'O', 'n', 'l', 'y', ')', ' ', '1', ' ', 'w', 'o', 'r', 'd', ' ',
@@ -59,7 +59,7 @@ class TestTextPlacer {
             DirectionGroup(8, 16, TextDirection.LeftToRight),
             DirectionGroup(16, 19, TextDirection.RightToLeft),
             DirectionGroup(19, 30, TextDirection.LeftToRight)
-        ), true)
+        ), BooleanArray(30) { index -> index < 16 || index > 18}, true)
 
         // These strings are ripped from the Hebrew William Shakespeare Wikipedia page
         // (but some are slightly modified to make things more interesting)
@@ -80,7 +80,7 @@ class TestTextPlacer {
             DirectionGroup(13, 30, TextDirection.RightToLeft),
             DirectionGroup(30, 32, TextDirection.Number),
             DirectionGroup(32, 33, TextDirection.RightToLeft)
-        ), false)
+        ), BooleanArray(33) { index -> index == 1 || index == 2 || index in 20..23 || index >= 31 }, false)
 
         testOrderChars(charArrayOf(
             ')', ')', ')', 'ן', 'ע', 'מ', ' ', 'ס', 'נ', 'י', 'י', 'ל', 'ר', ')', 'ע', 'ב',
@@ -94,7 +94,7 @@ class TestTextPlacer {
             DirectionGroup(0, 11, TextDirection.RightToLeft),
             DirectionGroup(11, 33, TextDirection.LeftToRight),
             DirectionGroup(33, 62, TextDirection.RightToLeft)
-        ), false)
+        ), BooleanArray(62) { index -> index in 29..50 }, false)
 
         testOrderChars(charArrayOf(
             'ד', 'ר', 'א', 'ל', '(', '(', ' ', 'L', 'o', 'r', 'd', ' ', 'C', 'h', 'a', 'm',
@@ -106,7 +106,7 @@ class TestTextPlacer {
             DirectionGroup(0, 2, TextDirection.RightToLeft),
             DirectionGroup(2, 24, TextDirection.LeftToRight),
             DirectionGroup(24, 31, TextDirection.RightToLeft)
-        ), false)
+        ), BooleanArray(31) { index -> index in 7..28 }, false)
 
         testOrderChars(charArrayOf(
             ')', 'a', '(', ')', 'b', ' ', '5', '2', ' ', 'ל', ')', '(', 'ט', 'א', '('
@@ -120,12 +120,12 @@ class TestTextPlacer {
             DirectionGroup(9, 10, TextDirection.RightToLeft),
             DirectionGroup(10, 14, TextDirection.LeftToRight),
             DirectionGroup(14, 15, TextDirection.RightToLeft)
-        ), false)
+        ), BooleanArray(15) { index -> index in 1..4 || index == 6 || index == 7 }, false)
     }
 
     private fun testOrderChars(
         expected: CharArray, expectedOriginalIndices: IntArray, expectedMirrorIndices: IntArray, inputString: String,
-        expectedGroups: List<DirectionGroup>, expectPrimarilyLeftToRight: Boolean
+        expectedGroups: List<DirectionGroup>, expectedLeftToRight: BooleanArray, expectPrimarilyLeftToRight: Boolean
     ) {
         val codepoints = inputString.codePoints().toArray()
         assertEquals(expectedGroups, groupText(codepoints, getPrimaryDirection(codepoints)))
@@ -134,11 +134,12 @@ class TestTextPlacer {
         assertArrayEquals(expected.map { it.code }.toIntArray(), orderedChars.chars)
         assertArrayEquals(expectedOriginalIndices, orderedChars.originalIndices)
 
-        val exportedMirror = BooleanArray(expected.size)
+        val expectedMirror = BooleanArray(expected.size)
         for (expectedMirrorIndex in expectedMirrorIndices) {
-            exportedMirror[expectedMirrorIndex] = true
+            expectedMirror[expectedMirrorIndex] = true
         }
-        assertArrayEquals(exportedMirror, orderedChars.shouldMirror)
+        assertArrayEquals(expectedMirror, orderedChars.shouldMirror)
+        assertArrayEquals(expectedLeftToRight, orderedChars.isLeftToRight)
 
         assertEquals(expectPrimarilyLeftToRight, orderedChars.isPrimarilyLeftToRight)
     }

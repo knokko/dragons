@@ -32,12 +32,11 @@ fun main() {
             val textStyle = TextStyle(
                 fillColor = Color.BLACK, font = null
             )
-            val backgroundColor = Color.rgbInt(250, 250, 250)
             for (x in arrayOf(0f, 0.3f, 0.6f, 0.9f)) {
                 for (counter in 0 until 100) {
                     graviks.drawString(
                         x, 0.99f - counter * 0.01f, 1f, 1f - counter * 0.01f,
-                        "The random numbers are ${rng.nextLong()} and ${rng.nextLong()}", textStyle, backgroundColor
+                        "The random numbers are ${rng.nextLong()} and ${rng.nextLong()}", textStyle
                     )
                 }
             }
@@ -81,8 +80,7 @@ fun main() {
                     1f,
                     1f - index * lineHeight,
                     line,
-                    textStyle,
-                    backgroundColor
+                    textStyle
                 )
             }
             shouldPresentAgain = true

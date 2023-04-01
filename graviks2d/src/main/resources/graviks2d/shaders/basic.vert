@@ -6,9 +6,8 @@ layout(location = 1) in int inOperationIndex;
 layout(location = 0) out int outOperationIndex;
 layout(location = 1) out vec2 outQuadCoordinates;
 layout(location = 2) out vec4 outTextColor;
-layout(location = 3) out vec4 outBackgroundColor;
-layout(location = 4) out vec4 outStrokeColor;
-layout(location = 5) out vec2 outStrokeDelta;
+layout(location = 3) out vec4 outStrokeColor;
+layout(location = 4) out vec2 outStrokeDelta;
 
 layout(set = 0, binding = 0) readonly buffer ShaderStorage {
     int operations[];
@@ -72,16 +71,14 @@ void main() {
 
     if (operationCode == OP_CODE_DRAW_TEXT) {
         outTextColor = decodeColor(shaderStorage.operations[inOperationIndex + 3]);
-        outBackgroundColor = decodeColor(shaderStorage.operations[inOperationIndex + 4]);
-        outStrokeColor = decodeColor(shaderStorage.operations[inOperationIndex + 5]);
+        outStrokeColor = decodeColor(shaderStorage.operations[inOperationIndex + 4]);
         outStrokeDelta = vec2(
-            decodeFloat(shaderStorage.operations[inOperationIndex + 6]),
-            decodeFloat(shaderStorage.operations[inOperationIndex + 7])
+            decodeFloat(shaderStorage.operations[inOperationIndex + 5]),
+            decodeFloat(shaderStorage.operations[inOperationIndex + 6])
         );
     } else {
         // The error text color will be displayed when the fragment shader tries to
         // use the text color outside a text drawing operation.
         outTextColor = ERROR_TEXT_COLOR;
-        outBackgroundColor = ERROR_TEXT_COLOR;
     }
 }

@@ -15,7 +15,8 @@ class CharacterPosition(
     val minX: Float,
     val minY: Float,
     val maxX: Float,
-    val maxY: Float
+    val maxY: Float,
+    val isLeftToRight: Boolean
 )
 
 internal fun placeText(
@@ -159,7 +160,8 @@ internal fun placeText(
                 minX = currentDrawMinX,
                 minY = finalMinY,
                 maxX = currentDrawMaxX,
-                maxY = finalMaxY
+                maxY = finalMaxY,
+                isLeftToRight = orderedChars.isLeftToRight[charIndex]
             ),
             originalIndex = orderedChars.originalIndices[charIndex]
         ))
@@ -332,6 +334,7 @@ internal class OrderedChars(
     val chars: IntArray,
     val originalIndices: IntArray,
     val shouldMirror: BooleanArray,
+    val isLeftToRight: BooleanArray,
     val isPrimarilyLeftToRight: Boolean
 )
 
@@ -343,6 +346,7 @@ internal fun orderChars(original: IntArray): OrderedChars {
     val result = IntArray(original.size)
     val originalIndices = IntArray(original.size)
     val shouldMirror = BooleanArray(original.size)
+    val isLeftToRight = BooleanArray(original.size)
 
     if (primaryDirection != TextDirection.RightToLeft) {
         var currentIndex = 0
@@ -357,6 +361,7 @@ internal fun orderChars(original: IntArray): OrderedChars {
                 result[currentIndex] = original[index]
                 originalIndices[currentIndex] = index
                 shouldMirror[currentIndex] = group.direction == TextDirection.RightToLeft && Character.isMirrored(original[index])
+                isLeftToRight[currentIndex] = group.direction != TextDirection.RightToLeft
                 currentIndex += 1
             }
         }
@@ -373,10 +378,11 @@ internal fun orderChars(original: IntArray): OrderedChars {
                 result[currentIndex] = original[index]
                 originalIndices[currentIndex] = index
                 shouldMirror[currentIndex] = group.direction == TextDirection.RightToLeft && Character.isMirrored(original[index])
+                isLeftToRight[currentIndex] = group.direction != TextDirection.RightToLeft
                 currentIndex -= 1
             }
         }
     }
 
-    return OrderedChars(result, originalIndices, shouldMirror, primaryDirection != TextDirection.RightToLeft)
+    return OrderedChars(result, originalIndices, shouldMirror, isLeftToRight, primaryDirection != TextDirection.RightToLeft)
 }

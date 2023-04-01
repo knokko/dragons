@@ -31,9 +31,9 @@ internal fun createGraviksPipelineColorBlend(
     attachment.srcColorBlendFactor(VK_BLEND_FACTOR_SRC_ALPHA)
     attachment.dstColorBlendFactor(VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
     attachment.colorBlendOp(VK_BLEND_OP_ADD)
-    attachment.srcAlphaBlendFactor(VK_BLEND_FACTOR_ONE)
-    attachment.dstAlphaBlendFactor(VK_BLEND_FACTOR_ZERO)
-    attachment.alphaBlendOp(VK_BLEND_OP_ADD)
+    attachment.srcAlphaBlendFactor(VK_BLEND_FACTOR_SRC_ALPHA)
+    attachment.dstAlphaBlendFactor(VK_BLEND_FACTOR_DST_ALPHA)
+    attachment.alphaBlendOp(VK_BLEND_OP_MAX)
     attachment.colorWriteMask(
         VK_COLOR_COMPONENT_R_BIT or
                 VK_COLOR_COMPONENT_G_BIT or

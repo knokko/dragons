@@ -68,7 +68,7 @@ class TestChildTarget {
         val result = child.drawString(
             0.1f, 0.2f, 0.5f, 0.8f, "T", TextStyle(
                 fillColor = Color.GREEN, font = null
-            ), Color.WHITE
+            )
         )
 
         assertEquals(0.24f, parent.x1, margin)
@@ -147,13 +147,13 @@ private class LoggedTarget : GraviksTarget {
         yTop: Float,
         string: String,
         style: TextStyle,
-        backgroundColor: Color
+        dryRun: Boolean
     ): List<CharacterPosition> {
         this.x1 = minX
         this.y1 = yBottom
         this.x2 = maxX
         this.y2 = yTop
-        return listOf(CharacterPosition(0.26f, 0.6f, 0.35f, 0.7f))
+        return listOf(CharacterPosition(0.26f, 0.6f, 0.35f, 0.7f, isLeftToRight = true))
     }
 
     override fun getStringAspectRatio(string: String, fontReference: FontReference?) = 5f
