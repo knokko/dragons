@@ -2,6 +2,7 @@ package playground
 
 import graviks.glfw.GraviksWindow
 import graviks2d.context.GraviksContext
+import graviks2d.resource.image.ImageReference
 import graviks2d.resource.text.TextAlignment
 import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
@@ -12,6 +13,7 @@ import gruviks.component.test.DiscoComponent
 import gruviks.component.text.TextButton
 import gruviks.component.text.TextButtonStyle
 import gruviks.component.text.TextComponent
+import gruviks.component.text.*
 import gruviks.feedback.*
 import gruviks.glfw.createAndControlGruviksWindow
 import gruviks.space.Coordinate
@@ -34,10 +36,19 @@ private val baseButtonStyle = TextButtonStyle(
     verticalAlignment = VerticalComponentAlignment.Middle
 )
 
+private val textFieldStyle = transparentTextFieldStyle(
+    defaultStyle = TextStyle(
+        fillColor = Color.rgbInt(172, 172, 172), font = null, alignment = TextAlignment.Natural
+    ),
+    focusStyle = TextStyle(
+        fillColor = Color.WHITE, font = null, alignment = TextAlignment.Natural
+    )
+)
+
 private fun createTitleScreen(): SimpleFlatMenu {
     val backgroundColor = Color.rgbInt(72, 72, 72)
     val menu = SimpleFlatMenu(SpaceLayout.Simple, backgroundColor)
-    //val testIcon = ImageReference.classLoaderPath("test-icon.png", false)
+    val testIcon = ImageReference.classLoaderPath("test-icon.png", false)
 
     val titleStyle = TextStyle(
         fillColor = Color.rgbInt(240, 87, 87),
@@ -66,15 +77,20 @@ private fun createTitleScreen(): SimpleFlatMenu {
     )
 
     menu.addComponent(
-        TextComponent("Knokko's", titleStyle, backgroundColor),
+        TextComponent("Knokko's", titleStyle),
         RectRegion.percentage(20, 87, 80, 98)
     )
     menu.addComponent(
-        TextComponent("Custom Items Editor", subtitleStyle, backgroundColor),
+        TextComponent("Custom Items Editor", subtitleStyle),
         RectRegion.percentage(20, 83, 80, 87)
     )
 
-    menu.addComponent(TextButton("New Item Set", null, baseButtonStyle) { _, giveFeedback ->
+    menu.addComponent(
+        TextField("Input Filename", "", textFieldStyle),
+        RectRegion.percentage(10, 70, 90, 80)
+    )
+
+    menu.addComponent(TextButton("New Item Set", testIcon, baseButtonStyle) { _, giveFeedback ->
         giveFeedback(ReplaceYouFeedback(::createNewItemSetMenu))
     }, RectRegion.percentage(20, 46, 80, 56))
     menu.addComponent(TextButton("Edit Item Set", null, baseButtonStyle) { _, giveFeedback ->
@@ -83,7 +99,7 @@ private fun createTitleScreen(): SimpleFlatMenu {
     menu.addComponent(TextButton("Combine Item Sets", null, baseButtonStyle) { _, giveFeedback ->
         giveFeedback(ShiftCameraFeedback(Coordinate.percentage(10), Coordinate.percentage(10)))
     }, RectRegion.percentage(20, 20, 80, 30))
-    menu.addComponent(TextButton("Exit Editor", null, exitButtonStyle) { _, giveFeedback ->
+    menu.addComponent(TextButton("Exit Editor", testIcon, exitButtonStyle) { _, giveFeedback ->
         giveFeedback(AddressedFeedback(null, ExitFeedback()))
     }, RectRegion.percentage(20, 7, 80, 17))
 
