@@ -12,6 +12,7 @@ import gruviks.feedback.*
 import gruviks.space.*
 import java.lang.Float.max
 import java.lang.Float.min
+import java.util.*
 
 /**
  * A flat menu where with a finite number of components that are always stored in main memory.
@@ -32,12 +33,17 @@ class SimpleFlatMenu(
     // The first draw should always draw all components
     private var shouldDoFullDraw = true
 
+    private var keyboardFocusNode: ComponentNode? = null
+
     private fun updateComponentTree(giveRenderFeedback: Boolean) {
         while (componentsToAdd.isNotEmpty()) {
             val (component, region) = componentsToAdd.removeLast()
             val childCursorTracker = NodeCursorTracker(agent.cursorTracker, region, this::getVisibleRegion)
-            val childFeedback = mutableListOf<Feedback>()
-            val childAgent = ComponentAgent(childCursorTracker, childFeedback::add)
+            val childFeedback = LinkedList<Feedback>()
+            val childAgent = ComponentAgent(childCursorTracker, childFeedback::add) {
+                val focusNode = keyboardFocusNode
+                focusNode != null && focusNode.component == component && agent.hasKeyboardFocus()
+            }
             childCursorTracker.getLastRenderResult = { childAgent.lastRenderResult }
             val node = ComponentNode(component, childAgent, childFeedback)
             component.initAgent(childAgent)
@@ -215,12 +221,30 @@ class SimpleFlatMenu(
 
                 visitedNodes.addAll(targetComponents.map { it.second })
             }
+        } else if (event is KeyEvent) {
+            val focusNode = keyboardFocusNode
+            if (focusNode != null) {
+                if (focusNode.agent.isSubscribed(event::class)) {
+                    focusNode.component.processEvent(event)
+                    visitedNodes.add(focusNode)
+                }
+            }
+        } else if (event is KeyboardFocusEvent) {
+            val focusNode = keyboardFocusNode
+            if (focusNode != null && focusNode.agent.isSubscribed(event::class)) {
+                focusNode.component.processEvent(event)
+                visitedNodes.add(focusNode)
+            }
+
+            if (event is KeyboardFocusLostEvent || event is KeyboardFocusRejectedEvent) {
+                keyboardFocusNode = null
+            }
         } else {
             throw UnsupportedOperationException("Unknown event $event")
         }
 
         for (node in visitedNodes) {
-            updateNode(node)
+            updateNode(node, true)
         }
 
         updateComponentTree(true)
@@ -335,7 +359,7 @@ class SimpleFlatMenu(
         }
 
         for ((_, node) in visibleComponents) {
-            updateNode(node)
+            updateNode(node, true)
         }
 
         shouldDoFullDraw = false
@@ -348,14 +372,48 @@ class SimpleFlatMenu(
         )
     }
 
-    private fun updateNode(node: ComponentNode) {
-        for (feedback in node.feedback) {
+    private fun updateNode(node: ComponentNode, allowKeyboardFocus: Boolean) {
+        while (node.feedback.isNotEmpty()) {
+            val feedback = node.feedback.removeFirst()
             if (feedback is RenderFeedback) {
                 node.didRequestRender = true
                 agent.giveFeedback(RenderFeedback())
             } else if (feedback is AddressedFeedback) {
-                // TODO Check whether it's addressed to me
-                agent.giveFeedback(feedback)
+                if (feedback.targetID == this.id) node.feedback.add(feedback.targetFeedback) else agent.giveFeedback(feedback)
+            } else if (feedback is RequestKeyboardFocusFeedback) {
+
+                if (!allowKeyboardFocus) {
+                    if (node.agent.isSubscribed(KeyboardFocusRejectedEvent::class)) {
+                        node.component.processEvent(KeyboardFocusRejectedEvent())
+                    }
+                    continue
+                }
+
+                if (agent.hasKeyboardFocus() && node == keyboardFocusNode) continue
+
+                val oldNode = keyboardFocusNode
+                keyboardFocusNode = node
+                if (oldNode != null && oldNode.agent.isSubscribed(KeyboardFocusLostEvent::class)) {
+                    oldNode.component.processEvent(KeyboardFocusLostEvent())
+
+                    // Forbid keyboard focus to avoid endless recursion
+                    updateNode(oldNode, false)
+                }
+
+                if (agent.hasKeyboardFocus()) {
+                    if (node.agent.isSubscribed(KeyboardFocusAcquiredEvent::class)) {
+                        node.component.processEvent(KeyboardFocusAcquiredEvent())
+                    }
+                } else {
+                    agent.giveFeedback(RequestKeyboardFocusFeedback())
+                }
+            } else if (feedback is ReleaseKeyboardFocusFeedback) {
+                if (node === keyboardFocusNode && agent.hasKeyboardFocus()) {
+                    keyboardFocusNode = null
+                    if (node.agent.isSubscribed(KeyboardFocusLostEvent::class)) {
+                        node.component.processEvent(KeyboardFocusLostEvent())
+                    }
+                }
             } else if (feedback is ShiftCameraFeedback) {
                 shiftCamera(feedback.deltaX, feedback.deltaY)
             } else if (feedback is MoveCameraFeedback) {

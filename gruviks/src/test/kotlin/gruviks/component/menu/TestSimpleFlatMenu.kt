@@ -24,7 +24,7 @@ class TestSimpleFlatMenu {
     @Test
     fun testGetVisibleRegionSimple() {
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLUE)
-        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         assertEquals(RectRegion.percentage(0, 0, 100, 100), menu.getVisibleRegion())
@@ -35,7 +35,7 @@ class TestSimpleFlatMenu {
     @Test
     fun testGetVisibleRegionGrowUp() {
         val menu = SimpleFlatMenu(SpaceLayout.GrowUp, Color.BLUE)
-        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         // Before rendering, the aspect ratio is assumed to be 1
@@ -50,7 +50,7 @@ class TestSimpleFlatMenu {
     @Test
     fun testGetVisibleRegionGrowDown() {
         val menu = SimpleFlatMenu(SpaceLayout.GrowDown, Color.BLUE)
-        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         // Before rendering, the aspect ratio is assumed to be 1
@@ -65,7 +65,7 @@ class TestSimpleFlatMenu {
     @Test
     fun testGetVisibleRegionGrowRight() {
         val menu = SimpleFlatMenu(SpaceLayout.GrowRight, Color.BLUE)
-        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         // Before rendering, the aspect ratio is assumed to be 1
@@ -90,7 +90,7 @@ class TestSimpleFlatMenu {
         val button = 1
 
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLACK)
-        val agent = ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK)
+        val agent = ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS)
         menu.initAgent(agent)
         menu.subscribeToEvents()
         for (event in arrayOf(
@@ -173,7 +173,7 @@ class TestSimpleFlatMenu {
         val cursor = Cursor(3)
         val fullEvent = CursorMoveEvent(cursor, EventPosition(0.7f, 0.25f), EventPosition(0f, 0.25f))
 
-        val agent = ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK)
+        val agent = ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS)
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLACK)
         menu.initAgent(agent)
         menu.subscribeToEvents()
@@ -272,7 +272,7 @@ class TestSimpleFlatMenu {
     @Test
     fun testRegionsToRedrawBeforeNextRenderTransparent() {
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.TRANSPARENT)
-        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         // Should be empty when there are no components to be drawn
@@ -332,7 +332,7 @@ class TestSimpleFlatMenu {
     @Test
     fun testRegionsToRedrawBeforeNextRenderSolid() {
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.WHITE)
-        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         // When the menu has a solid background, it should never need to redraw the background
@@ -404,7 +404,7 @@ class TestSimpleFlatMenu {
 
         val backgroundColor = Color.rgbInt(1, 2, 3)
         val menu = SimpleFlatMenu(SpaceLayout.Simple, backgroundColor)
-        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         menu.addComponent(ClickDrawComponent(), RectRegion.percentage(0, 50, 50, 100))
@@ -525,7 +525,7 @@ class TestSimpleFlatMenu {
         }
 
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.TRANSPARENT)
-        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         checkRenderResult(
@@ -720,7 +720,7 @@ class TestSimpleFlatMenu {
         }
 
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLUE)
-        menu.initAgent(ComponentAgent(FakeCursorTracker(), DUMMY_FEEDBACK))
+        menu.initAgent(ComponentAgent(FakeCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         menu.addComponent(CursorCheckComponent(), RectRegion.percentage(50, 20, 100, 90))
@@ -741,7 +741,7 @@ class TestSimpleFlatMenu {
 
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.RED)
         menu.addComponent(ClickDrawComponent(), RectRegion.percentage(0, 0, 10, 10))
-        menu.initAgent(ComponentAgent(DummyCursorTracker(), feedbackList::add))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), feedbackList::add, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         assertTrue(feedbackList.isEmpty())
@@ -763,7 +763,7 @@ class TestSimpleFlatMenu {
         val feedbackList = mutableListOf<Feedback>()
 
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLUE)
-        menu.initAgent(ComponentAgent(DummyCursorTracker(), feedbackList::add))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), feedbackList::add, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         class TestComponent : Component() {
@@ -774,7 +774,7 @@ class TestSimpleFlatMenu {
             override fun processEvent(event: Event) {
                 agent.giveFeedback(AddressedFeedback(null, RenderFeedback()))
                 agent.giveFeedback(AddressedFeedback(UUID.randomUUID(), RenderFeedback()))
-                // TODO Give feedback to the menu itself
+                agent.giveFeedback(AddressedFeedback(menu.id, AddressedFeedback(null, RenderFeedback())))
             }
 
             override fun render(target: GraviksTarget, force: Boolean) = RenderResult(
@@ -791,17 +791,25 @@ class TestSimpleFlatMenu {
         assertTrue(feedbackList.isEmpty())
 
         menu.processEvent(CursorClickEvent(Cursor(0), EventPosition(0.1f, 0.2f), 3))
-        assertEquals(2, feedbackList.size)
+        assertEquals(3, feedbackList.size)
+
+        // This feedback was directly addressed to the window
         assertNull((feedbackList[0] as AddressedFeedback).targetID)
         assertTrue((feedbackList[0] as AddressedFeedback).targetFeedback is RenderFeedback)
+
+        // This feedback was addressed to a non-existing component
         assertNotNull((feedbackList[1] as AddressedFeedback).targetID)
         assertTrue((feedbackList[1] as AddressedFeedback).targetFeedback is RenderFeedback)
+
+        // This feedback was indirectly addressed to the window
+        assertNull((feedbackList[2] as AddressedFeedback).targetID)
+        assertTrue((feedbackList[2] as AddressedFeedback).targetFeedback is RenderFeedback)
     }
 
     @Test
     fun testCameraFeedback() {
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.RED)
-        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         class TestComponent : Component() {
@@ -832,7 +840,7 @@ class TestSimpleFlatMenu {
         val feedbackList = mutableListOf<Feedback>()
 
         val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.GREEN)
-        menu.initAgent(ComponentAgent(DummyCursorTracker(), feedbackList::add))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), feedbackList::add, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
         class TestComponent : Component() {
@@ -857,5 +865,202 @@ class TestSimpleFlatMenu {
 
         assertEquals(1, feedbackList.size)
         assertTrue(feedbackList[0] is ReplaceMeFeedback)
+    }
+
+    @Test
+    fun testKeyboardFeedback() {
+        class KeyComponent : Component() {
+
+            var currentText = ""
+            var acquireCounter = 0
+            var lostCounter = 0
+            var rejectedCounter = 0
+
+            override fun subscribeToEvents() {
+                agent.subscribe(CursorClickEvent::class)
+                agent.subscribe(KeyTypeEvent::class)
+                agent.subscribe(KeyPressEvent::class)
+                agent.subscribe(KeyReleaseEvent::class)
+                agent.subscribe(KeyboardFocusAcquiredEvent::class)
+                agent.subscribe(KeyboardFocusLostEvent::class)
+                agent.subscribe(KeyboardFocusRejectedEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                if (event is CursorClickEvent) agent.giveFeedback(RequestKeyboardFocusFeedback())
+                else if (event is KeyTypeEvent) currentText += event.codePoint.toChar()
+                else if (event is KeyPressEvent && event.key.type == KeyType.Escape) agent.giveFeedback(ReleaseKeyboardFocusFeedback())
+                else if (event is KeyboardFocusAcquiredEvent) acquireCounter += 1
+                else if (event is KeyboardFocusLostEvent) lostCounter += 1
+                else if (event is KeyboardFocusRejectedEvent) rejectedCounter += 1
+                else throw UnsupportedOperationException("Unexpected event $event")
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean) = RenderResult(drawnRegion = RectangularDrawnRegion(
+                0f, 0f, 1f, 1f
+            ), propagateMissedCursorEvents = true)
+        }
+
+        var menuHasFocus = false
+        val feedback = mutableListOf<Feedback>()
+        val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLACK)
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), feedback::add) { menuHasFocus })
+
+        val clickEvent = CursorClickEvent(Cursor(1), EventPosition(0.5f, 0.5f), 2)
+
+        val component = KeyComponent()
+        menu.addComponent(component, RectRegion.percentage(10, 20, 80, 90))
+        menu.render(DummyGraviksTarget(), true)
+        feedback.clear()
+
+        // Reject the first focus request
+        run {
+            menu.processEvent(clickEvent)
+            assertEquals(0, component.rejectedCounter)
+
+            assertEquals(1, feedback.size)
+            assertTrue(feedback.removeLast() is RequestKeyboardFocusFeedback)
+            menu.processEvent(KeyboardFocusRejectedEvent())
+
+            assertEquals("", component.currentText)
+            assertEquals(0, component.acquireCounter)
+            assertEquals(0, component.lostCounter)
+            assertEquals(1, component.rejectedCounter)
+        }
+
+        // Accept the second focus request
+        run {
+            menu.processEvent(clickEvent)
+            assertEquals(1, component.rejectedCounter)
+
+            assertEquals(1, feedback.size)
+            assertTrue(feedback.removeLast() is RequestKeyboardFocusFeedback)
+            menuHasFocus = true
+            menu.processEvent(KeyboardFocusAcquiredEvent())
+
+            assertEquals("", component.currentText)
+            assertEquals(1, component.acquireCounter)
+            assertEquals(0, component.lostCounter)
+            assertEquals(1, component.rejectedCounter)
+        }
+
+        // Type hi
+        menu.processEvent(KeyTypeEvent('H'.code))
+        assertEquals("H", component.currentText)
+        assertEquals(1, component.acquireCounter)
+        assertEquals(0, component.lostCounter)
+        assertEquals(1, component.rejectedCounter)
+        menu.processEvent(KeyTypeEvent('i'.code))
+        assertEquals("Hi", component.currentText)
+
+        // Press the escape button to lose focus
+        menu.processEvent(KeyPressEvent(Key(0, KeyType.Escape), false))
+        assertEquals("Hi", component.currentText)
+        assertEquals(1, component.acquireCounter)
+        assertEquals(1, component.lostCounter)
+        assertEquals(1, component.rejectedCounter)
+
+        // The next character should be ignored because focus is lost
+        menu.processEvent(KeyTypeEvent('n'.code))
+        assertEquals("Hi", component.currentText)
+
+        // Click on the component to regain focus
+        menu.processEvent(clickEvent)
+        menu.processEvent(KeyTypeEvent('i'.code))
+        assertEquals("Hii", component.currentText)
+        assertEquals(2, component.acquireCounter)
+        assertEquals(1, component.lostCounter)
+        assertEquals(1, component.rejectedCounter)
+
+        // Take focus away from the menu
+        menu.processEvent(KeyboardFocusLostEvent())
+        assertEquals(2, component.lostCounter)
+        assertEquals(1, component.rejectedCounter)
+    }
+
+    @Test
+    fun testKeyboardFeedbackSpam() {
+        class KeyboardSpamComponent : Component() {
+
+            var keyPressCounter = 0
+            var focusLostCounter = 0
+            var focusRejectedCounter = 0
+            var focusAcquireCounter = 0
+
+            override fun subscribeToEvents() {
+                agent.subscribe(KeyPressEvent::class)
+                agent.subscribe(CursorClickEvent::class)
+                agent.subscribe(KeyboardFocusAcquiredEvent::class)
+                agent.subscribe(KeyboardFocusLostEvent::class)
+                agent.subscribe(KeyboardFocusRejectedEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                if (event is KeyPressEvent) keyPressCounter += 1
+                if (event is KeyboardFocusLostEvent) focusLostCounter += 1
+                if (event is KeyboardFocusRejectedEvent) focusRejectedCounter += 1
+                if (event is KeyboardFocusAcquiredEvent) focusAcquireCounter += 1
+
+                if (event is CursorClickEvent || event is KeyboardFocusLostEvent || event is KeyboardFocusAcquiredEvent) {
+                    agent.giveFeedback(RequestKeyboardFocusFeedback())
+                }
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean) = RenderResult(drawnRegion = RectangularDrawnRegion(
+                0f, 0f, 1f, 1f
+            ), propagateMissedCursorEvents = false)
+
+        }
+
+        class OtherComponent : Component() {
+
+            var keyPressCounter = 0
+
+            override fun subscribeToEvents() {
+                agent.subscribe(CursorClickEvent::class)
+                agent.subscribe(KeyPressEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                if (event is KeyPressEvent) keyPressCounter += 1
+                else agent.giveFeedback(RequestKeyboardFocusFeedback())
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean) = RenderResult(drawnRegion = RectangularDrawnRegion(
+                0f, 0f, 1f, 1f
+            ), propagateMissedCursorEvents = false)
+        }
+
+        val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.WHITE)
+        val spamComponent = KeyboardSpamComponent()
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK) { true })
+        val otherComponent = OtherComponent()
+        menu.addComponent(spamComponent, RectRegion.percentage(0, 0, 50, 50))
+        menu.addComponent(otherComponent, RectRegion.percentage(50, 50, 100, 100))
+        menu.render(DummyGraviksTarget(), true)
+
+        assertEquals(0, spamComponent.keyPressCounter)
+        assertEquals(0, spamComponent.focusLostCounter)
+        assertEquals(0, spamComponent.focusRejectedCounter)
+        assertEquals(0, spamComponent.focusAcquireCounter)
+
+        assertEquals(0, otherComponent.keyPressCounter)
+
+        menu.processEvent(CursorClickEvent(Cursor(0), EventPosition(0.25f, 0.25f), 0))
+        assertEquals(1, spamComponent.focusAcquireCounter)
+        menu.processEvent(KeyPressEvent(Key(1, KeyType.Enter), false))
+        assertEquals(1, spamComponent.keyPressCounter)
+        assertEquals(0, spamComponent.focusLostCounter)
+        assertEquals(0, spamComponent.focusRejectedCounter)
+        assertEquals(0, otherComponent.keyPressCounter)
+
+        menu.processEvent(CursorClickEvent(Cursor(0), EventPosition(0.75f, 0.75f), 1))
+        assertEquals(1, spamComponent.keyPressCounter)
+        assertEquals(1, spamComponent.focusLostCounter)
+        assertEquals(1, spamComponent.focusRejectedCounter)
+        assertEquals(1, spamComponent.focusAcquireCounter)
+        menu.processEvent(KeyPressEvent(Key(1, KeyType.Enter), false))
+        assertEquals(1, spamComponent.keyPressCounter)
+        assertEquals(1, otherComponent.keyPressCounter)
     }
 }

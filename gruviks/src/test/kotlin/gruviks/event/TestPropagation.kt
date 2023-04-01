@@ -4,6 +4,7 @@ import gruviks.component.EventLogComponent
 import gruviks.component.agent.ComponentAgent
 import gruviks.component.agent.DUMMY_FEEDBACK
 import gruviks.component.agent.DummyCursorTracker
+import gruviks.component.agent.NO_KEYBOARD_FOCUS
 import gruviks.util.DummyGraviksTarget
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -13,7 +14,7 @@ class TestPropagation {
 
     private fun createLogComponent(vararg events: KClass<out Event>): Pair<EventLogComponent, ComponentAgent> {
         val component = EventLogComponent(events.toSet())
-        val agent = ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK)
+        val agent = ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS)
         component.initAgent(agent)
         component.subscribeToEvents()
         return Pair(component, agent)

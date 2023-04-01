@@ -1,5 +1,7 @@
 package gruviks.component
 
+import graviks2d.resource.text.CharacterPosition
+
 class RenderResult(
     /**
      * The region where anything has been drawn. Giving a more accurate drawn region typically yields a better user
@@ -40,6 +42,12 @@ abstract class DrawnRegion(
 class RectangularDrawnRegion(
     minX: Float, minY: Float, maxX: Float, maxY: Float
 ): DrawnRegion(minX, minY, maxX, maxY) {
+
+    constructor(characterPosition: CharacterPosition) : this(
+        characterPosition.minX, characterPosition.minY,
+        characterPosition.maxX, characterPosition.maxY
+    )
+
     override fun isInside(x: Float, y: Float) = this.isWithinBounds(x, y)
 
     override fun toString() = "RectangularDrawnRegion($minX, $minY, $maxX, $maxY)"

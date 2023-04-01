@@ -11,6 +11,9 @@ import gruviks.event.raw.RawCursorMoveEvent
 import gruviks.event.raw.RawCursorPressEvent
 import gruviks.event.raw.RawCursorReleaseEvent
 import gruviks.util.optimizeRecentDrawnRegions
+import gruviks.event.Key
+import gruviks.event.KeyType
+import gruviks.event.raw.*
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.VkRectLayerKHR
@@ -49,6 +52,31 @@ fun createAndControlGruviksWindow(graviksWindow: GraviksWindow, rootComponent: C
     glfwSetCursorEnterCallback(graviksWindow.windowHandle) { _, entered ->
         if (!entered) {
             gruviksWindow.fireEvent(RawCursorLeaveEvent(mouseCursor))
+        }
+    }
+
+    glfwSetCharCallback(graviksWindow.windowHandle) { _, codePoint ->
+        gruviksWindow.fireEvent(RawKeyTypeEvent(codePoint))
+    }
+
+    glfwSetKeyCallback(graviksWindow.windowHandle) { _, keyCode, _, wasPressed, _ ->
+        val keyType = when (keyCode) {
+            GLFW_KEY_LEFT -> KeyType.Left
+            GLFW_KEY_RIGHT -> KeyType.Right
+            GLFW_KEY_UP -> KeyType.Up
+            GLFW_KEY_DOWN -> KeyType.Down
+            GLFW_KEY_ENTER -> KeyType.Enter
+            GLFW_KEY_BACKSPACE -> KeyType.Backspace
+            GLFW_KEY_ESCAPE -> KeyType.Escape
+            GLFW_KEY_TAB -> KeyType.Tab
+            else -> KeyType.Other
+        }
+        val key = Key(keyCode, keyType)
+        if (wasPressed == GLFW_PRESS || wasPressed == GLFW_REPEAT) {
+            gruviksWindow.fireEvent(RawKeyPressEvent(key, wasPressed == GLFW_REPEAT))
+        }
+        if (wasPressed == GLFW_RELEASE) {
+            gruviksWindow.fireEvent(RawKeyReleaseEvent(key))
         }
     }
     

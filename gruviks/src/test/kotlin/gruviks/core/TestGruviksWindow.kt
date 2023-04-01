@@ -9,6 +9,7 @@ import gruviks.component.RenderResult
 import gruviks.component.agent.ComponentAgent
 import gruviks.component.agent.DUMMY_FEEDBACK
 import gruviks.component.agent.DummyCursorTracker
+import gruviks.component.agent.NO_KEYBOARD_FOCUS
 import gruviks.component.fill.SimpleColorFillComponent
 import gruviks.component.text.TextButton
 import gruviks.component.text.TextButtonStyle
@@ -44,7 +45,7 @@ class TestGruviksWindow {
 
         // window.setRootComponent should initialize the component agent, so attempting to initialize it again
         // should throw an IllegalStateException
-        assertThrows<IllegalStateException> { nextComponent.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK)) }
+        assertThrows<IllegalStateException> { nextComponent.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS)) }
 
         window.render(DummyGraviksTarget(), false, null)
 

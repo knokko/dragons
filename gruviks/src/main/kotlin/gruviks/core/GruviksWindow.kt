@@ -22,6 +22,7 @@ class GruviksWindow(
     private val cursorTracker = RootCursorTracker(eventAdapter) { this.rootAgent.lastRenderResult }
 
     private var isFirstRenderOfRootComponent = true
+    private var keyboardFocusState = KeyboardFocusState.NoFocus
 
     init {
         this.setRootComponent(rootComponent)
@@ -35,6 +36,10 @@ class GruviksWindow(
         } else if (feedback is AddressedFeedback) {
             if (feedback.targetID != null) throw IllegalArgumentException("Received missed feedback $feedback")
             processFeedback(feedback.targetFeedback)
+        } else if (feedback is RequestKeyboardFocusFeedback) {
+            this.keyboardFocusState = KeyboardFocusState.GettingFocus
+        } else if (feedback is ReleaseKeyboardFocusFeedback) {
+            this.keyboardFocusState = KeyboardFocusState.LosingFocus
         } else if (feedback is ExitFeedback) {
             this.didRequestExit = true
         } else if (feedback is ReplaceMeFeedback) {
@@ -46,7 +51,7 @@ class GruviksWindow(
 
     fun setRootComponent(newComponent: Component) {
         this.rootComponent = newComponent
-        this.rootAgent = ComponentAgent(cursorTracker, this::processFeedback)
+        this.rootAgent = ComponentAgent(cursorTracker, this::processFeedback) { this.keyboardFocusState == KeyboardFocusState.Focus }
         this.didRequestRender = true
 
         this.rootComponent.initAgent(this.rootAgent)
@@ -57,6 +62,16 @@ class GruviksWindow(
     }
 
     private fun checkNextComponent() {
+        if (this.keyboardFocusState == KeyboardFocusState.GettingFocus) {
+            this.keyboardFocusState = KeyboardFocusState.Focus
+            rootComponent.processEvent(KeyboardFocusAcquiredEvent())
+        }
+
+        if (this.keyboardFocusState == KeyboardFocusState.LosingFocus) {
+            this.keyboardFocusState = KeyboardFocusState.NoFocus
+            rootComponent.processEvent(KeyboardFocusLostEvent())
+        }
+
         val nextComponent = this.nextComponent
         if (nextComponent != null) {
             this.nextComponent = null
@@ -110,4 +125,11 @@ class GruviksWindow(
             checkNextComponent()
         }
     }
+}
+
+private enum class KeyboardFocusState {
+    NoFocus,
+    Focus,
+    GettingFocus,
+    LosingFocus
 }

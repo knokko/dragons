@@ -45,15 +45,16 @@ class DummyGraviksTarget(
         yTop: Float,
         string: String,
         style: TextStyle,
-        backgroundColor: Color
+        dryRun: Boolean
     ): List<CharacterPosition> {
-        drawStringCounter += 1
+        if (!dryRun) drawStringCounter += 1
         val numCodepoints = string.codePointCount(0, string.length)
         return (0 until numCodepoints).map { CharacterPosition(
             minX = it.toFloat() / numCodepoints.toFloat(),
             minY = 0f,
             maxX = (it + 1).toFloat() / numCodepoints.toFloat(),
-            maxY = 1f
+            maxY = 1f,
+            isLeftToRight = true
         ) }
     }
 

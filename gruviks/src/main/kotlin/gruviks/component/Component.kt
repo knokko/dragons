@@ -3,8 +3,12 @@ package gruviks.component
 import graviks2d.target.GraviksTarget
 import gruviks.component.agent.ComponentAgent
 import gruviks.event.Event
+import java.util.*
 
 abstract class Component {
+
+    val id = UUID.randomUUID()
+
     protected lateinit var agent: ComponentAgent
 
     protected fun didInitAgent() = this::agent.isInitialized

@@ -7,7 +7,8 @@ import kotlin.reflect.KClass
 
 class ComponentAgent(
     val cursorTracker: CursorTracker,
-    val giveFeedback: (Feedback) -> Unit
+    val giveFeedback: (Feedback) -> Unit,
+    val hasKeyboardFocus: () -> Boolean
 ) {
     internal var lastRenderResult: RenderResult? = null
 

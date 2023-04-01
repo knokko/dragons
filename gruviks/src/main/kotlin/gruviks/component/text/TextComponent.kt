@@ -2,7 +2,6 @@ package gruviks.component.text
 
 import graviks2d.resource.text.TextStyle
 import graviks2d.target.GraviksTarget
-import graviks2d.util.Color
 import gruviks.component.Component
 import gruviks.component.RectangularDrawnRegion
 import gruviks.component.RenderResult
@@ -10,8 +9,7 @@ import gruviks.event.Event
 
 class TextComponent(
     private val text: String,
-    private val style: TextStyle,
-    private val background: Color
+    private val style: TextStyle
 ): Component() {
     override fun subscribeToEvents() {
         // This component doesn't respond to any events
@@ -22,11 +20,14 @@ class TextComponent(
     }
 
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {
-        target.drawString(0f, 0f, 1f, 1f, text, style, background)
-        return RenderResult(
-            // TODO Add more accurate drawn region, and test it
-            drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f),
-            propagateMissedCursorEvents = true
+        val characterPositions = target.drawString(0f, 0f, 1f, 1f, text, style)
+        if (characterPositions.isEmpty()) return RenderResult(
+            drawnRegion = null, recentDrawnRegion = null, propagateMissedCursorEvents = true
         )
+        val drawnRegion = RectangularDrawnRegion(
+            characterPositions.minOf { it.minX }, characterPositions.minOf { it.minY },
+            characterPositions.maxOf { it.maxX }, characterPositions.maxOf { it.maxY }
+        )
+        return RenderResult(drawnRegion = drawnRegion, propagateMissedCursorEvents = true)
     }
 }

@@ -67,6 +67,18 @@ class RawEventAdapter {
             }
         }
 
+        if (event is RawKeyTypeEvent) {
+            result.add(KeyTypeEvent(event.codePoint))
+        }
+
+        if (event is RawKeyPressEvent) {
+            result.add(KeyPressEvent(event.key, event.isRepeat))
+        }
+
+        if (event is RawKeyReleaseEvent) {
+            result.add(KeyReleaseEvent(event.key))
+        }
+
         return result
     }
 

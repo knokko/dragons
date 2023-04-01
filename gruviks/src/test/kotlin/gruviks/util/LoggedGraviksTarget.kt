@@ -50,7 +50,7 @@ class LoggedGraviksTarget: GraviksTarget {
         yTop: Float,
         string: String,
         style: TextStyle,
-        backgroundColor: Color
+        dryRun: Boolean
     ): List<CharacterPosition> {
         TODO("Not yet implemented")
     }
