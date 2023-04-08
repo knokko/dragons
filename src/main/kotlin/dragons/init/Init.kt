@@ -12,8 +12,8 @@ import dragons.plugin.loading.PluginClassLoader
 import dragons.plugin.loading.scanDefaultPluginLocations
 import dragons.state.StaticGameState
 import dragons.state.StaticGraphicsState
-import dragons.profiling.PerformanceProfiler
-import dragons.profiling.PerformanceStorage
+import profiler.performance.PerformanceProfiler
+import profiler.performance.PerformanceStorage
 import dragons.util.PerformanceStatistics
 import dragons.vr.initVr
 import dragons.vulkan.destroy.destroyVulkanDevice

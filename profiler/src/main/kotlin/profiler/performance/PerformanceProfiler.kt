@@ -1,33 +1,23 @@
-package dragons.profiling
+package profiler.performance
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory.getLogger
 import java.lang.Thread.sleep
 import java.lang.management.ManagementFactory
-import kotlin.system.measureTimeMillis
 
-class PerformanceProfiler(val storage: PerformanceStorage, private val sleepTime: Long) {
+class PerformanceProfiler(
+    val storage: PerformanceStorage, private val sleepTime: Long,
+    private val classNameFilter: (String) -> Boolean = { true }
+) {
 
     private val threads = ManagementFactory.getThreadMXBean()
     private lateinit var ownThread: Thread
     private var shouldStop = false
 
     fun start() {
-        
         ownThread = Thread {
-            var sampleCounter = 0
-
-            val spentTime = measureTimeMillis {
-                while (!shouldStop) {
-                    update()
-                    sampleCounter += 1
-                    sleep(sleepTime)
-                }
+            while (!shouldStop) {
+                update()
+                sleep(sleepTime)
             }
-
-            val logger = getLogger(Logger.ROOT_LOGGER_NAME)
-            logger.info("Took $sampleCounter performance samples in $spentTime ms with sleepTime $sleepTime")
-
         }
         ownThread.start()
     }
@@ -38,7 +28,7 @@ class PerformanceProfiler(val storage: PerformanceStorage, private val sleepTime
         }.map { it.threadId }.toLongArray()
 
         val dumps = threads.getThreadInfo(threadsToDump, false, false).filter { thread ->
-            thread != null && thread.threadState == Thread.State.RUNNABLE && thread.stackTrace.any { it.className.contains("dragons") }
+            thread != null && thread.threadState == Thread.State.RUNNABLE && thread.stackTrace.any { classNameFilter(it.className) }
         }
 
         for (dump in dumps) {

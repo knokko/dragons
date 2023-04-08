@@ -1,4 +1,4 @@
-package dragons.profiling
+package profiler.performance
 
 import java.io.PrintWriter
 import java.util.concurrent.ConcurrentHashMap

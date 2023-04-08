@@ -1,4 +1,4 @@
-package dragons.profiling
+package profiler.performance
 
 import java.io.File
 import java.io.PrintWriter
