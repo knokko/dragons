@@ -4,6 +4,7 @@ import graviks2d.core.GraviksInstance
 import graviks2d.util.assertSuccess
 import org.lwjgl.stb.STBImage.stbi_info_from_memory
 import org.lwjgl.stb.STBImage.stbi_load_from_memory
+import org.lwjgl.stb.STBImageWrite.stbi_write_png_to_func
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.*
 import org.lwjgl.util.vma.Vma.*
@@ -11,12 +12,8 @@ import org.lwjgl.util.vma.VmaAllocationCreateInfo
 import org.lwjgl.util.vma.VmaAllocationInfo
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
-import java.awt.image.BufferedImage
-import java.awt.image.BufferedImage.TYPE_INT_ARGB
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.InputStream
-import javax.imageio.ImageIO
 
 internal fun createImageView(vkDevice: VkDevice, vkImage: Long): Long {
     return stackPush().use { stack ->
@@ -269,14 +266,19 @@ internal fun createImagePair(
 }
 
 internal fun createDummyImage(instance: GraviksInstance): ImagePair {
-    val dummyBufferedImage = BufferedImage(1, 1, TYPE_INT_ARGB)
-    dummyBufferedImage.setRGB(0, 0, java.awt.Color(200, 150, 0).rgb)
+    val singlePixelData = memCalloc(4)
+    var dummyInput: ByteArrayInputStream? = null
+    if (!stbi_write_png_to_func({ _, address, size ->
+        val singlePixelPngData = memByteBuffer(address, size)
+        val singlePixelPngArray = ByteArray(singlePixelPngData.capacity())
+        singlePixelPngData.get(0, singlePixelPngArray)
+        dummyInput = ByteArrayInputStream(singlePixelPngArray)
+    }, 0L, 1, 1, 4, singlePixelData, 0)) {
+        throw RuntimeException("stbi_write_png_to_func failed")
+    }
+    memFree(singlePixelData)
 
-    val dummyOutput = ByteArrayOutputStream()
-    ImageIO.write(dummyBufferedImage, "PNG", dummyOutput)
-
-    val dummyInput = ByteArrayInputStream(dummyOutput.toByteArray())
-    return createImagePair(instance, dummyInput, "DummyImage")
+    return createImagePair(instance, dummyInput!!, "DummyImage")
 }
 
 internal class ImagePair(
