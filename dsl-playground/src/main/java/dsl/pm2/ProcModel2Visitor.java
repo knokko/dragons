@@ -35,35 +35,41 @@ public interface ProcModel2Visitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitParameterDeclaration(ProcModel2Parser.ParameterDeclarationContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ProcModel2Parser#vertexDeclaration}.
+	 * Visit a parse tree produced by {@link ProcModel2Parser#variableDeclaration}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitVertexDeclaration(ProcModel2Parser.VertexDeclarationContext ctx);
+	T visitVariableDeclaration(ProcModel2Parser.VariableDeclarationContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ProcModel2Parser#floatDeclaration}.
+	 * Visit a parse tree produced by {@link ProcModel2Parser#variableReassignment}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitFloatDeclaration(ProcModel2Parser.FloatDeclarationContext ctx);
+	T visitVariableReassignment(ProcModel2Parser.VariableReassignmentContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ProcModel2Parser#intDeclaration}.
+	 * Visit a parse tree produced by {@link ProcModel2Parser#functionInvocation}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIntDeclaration(ProcModel2Parser.IntDeclarationContext ctx);
+	T visitFunctionInvocation(ProcModel2Parser.FunctionInvocationContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ProcModel2Parser#floatExpression}.
+	 * Visit a parse tree produced by {@link ProcModel2Parser#expression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitFloatExpression(ProcModel2Parser.FloatExpressionContext ctx);
+	T visitExpression(ProcModel2Parser.ExpressionContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ProcModel2Parser#intExpression}.
+	 * Visit a parse tree produced by {@link ProcModel2Parser#variableProperty}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIntExpression(ProcModel2Parser.IntExpressionContext ctx);
+	T visitVariableProperty(ProcModel2Parser.VariablePropertyContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#positionConstructor}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPositionConstructor(ProcModel2Parser.PositionConstructorContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ProcModel2Parser#forLoop}.
 	 * @param ctx the parse tree

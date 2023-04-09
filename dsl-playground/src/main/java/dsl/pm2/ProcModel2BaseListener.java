@@ -65,61 +65,73 @@ public class ProcModel2BaseListener implements ProcModel2Listener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterVertexDeclaration(ProcModel2Parser.VertexDeclarationContext ctx) { }
+	@Override public void enterVariableDeclaration(ProcModel2Parser.VariableDeclarationContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitVertexDeclaration(ProcModel2Parser.VertexDeclarationContext ctx) { }
+	@Override public void exitVariableDeclaration(ProcModel2Parser.VariableDeclarationContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterFloatDeclaration(ProcModel2Parser.FloatDeclarationContext ctx) { }
+	@Override public void enterVariableReassignment(ProcModel2Parser.VariableReassignmentContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitFloatDeclaration(ProcModel2Parser.FloatDeclarationContext ctx) { }
+	@Override public void exitVariableReassignment(ProcModel2Parser.VariableReassignmentContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterIntDeclaration(ProcModel2Parser.IntDeclarationContext ctx) { }
+	@Override public void enterFunctionInvocation(ProcModel2Parser.FunctionInvocationContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitIntDeclaration(ProcModel2Parser.IntDeclarationContext ctx) { }
+	@Override public void exitFunctionInvocation(ProcModel2Parser.FunctionInvocationContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterFloatExpression(ProcModel2Parser.FloatExpressionContext ctx) { }
+	@Override public void enterExpression(ProcModel2Parser.ExpressionContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitFloatExpression(ProcModel2Parser.FloatExpressionContext ctx) { }
+	@Override public void exitExpression(ProcModel2Parser.ExpressionContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterIntExpression(ProcModel2Parser.IntExpressionContext ctx) { }
+	@Override public void enterVariableProperty(ProcModel2Parser.VariablePropertyContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitIntExpression(ProcModel2Parser.IntExpressionContext ctx) { }
+	@Override public void exitVariableProperty(ProcModel2Parser.VariablePropertyContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterPositionConstructor(ProcModel2Parser.PositionConstructorContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitPositionConstructor(ProcModel2Parser.PositionConstructorContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

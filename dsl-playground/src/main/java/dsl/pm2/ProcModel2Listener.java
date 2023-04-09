@@ -48,55 +48,65 @@ public interface ProcModel2Listener extends ParseTreeListener {
 	 */
 	void exitParameterDeclaration(ProcModel2Parser.ParameterDeclarationContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ProcModel2Parser#vertexDeclaration}.
+	 * Enter a parse tree produced by {@link ProcModel2Parser#variableDeclaration}.
 	 * @param ctx the parse tree
 	 */
-	void enterVertexDeclaration(ProcModel2Parser.VertexDeclarationContext ctx);
+	void enterVariableDeclaration(ProcModel2Parser.VariableDeclarationContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link ProcModel2Parser#vertexDeclaration}.
+	 * Exit a parse tree produced by {@link ProcModel2Parser#variableDeclaration}.
 	 * @param ctx the parse tree
 	 */
-	void exitVertexDeclaration(ProcModel2Parser.VertexDeclarationContext ctx);
+	void exitVariableDeclaration(ProcModel2Parser.VariableDeclarationContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ProcModel2Parser#floatDeclaration}.
+	 * Enter a parse tree produced by {@link ProcModel2Parser#variableReassignment}.
 	 * @param ctx the parse tree
 	 */
-	void enterFloatDeclaration(ProcModel2Parser.FloatDeclarationContext ctx);
+	void enterVariableReassignment(ProcModel2Parser.VariableReassignmentContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link ProcModel2Parser#floatDeclaration}.
+	 * Exit a parse tree produced by {@link ProcModel2Parser#variableReassignment}.
 	 * @param ctx the parse tree
 	 */
-	void exitFloatDeclaration(ProcModel2Parser.FloatDeclarationContext ctx);
+	void exitVariableReassignment(ProcModel2Parser.VariableReassignmentContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ProcModel2Parser#intDeclaration}.
+	 * Enter a parse tree produced by {@link ProcModel2Parser#functionInvocation}.
 	 * @param ctx the parse tree
 	 */
-	void enterIntDeclaration(ProcModel2Parser.IntDeclarationContext ctx);
+	void enterFunctionInvocation(ProcModel2Parser.FunctionInvocationContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link ProcModel2Parser#intDeclaration}.
+	 * Exit a parse tree produced by {@link ProcModel2Parser#functionInvocation}.
 	 * @param ctx the parse tree
 	 */
-	void exitIntDeclaration(ProcModel2Parser.IntDeclarationContext ctx);
+	void exitFunctionInvocation(ProcModel2Parser.FunctionInvocationContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ProcModel2Parser#floatExpression}.
+	 * Enter a parse tree produced by {@link ProcModel2Parser#expression}.
 	 * @param ctx the parse tree
 	 */
-	void enterFloatExpression(ProcModel2Parser.FloatExpressionContext ctx);
+	void enterExpression(ProcModel2Parser.ExpressionContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link ProcModel2Parser#floatExpression}.
+	 * Exit a parse tree produced by {@link ProcModel2Parser#expression}.
 	 * @param ctx the parse tree
 	 */
-	void exitFloatExpression(ProcModel2Parser.FloatExpressionContext ctx);
+	void exitExpression(ProcModel2Parser.ExpressionContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ProcModel2Parser#intExpression}.
+	 * Enter a parse tree produced by {@link ProcModel2Parser#variableProperty}.
 	 * @param ctx the parse tree
 	 */
-	void enterIntExpression(ProcModel2Parser.IntExpressionContext ctx);
+	void enterVariableProperty(ProcModel2Parser.VariablePropertyContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link ProcModel2Parser#intExpression}.
+	 * Exit a parse tree produced by {@link ProcModel2Parser#variableProperty}.
 	 * @param ctx the parse tree
 	 */
-	void exitIntExpression(ProcModel2Parser.IntExpressionContext ctx);
+	void exitVariableProperty(ProcModel2Parser.VariablePropertyContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#positionConstructor}.
+	 * @param ctx the parse tree
+	 */
+	void enterPositionConstructor(ProcModel2Parser.PositionConstructorContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#positionConstructor}.
+	 * @param ctx the parse tree
+	 */
+	void exitPositionConstructor(ProcModel2Parser.PositionConstructorContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ProcModel2Parser#forLoop}.
 	 * @param ctx the parse tree

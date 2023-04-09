@@ -7,46 +7,47 @@ outerStatement :
     innerStatement;
 
 innerStatement :
-    vertexDeclaration |
-    floatDeclaration |
-    intDeclaration |
+    variableDeclaration |
+    variableReassignment |
+    functionInvocation |
     forLoop;
 
 parameterDeclaration : PARAMETER_TYPE 'parameter' IDENTIFIER ';';
 
-vertexDeclaration : 'vertex' IDENTIFIER '=' '{' 'position' ':' '(' floatExpression ',' floatExpression')' '}' ';';
+variableDeclaration : IDENTIFIER IDENTIFIER ('=' expression)? ';';
 
-floatDeclaration : 'float' IDENTIFIER '=' floatExpression ';';
+variableReassignment : IDENTIFIER ('.' IDENTIFIER)* '=' expression ';';
 
-intDeclaration : 'int' IDENTIFIER '=' intExpression ';';
+functionInvocation : IDENTIFIER '(' ((expression ',')* expression)? ')' ';';
 
-floatExpression :
+expression :
     FLOAT_LITERAL |
-    IDENTIFIER |
-    'float' '(' intExpression ')' |
-    '(' floatExpression ')' |
-    floatExpression TIMES floatExpression |
-    floatExpression MINUS floatExpression |
-    floatExpression PLUS floatExpression;
-
-intExpression :
     INT_LITERAL |
     IDENTIFIER |
-    'int' '(' floatExpression ')' |
-    intExpression '+' intExpression;
+    expression variableProperty |
+    '(' expression ')' |
+    positionConstructor |
+    expression DIVIDE expression |
+    expression TIMES expression |
+    expression MINUS expression |
+    expression PLUS expression;
+
+variableProperty : '.' IDENTIFIER;
+
+positionConstructor : '(' expression ',' expression ')';
 
 PLUS : '+';
 MINUS : '-';
 TIMES : '*';
 DIVIDE : '/';
 
-forLoop : 'for' '(' intExpression ('<'|'<=') IDENTIFIER ('<'|'<=') intExpression ')' '{' innerStatement* '}';
+forLoop : 'for' '(' expression ('<'|'<=') IDENTIFIER ('<'|'<=') expression ')' '{' innerStatement* '}';
 
 NORMAL_TYPE : 'custom' | 'sharp' | 'smooth';
 
 PARAMETER_TYPE : 'static' | 'dynamic';
 
-IDENTIFIER : ('a'..'z') (('a'..'z')|('A'..'Z')|('0'..'9'))*;
+IDENTIFIER : (('a'..'z')|('A'..'Z')) (('a'..'z')|('A'..'Z')|('0'..'9'))*;
 
 FLOAT_LITERAL : INT_LITERAL '.' ('0'..'9')+;
 

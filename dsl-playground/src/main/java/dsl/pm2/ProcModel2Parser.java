@@ -18,35 +18,34 @@ public class ProcModel2Parser extends Parser {
 		new PredictionContextCache();
 	public static final int
 		T__0=1, T__1=2, T__2=3, T__3=4, T__4=5, T__5=6, T__6=7, T__7=8, T__8=9, 
-		T__9=10, T__10=11, T__11=12, T__12=13, T__13=14, T__14=15, T__15=16, PLUS=17, 
-		MINUS=18, TIMES=19, DIVIDE=20, NORMAL_TYPE=21, PARAMETER_TYPE=22, IDENTIFIER=23, 
-		FLOAT_LITERAL=24, INT_LITERAL=25, WS=26;
+		T__9=10, T__10=11, T__11=12, PLUS=13, MINUS=14, TIMES=15, DIVIDE=16, NORMAL_TYPE=17, 
+		PARAMETER_TYPE=18, IDENTIFIER=19, FLOAT_LITERAL=20, INT_LITERAL=21, WS=22;
 	public static final int
 		RULE_start = 0, RULE_outerStatement = 1, RULE_innerStatement = 2, RULE_parameterDeclaration = 3, 
-		RULE_vertexDeclaration = 4, RULE_floatDeclaration = 5, RULE_intDeclaration = 6, 
-		RULE_floatExpression = 7, RULE_intExpression = 8, RULE_forLoop = 9;
+		RULE_variableDeclaration = 4, RULE_variableReassignment = 5, RULE_functionInvocation = 6, 
+		RULE_expression = 7, RULE_variableProperty = 8, RULE_positionConstructor = 9, 
+		RULE_forLoop = 10;
 	private static String[] makeRuleNames() {
 		return new String[] {
 			"start", "outerStatement", "innerStatement", "parameterDeclaration", 
-			"vertexDeclaration", "floatDeclaration", "intDeclaration", "floatExpression", 
-			"intExpression", "forLoop"
+			"variableDeclaration", "variableReassignment", "functionInvocation", 
+			"expression", "variableProperty", "positionConstructor", "forLoop"
 		};
 	}
 	public static final String[] ruleNames = makeRuleNames();
 
 	private static String[] makeLiteralNames() {
 		return new String[] {
-			null, "'parameter'", "';'", "'vertex'", "'='", "'{'", "'position'", "':'", 
-			"'('", "','", "')'", "'}'", "'float'", "'int'", "'for'", "'<'", "'<='", 
-			"'+'", "'-'", "'*'", "'/'"
+			null, "'parameter'", "';'", "'='", "'.'", "'('", "','", "')'", "'for'", 
+			"'<'", "'<='", "'{'", "'}'", "'+'", "'-'", "'*'", "'/'"
 		};
 	}
 	private static final String[] _LITERAL_NAMES = makeLiteralNames();
 	private static String[] makeSymbolicNames() {
 		return new String[] {
 			null, null, null, null, null, null, null, null, null, null, null, null, 
-			null, null, null, null, null, "PLUS", "MINUS", "TIMES", "DIVIDE", "NORMAL_TYPE", 
-			"PARAMETER_TYPE", "IDENTIFIER", "FLOAT_LITERAL", "INT_LITERAL", "WS"
+			null, "PLUS", "MINUS", "TIMES", "DIVIDE", "NORMAL_TYPE", "PARAMETER_TYPE", 
+			"IDENTIFIER", "FLOAT_LITERAL", "INT_LITERAL", "WS"
 		};
 	}
 	private static final String[] _SYMBOLIC_NAMES = makeSymbolicNames();
@@ -135,21 +134,21 @@ public class ProcModel2Parser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(23);
+			setState(25);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
-			while (((_la) & ~0x3f) == 0 && ((1L << _la) & 4222984L) != 0) {
+			while (((_la) & ~0x3f) == 0 && ((1L << _la) & 786688L) != 0) {
 				{
 				{
-				setState(20);
+				setState(22);
 				outerStatement();
 				}
 				}
-				setState(25);
+				setState(27);
 				_errHandler.sync(this);
 				_la = _input.LA(1);
 			}
-			setState(26);
+			setState(28);
 			match(EOF);
 			}
 		}
@@ -195,23 +194,21 @@ public class ProcModel2Parser extends Parser {
 		OuterStatementContext _localctx = new OuterStatementContext(_ctx, getState());
 		enterRule(_localctx, 2, RULE_outerStatement);
 		try {
-			setState(30);
+			setState(32);
 			_errHandler.sync(this);
 			switch (_input.LA(1)) {
 			case PARAMETER_TYPE:
 				enterOuterAlt(_localctx, 1);
 				{
-				setState(28);
+				setState(30);
 				parameterDeclaration();
 				}
 				break;
-			case T__2:
-			case T__11:
-			case T__12:
-			case T__13:
+			case T__7:
+			case IDENTIFIER:
 				enterOuterAlt(_localctx, 2);
 				{
-				setState(29);
+				setState(31);
 				innerStatement();
 				}
 				break;
@@ -232,14 +229,14 @@ public class ProcModel2Parser extends Parser {
 
 	@SuppressWarnings("CheckReturnValue")
 	public static class InnerStatementContext extends ParserRuleContext {
-		public VertexDeclarationContext vertexDeclaration() {
-			return getRuleContext(VertexDeclarationContext.class,0);
+		public VariableDeclarationContext variableDeclaration() {
+			return getRuleContext(VariableDeclarationContext.class,0);
 		}
-		public FloatDeclarationContext floatDeclaration() {
-			return getRuleContext(FloatDeclarationContext.class,0);
+		public VariableReassignmentContext variableReassignment() {
+			return getRuleContext(VariableReassignmentContext.class,0);
 		}
-		public IntDeclarationContext intDeclaration() {
-			return getRuleContext(IntDeclarationContext.class,0);
+		public FunctionInvocationContext functionInvocation() {
+			return getRuleContext(FunctionInvocationContext.class,0);
 		}
 		public ForLoopContext forLoop() {
 			return getRuleContext(ForLoopContext.class,0);
@@ -267,39 +264,37 @@ public class ProcModel2Parser extends Parser {
 		InnerStatementContext _localctx = new InnerStatementContext(_ctx, getState());
 		enterRule(_localctx, 4, RULE_innerStatement);
 		try {
-			setState(36);
+			setState(38);
 			_errHandler.sync(this);
-			switch (_input.LA(1)) {
-			case T__2:
+			switch ( getInterpreter().adaptivePredict(_input,2,_ctx) ) {
+			case 1:
 				enterOuterAlt(_localctx, 1);
 				{
-				setState(32);
-				vertexDeclaration();
+				setState(34);
+				variableDeclaration();
 				}
 				break;
-			case T__11:
+			case 2:
 				enterOuterAlt(_localctx, 2);
 				{
-				setState(33);
-				floatDeclaration();
+				setState(35);
+				variableReassignment();
 				}
 				break;
-			case T__12:
+			case 3:
 				enterOuterAlt(_localctx, 3);
 				{
-				setState(34);
-				intDeclaration();
+				setState(36);
+				functionInvocation();
 				}
 				break;
-			case T__13:
+			case 4:
 				enterOuterAlt(_localctx, 4);
 				{
-				setState(35);
+				setState(37);
 				forLoop();
 				}
 				break;
-			default:
-				throw new NoViableAltException(this);
 			}
 		}
 		catch (RecognitionException re) {
@@ -342,194 +337,151 @@ public class ProcModel2Parser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(38);
-			match(PARAMETER_TYPE);
-			setState(39);
-			match(T__0);
 			setState(40);
-			match(IDENTIFIER);
+			match(PARAMETER_TYPE);
 			setState(41);
-			match(T__1);
-			}
-		}
-		catch (RecognitionException re) {
-			_localctx.exception = re;
-			_errHandler.reportError(this, re);
-			_errHandler.recover(this, re);
-		}
-		finally {
-			exitRule();
-		}
-		return _localctx;
-	}
-
-	@SuppressWarnings("CheckReturnValue")
-	public static class VertexDeclarationContext extends ParserRuleContext {
-		public TerminalNode IDENTIFIER() { return getToken(ProcModel2Parser.IDENTIFIER, 0); }
-		public List<FloatExpressionContext> floatExpression() {
-			return getRuleContexts(FloatExpressionContext.class);
-		}
-		public FloatExpressionContext floatExpression(int i) {
-			return getRuleContext(FloatExpressionContext.class,i);
-		}
-		public VertexDeclarationContext(ParserRuleContext parent, int invokingState) {
-			super(parent, invokingState);
-		}
-		@Override public int getRuleIndex() { return RULE_vertexDeclaration; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).enterVertexDeclaration(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).exitVertexDeclaration(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ProcModel2Visitor ) return ((ProcModel2Visitor<? extends T>)visitor).visitVertexDeclaration(this);
-			else return visitor.visitChildren(this);
-		}
-	}
-
-	public final VertexDeclarationContext vertexDeclaration() throws RecognitionException {
-		VertexDeclarationContext _localctx = new VertexDeclarationContext(_ctx, getState());
-		enterRule(_localctx, 8, RULE_vertexDeclaration);
-		try {
-			enterOuterAlt(_localctx, 1);
-			{
+			match(T__0);
+			setState(42);
+			match(IDENTIFIER);
 			setState(43);
-			match(T__2);
-			setState(44);
-			match(IDENTIFIER);
+			match(T__1);
+			}
+		}
+		catch (RecognitionException re) {
+			_localctx.exception = re;
+			_errHandler.reportError(this, re);
+			_errHandler.recover(this, re);
+		}
+		finally {
+			exitRule();
+		}
+		return _localctx;
+	}
+
+	@SuppressWarnings("CheckReturnValue")
+	public static class VariableDeclarationContext extends ParserRuleContext {
+		public List<TerminalNode> IDENTIFIER() { return getTokens(ProcModel2Parser.IDENTIFIER); }
+		public TerminalNode IDENTIFIER(int i) {
+			return getToken(ProcModel2Parser.IDENTIFIER, i);
+		}
+		public ExpressionContext expression() {
+			return getRuleContext(ExpressionContext.class,0);
+		}
+		public VariableDeclarationContext(ParserRuleContext parent, int invokingState) {
+			super(parent, invokingState);
+		}
+		@Override public int getRuleIndex() { return RULE_variableDeclaration; }
+		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).enterVariableDeclaration(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).exitVariableDeclaration(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ProcModel2Visitor ) return ((ProcModel2Visitor<? extends T>)visitor).visitVariableDeclaration(this);
+			else return visitor.visitChildren(this);
+		}
+	}
+
+	public final VariableDeclarationContext variableDeclaration() throws RecognitionException {
+		VariableDeclarationContext _localctx = new VariableDeclarationContext(_ctx, getState());
+		enterRule(_localctx, 8, RULE_variableDeclaration);
+		int _la;
+		try {
+			enterOuterAlt(_localctx, 1);
+			{
 			setState(45);
-			match(T__3);
+			match(IDENTIFIER);
 			setState(46);
-			match(T__4);
-			setState(47);
-			match(T__5);
-			setState(48);
-			match(T__6);
+			match(IDENTIFIER);
 			setState(49);
-			match(T__7);
-			setState(50);
-			floatExpression(0);
+			_errHandler.sync(this);
+			_la = _input.LA(1);
+			if (_la==T__2) {
+				{
+				setState(47);
+				match(T__2);
+				setState(48);
+				expression(0);
+				}
+			}
+
 			setState(51);
-			match(T__8);
-			setState(52);
-			floatExpression(0);
+			match(T__1);
+			}
+		}
+		catch (RecognitionException re) {
+			_localctx.exception = re;
+			_errHandler.reportError(this, re);
+			_errHandler.recover(this, re);
+		}
+		finally {
+			exitRule();
+		}
+		return _localctx;
+	}
+
+	@SuppressWarnings("CheckReturnValue")
+	public static class VariableReassignmentContext extends ParserRuleContext {
+		public List<TerminalNode> IDENTIFIER() { return getTokens(ProcModel2Parser.IDENTIFIER); }
+		public TerminalNode IDENTIFIER(int i) {
+			return getToken(ProcModel2Parser.IDENTIFIER, i);
+		}
+		public ExpressionContext expression() {
+			return getRuleContext(ExpressionContext.class,0);
+		}
+		public VariableReassignmentContext(ParserRuleContext parent, int invokingState) {
+			super(parent, invokingState);
+		}
+		@Override public int getRuleIndex() { return RULE_variableReassignment; }
+		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).enterVariableReassignment(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).exitVariableReassignment(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ProcModel2Visitor ) return ((ProcModel2Visitor<? extends T>)visitor).visitVariableReassignment(this);
+			else return visitor.visitChildren(this);
+		}
+	}
+
+	public final VariableReassignmentContext variableReassignment() throws RecognitionException {
+		VariableReassignmentContext _localctx = new VariableReassignmentContext(_ctx, getState());
+		enterRule(_localctx, 10, RULE_variableReassignment);
+		int _la;
+		try {
+			enterOuterAlt(_localctx, 1);
+			{
 			setState(53);
-			match(T__9);
-			setState(54);
-			match(T__10);
-			setState(55);
-			match(T__1);
-			}
-		}
-		catch (RecognitionException re) {
-			_localctx.exception = re;
-			_errHandler.reportError(this, re);
-			_errHandler.recover(this, re);
-		}
-		finally {
-			exitRule();
-		}
-		return _localctx;
-	}
-
-	@SuppressWarnings("CheckReturnValue")
-	public static class FloatDeclarationContext extends ParserRuleContext {
-		public TerminalNode IDENTIFIER() { return getToken(ProcModel2Parser.IDENTIFIER, 0); }
-		public FloatExpressionContext floatExpression() {
-			return getRuleContext(FloatExpressionContext.class,0);
-		}
-		public FloatDeclarationContext(ParserRuleContext parent, int invokingState) {
-			super(parent, invokingState);
-		}
-		@Override public int getRuleIndex() { return RULE_floatDeclaration; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).enterFloatDeclaration(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).exitFloatDeclaration(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ProcModel2Visitor ) return ((ProcModel2Visitor<? extends T>)visitor).visitFloatDeclaration(this);
-			else return visitor.visitChildren(this);
-		}
-	}
-
-	public final FloatDeclarationContext floatDeclaration() throws RecognitionException {
-		FloatDeclarationContext _localctx = new FloatDeclarationContext(_ctx, getState());
-		enterRule(_localctx, 10, RULE_floatDeclaration);
-		try {
-			enterOuterAlt(_localctx, 1);
-			{
-			setState(57);
-			match(T__11);
+			match(IDENTIFIER);
 			setState(58);
-			match(IDENTIFIER);
-			setState(59);
-			match(T__3);
-			setState(60);
-			floatExpression(0);
+			_errHandler.sync(this);
+			_la = _input.LA(1);
+			while (_la==T__3) {
+				{
+				{
+				setState(54);
+				match(T__3);
+				setState(55);
+				match(IDENTIFIER);
+				}
+				}
+				setState(60);
+				_errHandler.sync(this);
+				_la = _input.LA(1);
+			}
 			setState(61);
-			match(T__1);
-			}
-		}
-		catch (RecognitionException re) {
-			_localctx.exception = re;
-			_errHandler.reportError(this, re);
-			_errHandler.recover(this, re);
-		}
-		finally {
-			exitRule();
-		}
-		return _localctx;
-	}
-
-	@SuppressWarnings("CheckReturnValue")
-	public static class IntDeclarationContext extends ParserRuleContext {
-		public TerminalNode IDENTIFIER() { return getToken(ProcModel2Parser.IDENTIFIER, 0); }
-		public IntExpressionContext intExpression() {
-			return getRuleContext(IntExpressionContext.class,0);
-		}
-		public IntDeclarationContext(ParserRuleContext parent, int invokingState) {
-			super(parent, invokingState);
-		}
-		@Override public int getRuleIndex() { return RULE_intDeclaration; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).enterIntDeclaration(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).exitIntDeclaration(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ProcModel2Visitor ) return ((ProcModel2Visitor<? extends T>)visitor).visitIntDeclaration(this);
-			else return visitor.visitChildren(this);
-		}
-	}
-
-	public final IntDeclarationContext intDeclaration() throws RecognitionException {
-		IntDeclarationContext _localctx = new IntDeclarationContext(_ctx, getState());
-		enterRule(_localctx, 12, RULE_intDeclaration);
-		try {
-			enterOuterAlt(_localctx, 1);
-			{
+			match(T__2);
+			setState(62);
+			expression(0);
 			setState(63);
-			match(T__12);
-			setState(64);
-			match(IDENTIFIER);
-			setState(65);
-			match(T__3);
-			setState(66);
-			intExpression(0);
-			setState(67);
 			match(T__1);
 			}
 		}
@@ -545,149 +497,259 @@ public class ProcModel2Parser extends Parser {
 	}
 
 	@SuppressWarnings("CheckReturnValue")
-	public static class FloatExpressionContext extends ParserRuleContext {
-		public TerminalNode FLOAT_LITERAL() { return getToken(ProcModel2Parser.FLOAT_LITERAL, 0); }
+	public static class FunctionInvocationContext extends ParserRuleContext {
 		public TerminalNode IDENTIFIER() { return getToken(ProcModel2Parser.IDENTIFIER, 0); }
-		public IntExpressionContext intExpression() {
-			return getRuleContext(IntExpressionContext.class,0);
+		public List<ExpressionContext> expression() {
+			return getRuleContexts(ExpressionContext.class);
 		}
-		public List<FloatExpressionContext> floatExpression() {
-			return getRuleContexts(FloatExpressionContext.class);
+		public ExpressionContext expression(int i) {
+			return getRuleContext(ExpressionContext.class,i);
 		}
-		public FloatExpressionContext floatExpression(int i) {
-			return getRuleContext(FloatExpressionContext.class,i);
-		}
-		public TerminalNode TIMES() { return getToken(ProcModel2Parser.TIMES, 0); }
-		public TerminalNode MINUS() { return getToken(ProcModel2Parser.MINUS, 0); }
-		public TerminalNode PLUS() { return getToken(ProcModel2Parser.PLUS, 0); }
-		public FloatExpressionContext(ParserRuleContext parent, int invokingState) {
+		public FunctionInvocationContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
-		@Override public int getRuleIndex() { return RULE_floatExpression; }
+		@Override public int getRuleIndex() { return RULE_functionInvocation; }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).enterFloatExpression(this);
+			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).enterFunctionInvocation(this);
 		}
 		@Override
 		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).exitFloatExpression(this);
+			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).exitFunctionInvocation(this);
 		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ProcModel2Visitor ) return ((ProcModel2Visitor<? extends T>)visitor).visitFloatExpression(this);
+			if ( visitor instanceof ProcModel2Visitor ) return ((ProcModel2Visitor<? extends T>)visitor).visitFunctionInvocation(this);
 			else return visitor.visitChildren(this);
 		}
 	}
 
-	public final FloatExpressionContext floatExpression() throws RecognitionException {
-		return floatExpression(0);
-	}
-
-	private FloatExpressionContext floatExpression(int _p) throws RecognitionException {
-		ParserRuleContext _parentctx = _ctx;
-		int _parentState = getState();
-		FloatExpressionContext _localctx = new FloatExpressionContext(_ctx, _parentState);
-		FloatExpressionContext _prevctx = _localctx;
-		int _startState = 14;
-		enterRecursionRule(_localctx, 14, RULE_floatExpression, _p);
+	public final FunctionInvocationContext functionInvocation() throws RecognitionException {
+		FunctionInvocationContext _localctx = new FunctionInvocationContext(_ctx, getState());
+		enterRule(_localctx, 12, RULE_functionInvocation);
+		int _la;
 		try {
 			int _alt;
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(81);
+			setState(65);
+			match(IDENTIFIER);
+			setState(66);
+			match(T__4);
+			setState(76);
 			_errHandler.sync(this);
-			switch (_input.LA(1)) {
-			case FLOAT_LITERAL:
+			_la = _input.LA(1);
+			if (((_la) & ~0x3f) == 0 && ((1L << _la) & 3670048L) != 0) {
 				{
-				setState(70);
+				setState(72);
+				_errHandler.sync(this);
+				_alt = getInterpreter().adaptivePredict(_input,5,_ctx);
+				while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER ) {
+					if ( _alt==1 ) {
+						{
+						{
+						setState(67);
+						expression(0);
+						setState(68);
+						match(T__5);
+						}
+						} 
+					}
+					setState(74);
+					_errHandler.sync(this);
+					_alt = getInterpreter().adaptivePredict(_input,5,_ctx);
+				}
+				setState(75);
+				expression(0);
+				}
+			}
+
+			setState(78);
+			match(T__6);
+			setState(79);
+			match(T__1);
+			}
+		}
+		catch (RecognitionException re) {
+			_localctx.exception = re;
+			_errHandler.reportError(this, re);
+			_errHandler.recover(this, re);
+		}
+		finally {
+			exitRule();
+		}
+		return _localctx;
+	}
+
+	@SuppressWarnings("CheckReturnValue")
+	public static class ExpressionContext extends ParserRuleContext {
+		public TerminalNode FLOAT_LITERAL() { return getToken(ProcModel2Parser.FLOAT_LITERAL, 0); }
+		public TerminalNode INT_LITERAL() { return getToken(ProcModel2Parser.INT_LITERAL, 0); }
+		public TerminalNode IDENTIFIER() { return getToken(ProcModel2Parser.IDENTIFIER, 0); }
+		public List<ExpressionContext> expression() {
+			return getRuleContexts(ExpressionContext.class);
+		}
+		public ExpressionContext expression(int i) {
+			return getRuleContext(ExpressionContext.class,i);
+		}
+		public PositionConstructorContext positionConstructor() {
+			return getRuleContext(PositionConstructorContext.class,0);
+		}
+		public TerminalNode DIVIDE() { return getToken(ProcModel2Parser.DIVIDE, 0); }
+		public TerminalNode TIMES() { return getToken(ProcModel2Parser.TIMES, 0); }
+		public TerminalNode MINUS() { return getToken(ProcModel2Parser.MINUS, 0); }
+		public TerminalNode PLUS() { return getToken(ProcModel2Parser.PLUS, 0); }
+		public VariablePropertyContext variableProperty() {
+			return getRuleContext(VariablePropertyContext.class,0);
+		}
+		public ExpressionContext(ParserRuleContext parent, int invokingState) {
+			super(parent, invokingState);
+		}
+		@Override public int getRuleIndex() { return RULE_expression; }
+		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).enterExpression(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).exitExpression(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ProcModel2Visitor ) return ((ProcModel2Visitor<? extends T>)visitor).visitExpression(this);
+			else return visitor.visitChildren(this);
+		}
+	}
+
+	public final ExpressionContext expression() throws RecognitionException {
+		return expression(0);
+	}
+
+	private ExpressionContext expression(int _p) throws RecognitionException {
+		ParserRuleContext _parentctx = _ctx;
+		int _parentState = getState();
+		ExpressionContext _localctx = new ExpressionContext(_ctx, _parentState);
+		ExpressionContext _prevctx = _localctx;
+		int _startState = 14;
+		enterRecursionRule(_localctx, 14, RULE_expression, _p);
+		try {
+			int _alt;
+			enterOuterAlt(_localctx, 1);
+			{
+			setState(90);
+			_errHandler.sync(this);
+			switch ( getInterpreter().adaptivePredict(_input,7,_ctx) ) {
+			case 1:
+				{
+				setState(82);
 				match(FLOAT_LITERAL);
 				}
 				break;
-			case IDENTIFIER:
+			case 2:
 				{
-				setState(71);
+				setState(83);
+				match(INT_LITERAL);
+				}
+				break;
+			case 3:
+				{
+				setState(84);
 				match(IDENTIFIER);
 				}
 				break;
-			case T__11:
+			case 4:
 				{
-				setState(72);
-				match(T__11);
-				setState(73);
-				match(T__7);
-				setState(74);
-				intExpression(0);
-				setState(75);
-				match(T__9);
+				setState(85);
+				match(T__4);
+				setState(86);
+				expression(0);
+				setState(87);
+				match(T__6);
 				}
 				break;
-			case T__7:
+			case 5:
 				{
-				setState(77);
-				match(T__7);
-				setState(78);
-				floatExpression(0);
-				setState(79);
-				match(T__9);
+				setState(89);
+				positionConstructor();
 				}
 				break;
-			default:
-				throw new NoViableAltException(this);
 			}
 			_ctx.stop = _input.LT(-1);
-			setState(94);
+			setState(108);
 			_errHandler.sync(this);
-			_alt = getInterpreter().adaptivePredict(_input,5,_ctx);
+			_alt = getInterpreter().adaptivePredict(_input,9,_ctx);
 			while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER ) {
 				if ( _alt==1 ) {
 					if ( _parseListeners!=null ) triggerExitRuleEvent();
 					_prevctx = _localctx;
 					{
-					setState(92);
+					setState(106);
 					_errHandler.sync(this);
-					switch ( getInterpreter().adaptivePredict(_input,4,_ctx) ) {
+					switch ( getInterpreter().adaptivePredict(_input,8,_ctx) ) {
 					case 1:
 						{
-						_localctx = new FloatExpressionContext(_parentctx, _parentState);
-						pushNewRecursionContext(_localctx, _startState, RULE_floatExpression);
-						setState(83);
-						if (!(precpred(_ctx, 3))) throw new FailedPredicateException(this, "precpred(_ctx, 3)");
-						setState(84);
-						match(TIMES);
-						setState(85);
-						floatExpression(4);
+						_localctx = new ExpressionContext(_parentctx, _parentState);
+						pushNewRecursionContext(_localctx, _startState, RULE_expression);
+						setState(92);
+						if (!(precpred(_ctx, 4))) throw new FailedPredicateException(this, "precpred(_ctx, 4)");
+						setState(93);
+						match(DIVIDE);
+						setState(94);
+						expression(5);
 						}
 						break;
 					case 2:
 						{
-						_localctx = new FloatExpressionContext(_parentctx, _parentState);
-						pushNewRecursionContext(_localctx, _startState, RULE_floatExpression);
-						setState(86);
-						if (!(precpred(_ctx, 2))) throw new FailedPredicateException(this, "precpred(_ctx, 2)");
-						setState(87);
-						match(MINUS);
-						setState(88);
-						floatExpression(3);
+						_localctx = new ExpressionContext(_parentctx, _parentState);
+						pushNewRecursionContext(_localctx, _startState, RULE_expression);
+						setState(95);
+						if (!(precpred(_ctx, 3))) throw new FailedPredicateException(this, "precpred(_ctx, 3)");
+						setState(96);
+						match(TIMES);
+						setState(97);
+						expression(4);
 						}
 						break;
 					case 3:
 						{
-						_localctx = new FloatExpressionContext(_parentctx, _parentState);
-						pushNewRecursionContext(_localctx, _startState, RULE_floatExpression);
-						setState(89);
+						_localctx = new ExpressionContext(_parentctx, _parentState);
+						pushNewRecursionContext(_localctx, _startState, RULE_expression);
+						setState(98);
+						if (!(precpred(_ctx, 2))) throw new FailedPredicateException(this, "precpred(_ctx, 2)");
+						setState(99);
+						match(MINUS);
+						setState(100);
+						expression(3);
+						}
+						break;
+					case 4:
+						{
+						_localctx = new ExpressionContext(_parentctx, _parentState);
+						pushNewRecursionContext(_localctx, _startState, RULE_expression);
+						setState(101);
 						if (!(precpred(_ctx, 1))) throw new FailedPredicateException(this, "precpred(_ctx, 1)");
-						setState(90);
+						setState(102);
 						match(PLUS);
-						setState(91);
-						floatExpression(2);
+						setState(103);
+						expression(2);
+						}
+						break;
+					case 5:
+						{
+						_localctx = new ExpressionContext(_parentctx, _parentState);
+						pushNewRecursionContext(_localctx, _startState, RULE_expression);
+						setState(104);
+						if (!(precpred(_ctx, 7))) throw new FailedPredicateException(this, "precpred(_ctx, 7)");
+						setState(105);
+						variableProperty();
 						}
 						break;
 					}
 					} 
 				}
-				setState(96);
+				setState(110);
 				_errHandler.sync(this);
-				_alt = getInterpreter().adaptivePredict(_input,5,_ctx);
+				_alt = getInterpreter().adaptivePredict(_input,9,_ctx);
 			}
 			}
 		}
@@ -703,108 +765,37 @@ public class ProcModel2Parser extends Parser {
 	}
 
 	@SuppressWarnings("CheckReturnValue")
-	public static class IntExpressionContext extends ParserRuleContext {
-		public TerminalNode INT_LITERAL() { return getToken(ProcModel2Parser.INT_LITERAL, 0); }
+	public static class VariablePropertyContext extends ParserRuleContext {
 		public TerminalNode IDENTIFIER() { return getToken(ProcModel2Parser.IDENTIFIER, 0); }
-		public FloatExpressionContext floatExpression() {
-			return getRuleContext(FloatExpressionContext.class,0);
-		}
-		public List<IntExpressionContext> intExpression() {
-			return getRuleContexts(IntExpressionContext.class);
-		}
-		public IntExpressionContext intExpression(int i) {
-			return getRuleContext(IntExpressionContext.class,i);
-		}
-		public TerminalNode PLUS() { return getToken(ProcModel2Parser.PLUS, 0); }
-		public IntExpressionContext(ParserRuleContext parent, int invokingState) {
+		public VariablePropertyContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
-		@Override public int getRuleIndex() { return RULE_intExpression; }
+		@Override public int getRuleIndex() { return RULE_variableProperty; }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).enterIntExpression(this);
+			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).enterVariableProperty(this);
 		}
 		@Override
 		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).exitIntExpression(this);
+			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).exitVariableProperty(this);
 		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ProcModel2Visitor ) return ((ProcModel2Visitor<? extends T>)visitor).visitIntExpression(this);
+			if ( visitor instanceof ProcModel2Visitor ) return ((ProcModel2Visitor<? extends T>)visitor).visitVariableProperty(this);
 			else return visitor.visitChildren(this);
 		}
 	}
 
-	public final IntExpressionContext intExpression() throws RecognitionException {
-		return intExpression(0);
-	}
-
-	private IntExpressionContext intExpression(int _p) throws RecognitionException {
-		ParserRuleContext _parentctx = _ctx;
-		int _parentState = getState();
-		IntExpressionContext _localctx = new IntExpressionContext(_ctx, _parentState);
-		IntExpressionContext _prevctx = _localctx;
-		int _startState = 16;
-		enterRecursionRule(_localctx, 16, RULE_intExpression, _p);
+	public final VariablePropertyContext variableProperty() throws RecognitionException {
+		VariablePropertyContext _localctx = new VariablePropertyContext(_ctx, getState());
+		enterRule(_localctx, 16, RULE_variableProperty);
 		try {
-			int _alt;
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(105);
-			_errHandler.sync(this);
-			switch (_input.LA(1)) {
-			case INT_LITERAL:
-				{
-				setState(98);
-				match(INT_LITERAL);
-				}
-				break;
-			case IDENTIFIER:
-				{
-				setState(99);
-				match(IDENTIFIER);
-				}
-				break;
-			case T__12:
-				{
-				setState(100);
-				match(T__12);
-				setState(101);
-				match(T__7);
-				setState(102);
-				floatExpression(0);
-				setState(103);
-				match(T__9);
-				}
-				break;
-			default:
-				throw new NoViableAltException(this);
-			}
-			_ctx.stop = _input.LT(-1);
+			setState(111);
+			match(T__3);
 			setState(112);
-			_errHandler.sync(this);
-			_alt = getInterpreter().adaptivePredict(_input,7,_ctx);
-			while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER ) {
-				if ( _alt==1 ) {
-					if ( _parseListeners!=null ) triggerExitRuleEvent();
-					_prevctx = _localctx;
-					{
-					{
-					_localctx = new IntExpressionContext(_parentctx, _parentState);
-					pushNewRecursionContext(_localctx, _startState, RULE_intExpression);
-					setState(107);
-					if (!(precpred(_ctx, 1))) throw new FailedPredicateException(this, "precpred(_ctx, 1)");
-					setState(108);
-					match(PLUS);
-					setState(109);
-					intExpression(2);
-					}
-					} 
-				}
-				setState(114);
-				_errHandler.sync(this);
-				_alt = getInterpreter().adaptivePredict(_input,7,_ctx);
-			}
+			match(IDENTIFIER);
 			}
 		}
 		catch (RecognitionException re) {
@@ -813,18 +804,74 @@ public class ProcModel2Parser extends Parser {
 			_errHandler.recover(this, re);
 		}
 		finally {
-			unrollRecursionContexts(_parentctx);
+			exitRule();
+		}
+		return _localctx;
+	}
+
+	@SuppressWarnings("CheckReturnValue")
+	public static class PositionConstructorContext extends ParserRuleContext {
+		public List<ExpressionContext> expression() {
+			return getRuleContexts(ExpressionContext.class);
+		}
+		public ExpressionContext expression(int i) {
+			return getRuleContext(ExpressionContext.class,i);
+		}
+		public PositionConstructorContext(ParserRuleContext parent, int invokingState) {
+			super(parent, invokingState);
+		}
+		@Override public int getRuleIndex() { return RULE_positionConstructor; }
+		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).enterPositionConstructor(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof ProcModel2Listener ) ((ProcModel2Listener)listener).exitPositionConstructor(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ProcModel2Visitor ) return ((ProcModel2Visitor<? extends T>)visitor).visitPositionConstructor(this);
+			else return visitor.visitChildren(this);
+		}
+	}
+
+	public final PositionConstructorContext positionConstructor() throws RecognitionException {
+		PositionConstructorContext _localctx = new PositionConstructorContext(_ctx, getState());
+		enterRule(_localctx, 18, RULE_positionConstructor);
+		try {
+			enterOuterAlt(_localctx, 1);
+			{
+			setState(114);
+			match(T__4);
+			setState(115);
+			expression(0);
+			setState(116);
+			match(T__5);
+			setState(117);
+			expression(0);
+			setState(118);
+			match(T__6);
+			}
+		}
+		catch (RecognitionException re) {
+			_localctx.exception = re;
+			_errHandler.reportError(this, re);
+			_errHandler.recover(this, re);
+		}
+		finally {
+			exitRule();
 		}
 		return _localctx;
 	}
 
 	@SuppressWarnings("CheckReturnValue")
 	public static class ForLoopContext extends ParserRuleContext {
-		public List<IntExpressionContext> intExpression() {
-			return getRuleContexts(IntExpressionContext.class);
+		public List<ExpressionContext> expression() {
+			return getRuleContexts(ExpressionContext.class);
 		}
-		public IntExpressionContext intExpression(int i) {
-			return getRuleContext(IntExpressionContext.class,i);
+		public ExpressionContext expression(int i) {
+			return getRuleContext(ExpressionContext.class,i);
 		}
 		public TerminalNode IDENTIFIER() { return getToken(ProcModel2Parser.IDENTIFIER, 0); }
 		public List<InnerStatementContext> innerStatement() {
@@ -854,32 +901,20 @@ public class ProcModel2Parser extends Parser {
 
 	public final ForLoopContext forLoop() throws RecognitionException {
 		ForLoopContext _localctx = new ForLoopContext(_ctx, getState());
-		enterRule(_localctx, 18, RULE_forLoop);
+		enterRule(_localctx, 20, RULE_forLoop);
 		int _la;
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(115);
-			match(T__13);
-			setState(116);
-			match(T__7);
-			setState(117);
-			intExpression(0);
-			setState(118);
-			_la = _input.LA(1);
-			if ( !(_la==T__14 || _la==T__15) ) {
-			_errHandler.recoverInline(this);
-			}
-			else {
-				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
-				_errHandler.reportMatch(this);
-				consume();
-			}
-			setState(119);
-			match(IDENTIFIER);
 			setState(120);
+			match(T__7);
+			setState(121);
+			match(T__4);
+			setState(122);
+			expression(0);
+			setState(123);
 			_la = _input.LA(1);
-			if ( !(_la==T__14 || _la==T__15) ) {
+			if ( !(_la==T__8 || _la==T__9) ) {
 			_errHandler.recoverInline(this);
 			}
 			else {
@@ -887,28 +922,40 @@ public class ProcModel2Parser extends Parser {
 				_errHandler.reportMatch(this);
 				consume();
 			}
-			setState(121);
-			intExpression(0);
-			setState(122);
-			match(T__9);
-			setState(123);
-			match(T__4);
+			setState(124);
+			match(IDENTIFIER);
+			setState(125);
+			_la = _input.LA(1);
+			if ( !(_la==T__8 || _la==T__9) ) {
+			_errHandler.recoverInline(this);
+			}
+			else {
+				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+				_errHandler.reportMatch(this);
+				consume();
+			}
+			setState(126);
+			expression(0);
 			setState(127);
+			match(T__6);
+			setState(128);
+			match(T__10);
+			setState(132);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
-			while (((_la) & ~0x3f) == 0 && ((1L << _la) & 28680L) != 0) {
+			while (_la==T__7 || _la==IDENTIFIER) {
 				{
 				{
-				setState(124);
+				setState(129);
 				innerStatement();
 				}
 				}
-				setState(129);
+				setState(134);
 				_errHandler.sync(this);
 				_la = _input.LA(1);
 			}
-			setState(130);
-			match(T__10);
+			setState(135);
+			match(T__11);
 			}
 		}
 		catch (RecognitionException re) {
@@ -925,107 +972,107 @@ public class ProcModel2Parser extends Parser {
 	public boolean sempred(RuleContext _localctx, int ruleIndex, int predIndex) {
 		switch (ruleIndex) {
 		case 7:
-			return floatExpression_sempred((FloatExpressionContext)_localctx, predIndex);
-		case 8:
-			return intExpression_sempred((IntExpressionContext)_localctx, predIndex);
+			return expression_sempred((ExpressionContext)_localctx, predIndex);
 		}
 		return true;
 	}
-	private boolean floatExpression_sempred(FloatExpressionContext _localctx, int predIndex) {
+	private boolean expression_sempred(ExpressionContext _localctx, int predIndex) {
 		switch (predIndex) {
 		case 0:
-			return precpred(_ctx, 3);
+			return precpred(_ctx, 4);
 		case 1:
-			return precpred(_ctx, 2);
+			return precpred(_ctx, 3);
 		case 2:
-			return precpred(_ctx, 1);
-		}
-		return true;
-	}
-	private boolean intExpression_sempred(IntExpressionContext _localctx, int predIndex) {
-		switch (predIndex) {
+			return precpred(_ctx, 2);
 		case 3:
 			return precpred(_ctx, 1);
+		case 4:
+			return precpred(_ctx, 7);
 		}
 		return true;
 	}
 
 	public static final String _serializedATN =
-		"\u0004\u0001\u001a\u0085\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001"+
+		"\u0004\u0001\u0016\u008a\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001"+
 		"\u0002\u0002\u0007\u0002\u0002\u0003\u0007\u0003\u0002\u0004\u0007\u0004"+
 		"\u0002\u0005\u0007\u0005\u0002\u0006\u0007\u0006\u0002\u0007\u0007\u0007"+
-		"\u0002\b\u0007\b\u0002\t\u0007\t\u0001\u0000\u0005\u0000\u0016\b\u0000"+
-		"\n\u0000\f\u0000\u0019\t\u0000\u0001\u0000\u0001\u0000\u0001\u0001\u0001"+
-		"\u0001\u0003\u0001\u001f\b\u0001\u0001\u0002\u0001\u0002\u0001\u0002\u0001"+
-		"\u0002\u0003\u0002%\b\u0002\u0001\u0003\u0001\u0003\u0001\u0003\u0001"+
-		"\u0003\u0001\u0003\u0001\u0004\u0001\u0004\u0001\u0004\u0001\u0004\u0001"+
-		"\u0004\u0001\u0004\u0001\u0004\u0001\u0004\u0001\u0004\u0001\u0004\u0001"+
-		"\u0004\u0001\u0004\u0001\u0004\u0001\u0004\u0001\u0005\u0001\u0005\u0001"+
+		"\u0002\b\u0007\b\u0002\t\u0007\t\u0002\n\u0007\n\u0001\u0000\u0005\u0000"+
+		"\u0018\b\u0000\n\u0000\f\u0000\u001b\t\u0000\u0001\u0000\u0001\u0000\u0001"+
+		"\u0001\u0001\u0001\u0003\u0001!\b\u0001\u0001\u0002\u0001\u0002\u0001"+
+		"\u0002\u0001\u0002\u0003\u0002\'\b\u0002\u0001\u0003\u0001\u0003\u0001"+
+		"\u0003\u0001\u0003\u0001\u0003\u0001\u0004\u0001\u0004\u0001\u0004\u0001"+
+		"\u0004\u0003\u00042\b\u0004\u0001\u0004\u0001\u0004\u0001\u0005\u0001"+
+		"\u0005\u0001\u0005\u0005\u00059\b\u0005\n\u0005\f\u0005<\t\u0005\u0001"+
 		"\u0005\u0001\u0005\u0001\u0005\u0001\u0005\u0001\u0006\u0001\u0006\u0001"+
-		"\u0006\u0001\u0006\u0001\u0006\u0001\u0006\u0001\u0007\u0001\u0007\u0001"+
+		"\u0006\u0001\u0006\u0001\u0006\u0005\u0006G\b\u0006\n\u0006\f\u0006J\t"+
+		"\u0006\u0001\u0006\u0003\u0006M\b\u0006\u0001\u0006\u0001\u0006\u0001"+
+		"\u0006\u0001\u0007\u0001\u0007\u0001\u0007\u0001\u0007\u0001\u0007\u0001"+
+		"\u0007\u0001\u0007\u0001\u0007\u0001\u0007\u0003\u0007[\b\u0007\u0001"+
 		"\u0007\u0001\u0007\u0001\u0007\u0001\u0007\u0001\u0007\u0001\u0007\u0001"+
-		"\u0007\u0001\u0007\u0001\u0007\u0001\u0007\u0003\u0007R\b\u0007\u0001"+
 		"\u0007\u0001\u0007\u0001\u0007\u0001\u0007\u0001\u0007\u0001\u0007\u0001"+
-		"\u0007\u0001\u0007\u0001\u0007\u0005\u0007]\b\u0007\n\u0007\f\u0007`\t"+
-		"\u0007\u0001\b\u0001\b\u0001\b\u0001\b\u0001\b\u0001\b\u0001\b\u0001\b"+
-		"\u0003\bj\b\b\u0001\b\u0001\b\u0001\b\u0005\bo\b\b\n\b\f\br\t\b\u0001"+
-		"\t\u0001\t\u0001\t\u0001\t\u0001\t\u0001\t\u0001\t\u0001\t\u0001\t\u0001"+
-		"\t\u0005\t~\b\t\n\t\f\t\u0081\t\t\u0001\t\u0001\t\u0001\t\u0000\u0002"+
-		"\u000e\u0010\n\u0000\u0002\u0004\u0006\b\n\f\u000e\u0010\u0012\u0000\u0001"+
-		"\u0001\u0000\u000f\u0010\u0089\u0000\u0017\u0001\u0000\u0000\u0000\u0002"+
-		"\u001e\u0001\u0000\u0000\u0000\u0004$\u0001\u0000\u0000\u0000\u0006&\u0001"+
-		"\u0000\u0000\u0000\b+\u0001\u0000\u0000\u0000\n9\u0001\u0000\u0000\u0000"+
-		"\f?\u0001\u0000\u0000\u0000\u000eQ\u0001\u0000\u0000\u0000\u0010i\u0001"+
-		"\u0000\u0000\u0000\u0012s\u0001\u0000\u0000\u0000\u0014\u0016\u0003\u0002"+
-		"\u0001\u0000\u0015\u0014\u0001\u0000\u0000\u0000\u0016\u0019\u0001\u0000"+
-		"\u0000\u0000\u0017\u0015\u0001\u0000\u0000\u0000\u0017\u0018\u0001\u0000"+
-		"\u0000\u0000\u0018\u001a\u0001\u0000\u0000\u0000\u0019\u0017\u0001\u0000"+
-		"\u0000\u0000\u001a\u001b\u0005\u0000\u0000\u0001\u001b\u0001\u0001\u0000"+
-		"\u0000\u0000\u001c\u001f\u0003\u0006\u0003\u0000\u001d\u001f\u0003\u0004"+
-		"\u0002\u0000\u001e\u001c\u0001\u0000\u0000\u0000\u001e\u001d\u0001\u0000"+
-		"\u0000\u0000\u001f\u0003\u0001\u0000\u0000\u0000 %\u0003\b\u0004\u0000"+
-		"!%\u0003\n\u0005\u0000\"%\u0003\f\u0006\u0000#%\u0003\u0012\t\u0000$ "+
-		"\u0001\u0000\u0000\u0000$!\u0001\u0000\u0000\u0000$\"\u0001\u0000\u0000"+
-		"\u0000$#\u0001\u0000\u0000\u0000%\u0005\u0001\u0000\u0000\u0000&\'\u0005"+
-		"\u0016\u0000\u0000\'(\u0005\u0001\u0000\u0000()\u0005\u0017\u0000\u0000"+
-		")*\u0005\u0002\u0000\u0000*\u0007\u0001\u0000\u0000\u0000+,\u0005\u0003"+
-		"\u0000\u0000,-\u0005\u0017\u0000\u0000-.\u0005\u0004\u0000\u0000./\u0005"+
-		"\u0005\u0000\u0000/0\u0005\u0006\u0000\u000001\u0005\u0007\u0000\u0000"+
-		"12\u0005\b\u0000\u000023\u0003\u000e\u0007\u000034\u0005\t\u0000\u0000"+
-		"45\u0003\u000e\u0007\u000056\u0005\n\u0000\u000067\u0005\u000b\u0000\u0000"+
-		"78\u0005\u0002\u0000\u00008\t\u0001\u0000\u0000\u00009:\u0005\f\u0000"+
-		"\u0000:;\u0005\u0017\u0000\u0000;<\u0005\u0004\u0000\u0000<=\u0003\u000e"+
-		"\u0007\u0000=>\u0005\u0002\u0000\u0000>\u000b\u0001\u0000\u0000\u0000"+
-		"?@\u0005\r\u0000\u0000@A\u0005\u0017\u0000\u0000AB\u0005\u0004\u0000\u0000"+
-		"BC\u0003\u0010\b\u0000CD\u0005\u0002\u0000\u0000D\r\u0001\u0000\u0000"+
-		"\u0000EF\u0006\u0007\uffff\uffff\u0000FR\u0005\u0018\u0000\u0000GR\u0005"+
-		"\u0017\u0000\u0000HI\u0005\f\u0000\u0000IJ\u0005\b\u0000\u0000JK\u0003"+
-		"\u0010\b\u0000KL\u0005\n\u0000\u0000LR\u0001\u0000\u0000\u0000MN\u0005"+
-		"\b\u0000\u0000NO\u0003\u000e\u0007\u0000OP\u0005\n\u0000\u0000PR\u0001"+
-		"\u0000\u0000\u0000QE\u0001\u0000\u0000\u0000QG\u0001\u0000\u0000\u0000"+
-		"QH\u0001\u0000\u0000\u0000QM\u0001\u0000\u0000\u0000R^\u0001\u0000\u0000"+
-		"\u0000ST\n\u0003\u0000\u0000TU\u0005\u0013\u0000\u0000U]\u0003\u000e\u0007"+
-		"\u0004VW\n\u0002\u0000\u0000WX\u0005\u0012\u0000\u0000X]\u0003\u000e\u0007"+
-		"\u0003YZ\n\u0001\u0000\u0000Z[\u0005\u0011\u0000\u0000[]\u0003\u000e\u0007"+
-		"\u0002\\S\u0001\u0000\u0000\u0000\\V\u0001\u0000\u0000\u0000\\Y\u0001"+
-		"\u0000\u0000\u0000]`\u0001\u0000\u0000\u0000^\\\u0001\u0000\u0000\u0000"+
-		"^_\u0001\u0000\u0000\u0000_\u000f\u0001\u0000\u0000\u0000`^\u0001\u0000"+
-		"\u0000\u0000ab\u0006\b\uffff\uffff\u0000bj\u0005\u0019\u0000\u0000cj\u0005"+
-		"\u0017\u0000\u0000de\u0005\r\u0000\u0000ef\u0005\b\u0000\u0000fg\u0003"+
-		"\u000e\u0007\u0000gh\u0005\n\u0000\u0000hj\u0001\u0000\u0000\u0000ia\u0001"+
-		"\u0000\u0000\u0000ic\u0001\u0000\u0000\u0000id\u0001\u0000\u0000\u0000"+
-		"jp\u0001\u0000\u0000\u0000kl\n\u0001\u0000\u0000lm\u0005\u0011\u0000\u0000"+
-		"mo\u0003\u0010\b\u0002nk\u0001\u0000\u0000\u0000or\u0001\u0000\u0000\u0000"+
-		"pn\u0001\u0000\u0000\u0000pq\u0001\u0000\u0000\u0000q\u0011\u0001\u0000"+
-		"\u0000\u0000rp\u0001\u0000\u0000\u0000st\u0005\u000e\u0000\u0000tu\u0005"+
-		"\b\u0000\u0000uv\u0003\u0010\b\u0000vw\u0007\u0000\u0000\u0000wx\u0005"+
-		"\u0017\u0000\u0000xy\u0007\u0000\u0000\u0000yz\u0003\u0010\b\u0000z{\u0005"+
-		"\n\u0000\u0000{\u007f\u0005\u0005\u0000\u0000|~\u0003\u0004\u0002\u0000"+
-		"}|\u0001\u0000\u0000\u0000~\u0081\u0001\u0000\u0000\u0000\u007f}\u0001"+
-		"\u0000\u0000\u0000\u007f\u0080\u0001\u0000\u0000\u0000\u0080\u0082\u0001"+
-		"\u0000\u0000\u0000\u0081\u007f\u0001\u0000\u0000\u0000\u0082\u0083\u0005"+
-		"\u000b\u0000\u0000\u0083\u0013\u0001\u0000\u0000\u0000\t\u0017\u001e$"+
-		"Q\\^ip\u007f";
+		"\u0007\u0001\u0007\u0005\u0007k\b\u0007\n\u0007\f\u0007n\t\u0007\u0001"+
+		"\b\u0001\b\u0001\b\u0001\t\u0001\t\u0001\t\u0001\t\u0001\t\u0001\t\u0001"+
+		"\n\u0001\n\u0001\n\u0001\n\u0001\n\u0001\n\u0001\n\u0001\n\u0001\n\u0001"+
+		"\n\u0005\n\u0083\b\n\n\n\f\n\u0086\t\n\u0001\n\u0001\n\u0001\n\u0000\u0001"+
+		"\u000e\u000b\u0000\u0002\u0004\u0006\b\n\f\u000e\u0010\u0012\u0014\u0000"+
+		"\u0001\u0001\u0000\t\n\u0091\u0000\u0019\u0001\u0000\u0000\u0000\u0002"+
+		" \u0001\u0000\u0000\u0000\u0004&\u0001\u0000\u0000\u0000\u0006(\u0001"+
+		"\u0000\u0000\u0000\b-\u0001\u0000\u0000\u0000\n5\u0001\u0000\u0000\u0000"+
+		"\fA\u0001\u0000\u0000\u0000\u000eZ\u0001\u0000\u0000\u0000\u0010o\u0001"+
+		"\u0000\u0000\u0000\u0012r\u0001\u0000\u0000\u0000\u0014x\u0001\u0000\u0000"+
+		"\u0000\u0016\u0018\u0003\u0002\u0001\u0000\u0017\u0016\u0001\u0000\u0000"+
+		"\u0000\u0018\u001b\u0001\u0000\u0000\u0000\u0019\u0017\u0001\u0000\u0000"+
+		"\u0000\u0019\u001a\u0001\u0000\u0000\u0000\u001a\u001c\u0001\u0000\u0000"+
+		"\u0000\u001b\u0019\u0001\u0000\u0000\u0000\u001c\u001d\u0005\u0000\u0000"+
+		"\u0001\u001d\u0001\u0001\u0000\u0000\u0000\u001e!\u0003\u0006\u0003\u0000"+
+		"\u001f!\u0003\u0004\u0002\u0000 \u001e\u0001\u0000\u0000\u0000 \u001f"+
+		"\u0001\u0000\u0000\u0000!\u0003\u0001\u0000\u0000\u0000\"\'\u0003\b\u0004"+
+		"\u0000#\'\u0003\n\u0005\u0000$\'\u0003\f\u0006\u0000%\'\u0003\u0014\n"+
+		"\u0000&\"\u0001\u0000\u0000\u0000&#\u0001\u0000\u0000\u0000&$\u0001\u0000"+
+		"\u0000\u0000&%\u0001\u0000\u0000\u0000\'\u0005\u0001\u0000\u0000\u0000"+
+		"()\u0005\u0012\u0000\u0000)*\u0005\u0001\u0000\u0000*+\u0005\u0013\u0000"+
+		"\u0000+,\u0005\u0002\u0000\u0000,\u0007\u0001\u0000\u0000\u0000-.\u0005"+
+		"\u0013\u0000\u0000.1\u0005\u0013\u0000\u0000/0\u0005\u0003\u0000\u0000"+
+		"02\u0003\u000e\u0007\u00001/\u0001\u0000\u0000\u000012\u0001\u0000\u0000"+
+		"\u000023\u0001\u0000\u0000\u000034\u0005\u0002\u0000\u00004\t\u0001\u0000"+
+		"\u0000\u00005:\u0005\u0013\u0000\u000067\u0005\u0004\u0000\u000079\u0005"+
+		"\u0013\u0000\u000086\u0001\u0000\u0000\u00009<\u0001\u0000\u0000\u0000"+
+		":8\u0001\u0000\u0000\u0000:;\u0001\u0000\u0000\u0000;=\u0001\u0000\u0000"+
+		"\u0000<:\u0001\u0000\u0000\u0000=>\u0005\u0003\u0000\u0000>?\u0003\u000e"+
+		"\u0007\u0000?@\u0005\u0002\u0000\u0000@\u000b\u0001\u0000\u0000\u0000"+
+		"AB\u0005\u0013\u0000\u0000BL\u0005\u0005\u0000\u0000CD\u0003\u000e\u0007"+
+		"\u0000DE\u0005\u0006\u0000\u0000EG\u0001\u0000\u0000\u0000FC\u0001\u0000"+
+		"\u0000\u0000GJ\u0001\u0000\u0000\u0000HF\u0001\u0000\u0000\u0000HI\u0001"+
+		"\u0000\u0000\u0000IK\u0001\u0000\u0000\u0000JH\u0001\u0000\u0000\u0000"+
+		"KM\u0003\u000e\u0007\u0000LH\u0001\u0000\u0000\u0000LM\u0001\u0000\u0000"+
+		"\u0000MN\u0001\u0000\u0000\u0000NO\u0005\u0007\u0000\u0000OP\u0005\u0002"+
+		"\u0000\u0000P\r\u0001\u0000\u0000\u0000QR\u0006\u0007\uffff\uffff\u0000"+
+		"R[\u0005\u0014\u0000\u0000S[\u0005\u0015\u0000\u0000T[\u0005\u0013\u0000"+
+		"\u0000UV\u0005\u0005\u0000\u0000VW\u0003\u000e\u0007\u0000WX\u0005\u0007"+
+		"\u0000\u0000X[\u0001\u0000\u0000\u0000Y[\u0003\u0012\t\u0000ZQ\u0001\u0000"+
+		"\u0000\u0000ZS\u0001\u0000\u0000\u0000ZT\u0001\u0000\u0000\u0000ZU\u0001"+
+		"\u0000\u0000\u0000ZY\u0001\u0000\u0000\u0000[l\u0001\u0000\u0000\u0000"+
+		"\\]\n\u0004\u0000\u0000]^\u0005\u0010\u0000\u0000^k\u0003\u000e\u0007"+
+		"\u0005_`\n\u0003\u0000\u0000`a\u0005\u000f\u0000\u0000ak\u0003\u000e\u0007"+
+		"\u0004bc\n\u0002\u0000\u0000cd\u0005\u000e\u0000\u0000dk\u0003\u000e\u0007"+
+		"\u0003ef\n\u0001\u0000\u0000fg\u0005\r\u0000\u0000gk\u0003\u000e\u0007"+
+		"\u0002hi\n\u0007\u0000\u0000ik\u0003\u0010\b\u0000j\\\u0001\u0000\u0000"+
+		"\u0000j_\u0001\u0000\u0000\u0000jb\u0001\u0000\u0000\u0000je\u0001\u0000"+
+		"\u0000\u0000jh\u0001\u0000\u0000\u0000kn\u0001\u0000\u0000\u0000lj\u0001"+
+		"\u0000\u0000\u0000lm\u0001\u0000\u0000\u0000m\u000f\u0001\u0000\u0000"+
+		"\u0000nl\u0001\u0000\u0000\u0000op\u0005\u0004\u0000\u0000pq\u0005\u0013"+
+		"\u0000\u0000q\u0011\u0001\u0000\u0000\u0000rs\u0005\u0005\u0000\u0000"+
+		"st\u0003\u000e\u0007\u0000tu\u0005\u0006\u0000\u0000uv\u0003\u000e\u0007"+
+		"\u0000vw\u0005\u0007\u0000\u0000w\u0013\u0001\u0000\u0000\u0000xy\u0005"+
+		"\b\u0000\u0000yz\u0005\u0005\u0000\u0000z{\u0003\u000e\u0007\u0000{|\u0007"+
+		"\u0000\u0000\u0000|}\u0005\u0013\u0000\u0000}~\u0007\u0000\u0000\u0000"+
+		"~\u007f\u0003\u000e\u0007\u0000\u007f\u0080\u0005\u0007\u0000\u0000\u0080"+
+		"\u0084\u0005\u000b\u0000\u0000\u0081\u0083\u0003\u0004\u0002\u0000\u0082"+
+		"\u0081\u0001\u0000\u0000\u0000\u0083\u0086\u0001\u0000\u0000\u0000\u0084"+
+		"\u0082\u0001\u0000\u0000\u0000\u0084\u0085\u0001\u0000\u0000\u0000\u0085"+
+		"\u0087\u0001\u0000\u0000\u0000\u0086\u0084\u0001\u0000\u0000\u0000\u0087"+
+		"\u0088\u0005\f\u0000\u0000\u0088\u0015\u0001\u0000\u0000\u0000\u000b\u0019"+
+		" &1:HLZjl\u0084";
 	public static final ATN _ATN =
 		new ATNDeserializer().deserialize(_serializedATN.toCharArray());
 	static {

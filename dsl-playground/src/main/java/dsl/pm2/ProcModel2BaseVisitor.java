@@ -46,35 +46,42 @@ public class ProcModel2BaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitVertexDeclaration(ProcModel2Parser.VertexDeclarationContext ctx) { return visitChildren(ctx); }
+	@Override public T visitVariableDeclaration(ProcModel2Parser.VariableDeclarationContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitFloatDeclaration(ProcModel2Parser.FloatDeclarationContext ctx) { return visitChildren(ctx); }
+	@Override public T visitVariableReassignment(ProcModel2Parser.VariableReassignmentContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitIntDeclaration(ProcModel2Parser.IntDeclarationContext ctx) { return visitChildren(ctx); }
+	@Override public T visitFunctionInvocation(ProcModel2Parser.FunctionInvocationContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitFloatExpression(ProcModel2Parser.FloatExpressionContext ctx) { return visitChildren(ctx); }
+	@Override public T visitExpression(ProcModel2Parser.ExpressionContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitIntExpression(ProcModel2Parser.IntExpressionContext ctx) { return visitChildren(ctx); }
+	@Override public T visitVariableProperty(ProcModel2Parser.VariablePropertyContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitPositionConstructor(ProcModel2Parser.PositionConstructorContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
