@@ -39,7 +39,8 @@ internal class TextPipeline(
             // Note: the following is shared with the regular graviks pipeline:
             // inputAssembly, viewportState, dynamicState, rasterizationState
             ciCountPipeline.`sType$Default`()
-            ciCountPipeline.pStages(createTextCountShaderStages(vkDevice, stack))
+            val countStages = createTextCountShaderStages(vkDevice, stack)
+            ciCountPipeline.pStages(countStages)
             ciCountPipeline.pVertexInputState(createTextCountPipelineVertexInput(stack))
             ciCountPipeline.pInputAssemblyState(createGraviksPipelineInputAssembly(stack))
             ciCountPipeline.pViewportState(createGraviksPipelineViewport(stack))
@@ -53,7 +54,8 @@ internal class TextPipeline(
 
             val ciOddPipeline = ciPipelines[1]
             ciOddPipeline.`sType$Default`()
-            ciOddPipeline.pStages(createTextOddShaderStages(vkDevice, stack))
+            val oddStages = createTextOddShaderStages(vkDevice, stack)
+            ciOddPipeline.pStages(oddStages)
             ciOddPipeline.pVertexInputState(createTextOddPipelineVertexInput(stack))
             ciOddPipeline.pInputAssemblyState(createGraviksPipelineInputAssembly(stack))
             ciOddPipeline.pViewportState(createGraviksPipelineViewport(stack))
@@ -73,10 +75,10 @@ internal class TextPipeline(
             this.countPipeline = pPipelines[0]
             this.oddPipeline = pPipelines[1]
 
-            vkDestroyShaderModule(vkDevice, ciCountPipeline.pStages()[0].module(), null)
-            vkDestroyShaderModule(vkDevice, ciCountPipeline.pStages()[1].module(), null)
-            vkDestroyShaderModule(vkDevice, ciOddPipeline.pStages()[0].module(), null)
-            vkDestroyShaderModule(vkDevice, ciOddPipeline.pStages()[1].module(), null)
+            vkDestroyShaderModule(vkDevice, countStages[0].module(), null)
+            vkDestroyShaderModule(vkDevice, countStages[1].module(), null)
+            vkDestroyShaderModule(vkDevice, oddStages[0].module(), null)
+            vkDestroyShaderModule(vkDevice, oddStages[1].module(), null)
         }
     }
 

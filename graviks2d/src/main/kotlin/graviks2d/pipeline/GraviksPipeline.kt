@@ -31,7 +31,8 @@ internal class GraviksPipeline(
             val ciPipelines = VkGraphicsPipelineCreateInfo.calloc(1, stack)
             val ciPipeline = ciPipelines[0]
             ciPipeline.`sType$Default`()
-            ciPipeline.pStages(createGraviksShaderStages(instance.device, instance.maxNumDescriptorImages, stack))
+            val shaderStages = createGraviksShaderStages(instance.device, instance.maxNumDescriptorImages, stack)
+            ciPipeline.pStages(shaderStages)
             ciPipeline.pVertexInputState(createGraviksPipelineVertexInput(stack))
             ciPipeline.pInputAssemblyState(createGraviksPipelineInputAssembly(stack))
             ciPipeline.pViewportState(createGraviksPipelineViewport(stack))
@@ -50,8 +51,8 @@ internal class GraviksPipeline(
             )
             this.vkPipeline = pPipeline[0]
 
-            vkDestroyShaderModule(instance.device, ciPipeline.pStages()[0].module(), null)
-            vkDestroyShaderModule(instance.device, ciPipeline.pStages()[1].module(), null)
+            vkDestroyShaderModule(instance.device, shaderStages[0].module(), null)
+            vkDestroyShaderModule(instance.device, shaderStages[1].module(), null)
         }
     }
 

@@ -44,10 +44,11 @@ fun createBasicGraphicsPipeline(
         )
         logger.info("Created basic graphics pipeline")
 
-        vkDestroyShaderModule(vkDevice, ciPipelines[0].pStages()[0].module(), null)
-        vkDestroyShaderModule(vkDevice, ciPipelines[0].pStages()[1].module(), null)
-        vkDestroyShaderModule(vkDevice, ciPipelines[0].pStages()[2].module(), null)
-        vkDestroyShaderModule(vkDevice, ciPipelines[0].pStages()[3].module(), null)
+        val pipelineStages = ciPipelines[0].pStages()!!
+        vkDestroyShaderModule(vkDevice, pipelineStages[0].module(), null)
+        vkDestroyShaderModule(vkDevice, pipelineStages[1].module(), null)
+        vkDestroyShaderModule(vkDevice, pipelineStages[2].module(), null)
+        vkDestroyShaderModule(vkDevice, pipelineStages[3].module(), null)
 
         return BasicGraphicsPipeline(
             handle = pPipelines[0],
