@@ -5,7 +5,7 @@ import java.nio.file.Files
 import java.util.*
 import kotlin.io.path.absolutePathString
 
-private val isWindows = System.getProperty("os.name").lowercase().contains("win")
+internal val isWindows = System.getProperty("os.name").lowercase().contains("win")
 
 private val memoryScriptFile = if (isWindows) {
     Files.createTempFile("", ".bat")
@@ -52,7 +52,25 @@ fun getProcessMemoryUsage(): Long {
             } else throw UnsupportedOperationException("Unexpected memory query format (1): $scannedInput")
         } else throw UnsupportedOperationException("Memory query failed with exit code $exitCode")
     } else {
-        // TODO UNIX support
-        throw UnsupportedOperationException("Unsupported OS")
+        val memoryUsageProcess = Runtime.getRuntime().exec("ps -q $pid -eo size")
+        val exitCode = memoryUsageProcess.waitFor()
+        if (exitCode == 0) {
+            val scannedInput = mutableListOf<String>()
+            val scanner = Scanner(memoryUsageProcess.inputStream)
+            while (scanner.hasNextLine()) {
+                scannedInput.add(scanner.nextLine())
+            }
+            scanner.close()
+
+            if (scannedInput.size != 3) throw UnsupportedOperationException("Unexpected memory query format (4)")
+            if (!scannedInput[0].contains("SIZE")) throw UnsupportedOperationException("Unexpected memory query format (5)")
+            try {
+                val dummyUsage = parseLong(scannedInput[2].trim())
+                if (dummyUsage != 0L) throw UnsupportedOperationException("Unexpected memory query format (6)")
+                return 1024 * parseLong(scannedInput[1].trim())
+            } catch (invalid: NumberFormatException) {
+                throw UnsupportedOperationException("Unexpected memory query format (7)")
+            }
+        } else throw UnsupportedOperationException("Memory query failed with exit code $exitCode")
     }
 }

@@ -19,7 +19,11 @@ class MemorySnapshot(
     }
 
     val unknownMemory: Long?
-    get() = if (processMemory == null) null else processMemory - heapMemory.used - nonHeapMemory.used
+    get() = if (processMemory == null) null
+            // On Windows, `getProcessMemoryUsage` will count the *used* (non-)heap memory
+            else if (isWindows) processMemory - heapMemory.used - nonHeapMemory.used
+            // On Linux, `getProcessMemoryUsage` will count the *committed* (non-)heap memory
+            else processMemory - heapMemory.committed - nonHeapMemory.committed
 
     companion object {
         fun take(): MemorySnapshot {
@@ -44,8 +48,6 @@ class MemorySnapshot(
     override fun toString() = "MemorySnapshot(heap: ${formatUsage(heapMemory)}, non-heap: ${formatUsage(nonHeapMemory)}, process: ${if (processMemory != null) format(processMemory) else "unknown"}"
 
     fun debugDump() {
-
-
         println("Heap memory: ${formatUsage(heapMemory)}")
         println("Non-heap memory: ${formatUsage(nonHeapMemory)}")
         if (processMemory != null) {
