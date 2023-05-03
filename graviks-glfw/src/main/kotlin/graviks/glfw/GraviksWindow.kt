@@ -150,8 +150,8 @@ class GraviksWindow(
         // The swapchain will be null when the window is minified. In this case, we should not do anything
         if (swapchain == null) return
 
-        // If it takes more than 1 second to present a frame, something is wrong
-        val timeout = 1_000_000_000L
+        // Presentation can take a long time if the window is minimized (on some systems)
+        val timeout = -1L
 
         stackPush().use { stack ->
             val pImageIndex = stack.callocInt(1)
