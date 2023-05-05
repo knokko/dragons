@@ -47,6 +47,18 @@ public interface ProcModel2Visitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitVariableReassignment(ProcModel2Parser.VariableReassignmentContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#variableReassignmentTarget}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitVariableReassignmentTarget(ProcModel2Parser.VariableReassignmentTargetContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#functionDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitFunctionDeclaration(ProcModel2Parser.FunctionDeclarationContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link ProcModel2Parser#functionInvocation}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -76,4 +88,34 @@ public interface ProcModel2Visitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitForLoop(ProcModel2Parser.ForLoopContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#forLoopHeader}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitForLoopHeader(ProcModel2Parser.ForLoopHeaderContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#forLoopVariable}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitForLoopVariable(ProcModel2Parser.ForLoopVariableContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#forLoopComparator1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitForLoopComparator1(ProcModel2Parser.ForLoopComparator1Context ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#forLoopComparator2}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitForLoopComparator2(ProcModel2Parser.ForLoopComparator2Context ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#forLoopComparator}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitForLoopComparator(ProcModel2Parser.ForLoopComparatorContext ctx);
 }

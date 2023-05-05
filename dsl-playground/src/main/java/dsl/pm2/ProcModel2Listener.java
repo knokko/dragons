@@ -68,6 +68,26 @@ public interface ProcModel2Listener extends ParseTreeListener {
 	 */
 	void exitVariableReassignment(ProcModel2Parser.VariableReassignmentContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#variableReassignmentTarget}.
+	 * @param ctx the parse tree
+	 */
+	void enterVariableReassignmentTarget(ProcModel2Parser.VariableReassignmentTargetContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#variableReassignmentTarget}.
+	 * @param ctx the parse tree
+	 */
+	void exitVariableReassignmentTarget(ProcModel2Parser.VariableReassignmentTargetContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#functionDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterFunctionDeclaration(ProcModel2Parser.FunctionDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#functionDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitFunctionDeclaration(ProcModel2Parser.FunctionDeclarationContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link ProcModel2Parser#functionInvocation}.
 	 * @param ctx the parse tree
 	 */
@@ -117,4 +137,54 @@ public interface ProcModel2Listener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitForLoop(ProcModel2Parser.ForLoopContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#forLoopHeader}.
+	 * @param ctx the parse tree
+	 */
+	void enterForLoopHeader(ProcModel2Parser.ForLoopHeaderContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#forLoopHeader}.
+	 * @param ctx the parse tree
+	 */
+	void exitForLoopHeader(ProcModel2Parser.ForLoopHeaderContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#forLoopVariable}.
+	 * @param ctx the parse tree
+	 */
+	void enterForLoopVariable(ProcModel2Parser.ForLoopVariableContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#forLoopVariable}.
+	 * @param ctx the parse tree
+	 */
+	void exitForLoopVariable(ProcModel2Parser.ForLoopVariableContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#forLoopComparator1}.
+	 * @param ctx the parse tree
+	 */
+	void enterForLoopComparator1(ProcModel2Parser.ForLoopComparator1Context ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#forLoopComparator1}.
+	 * @param ctx the parse tree
+	 */
+	void exitForLoopComparator1(ProcModel2Parser.ForLoopComparator1Context ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#forLoopComparator2}.
+	 * @param ctx the parse tree
+	 */
+	void enterForLoopComparator2(ProcModel2Parser.ForLoopComparator2Context ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#forLoopComparator2}.
+	 * @param ctx the parse tree
+	 */
+	void exitForLoopComparator2(ProcModel2Parser.ForLoopComparator2Context ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#forLoopComparator}.
+	 * @param ctx the parse tree
+	 */
+	void enterForLoopComparator(ProcModel2Parser.ForLoopComparatorContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#forLoopComparator}.
+	 * @param ctx the parse tree
+	 */
+	void exitForLoopComparator(ProcModel2Parser.ForLoopComparatorContext ctx);
 }

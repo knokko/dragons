@@ -179,7 +179,12 @@ project(':debug-plugin') {
 
 project(':dsl-playground') {
     dependencies {
+        implementation project(':graviks2d')
+        implementation project(':graviks-glfw')
+        implementation project(':gruviks')
+        implementation project(':gruviks-glfw')
         implementation 'org.antlr:antlr4:4.11.1'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
     }
 }
 

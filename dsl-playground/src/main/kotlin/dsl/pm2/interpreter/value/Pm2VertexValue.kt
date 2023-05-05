@@ -1,5 +1,7 @@
 package dsl.pm2.interpreter.value
 
+import dsl.pm2.interpreter.Pm2Vertex
+
 class Pm2VertexValue : Pm2Value() {
 
     private lateinit var position: Pm2PositionValue
@@ -18,6 +20,11 @@ class Pm2VertexValue : Pm2Value() {
 
     override fun toString(): String {
         val positionString = if (this::position.isInitialized) this.position.toString() else "undefined"
-        return "Vertex($positionString)"
+        return "Vertex($positionString, identity=${System.identityHashCode(this)})"
     }
+
+    fun toVertex() = Pm2Vertex(
+        x = position.getProperty("x").floatValue(),
+        y = position.getProperty("y").floatValue()
+    )
 }

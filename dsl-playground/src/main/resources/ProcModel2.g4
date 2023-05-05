@@ -9,21 +9,27 @@ outerStatement :
 innerStatement :
     variableDeclaration |
     variableReassignment |
-    functionInvocation |
+    functionDeclaration |
+    functionInvocation ';' |
     forLoop;
 
-parameterDeclaration : PARAMETER_TYPE 'parameter' IDENTIFIER ';';
+parameterDeclaration : PARAMETER_TYPE 'parameter' IDENTIFIER IDENTIFIER ';';
 
 variableDeclaration : IDENTIFIER IDENTIFIER ('=' expression)? ';';
 
-variableReassignment : IDENTIFIER ('.' IDENTIFIER)* '=' expression ';';
+variableReassignment : variableReassignmentTarget '=' expression ';';
 
-functionInvocation : IDENTIFIER '(' ((expression ',')* expression)? ')' ';';
+variableReassignmentTarget: IDENTIFIER ('.' IDENTIFIER)*;
+
+functionDeclaration : IDENTIFIER IDENTIFIER '(' ((IDENTIFIER ',')* IDENTIFIER)? ')' '{' innerStatement* '}';
+
+functionInvocation : IDENTIFIER '(' ((expression ',')* expression)? ')';
 
 expression :
     FLOAT_LITERAL |
     INT_LITERAL |
     IDENTIFIER |
+    functionInvocation |
     expression variableProperty |
     '(' expression ')' |
     positionConstructor |
@@ -41,7 +47,17 @@ MINUS : '-';
 TIMES : '*';
 DIVIDE : '/';
 
-forLoop : 'for' '(' expression ('<'|'<=') IDENTIFIER ('<'|'<=') expression ')' '{' innerStatement* '}';
+forLoop : forLoopHeader '{' innerStatement* '}';
+
+forLoopHeader : 'for' '(' expression forLoopComparator1 forLoopVariable forLoopComparator2 expression ')';
+
+forLoopVariable : IDENTIFIER;
+
+forLoopComparator1 : forLoopComparator;
+
+forLoopComparator2 : forLoopComparator;
+
+forLoopComparator : '<' | '<=';
 
 NORMAL_TYPE : 'custom' | 'sharp' | 'smooth';
 
