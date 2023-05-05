@@ -65,7 +65,7 @@ internal fun createGraviksShaderModule(
     return pModule[0]
 }
 
-internal const val OP_CODE_FILL_RECT = 1
+internal const val OP_CODE_FILL = 1
 internal const val OP_CODE_DRAW_IMAGE_BOTTOM_LEFT = 2
 internal const val OP_CODE_DRAW_IMAGE_BOTTOM_RIGHT = 3
 internal const val OP_CODE_DRAW_IMAGE_TOP_RIGHT = 4

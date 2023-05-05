@@ -13,6 +13,21 @@ import org.junit.jupiter.api.Test
 class TestChildTarget {
 
     @Test
+    fun testFillTriangle() {
+        val parent = LoggedTarget()
+        val child = ChildTarget(parent, 0.2f, 0.5f, 0.6f, 0.8f)
+        val margin = 0.0001f
+        child.fillTriangle(0.1f, 0.5f, 0.4f, 0.9f, 0f, 1f, Color.BLUE)
+
+        assertEquals(0.24f, parent.x1, margin)
+        assertEquals(0.65f, parent.y1, margin)
+        assertEquals(0.36f, parent.x2, margin)
+        assertEquals(0.77f, parent.y2, margin)
+        assertEquals(0.2f, parent.x3, margin)
+        assertEquals(0.8f, parent.y3, margin)
+    }
+
+    @Test
     fun testFillRect() {
         val parent = LoggedTarget()
         val child = ChildTarget(parent, 0.2f, 0.5f, 0.6f, 0.8f)
@@ -106,7 +121,18 @@ private class LoggedTarget : GraviksTarget {
     var y1 = 0f
     var x2 = 0f
     var y2 = 0f
+    var x3 = 0f
+    var y3 = 0f
     var radiusX = 0f
+
+    override fun fillTriangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Color) {
+        this.x1 = x1
+        this.y1 = y1
+        this.x2 = x2
+        this.y2 = y2
+        this.x3 = x3
+        this.y3 = y3
+    }
 
     override fun fillRect(x1: Float, y1: Float, x2: Float, y2: Float, color: Color) {
         this.x1 = x1

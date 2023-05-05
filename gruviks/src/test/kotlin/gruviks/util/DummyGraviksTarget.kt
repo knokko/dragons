@@ -11,10 +11,15 @@ class DummyGraviksTarget(
     private val dummyAspectRatio: Float = 1f
 ): GraviksTarget {
 
+    var fillTriangleCounter = 0
     var fillRectCounter = 0
     var drawRoundedRectCounter = 0
     var drawImageCounter = 0
     var drawStringCounter = 0
+
+    override fun fillTriangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Color) {
+        fillTriangleCounter += 1
+    }
 
     override fun fillRect(x1: Float, y1: Float, x2: Float, y2: Float, color: Color) {
         fillRectCounter += 1

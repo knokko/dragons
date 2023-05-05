@@ -27,9 +27,13 @@ class Pm2SceneComponent(
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {
         target.fillRect(0f, 0f, 1f, 1f, Color.BLACK)
 
+        for (triples in scene.vertices.windowed(3)) {
+            target.fillTriangle(triples[0].x, triples[0].y, triples[1].x, triples[1].y, triples[2].x, triples[2].y, Color.RED)
+        }
+
         val radius = 0.002f
         for (vertex in scene.vertices) {
-            target.fillRect(vertex.x - radius, vertex.y - radius, vertex.x + radius, vertex.y + radius, Color.RED)
+            target.fillRect(vertex.x - radius, vertex.y - radius, vertex.x + radius, vertex.y + radius, Color.BLUE)
         }
 
         return RenderResult(

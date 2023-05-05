@@ -34,7 +34,7 @@ float decodeFloat(int rawValue) {
     return float(rawValue) * 0.000001;
 }
 
-const int OP_CODE_FILL_RECT = 1;
+const int OP_CODE_FILL = 1;
 const int OP_CODE_DRAW_IMAGE = 2;
 const int OP_CODE_DRAW_TEXT = 6;
 const int OP_CODE_DRAW_ROUNDED_RECT = 7;
@@ -42,7 +42,7 @@ const int OP_CODE_DRAW_ROUNDED_RECT = 7;
 void main() {
     int operationCode = shaderStorage.operations[operationIndex];
 
-    if (operationCode == OP_CODE_FILL_RECT) {
+    if (operationCode == OP_CODE_FILL) {
         vec4 fillColor = decodeColor(shaderStorage.operations[operationIndex + 1]);
         outColor = fillColor;
     } else if (operationCode == OP_CODE_DRAW_IMAGE) {
