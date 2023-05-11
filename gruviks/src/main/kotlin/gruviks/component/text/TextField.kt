@@ -12,16 +12,14 @@ import gruviks.feedback.RenderFeedback
 import gruviks.feedback.RequestKeyboardFocusFeedback
 import kotlin.math.min
 import kotlin.math.max
-import kotlin.text.StringBuilder
 
 class TextField(
-    private val placeholder: String,
-    private var currentText: String,
-    private var currentStyle: TextFieldStyle
+        private val placeholder: String,
+        initialText: String,
+        private var currentStyle: TextFieldStyle,
 ) : Component() {
 
-    private lateinit var drawnCharacterPositions: List<CharacterPosition>
-    private var caretPosition = 0
+    private val textInput = TextInput(initialText) { agent.giveFeedback(RenderFeedback()) }
 
     override fun subscribeToEvents() {
         agent.subscribe(KeyboardFocusAcquiredEvent::class)
@@ -33,98 +31,20 @@ class TextField(
 
     override fun processEvent(event: Event) {
         if (event is KeyTypeEvent) {
-            val newCodepoints = if (caretPosition < currentText.length) {
-                val oldCodepoints = currentText.codePoints().toArray()
-                val newCodepoints = StringBuilder(currentText.length + 2)
-
-                for ((oldIndex, oldCodepoint) in oldCodepoints.withIndex()) {
-                    if (oldIndex == caretPosition) {
-                        newCodepoints.appendCodePoint(event.codePoint)
-                    }
-                    newCodepoints.appendCodePoint(oldCodepoint)
-                }
-                newCodepoints
-            } else {
-                val newCodepoints = StringBuilder(currentText)
-                newCodepoints.appendCodePoint(event.codePoint)
-                newCodepoints
-            }
-
-            caretPosition += 1
-            setText(newCodepoints.toString())
+            textInput.type(event.codePoint)
         } else if (event is KeyPressEvent) {
             when (event.key.type) {
                 KeyType.Escape -> agent.giveFeedback(ReleaseKeyboardFocusFeedback())
                 // TODO Switch to the next text field?
                 KeyType.Enter -> agent.giveFeedback(ReleaseKeyboardFocusFeedback())
                 KeyType.Tab -> agent.giveFeedback(ReleaseKeyboardFocusFeedback())
-                KeyType.Backspace -> {
-                    if (caretPosition > 0) {
-
-                        val oldCodepoints = currentText.codePoints().toArray()
-                        val newTextBuilder = StringBuilder()
-                        for ((index, codepoint) in oldCodepoints.withIndex()) {
-                            if (index != caretPosition - 1) newTextBuilder.appendCodePoint(codepoint)
-                        }
-
-                        caretPosition -= 1
-                        setText(newTextBuilder.toString())
-                    }
-                }
-                KeyType.Right -> {
-                    if (drawnCharacterPositions.isNotEmpty()) {
-                        if (caretPosition < drawnCharacterPositions.size) {
-                            val currentMinX = drawnCharacterPositions[caretPosition].minX
-                            val nextPosition = drawnCharacterPositions.filter { it.minX > currentMinX }.minByOrNull { it.minX }
-                            if (nextPosition != null) {
-                                caretPosition = drawnCharacterPositions.indexOf(nextPosition)
-                                agent.giveFeedback(RenderFeedback())
-                            } else if (caretPosition == drawnCharacterPositions.size - 1 && drawnCharacterPositions[caretPosition].isLeftToRight) {
-                                caretPosition = drawnCharacterPositions.size
-                                agent.giveFeedback(RenderFeedback())
-                            }
-                        } else if (!drawnCharacterPositions[drawnCharacterPositions.size - 1].isLeftToRight) {
-                            caretPosition -= 1
-                            agent.giveFeedback(RenderFeedback())
-                        }
-                    }
-                }
-                KeyType.Left -> {
-                    if (drawnCharacterPositions.isNotEmpty()) {
-                        if (caretPosition < drawnCharacterPositions.size) {
-                            val currentMinX = drawnCharacterPositions[caretPosition].minX
-                            val nextPosition = drawnCharacterPositions.filter { it.minX < currentMinX }.maxByOrNull { it.minX }
-                            if (nextPosition != null) {
-                                caretPosition = drawnCharacterPositions.indexOf(nextPosition)
-                                agent.giveFeedback(RenderFeedback())
-                            } else if (caretPosition == drawnCharacterPositions.size - 1 && !drawnCharacterPositions[caretPosition].isLeftToRight){
-                                caretPosition = drawnCharacterPositions.size
-                                agent.giveFeedback(RenderFeedback())
-                            }
-                        } else if (drawnCharacterPositions[drawnCharacterPositions.size - 1].isLeftToRight) {
-                            caretPosition -= 1
-                            agent.giveFeedback(RenderFeedback())
-                        }
-                    }
-                }
+                KeyType.Backspace -> textInput.backspace()
+                KeyType.Right -> textInput.moveRight()
+                KeyType.Left -> textInput.moveLeft()
                 else -> {}
             }
         } else if (event is CursorClickEvent) {
-            val clickedIndex = this.drawnCharacterPositions.indexOfFirst {
-                it.minX <= event.position.x && it.maxX >= event.position.x
-            }
-            val numCodepoints = currentText.codePointCount(0, currentText.length)
-            this.caretPosition = if (clickedIndex != -1 && clickedIndex < numCodepoints) {
-                val isRightToLeft = !this.drawnCharacterPositions[clickedIndex].isLeftToRight
-                val clickedPosition = this.drawnCharacterPositions[clickedIndex]
-                val clickedOnLeftSide = event.position.x - clickedPosition.minX <= clickedPosition.maxX - event.position.x
-                if (clickedOnLeftSide != isRightToLeft) {
-                    clickedIndex
-                } else {
-                    clickedIndex + 1
-                }
-            } else numCodepoints
-
+            textInput.moveTo(event.position.x)
             agent.giveFeedback(RequestKeyboardFocusFeedback())
         } else if (event is KeyboardFocusEvent) {
             agent.giveFeedback(RenderFeedback())
@@ -133,14 +53,12 @@ class TextField(
         }
     }
 
-    fun getText() = currentText
+    fun getText() = textInput.getText()
 
     fun getStyle() = currentStyle
 
     fun setText(newText: String) {
-        this.currentText = newText
-        this.caretPosition = min(this.caretPosition, this.currentText.codePointCount(0, this.currentText.length))
-        agent.giveFeedback(RenderFeedback())
+        textInput.setText(newText)
     }
 
     fun setStyle(newStyle: TextFieldStyle) {
@@ -153,22 +71,22 @@ class TextField(
         val (textStyle, textRegion, drawPlaceholder) = if (hasFocus) currentStyle.drawFocusBackground(target, placeholder)
         else currentStyle.drawDefaultBackground(target, placeholder)
 
-        this.drawnCharacterPositions = target.drawString(
-            textRegion.minX, textRegion.minY, textRegion.maxX, textRegion.maxY, currentText, textStyle
+        textInput.drawnCharacterPositions = target.drawString(
+            textRegion.minX, textRegion.minY, textRegion.maxX, textRegion.maxY, textInput.getText(), textStyle
         )
 
-        val finalDrawnCharacterPositions = if (this.drawnCharacterPositions.isEmpty() && drawPlaceholder) {
+        val finalDrawnCharacterPositions = if (textInput.drawnCharacterPositions.isEmpty() && drawPlaceholder) {
             target.drawString(textRegion.minX, textRegion.minY, textRegion.maxX, textRegion.maxY, placeholder, textStyle)
-        } else this.drawnCharacterPositions
+        } else textInput.drawnCharacterPositions
 
         return if (hasFocus) {
-            val caretCharIndex = min(drawnCharacterPositions.size - 1, caretPosition)
-            val flip = caretPosition >= drawnCharacterPositions.size
+            val caretCharIndex = min(textInput.drawnCharacterPositions.size - 1, textInput.getCaretPosition())
+            val flip = textInput.getCaretPosition() >= textInput.drawnCharacterPositions.size
 
-            val characterPosition = if (drawnCharacterPositions.isEmpty()) CharacterPosition(
+            val characterPosition = if (textInput.drawnCharacterPositions.isEmpty()) CharacterPosition(
                 textRegion.minX, 0f, textRegion.maxX, 0f, false
             )
-            else drawnCharacterPositions[caretCharIndex]
+            else textInput.drawnCharacterPositions[caretCharIndex]
 
             val caretWidth = target.getStringAspectRatio("|", textStyle.font) / target.getAspectRatio() / 4
             var caretX = if (characterPosition.isLeftToRight == flip) {
