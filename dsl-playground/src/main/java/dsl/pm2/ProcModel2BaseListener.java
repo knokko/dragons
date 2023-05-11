@@ -89,6 +89,30 @@ public class ProcModel2BaseListener implements ProcModel2Listener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterVariableReassignmentTarget(ProcModel2Parser.VariableReassignmentTargetContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitVariableReassignmentTarget(ProcModel2Parser.VariableReassignmentTargetContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterFunctionDeclaration(ProcModel2Parser.FunctionDeclarationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitFunctionDeclaration(ProcModel2Parser.FunctionDeclarationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterFunctionInvocation(ProcModel2Parser.FunctionInvocationContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -144,6 +168,66 @@ public class ProcModel2BaseListener implements ProcModel2Listener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitForLoop(ProcModel2Parser.ForLoopContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterForLoopHeader(ProcModel2Parser.ForLoopHeaderContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitForLoopHeader(ProcModel2Parser.ForLoopHeaderContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterForLoopVariable(ProcModel2Parser.ForLoopVariableContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitForLoopVariable(ProcModel2Parser.ForLoopVariableContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterForLoopComparator1(ProcModel2Parser.ForLoopComparator1Context ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitForLoopComparator1(ProcModel2Parser.ForLoopComparator1Context ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterForLoopComparator2(ProcModel2Parser.ForLoopComparator2Context ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitForLoopComparator2(ProcModel2Parser.ForLoopComparator2Context ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterForLoopComparator(ProcModel2Parser.ForLoopComparatorContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitForLoopComparator(ProcModel2Parser.ForLoopComparatorContext ctx) { }
 
 	/**
 	 * {@inheritDoc}

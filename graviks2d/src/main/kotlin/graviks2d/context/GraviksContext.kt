@@ -6,7 +6,7 @@ import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_BOTTOM_LEFT
 import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_BOTTOM_RIGHT
 import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_TOP_LEFT
 import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_TOP_RIGHT
-import graviks2d.pipeline.OP_CODE_FILL_RECT
+import graviks2d.pipeline.OP_CODE_FILL
 import graviks2d.resource.image.BorrowedImage
 import graviks2d.resource.image.ImageReference
 import graviks2d.resource.text.*
@@ -224,9 +224,9 @@ class GraviksContext(
         this.pushRect(x1, y1, x2, y2, vertexIndex, operationIndex, operationIndex, operationIndex, operationIndex)
     }
 
-    private fun pushRect(
-        x1: Float, y1: Float, x2: Float, y2: Float, vertexIndex: Int,
-        operationIndex1: Int, operationIndex2: Int, operationIndex3: Int, operationIndex4: Int
+    private fun pushTriangle(
+        x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, vertexIndex: Int,
+        operationIndex1: Int, operationIndex2: Int, operationIndex3: Int
     ) {
         this.buffers.vertexCpuBuffer.run {
             this[vertexIndex].x = x1
@@ -234,24 +234,37 @@ class GraviksContext(
             this[vertexIndex].operationIndex = operationIndex1
 
             this[vertexIndex + 1].x = x2
-            this[vertexIndex + 1].y = y1
+            this[vertexIndex + 1].y = y2
             this[vertexIndex + 1].operationIndex = operationIndex2
 
-            this[vertexIndex + 2].x = x2
-            this[vertexIndex + 2].y = y2
+            this[vertexIndex + 2].x = x3
+            this[vertexIndex + 2].y = y3
             this[vertexIndex + 2].operationIndex = operationIndex3
+        }
+    }
 
-            this[vertexIndex + 3].x = x2
-            this[vertexIndex + 3].y = y2
-            this[vertexIndex + 3].operationIndex = operationIndex3
+    private fun pushTriangle(
+        x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, vertexIndex: Int, operationIndex: Int
+    ) {
+        pushTriangle(x1, y1, x2, y2, x3, y3, vertexIndex, operationIndex, operationIndex, operationIndex)
+    }
 
-            this[vertexIndex + 4].x = x1
-            this[vertexIndex + 4].y = y2
-            this[vertexIndex + 4].operationIndex = operationIndex4
+    private fun pushRect(
+        x1: Float, y1: Float, x2: Float, y2: Float, vertexIndex: Int,
+        operationIndex1: Int, operationIndex2: Int, operationIndex3: Int, operationIndex4: Int
+    ) {
+        pushTriangle(x1, y1, x2, y1, x2, y2, vertexIndex, operationIndex1, operationIndex2, operationIndex3)
+        pushTriangle(x2, y2, x1, y2, x1, y1, vertexIndex + 3, operationIndex3, operationIndex4, operationIndex1)
+    }
 
-            this[vertexIndex + 5].x = x1
-            this[vertexIndex + 5].y = y1
-            this[vertexIndex + 5].operationIndex = operationIndex1
+    override fun fillTriangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Color) {
+        val claimedSpace = this.claimSpace(numVertices = 3, numOperationValues = 2)
+
+        this.pushTriangle(x1, y1, x2, y2, x3, y3, vertexIndex = claimedSpace.vertexIndex, operationIndex = claimedSpace.operationIndex)
+
+        this.buffers.operationCpuBuffer.run {
+            this.put(claimedSpace.operationIndex, OP_CODE_FILL)
+            this.put(claimedSpace.operationIndex + 1, color.rawValue)
         }
     }
 
@@ -261,7 +274,7 @@ class GraviksContext(
         this.pushRect(x1, y1, x2, y2, vertexIndex = claimedSpace.vertexIndex, operationIndex = claimedSpace.operationIndex)
 
         this.buffers.operationCpuBuffer.run {
-            this.put(claimedSpace.operationIndex, OP_CODE_FILL_RECT)
+            this.put(claimedSpace.operationIndex, OP_CODE_FILL)
             this.put(claimedSpace.operationIndex + 1, color.rawValue)
         }
     }

@@ -23,6 +23,11 @@ abstract class Pm2Value {
     }
 
     @Throws(UnsupportedOperationException::class)
+    open fun booleanValue(): Boolean {
+        throw UnsupportedOperationException("This variable is not of type boolean")
+    }
+
+    @Throws(UnsupportedOperationException::class)
     open operator fun div(right: Pm2Value): Pm2Value {
         throw UnsupportedOperationException("No semantics for ${this::class.simpleName} / ${right::class.simpleName}")
     }
@@ -40,5 +45,10 @@ abstract class Pm2Value {
     @Throws(UnsupportedOperationException::class)
     open operator fun plus(right: Pm2Value): Pm2Value {
         throw UnsupportedOperationException("No semantics for ${this::class.simpleName} + ${right::class.simpleName}")
+    }
+
+    @Throws(UnsupportedOperationException::class)
+    open operator fun compareTo(right: Pm2Value): Int {
+        throw UnsupportedOperationException("No semantics for ${this::class.simpleName} cmp ${right::class.simpleName}")
     }
 }

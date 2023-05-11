@@ -13,7 +13,6 @@ layout(set = 0, binding = 0) readonly buffer ShaderStorage {
     int operations[];
 } shaderStorage;
 
-const int OP_CODE_FILL_RECT = 1;
 const int OP_CODE_DRAW_IMAGE_BOTTOM_LEFT = 2;
 const int OP_CODE_DRAW_IMAGE_BOTTOM_RIGHT = 3;
 const int OP_CODE_DRAW_IMAGE_TOP_RIGHT = 4;

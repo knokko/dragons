@@ -278,6 +278,29 @@ class TestContext {
     }
 
     @Test
+    fun testFillTriangle() {
+        val backgroundColor = Color.rgbInt(100, 0, 0)
+        val graviks = GraviksContext(
+            this.graviksInstance, 100, 100, initialBackgroundColor = backgroundColor
+        )
+
+        val color = Color.GREEN
+
+        withTestImage(graviks, true) { update, hostImage ->
+            graviks.fillTriangle(0f, 0.1f, 0.5f, 0.2f, 0.2f, 0.8f, color)
+            update()
+            assertColorEquals(backgroundColor, hostImage.getPixel(0, 0))
+            assertColorEquals(color, hostImage.getPixel(2, 12))
+            assertColorEquals(color, hostImage.getPixel(48, 20))
+            assertColorEquals(backgroundColor, hostImage.getPixel(52, 20))
+            assertColorEquals(color, hostImage.getPixel(20, 75))
+            assertColorEquals(backgroundColor, hostImage.getPixel(20, 85))
+        }
+
+        graviks.destroy()
+    }
+
+    @Test
     fun testFillRectangle() {
         val backgroundColor = Color.rgbInt(100, 0, 0)
         val graviks = GraviksContext(

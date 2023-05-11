@@ -13,18 +13,22 @@ class ChildTarget(
     private val maxX: Float,
     private val maxY: Float
 ): GraviksTarget {
-    private fun transform(x1: Float, y1: Float, x2: Float, y2: Float, drawFunction: (Float, Float, Float, Float) -> Unit) {
-        fun transformX(x: Float) = this.minX + x * (this.maxX - this.minX)
-        fun transformY(y: Float) = this.minY + y * (this.maxY - this.minY)
+    private fun transformX(x: Float) = this.minX + x * (this.maxX - this.minX)
+    private fun transformY(y: Float) = this.minY + y * (this.maxY - this.minY)
 
+    private fun transform(x1: Float, y1: Float, x2: Float, y2: Float, drawFunction: (Float, Float, Float, Float) -> Unit) {
         drawFunction(transformX(x1), transformY(y1), transformX(x2), transformY(y2))
     }
 
     private fun transformBack(x1: Float, y1: Float, x2: Float, y2: Float, backFunction: (Float, Float, Float, Float) -> Unit) {
-        fun transformX(x: Float) = (x - this.minX) / (this.maxX - this.minX)
-        fun transformY(y: Float) = (y - this.minY) / (this.maxY - this.minY)
+        fun transformBackX(x: Float) = (x - this.minX) / (this.maxX - this.minX)
+        fun transformBackY(y: Float) = (y - this.minY) / (this.maxY - this.minY)
 
-        backFunction(transformX(x1), transformY(y1), transformX(x2), transformY(y2))
+        backFunction(transformBackX(x1), transformBackY(y1), transformBackX(x2), transformBackY(y2))
+    }
+
+    override fun fillTriangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Color) {
+        this.parent.fillTriangle(transformX(x1), transformY(y1), transformX(x2), transformY(y2), transformX(x3), transformY(y3), color)
     }
 
     override fun fillRect(x1: Float, y1: Float, x2: Float, y2: Float, color: Color) {
