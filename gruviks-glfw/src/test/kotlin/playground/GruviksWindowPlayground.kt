@@ -124,7 +124,10 @@ fun createNewItemSetMenu(): SimpleFlatMenu {
     ) { _, giveFeedback ->
         giveFeedback(ReplaceYouFeedback(::createTitleScreen))
     }, RectRegion.percentage
-    (10, 40, 90, 60))
+    (10, 0, 90, 10))
+    menu.addComponent(TextArea(
+            "test1234\ntest", 0.04f, TextStyle(fillColor = Color.BLACK, font = null)
+    ), RectRegion.percentage(1, 11, 99, 99))
     return menu
 }
 
