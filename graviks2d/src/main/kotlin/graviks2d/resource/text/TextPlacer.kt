@@ -9,7 +9,9 @@ internal class PlacedCharacter(
     val shouldMirror: Boolean,
     val position: CharacterPosition,
     val originalIndex: Int
-)
+) {
+    override fun toString() = "PlacedCharacter(codepoint=$codepoint, size=($pixelWidth, $pixelHeight)"
+}
 
 class CharacterPosition(
     val minX: Float,

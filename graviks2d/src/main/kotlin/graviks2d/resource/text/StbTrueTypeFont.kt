@@ -72,6 +72,9 @@ class StbTrueTypeFont(ttfInput: InputStream, closeTtfInput: Boolean) {
     }
 
     internal fun getAdvanceWidth(codepoint: Int): Int {
+        // Special case: tab
+        if (codepoint == '\t'.code) return 4 * getAdvanceWidth(' '.code)
+
         return advanceWidthCache.getOrPut(codepoint) {
             val glyph = this.getGlyph(codepoint)
 
@@ -85,6 +88,12 @@ class StbTrueTypeFont(ttfInput: InputStream, closeTtfInput: Boolean) {
     }
 
     internal fun borrowGlyphShape(codepoint: Int, useGlyph: (GlyphShape) -> Unit) {
+        // Special case: tab
+        if (codepoint == '\t'.code) {
+            useGlyph(GlyphShape(fontInfo = this.fontInfo, ttfVertices = null, advanceWidth = this.getAdvanceWidth(codepoint)))
+            return
+        }
+
         glyphShapeCache.borrow(codepoint, {
             val glyph = this.getGlyph(codepoint)
             val shape = stbtt_GetGlyphShape(this.fontInfo, glyph)
