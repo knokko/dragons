@@ -125,8 +125,17 @@ fun createNewItemSetMenu(): SimpleFlatMenu {
         giveFeedback(ReplaceYouFeedback(::createTitleScreen))
     }, RectRegion.percentage
     (10, 0, 90, 10))
+
+    val textAreaStyle = squareTextAreaStyle(
+            defaultTextStyle = TextStyle(fillColor = Color.rgbInt(50, 50, 50), font = null),
+            defaultBackgroundColor = Color.rgbInt(200, 200, 200),
+            focusTextStyle = TextStyle(fillColor = Color.BLACK, font = null),
+            focusBackgroundColor = Color.WHITE,
+            lineHeight = 0.04f,
+            placeholderStyle = TextStyle(fillColor = Color.rgbInt(100, 100, 100), font = null)
+    )
     menu.addComponent(TextArea(
-            "test1234\ntest", 0.04f, TextStyle(fillColor = Color.BLACK, font = null)
+            "test1234\ntest", textAreaStyle, "Just put some text here\n\rCan be whatever you want!"
     ), RectRegion.percentage(1, 11, 99, 99))
     return menu
 }

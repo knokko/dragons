@@ -1,7 +1,6 @@
 package gruviks.component.text
 
 import graviks2d.resource.text.CharacterPosition
-import graviks2d.resource.text.TextStyle
 import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 import gruviks.component.Component
@@ -11,16 +10,18 @@ import gruviks.event.*
 import gruviks.feedback.ReleaseKeyboardFocusFeedback
 import gruviks.feedback.RenderFeedback
 import gruviks.feedback.RequestKeyboardFocusFeedback
+import java.lang.StringBuilder
 import kotlin.math.max
 import kotlin.math.min
 
 class TextArea(
         private val initialText: String,
-        private val lineHeight: Float,
-        private val textStyle: TextStyle
+        private val style: TextAreaStyle,
+        private val placeholder: String? = null,
 ): Component() {
 
     private lateinit var lineInputs: MutableList<TextInput>
+    private var lastLineHeight = 0f
     private var caretLine: Int? = null
 
     override fun subscribeToEvents() {
@@ -40,7 +41,7 @@ class TextArea(
 
             agent.giveFeedback(RequestKeyboardFocusFeedback())
 
-            var newCaretLine = ((1f - event.position.y) / lineHeight).toInt()
+            var newCaretLine = ((1f - event.position.y) / lastLineHeight).toInt()
             if (newCaretLine < 0) newCaretLine = 0
             if (newCaretLine >= lineInputs.size) newCaretLine = lineInputs.size - 1
 
@@ -71,7 +72,7 @@ class TextArea(
 
                         val newLine = oldLine.substring(textInput.getCaretPosition())
                         textInput.setText(oldLine.substring(0, textInput.getCaretPosition()))
-                        lineInputs.add(1 + caretLine!!, TextInput(newLine) { agent.giveFeedback(RenderFeedback()) })
+                        lineInputs.add(1 + caretLine!!, TextInput(newLine, this::giveRenderFeedback))
                         caretLine = caretLine!! + 1
                         agent.giveFeedback(RenderFeedback())
                     }
@@ -110,29 +111,47 @@ class TextArea(
         }
     }
 
+    private fun giveRenderFeedback() = agent.giveFeedback(RenderFeedback())
+
+    fun getText(): String {
+        val result = StringBuilder()
+        for ((index, line) in lineInputs.withIndex()) {
+            result.append(line.getText())
+            if (index != lineInputs.size - 1) result.append('\n')
+        }
+        return result.toString()
+    }
+
     private fun splitLines(text: String) = text.replace("\r\n", "\n").replace("\n\r", "\n")
             .replace("\r", "\n").split('\n')
 
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {
-        target.fillRect(0f, 0f, 1f, 1f, Color.WHITE)
-
         if (!::lineInputs.isInitialized) {
-            lineInputs = splitLines(initialText).map { TextInput(it) { agent.giveFeedback(RenderFeedback()) } }.toMutableList()
+            lineInputs = splitLines(initialText).map { TextInput(it, this::giveRenderFeedback) }.toMutableList()
         }
 
-        var maxY = 1f
-        for ((lineIndex, line) in lineInputs.withIndex()) {
+        val drawBackgroundFunction = if (agent.hasKeyboardFocus()) style.drawFocusBackground else style.drawDefaultBackground
+        val (textRegion, lineHeight) = drawBackgroundFunction(target)
+        val drawPlaceholder = !agent.hasKeyboardFocus() && placeholder != null && getText().isEmpty()
+        val textStyle = if (agent.hasKeyboardFocus()) style.focusTextStyle else if (drawPlaceholder) style.placeholderTextStyle!! else style.defaultTextStyle
+        lastLineHeight = lineHeight
+
+        var maxY = textRegion.maxY
+        // TODO Respect textRegion.minY
+
+        val textToDraw = if (drawPlaceholder) splitLines(placeholder!!).map { TextInput(it, this::giveRenderFeedback) }.withIndex() else lineInputs.withIndex()
+        for ((lineIndex, line) in textToDraw) {
             if (maxY < 0f) break
 
             val minY = maxY - lineHeight
-            val drawnCharPositions = target.drawString(0f, minY, 1f, maxY, line.getText(), textStyle)
+            val drawnCharPositions = target.drawString(textRegion.minX, minY, textRegion.maxX, maxY, line.getText(), textStyle)
             line.drawnCharacterPositions = drawnCharPositions.map { originalPosition -> CharacterPosition(
                     minX = originalPosition.minX, minY = (originalPosition.minY - minY) / lineHeight,
                     maxX = originalPosition.maxX, maxY = (originalPosition.maxY - minY) / lineHeight,
                     isLeftToRight = originalPosition.isLeftToRight
             ) }
 
-            if (caretLine == lineIndex) {
+            if (caretLine == lineIndex && agent.hasKeyboardFocus()) {
                 val caretCharIndex = min(line.drawnCharacterPositions.size - 1, line.getCaretPosition())
                 val flip = line.getCaretPosition() >= line.drawnCharacterPositions.size
 
