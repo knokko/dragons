@@ -266,6 +266,7 @@ internal class StandardEntityRenderer(
             ))
             drawCommand.indexCount(meshToDraw.mesh.generator.numIndices)
             drawCommand.instanceCount(meshToDraw.mesh.numTransformationMatrices)
+            // TODO Wait... why can't instanceCount be just 1?
             drawCommand.firstIndex(meshLocation.indexOffset / Int.SIZE_BYTES)
             drawCommand.vertexOffset(meshLocation.vertexOffset / BasicVertex.SIZE)
             drawCommand.firstInstance(meshToDraw.firstMatrixIndex)

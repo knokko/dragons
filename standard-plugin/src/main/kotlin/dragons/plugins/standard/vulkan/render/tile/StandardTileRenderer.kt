@@ -148,6 +148,7 @@ internal class StandardTileRenderer(
         ))
         drawCommand.indexCount((indices.size / 4).toInt())
         drawCommand.instanceCount(transformationMatrices.size)
+        // TODO Wait... why can't instanceCount be just 1?
         drawCommand.firstIndex((indices.offset / 4).toInt())
         drawCommand.vertexOffset((vertices.offset / BasicVertex.SIZE).toInt())
         drawCommand.firstInstance(firstMatrixIndex)
