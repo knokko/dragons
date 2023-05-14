@@ -49,7 +49,7 @@ private fun createShaderModule(vkDevice: VkDevice, stack: MemoryStack, extension
     ciModule.pCode(byteBuffer)
 
     val pModule = stack.callocLong(1)
-    checkReturnValue(vkCreateShaderModule(vkDevice, ciModule, null, pModule))
+    checkReturnValue(vkCreateShaderModule(vkDevice, ciModule, null, pModule), "CreateShaderModule")
 
     memFree(byteBuffer)
     return pModule[0]
