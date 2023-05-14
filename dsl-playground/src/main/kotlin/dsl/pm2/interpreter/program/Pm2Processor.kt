@@ -1,7 +1,6 @@
 package dsl.pm2.interpreter.program
 
 import dsl.pm2.interpreter.Pm2BuiltinFunction
-import dsl.pm2.interpreter.Pm2Scene
 import dsl.pm2.interpreter.Pm2VariableScope
 import dsl.pm2.interpreter.Pm2Vertex
 import dsl.pm2.interpreter.instruction.Pm2Instruction
@@ -15,7 +14,7 @@ internal class Pm2Processor {
 
     private val vertices = mutableListOf<Pm2VertexValue>()
 
-    fun execute(program: Pm2Program): Pm2Scene {
+    fun execute(program: Pm2Program): List<Pm2Vertex> {
         variables.pushScope()
 
         var instructionIndex = 0
@@ -31,7 +30,7 @@ internal class Pm2Processor {
 
         variables.popScope()
 
-        return Pm2Scene(vertices.map { it.toVertex() })
+        return vertices.map { it.toVertex() }
     }
 
     private fun executeInstruction(instruction: Pm2Instruction) {

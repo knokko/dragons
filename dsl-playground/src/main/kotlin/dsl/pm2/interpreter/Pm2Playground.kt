@@ -1,6 +1,7 @@
 package dsl.pm2.interpreter
 
 import dsl.pm2.interpreter.program.Pm2Program
+import dsl.pm2.ui.Pm2SceneComponent
 import graviks.glfw.GraviksWindow
 import graviks2d.context.GraviksContext
 import gruviks.glfw.createAndControlGruviksWindow
@@ -67,5 +68,5 @@ fun main() {
         GraviksContext(instance, width, height)
     }
 
-    createAndControlGruviksWindow(graviksWindow, Pm2SceneComponent(scene))
+    //createAndControlGruviksWindow(graviksWindow, Pm2SceneComponent(scene))
 }

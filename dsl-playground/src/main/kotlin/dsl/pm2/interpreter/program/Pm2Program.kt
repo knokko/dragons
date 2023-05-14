@@ -4,9 +4,6 @@ import dsl.pm2.ProcModel2Lexer
 import dsl.pm2.ProcModel2Parser
 import dsl.pm2.interpreter.*
 import dsl.pm2.interpreter.instruction.Pm2Instruction
-import dsl.pm2.interpreter.instruction.Pm2InstructionType
-import dsl.pm2.interpreter.value.Pm2Value
-import dsl.pm2.interpreter.value.Pm2VertexValue
 import org.antlr.v4.runtime.BailErrorStrategy
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -18,7 +15,7 @@ class Pm2Program(
     val instructions: List<Pm2Instruction>
 ) {
 
-    fun run(): Pm2Scene {
+    fun run(): List<Pm2Vertex> {
         return Pm2Processor().execute(this)
     }
 
