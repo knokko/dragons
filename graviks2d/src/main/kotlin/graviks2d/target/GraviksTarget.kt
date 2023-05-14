@@ -25,6 +25,11 @@ interface GraviksTarget {
 
     fun getImageSize(image: ImageReference): Pair<Int, Int>
 
+    @Throws(UnsupportedOperationException::class)
+    fun drawVulkanImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, vkImage: Long, vkImageView: Long) {
+        throw UnsupportedOperationException("This implementation (${this::class.java.simpleName}) doesn't support this")
+    }
+
     fun drawString(
         minX: Float, yBottom: Float, maxX: Float, yTop: Float,
         string: String, style: TextStyle, dryRun: Boolean = false

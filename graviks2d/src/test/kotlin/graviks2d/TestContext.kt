@@ -3,7 +3,9 @@ package graviks2d
 import graviks2d.context.GraviksContext
 import graviks2d.core.GraviksInstance
 import graviks2d.resource.image.ImageCache
+import graviks2d.resource.image.ImagePair
 import graviks2d.resource.image.ImageReference
+import graviks2d.resource.image.createImagePair
 import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
 import graviks2d.util.HostImage
@@ -404,6 +406,76 @@ class TestContext {
             update()
             assertImageEquals("drawImage.png", hostImage)
         }
+
+        graviks.destroy()
+    }
+
+    @Test
+    fun testDrawVulkanImage() {
+        val backgroundColor = Color.WHITE
+        val graviks = GraviksContext(this.graviksInstance, 50, 50, initialBackgroundColor = backgroundColor)
+
+        val inputImage1 = TestContext::class.java.classLoader.getResourceAsStream("graviks2d/images/test1.png")!!
+        val image1 = createImagePair(this.graviksInstance, inputImage1, "test1")
+        inputImage1.close()
+
+        val inputImage2 = TestContext::class.java.classLoader.getResourceAsStream("graviks2d/images/test2.png")!!
+        val image2 = createImagePair(this.graviksInstance, inputImage2, "test1")
+        inputImage2.close()
+
+        withTestImage(graviks, true) { update, hostImage ->
+            fun drawFlippedImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImagePair) {
+                graviks.drawVulkanImage(xLeft, 1f - yTop, xRight, 1f - yBottom, image.vkImage, image.vkImageView)
+            }
+
+            drawFlippedImage(0.04f, 0.06f, 0.46f, 0.48f, image2)
+            drawFlippedImage(0.14f, 0.34f, 0.56f, 0.76f, image2)
+            drawFlippedImage(0.6f, 0.58f, 0.88f, 0.86f, image1)
+            drawFlippedImage(0.32f, 0.22f, 0.6f, 0.5f, image1)
+            drawFlippedImage(0.54f, 0.22f, 0.96f, 0.64f, image2)
+            update()
+            assertImageEquals("drawImage.png", hostImage)
+        }
+
+        vkDestroyImageView(this.graviksInstance.device, image1.vkImageView, null)
+        vkDestroyImageView(this.graviksInstance.device, image2.vkImageView, null)
+        vmaDestroyImage(this.graviksInstance.vmaAllocator, image1.vkImage, image1.vmaAllocation)
+        vmaDestroyImage(this.graviksInstance.vmaAllocator, image2.vkImage, image2.vmaAllocation)
+
+        graviks.destroy()
+    }
+
+    @Test
+    fun testDrawVulkanImageCombinedWithBasicImage() {
+        val backgroundColor = Color.WHITE
+        val graviks = GraviksContext(this.graviksInstance, 50, 50, initialBackgroundColor = backgroundColor)
+
+        val inputImage1 = TestContext::class.java.classLoader.getResourceAsStream("graviks2d/images/test1.png")!!
+        val image1 = createImagePair(this.graviksInstance, inputImage1, "test1")
+        inputImage1.close()
+
+        val image2 = ImageReference.classLoaderPath("graviks2d/images/test2.png", false)
+
+        withTestImage(graviks, true) { update, hostImage ->
+            fun drawFlippedImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImageReference) {
+                graviks.drawImage(xLeft, 1f - yTop, xRight, 1f - yBottom, image)
+            }
+
+            fun drawFlippedImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImagePair) {
+                graviks.drawVulkanImage(xLeft, 1f - yTop, xRight, 1f - yBottom, image.vkImage, image.vkImageView)
+            }
+
+            drawFlippedImage(0.04f, 0.06f, 0.46f, 0.48f, image2)
+            drawFlippedImage(0.14f, 0.34f, 0.56f, 0.76f, image2)
+            drawFlippedImage(0.6f, 0.58f, 0.88f, 0.86f, image1)
+            drawFlippedImage(0.32f, 0.22f, 0.6f, 0.5f, image1)
+            drawFlippedImage(0.54f, 0.22f, 0.96f, 0.64f, image2)
+            update()
+            assertImageEquals("drawImage.png", hostImage)
+        }
+
+        vkDestroyImageView(this.graviksInstance.device, image1.vkImageView, null)
+        vmaDestroyImage(this.graviksInstance.vmaAllocator, image1.vkImage, image1.vmaAllocation)
 
         graviks.destroy()
     }

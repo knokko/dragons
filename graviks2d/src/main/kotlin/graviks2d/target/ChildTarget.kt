@@ -58,6 +58,19 @@ class ChildTarget(
         }
     }
 
+    override fun drawVulkanImage(
+        xLeft: Float,
+        yBottom: Float,
+        xRight: Float,
+        yTop: Float,
+        vkImage: Long,
+        vkImageView: Long
+    ) {
+        this.transform(xLeft, yBottom, xRight, yTop) { tLeft, tBottom, tRight, tTop ->
+            this.parent.drawVulkanImage(tLeft, tBottom, tRight, tTop, vkImage, vkImageView)
+        }
+    }
+
     override fun getImageSize(image: ImageReference) = parent.getImageSize(image)
 
     override fun drawString(

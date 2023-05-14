@@ -14,22 +14,6 @@ internal class ImageCache(
     private val cache = mutableMapOf<String, CachedImage>()
 
     fun borrowImage(image: ImageReference): BorrowedImage {
-
-        // Custom images don't need to be cached
-        if (image.customVkImage != null) {
-
-            val imagePair = ImagePair(
-                vkImage = image.customVkImage,
-                vkImageView = image.customVkImageView!!,
-                vmaAllocation = 0L, // The allocation is not handled by this cache
-                width = image.customWidth!!,
-                height = image.customHeight!!
-            )
-            return BorrowedImage(
-                imageReference = image, imagePair = CompletableDeferred(imagePair)
-            )
-        }
-
         return synchronized(this) {
 
             if (image.isSvg) {
@@ -83,7 +67,7 @@ internal class ImageCache(
     }
 
     fun returnImage(borrowedImage: BorrowedImage) {
-        if (!borrowedImage.wasReturned && borrowedImage.imageReference.customVkImage == null) {
+        if (!borrowedImage.wasReturned) {
             synchronized(this) {
                 borrowedImage.wasReturned = true
 

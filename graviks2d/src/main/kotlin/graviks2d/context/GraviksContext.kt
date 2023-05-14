@@ -77,6 +77,7 @@ class GraviksContext(
 
     private val commands = ContextCommands(this)
     private val currentImages = mutableMapOf<BorrowedImage, Int>()
+    private val currentCustomImages = mutableMapOf<Long, Int>()
     internal val textShapeCache = TextShapeCache(
         context = this, width = textCacheWidth, height = textCacheHeight,
         vertexBufferSize = textVertexBufferSize, rectanglePackingBufferSize = textRectanglePackingBufferSize,
@@ -187,9 +188,12 @@ class GraviksContext(
         // If no draw commands are queued, we can skip it and spare the synchronization overhead
         if (queuedDrawCommands.isNotEmpty()) {
             runBlocking {
-                val imageViewsArray = Array<Long>(currentImages.size) { 0 }
+                val imageViewsArray = Array<Long>(currentImages.size + currentCustomImages.size) { 0 }
                 for ((borrowedImage, index) in currentImages) {
                     imageViewsArray[index] = borrowedImage.imagePair.await().vkImageView
+                }
+                for ((vkImageView, index) in currentCustomImages) {
+                    imageViewsArray[index] = vkImageView
                 }
                 descriptors.updateDescriptors(imageViewsArray)
             }
@@ -208,6 +212,7 @@ class GraviksContext(
             instance.imageCache.returnImage(borrowedImage)
         }
         currentImages.clear()
+        currentCustomImages.clear()
     }
 
     private fun handlePendingCommand() {
@@ -298,17 +303,7 @@ class GraviksContext(
         }
     }
 
-    override fun drawImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImageReference) {
-        val borrowedImage = this.instance.imageCache.borrowImage(image)
-        var imageIndex = this.currentImages[borrowedImage]
-        if (imageIndex == null) {
-            if (this.currentImages.size >= this.instance.maxNumDescriptorImages) {
-                this.hardFlush(true)
-            }
-            imageIndex = this.currentImages.size
-            this.currentImages[borrowedImage] = imageIndex
-        }
-
+    private fun drawImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, imageIndex: Int) {
         val claimedSpace = this.claimSpace(numVertices = 6, numOperationValues = 5)
 
         this.pushRect(
@@ -326,9 +321,34 @@ class GraviksContext(
         }
     }
 
-    override fun getImageSize(image: ImageReference): Pair<Int, Int> {
-        if (image.customVkImage != null) return Pair(image.customWidth!!, image.customHeight!!)
+    override fun drawImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImageReference) {
+        val borrowedImage = this.instance.imageCache.borrowImage(image)
+        var imageIndex = this.currentImages[borrowedImage]
+        if (imageIndex == null) {
+            if (this.currentImages.size + this.currentCustomImages.size >= this.instance.maxNumDescriptorImages) {
+                this.hardFlush(true)
+            }
+            imageIndex = this.currentImages.size + this.currentCustomImages.size
+            this.currentImages[borrowedImage] = imageIndex
+        }
 
+        drawImage(xLeft, yBottom, xRight, yTop, imageIndex)
+    }
+
+    override fun drawVulkanImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, vkImage: Long, vkImageView: Long) {
+        var imageIndex = this.currentCustomImages[vkImageView]
+        if (imageIndex == null) {
+            if (this.currentImages.size + this.currentCustomImages.size >= this.instance.maxNumDescriptorImages) {
+                this.hardFlush(true)
+            }
+            imageIndex = this.currentImages.size + this.currentCustomImages.size
+            this.currentCustomImages[vkImageView] = imageIndex
+        }
+
+        drawImage(xLeft, yBottom, xRight, yTop, imageIndex)
+    }
+
+    override fun getImageSize(image: ImageReference): Pair<Int, Int> {
         val borrow = this.instance.imageCache.borrowImage(image)
         val size = runBlocking {
             val imagePair = borrow.imagePair.await()
