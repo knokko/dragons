@@ -10,6 +10,7 @@ import gruviks.event.*
 import gruviks.feedback.ReleaseKeyboardFocusFeedback
 import gruviks.feedback.RenderFeedback
 import gruviks.feedback.RequestKeyboardFocusFeedback
+import java.lang.System.currentTimeMillis
 import kotlin.math.min
 import kotlin.math.max
 
@@ -21,18 +22,29 @@ class TextField(
 
     private val textInput = TextInput(initialText) { agent.giveFeedback(RenderFeedback()) }
 
+    private var lastCaretTime = currentTimeMillis()
+    private var showCaret = true
+
+    private fun resetCaretFlipper() {
+        lastCaretTime = currentTimeMillis()
+        showCaret = true
+    }
+
     override fun subscribeToEvents() {
         agent.subscribe(KeyboardFocusAcquiredEvent::class)
         agent.subscribe(KeyboardFocusLostEvent::class)
         agent.subscribe(KeyTypeEvent::class)
         agent.subscribe(KeyPressEvent::class)
         agent.subscribe(CursorClickEvent::class)
+        agent.subscribe(UpdateEvent::class)
     }
 
     override fun processEvent(event: Event) {
         if (event is KeyTypeEvent) {
             textInput.type(event.codePoint)
+            resetCaretFlipper()
         } else if (event is KeyPressEvent) {
+            var shouldResetCaretFlipper = true
             when (event.key.type) {
                 KeyType.Escape -> agent.giveFeedback(ReleaseKeyboardFocusFeedback())
                 // TODO Switch to the next text field?
@@ -41,13 +53,23 @@ class TextField(
                 KeyType.Backspace -> textInput.backspace()
                 KeyType.Right -> textInput.moveRight()
                 KeyType.Left -> textInput.moveLeft()
-                else -> {}
+                else -> shouldResetCaretFlipper = false
             }
+
+            if (shouldResetCaretFlipper) resetCaretFlipper()
         } else if (event is CursorClickEvent) {
             textInput.moveTo(event.position.x)
+            resetCaretFlipper()
             agent.giveFeedback(RequestKeyboardFocusFeedback())
         } else if (event is KeyboardFocusEvent) {
             agent.giveFeedback(RenderFeedback())
+        } else if (event is UpdateEvent) {
+            val currentTime = currentTimeMillis()
+            if (currentTime - lastCaretTime > 500) {
+                lastCaretTime = currentTime
+                showCaret = !showCaret
+                agent.giveFeedback(RenderFeedback())
+            }
         } else {
             throw UnsupportedOperationException("Unexpected event $event")
         }
@@ -80,25 +102,35 @@ class TextField(
         } else textInput.drawnCharacterPositions
 
         return if (hasFocus) {
-            val caretCharIndex = min(textInput.drawnCharacterPositions.size - 1, textInput.getCaretPosition())
-            val flip = textInput.getCaretPosition() >= textInput.drawnCharacterPositions.size
+            var caretX: Float
+            val caretWidth: Float
+            if (showCaret) {
+                val caretCharIndex = min(textInput.drawnCharacterPositions.size - 1, textInput.getCaretPosition())
+                val flip = textInput.getCaretPosition() >= textInput.drawnCharacterPositions.size
 
-            val characterPosition = if (textInput.drawnCharacterPositions.isEmpty()) CharacterPosition(
-                textRegion.minX, 0f, textRegion.maxX, 0f, false
-            )
-            else textInput.drawnCharacterPositions[caretCharIndex]
+                val characterPosition = if (textInput.drawnCharacterPositions.isEmpty()) CharacterPosition(
+                        textRegion.minX, 0f, textRegion.maxX, 0f, false
+                )
+                else textInput.drawnCharacterPositions[caretCharIndex]
 
-            val caretWidth = target.getStringAspectRatio("|", textStyle.font) / target.getAspectRatio() / 4
-            var caretX = if (characterPosition.isLeftToRight == flip) {
-                characterPosition.maxX - caretWidth / 2
-            } else characterPosition.minX - caretWidth / 2
-            caretX = max(caretX, textRegion.minX)
-            caretX = min(caretX, textRegion.maxX - caretWidth)
+                caretWidth = target.getStringAspectRatio("|", textStyle.font) / target.getAspectRatio() / 4
+                caretX = if (characterPosition.isLeftToRight == flip) {
+                    characterPosition.maxX - caretWidth / 2
+                } else characterPosition.minX - caretWidth / 2
+                caretX = max(caretX, textRegion.minX)
+                caretX = min(caretX, textRegion.maxX - caretWidth)
 
-            target.fillRect(caretX, textRegion.minY, caretX + caretWidth, textRegion.maxY, Color.RED)
-            val renderedTextPosition = if (finalDrawnCharacterPositions.isEmpty()) RectangularDrawnRegion(
+                target.fillRect(caretX, textRegion.minY, caretX + caretWidth, textRegion.maxY, textStyle.fillColor)
+            } else if (finalDrawnCharacterPositions.isNotEmpty()) {
+                caretX = finalDrawnCharacterPositions.minOf { it.minX }
+                caretWidth = 0f
+            } else {
+                caretX = -1f
+                caretWidth = 0f
+            }
+            val renderedTextPosition = if (showCaret && finalDrawnCharacterPositions.isEmpty()) RectangularDrawnRegion(
                 caretX, textRegion.minY, caretX + caretWidth, textRegion.maxY
-            ) else RectangularDrawnRegion(
+            ) else if (finalDrawnCharacterPositions.isEmpty()) null else RectangularDrawnRegion(
                 minX = min(finalDrawnCharacterPositions.minOf { it.minX }, caretX),
                 minY = finalDrawnCharacterPositions.minOf { it.minY },
                 maxX = max(finalDrawnCharacterPositions.maxOf { it.maxX }, caretX + caretWidth),

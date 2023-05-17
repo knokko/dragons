@@ -11,6 +11,7 @@ import gruviks.feedback.ReleaseKeyboardFocusFeedback
 import gruviks.feedback.RenderFeedback
 import gruviks.feedback.RequestKeyboardFocusFeedback
 import java.lang.StringBuilder
+import java.lang.System.currentTimeMillis
 import kotlin.math.max
 import kotlin.math.min
 
@@ -22,7 +23,10 @@ class TextArea(
 
     private lateinit var lineInputs: MutableList<TextInput>
     private var lastLineHeight = 0f
+
     private var caretLine: Int? = null
+    private var lastCaretFlipTime = currentTimeMillis()
+    private var showCaret = true
 
     override fun subscribeToEvents() {
         agent.subscribe(KeyboardFocusAcquiredEvent::class)
@@ -30,6 +34,12 @@ class TextArea(
         agent.subscribe(KeyTypeEvent::class)
         agent.subscribe(KeyPressEvent::class)
         agent.subscribe(CursorClickEvent::class)
+        agent.subscribe(UpdateEvent::class)
+    }
+
+    private fun resetCaretFlipper() {
+        lastCaretFlipTime = currentTimeMillis()
+        showCaret = true
     }
 
     override fun processEvent(event: Event) {
@@ -50,6 +60,7 @@ class TextArea(
                 caretLine = newCaretLine
             }
 
+            resetCaretFlipper()
             agent.giveFeedback(RenderFeedback())
         }
 
@@ -57,6 +68,7 @@ class TextArea(
             val caretLine = this.caretLine
             if (caretLine != null && caretLine < lineInputs.size) {
                 lineInputs[caretLine].type(event.codePoint)
+                resetCaretFlipper()
             }
         }
 
@@ -65,6 +77,7 @@ class TextArea(
 
             if (caretLine != null) {
                 val textInput = lineInputs[caretLine!!]
+                var shouldResetCaretFlipper = true
                 when (event.key.type) {
                     KeyType.Tab -> textInput.type('\t'.code)
                     KeyType.Enter -> {
@@ -105,8 +118,19 @@ class TextArea(
                             agent.giveFeedback(RenderFeedback())
                         }
                     }
-                    else -> {}
+                    else -> shouldResetCaretFlipper = false
                 }
+
+                if (shouldResetCaretFlipper) resetCaretFlipper()
+            }
+        }
+
+        if (event is UpdateEvent) {
+            val currentTime = currentTimeMillis()
+            if (currentTime - lastCaretFlipTime > 500) {
+                lastCaretFlipTime = currentTime
+                showCaret = !showCaret
+                agent.giveFeedback(RenderFeedback())
             }
         }
     }
@@ -151,7 +175,7 @@ class TextArea(
                     isLeftToRight = originalPosition.isLeftToRight
             ) }
 
-            if (caretLine == lineIndex && agent.hasKeyboardFocus()) {
+            if (showCaret && caretLine == lineIndex && agent.hasKeyboardFocus()) {
                 val caretCharIndex = min(line.drawnCharacterPositions.size - 1, line.getCaretPosition())
                 val flip = line.getCaretPosition() >= line.drawnCharacterPositions.size
 
@@ -167,7 +191,7 @@ class TextArea(
                 caretX = max(caretX, 0f)
                 caretX = min(caretX, 1f - caretWidth)
 
-                target.fillRect(caretX, minY, caretX + caretWidth, maxY, Color.RED)
+                target.fillRect(caretX, minY, caretX + caretWidth, maxY, textStyle.fillColor)
             }
 
             maxY = minY
