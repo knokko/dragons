@@ -27,6 +27,8 @@ class SimpleFlatMenu(
     private val componentTree = RectTree<ComponentNode>()
     private val componentsToAdd = mutableListOf<Pair<Component, RectRegion>>()
 
+    private val updateComponents = mutableSetOf<ComponentNode>()
+
     private var cameraPosition = Point.percentage(0, 0)
     private var lastVisibleRegion: RectRegion? = null
 
@@ -49,6 +51,10 @@ class SimpleFlatMenu(
             component.initAgent(childAgent)
             component.subscribeToEvents()
             childAgent.forbidFutureSubscriptions()
+
+            if (childAgent.isSubscribed(UpdateEvent::class)) {
+                updateComponents.add(node)
+            }
 
             componentTree.insert(node, region)
             if (giveRenderFeedback) agent.giveFeedback(RenderFeedback())
@@ -238,6 +244,11 @@ class SimpleFlatMenu(
 
             if (event is KeyboardFocusLostEvent || event is KeyboardFocusRejectedEvent) {
                 keyboardFocusNode = null
+            }
+        } else if (event is UpdateEvent) {
+            for (node in updateComponents) {
+                node.component.processEvent(event)
+                visitedNodes.add(node)
             }
         } else {
             throw UnsupportedOperationException("Unknown event $event")

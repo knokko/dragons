@@ -16,6 +16,7 @@ import gruviks.util.FillRectCall
 import gruviks.util.LoggedGraviksTarget
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 import java.util.*
 import kotlin.math.abs
 
@@ -1062,5 +1063,55 @@ class TestSimpleFlatMenu {
         menu.processEvent(KeyPressEvent(Key(1, KeyType.Enter), false))
         assertEquals(1, spamComponent.keyPressCounter)
         assertEquals(1, otherComponent.keyPressCounter)
+    }
+
+    @Test
+    fun testPropagateUpdateEvents() {
+        class ShouldUpdateComponent : Component() {
+
+            var receivedUpdate = false
+
+            override fun subscribeToEvents() {
+                agent.subscribe(UpdateEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                assertTrue(event is UpdateEvent)
+                receivedUpdate = true
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean): RenderResult {
+                return RenderResult(
+                        drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f),
+                        propagateMissedCursorEvents = false
+                )
+            }
+        }
+
+        class ShouldNotUpdateComponent : Component() {
+            override fun subscribeToEvents() {}
+
+            override fun processEvent(event: Event) {
+                fail("This component shouldn't get any events")
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean): RenderResult {
+                return RenderResult(
+                        drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f),
+                        propagateMissedCursorEvents = false
+                )
+            }
+        }
+
+        val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLACK)
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK) { false })
+        menu.subscribeToEvents()
+
+        val updateComponent = ShouldUpdateComponent()
+        menu.addComponent(updateComponent, RectRegion.percentage(10, 20, 30, 40))
+        menu.addComponent(ShouldNotUpdateComponent(), RectRegion.percentage(60, 70, 80, 90))
+
+        menu.processEvent(UpdateEvent())
+        assertTrue(updateComponent.receivedUpdate)
     }
 }

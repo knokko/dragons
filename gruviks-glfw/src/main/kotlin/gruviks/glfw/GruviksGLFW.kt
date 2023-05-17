@@ -89,6 +89,8 @@ fun createAndControlGruviksWindow(graviksWindow: GraviksWindow, rootComponent: C
             forceRender = true
         }
 
+        gruviksWindow.fireEvent(RawUpdateEvent())
+
         graviksWindow.graviksContext?.run {
             gruviksWindow.render(this, forceRender, regionsToPresent)
 

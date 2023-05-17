@@ -79,6 +79,10 @@ class RawEventAdapter {
             result.add(KeyReleaseEvent(event.key))
         }
 
+        if (event is RawUpdateEvent) {
+            result.add(UpdateEvent())
+        }
+
         return result
     }
 

@@ -4,6 +4,8 @@ import kotlin.math.absoluteValue
 
 abstract class Event
 
+class UpdateEvent : Event()
+
 abstract class PositionedEvent(val position: EventPosition): Event() {
     abstract fun copyWitChangedPosition(newPosition: EventPosition): PositionedEvent
 }
