@@ -32,7 +32,7 @@ internal fun rasterizeTextAtlas(
             viewport.width(textCache.width.toFloat())
             viewport.height(textCache.height.toFloat())
             viewport.minDepth(0f)
-            viewport.minDepth(1f)
+            viewport.maxDepth(1f)
 
             val scissors = VkRect2D.calloc(1, stack)
             val scissor = scissors[0]
