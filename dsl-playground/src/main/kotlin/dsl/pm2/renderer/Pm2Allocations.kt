@@ -45,6 +45,9 @@ class Pm2Allocations internal constructor(
             for (vertex in vertices) {
                 byteBuffer.putFloat(vertex.x)
                 byteBuffer.putFloat(vertex.y)
+                byteBuffer.putFloat(vertex.color.redF)
+                byteBuffer.putFloat(vertex.color.greenF)
+                byteBuffer.putFloat(vertex.color.blueF)
             }
 
             Pm2Mesh(

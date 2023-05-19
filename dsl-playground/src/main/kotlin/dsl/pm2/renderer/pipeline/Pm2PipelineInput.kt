@@ -7,21 +7,27 @@ import org.lwjgl.vulkan.VkPipelineVertexInputStateCreateInfo
 import org.lwjgl.vulkan.VkVertexInputAttributeDescription
 import org.lwjgl.vulkan.VkVertexInputBindingDescription
 
-internal const val STATIC_VERTEX_SIZE = 8
+internal const val STATIC_VERTEX_SIZE = 20
 
 internal fun createVertexInputState(stack: MemoryStack): VkPipelineVertexInputStateCreateInfo {
     val bindings = VkVertexInputBindingDescription.calloc(1, stack)
     val staticBinding = bindings[0]
     staticBinding.binding(0)
     staticBinding.stride(STATIC_VERTEX_SIZE)
-    staticBinding.inputRate(VK_VERTEX_INPUT_RATE_INSTANCE)
+    staticBinding.inputRate(VK_VERTEX_INPUT_RATE_VERTEX)
 
-    val attributes = VkVertexInputAttributeDescription.calloc(1, stack)
+    val attributes = VkVertexInputAttributeDescription.calloc(2, stack)
     val attributePosition = attributes[0]
     attributePosition.location(0)
     attributePosition.binding(0)
     attributePosition.format(VK_FORMAT_R32G32_SFLOAT)
     attributePosition.offset(0)
+
+    val attributeColor = attributes[1]
+    attributeColor.location(1)
+    attributeColor.binding(0)
+    attributeColor.format(VK_FORMAT_R32G32B32_SFLOAT)
+    attributeColor.offset(8)
 
     val ciVertexInput = VkPipelineVertexInputStateCreateInfo.calloc(stack)
     ciVertexInput.`sType$Default`()
