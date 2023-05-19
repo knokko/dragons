@@ -106,8 +106,14 @@ class Pm2Scene internal constructor(
             subpass.pDepthStencilAttachment(null)
             subpass.pPreserveAttachments(null)
 
-            // TODO Check whether I need external subpass dependencies
-            val dependencies = null
+            val dependencies = VkSubpassDependency.calloc(1, stack)
+            dependencies[0].srcSubpass(0)
+            dependencies[0].dstSubpass(VK_SUBPASS_EXTERNAL)
+            dependencies[0].srcStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+            dependencies[0].dstStageMask(VK_PIPELINE_STAGE_TRANSFER_BIT)
+            dependencies[0].srcAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+            dependencies[0].dstAccessMask(VK_ACCESS_TRANSFER_READ_BIT)
+            dependencies[0].dependencyFlags(0)
 
             val ciRenderPass = VkRenderPassCreateInfo.calloc(stack)
             ciRenderPass.`sType$Default`()
@@ -202,6 +208,7 @@ class Pm2Scene internal constructor(
             clearValues.color().float32(0, backgroundRed / 255f)
             clearValues.color().float32(1, backgroundGreen / 255f)
             clearValues.color().float32(2, backgroundBlue / 255f)
+            clearValues.color().float32(3, 1f)
 
             val biRenderPass = VkRenderPassBeginInfo.calloc(stack)
             biRenderPass.`sType$Default`()
@@ -213,6 +220,15 @@ class Pm2Scene internal constructor(
             biRenderPass.pClearValues(clearValues)
 
             vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
+
+            val viewport = VkViewport.calloc(1, stack)
+            viewport[0].set(0f, 0f, width.toFloat(), height.toFloat(), 0f, 1f)
+            vkCmdSetViewport(commandBuffer, 0, viewport)
+
+            val scissor = VkRect2D.calloc(1, stack)
+            scissor.extent().set(width, height)
+
+            vkCmdSetScissor(commandBuffer, 0, scissor)
 
             instance.recordDraw(commandBuffer, pipelineInfo, meshes)
 

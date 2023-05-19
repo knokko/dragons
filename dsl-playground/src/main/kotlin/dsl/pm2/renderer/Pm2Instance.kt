@@ -33,7 +33,7 @@ class Pm2Instance(
                 vkCmdBindVertexBuffers(commandBuffer, 0, stack.longs(vertexBuffer), stack.longs(0))
                 // TODO Experiment with optimizations
                 for (mesh in currentMeshes) {
-                    vkCmdDraw(commandBuffer, 3 * mesh.numVertices, 1, mesh.vertexOffset, 0)
+                    vkCmdDraw(commandBuffer, mesh.numVertices, 1, mesh.vertexOffset, 0)
                 }
             }
         }

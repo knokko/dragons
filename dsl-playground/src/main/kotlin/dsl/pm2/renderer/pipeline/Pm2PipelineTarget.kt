@@ -29,6 +29,7 @@ internal fun createRasterizationState(stack: MemoryStack): VkPipelineRasterizati
     ciRaster.cullMode(VK_CULL_MODE_NONE) // TODO Should really enable this when upgrading to 3d
     ciRaster.frontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE)
     ciRaster.depthBiasEnable(false)
+    ciRaster.lineWidth(1f)
 
     return ciRaster
 }

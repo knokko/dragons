@@ -36,7 +36,7 @@ private fun populateFragmentShader(ciShader: VkPipelineShaderStageCreateInfo, fr
 }
 
 private fun createShaderModule(vkDevice: VkDevice, stack: MemoryStack, extension: String): Long {
-    val resourcePath = "dsl/pm2/shaders/simple.$extension/.spv"
+    val resourcePath = "dsl/pm2/shaders/simple.$extension.spv"
     val inputStream = Pm2Instance::class.java.classLoader.getResourceAsStream(resourcePath)!!
     val byteArray = inputStream.readAllBytes()
     inputStream.close()
