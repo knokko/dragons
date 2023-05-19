@@ -6,9 +6,10 @@ import gruviks.component.Component
 import gruviks.component.RectangularDrawnRegion
 import gruviks.component.RenderResult
 import gruviks.event.Event
+import gruviks.feedback.RenderFeedback
 
 class TextComponent(
-    private val text: String,
+    private var text: String,
     private val style: TextStyle
 ): Component() {
     override fun subscribeToEvents() {
@@ -17,6 +18,11 @@ class TextComponent(
 
     override fun processEvent(event: Event) {
         throw UnsupportedOperationException("This component shouldn't receive any events")
+    }
+
+    fun setText(newText: String) {
+        this.text = newText
+        agent.giveFeedback(RenderFeedback())
     }
 
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {
