@@ -10,7 +10,12 @@ class Pm2PipelineInfo(
     internal val renderPass: Long,
     internal val subpass: Int,
     internal val setBlendState: (MemoryStack, VkPipelineColorBlendStateCreateInfo) -> Unit
-)
+) {
+    override fun hashCode() = renderPass.toInt() + 131 * subpass + 29 * setBlendState.hashCode()
+
+    override fun equals(other: Any?) = other is Pm2PipelineInfo && this.renderPass == other.renderPass
+            && this.subpass == other.subpass && this.setBlendState == other.setBlendState
+}
 
 internal class Pm2Pipeline(
     val vkPipeline: Long,
