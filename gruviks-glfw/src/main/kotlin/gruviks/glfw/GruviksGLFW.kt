@@ -16,13 +16,18 @@ import gruviks.event.KeyType
 import gruviks.event.raw.*
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.system.MemoryStack
+import org.lwjgl.vulkan.VK10.vkDeviceWaitIdle
 import org.lwjgl.vulkan.VkRectLayerKHR
 import java.lang.Integer.max
 import java.lang.Integer.min
 import java.lang.System.currentTimeMillis
 import java.lang.Thread.sleep
 
-fun createAndControlGruviksWindow(graviksWindow: GraviksWindow, rootComponent: Component) {
+fun createAndControlGruviksWindow(
+    graviksWindow: GraviksWindow,
+    rootComponent: Component,
+    destroyFunction: () -> Unit = { }
+) {
     val gruviksWindow = GruviksWindow(rootComponent)
 
     val mouseCursor = Cursor(0)
@@ -116,6 +121,8 @@ fun createAndControlGruviksWindow(graviksWindow: GraviksWindow, rootComponent: C
         sleep(1)
     }
 
+    vkDeviceWaitIdle(graviksWindow.graviksInstance.device)
+    destroyFunction()
     graviksWindow.destroy()
 }
 
