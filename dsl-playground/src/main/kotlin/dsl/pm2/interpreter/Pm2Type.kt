@@ -18,5 +18,7 @@ object BuiltinTypes {
 
     val POSITION = Pm2Type("position", createDefaultValue = null, acceptValue = { value -> value is Pm2PositionValue })
 
+    val COLOR = Pm2Type("color", createDefaultValue = { Pm2ColorValue(0f, 0f, 0f) }, acceptValue = { value -> value is Pm2ColorValue })
+
     val VERTEX = Pm2Type("Vertex", createDefaultValue = { Pm2VertexValue() }, acceptValue = { value -> value is Pm2VertexValue })
 }

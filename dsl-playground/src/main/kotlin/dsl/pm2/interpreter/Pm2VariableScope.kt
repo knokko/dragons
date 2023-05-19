@@ -15,8 +15,8 @@ class Pm2VariableScope {
 
     fun defineVariable(type: Pm2Type, name: String, initialValue: Pm2Value) {
         val lastScope = scopes.last()
-        if (lastScope.containsKey(name)) throw IllegalArgumentException("Duplicate variable $name")
-        if (!type.acceptValue(initialValue)) throw IllegalArgumentException("Type $type doesn't accept $initialValue")
+        if (lastScope.containsKey(name)) throw Pm2RuntimeError("Duplicate variable $name")
+        if (!type.acceptValue(initialValue)) throw Pm2RuntimeError("Type $type doesn't accept $initialValue")
         lastScope[name] = Pair(type, initialValue)
     }
 
@@ -25,13 +25,13 @@ class Pm2VariableScope {
             val maybeVariable = scope[name]
             if (maybeVariable != null) {
                 if (!maybeVariable.first.acceptValue(newValue)) {
-                    throw IllegalArgumentException("$name has type ${maybeVariable.first}, which doesn't accept $newValue")
+                    throw Pm2RuntimeError("$name has type ${maybeVariable.first}, which doesn't accept $newValue")
                 }
                 scope[name] = Pair(maybeVariable.first, newValue)
                 return
             }
         }
-        throw IllegalArgumentException("Unknown variable $name")
+        throw Pm2RuntimeError("Unknown variable $name")
     }
 
     fun getVariable(name: String): Pm2Value? {

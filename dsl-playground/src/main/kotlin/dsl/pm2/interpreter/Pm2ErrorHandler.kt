@@ -13,6 +13,10 @@ class Pm2CompileError(message: String) : Exception(message) {
     constructor(description: String, lineNumber: Int, linePosition: Int) : this("$lineNumber:$linePosition $description")
 }
 
+class Pm2RuntimeError(message: String) : RuntimeException(message) {
+    constructor(description: String, lineNumber: Int) : this("line $lineNumber: $description")
+}
+
 class Pm2ErrorHandler : BaseErrorListener() {
 
     override fun syntaxError(

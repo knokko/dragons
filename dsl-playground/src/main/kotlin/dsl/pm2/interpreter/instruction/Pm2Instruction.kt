@@ -5,6 +5,7 @@ import dsl.pm2.interpreter.value.Pm2Value
 
 class Pm2Instruction(
     val type: Pm2InstructionType,
+    val lineNumber: Int,
     /**
      * When *type* is `PushValue`, this is the value to be pushed, or null if the default value of *variableType*
      * should be pushed. For all other instructions, this must be null.

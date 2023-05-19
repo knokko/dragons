@@ -58,7 +58,7 @@ class Pm2Converter : ProcModel2BaseListener() {
                 )
             }
 
-            instructions.add(Pm2Instruction(Pm2InstructionType.InvokeBuiltinFunction, name = functionName))
+            instructions.add(Pm2Instruction(Pm2InstructionType.InvokeBuiltinFunction, lineNumber = ctx.start.line, name = functionName))
         } else {
             println(functionName)
             TODO("Add support for user-defined functions")
@@ -73,7 +73,7 @@ class Pm2Converter : ProcModel2BaseListener() {
 
         // In statements like `functionCall(x);`, the result is ignored, and should therefore be deleted from the stack
         if (ctx!!.functionInvocation() != null) {
-            instructions.add(Pm2Instruction(Pm2InstructionType.Delete))
+            instructions.add(Pm2Instruction(Pm2InstructionType.Delete, lineNumber = ctx.start.line))
         }
     }
 
@@ -86,17 +86,30 @@ class Pm2Converter : ProcModel2BaseListener() {
             if (type.createDefaultValue == null) throw Pm2CompileError(
                 "Type $typeName doesn't have a default value", ctx.start.line, ctx.start.charPositionInLine
             )
-            instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, variableType = type))
+            instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.start.line, variableType = type))
         }
-        instructions.add(Pm2Instruction(Pm2InstructionType.DeclareVariable, variableType = type, name = ctx.IDENTIFIER(1).text))
+        instructions.add(Pm2Instruction(
+            Pm2InstructionType.DeclareVariable,
+            lineNumber = ctx.start.line,
+            variableType = type,
+            name = ctx.IDENTIFIER(1).text)
+        )
     }
 
     override fun exitVariableReassignmentTarget(ctx: ProcModel2Parser.VariableReassignmentTargetContext?) {
         val identifiers = ctx!!.IDENTIFIER().toMutableList()
         if (identifiers.size > 1) {
-            instructions.add(Pm2Instruction(Pm2InstructionType.PushVariable, name = identifiers.removeFirst().text))
+            instructions.add(Pm2Instruction(
+                Pm2InstructionType.PushVariable,
+                lineNumber = ctx.start.line,
+                name = identifiers.removeFirst().text)
+            )
             while (identifiers.size > 1) {
-                instructions.add(Pm2Instruction(Pm2InstructionType.PushProperty, name = identifiers.removeFirst().text))
+                instructions.add(Pm2Instruction(
+                    Pm2InstructionType.PushProperty,
+                    lineNumber = ctx.start.line,
+                    name = identifiers.removeFirst().text)
+                )
             }
         }
     }
@@ -104,7 +117,7 @@ class Pm2Converter : ProcModel2BaseListener() {
     override fun exitVariableReassignment(ctx: ProcModel2Parser.VariableReassignmentContext?) {
         val identifiers = ctx!!.variableReassignmentTarget().IDENTIFIER().toMutableList()
         val instructionType = if (identifiers.size == 1) Pm2InstructionType.ReassignVariable else Pm2InstructionType.SetProperty
-        instructions.add(Pm2Instruction(instructionType, name = identifiers.last().text))
+        instructions.add(Pm2Instruction(instructionType, lineNumber = ctx.start.line, name = identifiers.last().text))
     }
 
     override fun exitExpression(ctx: ProcModel2Parser.ExpressionContext?) {
@@ -115,50 +128,71 @@ class Pm2Converter : ProcModel2BaseListener() {
     override fun exitForLoopHeader(ctx: ProcModel2Parser.ForLoopHeaderContext?) {
         loopIndexStack.add(instructions.size)
 
-        instructions.add(Pm2Instruction(Pm2InstructionType.Duplicate))
-        instructions.add(Pm2Instruction(Pm2InstructionType.PushScope))
-        instructions.add(Pm2Instruction(Pm2InstructionType.PushVariable, name = ctx!!.forLoopVariable().text))
+        instructions.add(Pm2Instruction(Pm2InstructionType.Duplicate, lineNumber = ctx!!.start.line))
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushScope, lineNumber = ctx.start.line))
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushVariable, lineNumber = ctx.start.line, name = ctx.forLoopVariable().text))
 
         if (ctx.forLoopComparator2().text == "<=") {
-            instructions.add(Pm2Instruction(Pm2InstructionType.SmallerThan))
+            instructions.add(Pm2Instruction(Pm2InstructionType.SmallerThan, lineNumber = ctx.start.line))
         } else {
-            instructions.add(Pm2Instruction(Pm2InstructionType.SmallerOrEqual))
+            instructions.add(Pm2Instruction(Pm2InstructionType.SmallerOrEqual, lineNumber = ctx.start.line))
         }
         // Note: the jumpOffset will be fixed later
-        instructions.add(Pm2Instruction(Pm2InstructionType.Jump, jumpOffset = -1))
+        instructions.add(Pm2Instruction(Pm2InstructionType.Jump, lineNumber = ctx.start.line, jumpOffset = -1))
     }
 
     override fun exitForLoopComparator1(ctx: ProcModel2Parser.ForLoopComparator1Context?) {
         if (ctx!!.text == "<") {
-            instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, value = Pm2IntValue(1)))
-            instructions.add(Pm2Instruction(Pm2InstructionType.Add))
+            instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.start.line, value = Pm2IntValue(1)))
+            instructions.add(Pm2Instruction(Pm2InstructionType.Add, lineNumber = ctx.start.line))
         } else if (ctx.text != "<=") {
             throw Pm2CompileError("Unexpected lower bound comparator of for loop: ${ctx.text}")
         }
     }
 
     override fun exitForLoopVariable(ctx: ProcModel2Parser.ForLoopVariableContext?) {
-        instructions.add(Pm2Instruction(Pm2InstructionType.PushScope))
-        instructions.add(Pm2Instruction(Pm2InstructionType.DeclareVariable, variableType = BuiltinTypes.INT, name = ctx!!.text))
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushScope, lineNumber = ctx!!.start.line))
+        instructions.add(Pm2Instruction(
+            Pm2InstructionType.DeclareVariable,
+            lineNumber = ctx.start.line,
+            variableType = BuiltinTypes.INT,
+            name = ctx.text
+        ))
     }
 
     override fun exitForLoop(ctx: ProcModel2Parser.ForLoopContext?) {
-        instructions.add(Pm2Instruction(Pm2InstructionType.PopScope))
-        instructions.add(Pm2Instruction(Pm2InstructionType.PushVariable, name = ctx!!.forLoopHeader().forLoopVariable().text))
-        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, value = Pm2IntValue(1)))
-        instructions.add(Pm2Instruction(Pm2InstructionType.Add))
-        instructions.add(Pm2Instruction(Pm2InstructionType.ReassignVariable, name = ctx.forLoopHeader().forLoopVariable().text))
+        instructions.add(Pm2Instruction(Pm2InstructionType.PopScope, lineNumber = ctx!!.start.line))
+        instructions.add(Pm2Instruction(
+            Pm2InstructionType.PushVariable,
+            lineNumber = ctx.start.line,
+            name = ctx.forLoopHeader().forLoopVariable().text)
+        )
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.start.line, value = Pm2IntValue(1)))
+        instructions.add(Pm2Instruction(Pm2InstructionType.Add, lineNumber = ctx.start.line))
+        instructions.add(Pm2Instruction(
+            Pm2InstructionType.ReassignVariable,
+            lineNumber = ctx.start.line,
+            name = ctx.forLoopHeader().forLoopVariable().text
+        ))
 
-        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, value = Pm2BooleanValue(true)))
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.start.line, value = Pm2BooleanValue(true)))
         val jumpBackInstructionIndex = instructions.size
         val targetInstructionIndex = loopIndexStack.removeLast()
-        instructions.add(Pm2Instruction(Pm2InstructionType.Jump, jumpOffset = targetInstructionIndex - jumpBackInstructionIndex))
-        instructions.add(Pm2Instruction(Pm2InstructionType.Delete))
-        instructions.add(Pm2Instruction(Pm2InstructionType.PopScope))
-        instructions.add(Pm2Instruction(Pm2InstructionType.PopScope))
+        instructions.add(Pm2Instruction(
+            Pm2InstructionType.Jump,
+            lineNumber = ctx.start.line,
+            jumpOffset = targetInstructionIndex - jumpBackInstructionIndex
+        ))
+        instructions.add(Pm2Instruction(Pm2InstructionType.Delete, lineNumber = ctx.start.line))
+        instructions.add(Pm2Instruction(Pm2InstructionType.PopScope, lineNumber = ctx.start.line))
+        instructions.add(Pm2Instruction(Pm2InstructionType.PopScope, lineNumber = ctx.start.line))
 
         val exitInstructionIndex = targetInstructionIndex + 4
-        instructions[exitInstructionIndex] = Pm2Instruction(Pm2InstructionType.Jump, jumpOffset = 1 + jumpBackInstructionIndex - exitInstructionIndex)
+        instructions[exitInstructionIndex] = Pm2Instruction(
+            Pm2InstructionType.Jump,
+            lineNumber = ctx.start.line,
+            jumpOffset = 1 + jumpBackInstructionIndex - exitInstructionIndex
+        )
     }
 
     fun dumpInstructions() {
