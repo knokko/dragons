@@ -348,6 +348,10 @@ class GraviksContext(
         drawImage(xLeft, yBottom, xRight, yTop, imageIndex)
     }
 
+    override fun addWaitSemaphore(vkSemaphore: Long) {
+        this.commands.addWaitSemaphore(vkSemaphore)
+    }
+
     override fun getImageSize(image: ImageReference): Pair<Int, Int> {
         val borrow = this.instance.imageCache.borrowImage(image)
         val size = runBlocking {

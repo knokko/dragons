@@ -30,6 +30,11 @@ interface GraviksTarget {
         throw UnsupportedOperationException("This implementation (${this::class.java.simpleName}) doesn't support this")
     }
 
+    @Throws(UnsupportedOperationException::class)
+    fun addWaitSemaphore(vkSemaphore: Long) {
+        throw UnsupportedOperationException("This implementation (${this::class.java.simpleName}) doesn't support this")
+    }
+
     fun drawString(
         minX: Float, yBottom: Float, maxX: Float, yTop: Float,
         string: String, style: TextStyle, dryRun: Boolean = false

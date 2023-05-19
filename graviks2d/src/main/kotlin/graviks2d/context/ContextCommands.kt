@@ -16,6 +16,8 @@ internal class ContextCommands(
     private val commandBuffer: VkCommandBuffer
     private val fence: Long
 
+    private val waitSemaphores = mutableListOf<Long>()
+
     private var hasDrawnBefore = false
 
     private var isStillRecording = false
@@ -86,7 +88,10 @@ internal class ContextCommands(
         isStillRecording = true
     }
 
-    private fun endSubmitCommandBuffer(stack: MemoryStack, signalSemaphore: Long?, submissionMarker: CompletableDeferred<Unit>?) {
+    private fun endSubmitCommandBuffer(
+        stack: MemoryStack, signalSemaphore: Long?,
+        submissionMarker: CompletableDeferred<Unit>?
+    ) {
 
         if (!isStillRecording) throw IllegalStateException("No commands are recorded")
 
@@ -97,7 +102,18 @@ internal class ContextCommands(
         val pSubmitInfo = VkSubmitInfo.calloc(1, stack)
         val submitInfo = pSubmitInfo[0]
         submitInfo.`sType$Default`()
-        submitInfo.waitSemaphoreCount(0)
+        submitInfo.waitSemaphoreCount(waitSemaphores.size)
+        if (waitSemaphores.isNotEmpty()) {
+            val pWaitSemaphores = stack.callocLong(waitSemaphores.size)
+            val pWaitDstStageMasks = stack.callocInt(waitSemaphores.size)
+            for ((index, semaphore) in waitSemaphores.withIndex()) {
+                pWaitSemaphores.put(index, semaphore)
+                pWaitDstStageMasks.put(index, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
+            }
+            submitInfo.pWaitSemaphores(pWaitSemaphores)
+            submitInfo.pWaitDstStageMask(pWaitDstStageMasks)
+        }
+        waitSemaphores.clear()
         if (signalSemaphore != null) {
             submitInfo.pSignalSemaphores(stack.longs(signalSemaphore))
         } else {
@@ -133,7 +149,10 @@ internal class ContextCommands(
         hasPendingSubmission = false
     }
 
-    private fun endSubmitWaitCommandBuffer(stack: MemoryStack, signalSemaphore: Long?, submissionMarker: CompletableDeferred<Unit>?) {
+    private fun endSubmitWaitCommandBuffer(
+        stack: MemoryStack, signalSemaphore: Long?,
+        submissionMarker: CompletableDeferred<Unit>?
+    ) {
         endSubmitCommandBuffer(stack, signalSemaphore, submissionMarker)
         awaitPendingSubmission(stack)
     }
@@ -188,6 +207,10 @@ internal class ContextCommands(
             this.commandBuffer, srcStageMask, dstStageMask, 0,
             null, null, imageBarriers
         )
+    }
+
+    fun addWaitSemaphore(semaphore: Long) {
+        waitSemaphores.add(semaphore)
     }
 
     fun copyColorImageTo(

@@ -71,6 +71,10 @@ class ChildTarget(
         }
     }
 
+    override fun addWaitSemaphore(vkSemaphore: Long) {
+        this.parent.addWaitSemaphore(vkSemaphore)
+    }
+
     override fun getImageSize(image: ImageReference) = parent.getImageSize(image)
 
     override fun drawString(
