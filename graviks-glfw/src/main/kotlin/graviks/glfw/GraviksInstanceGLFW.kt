@@ -11,6 +11,7 @@ import org.lwjgl.util.vma.VmaVulkanFunctions
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.EXTDebugUtils.*
 import org.lwjgl.vulkan.EXTMemoryBudget.VK_EXT_MEMORY_BUDGET_EXTENSION_NAME
+import org.lwjgl.vulkan.EXTValidationFeatures.*
 import org.lwjgl.vulkan.KHRBindMemory2.VK_KHR_BIND_MEMORY_2_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRDedicatedAllocation.VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRGetMemoryRequirements2.VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME
@@ -52,23 +53,30 @@ internal fun createVulkanInstance(
 
     if (enableValidation) {
         requiredExtensions.add(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
+        requiredExtensions.add(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)
     }
 
     val availableExtensions = run {
-        val pNumExtensions = stack.callocInt(1)
-        assertSuccess(
-            vkEnumerateInstanceExtensionProperties(null as ByteBuffer?, pNumExtensions, null)
-        )
-        val numExtensions = pNumExtensions[0]
-
-        val pExtensions = VkExtensionProperties.calloc(numExtensions, stack)
-        assertSuccess(
-            vkEnumerateInstanceExtensionProperties(null as ByteBuffer?, pNumExtensions, pExtensions)
-        )
-
         val extensions = HashSet<String>()
-        for (extension in pExtensions) {
-            extensions.add(extension.extensionNameString())
+
+        val layerNames = mutableListOf<String?>(null)
+        if (enableValidation) layerNames.add("VK_LAYER_KHRONOS_validation")
+        for (layerName in layerNames) {
+            val pLayerName = if (layerName == null) null else stack.UTF8(layerName)
+            val pNumExtensions = stack.callocInt(1)
+            assertSuccess(
+                vkEnumerateInstanceExtensionProperties(pLayerName, pNumExtensions, null)
+            )
+            val numExtensions = pNumExtensions[0]
+
+            val pExtensions = VkExtensionProperties.calloc(numExtensions, stack)
+            assertSuccess(
+                vkEnumerateInstanceExtensionProperties(pLayerName, pNumExtensions, pExtensions)
+            )
+
+            for (extension in pExtensions) {
+                extensions.add(extension.extensionNameString())
+            }
         }
         extensions
     }
@@ -120,6 +128,17 @@ internal fun createVulkanInstance(
             throw RuntimeException("Missing validation layer")
         }
         ciInstance.ppEnabledLayerNames(stack.pointers(stack.UTF8("VK_LAYER_KHRONOS_validation")))
+
+        val validationFeatures = VkValidationFeaturesEXT.calloc(stack)
+        validationFeatures.`sType$Default`()
+        validationFeatures.pEnabledValidationFeatures(stack.ints(
+            VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
+            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT
+        ))
+
+        ciInstance.pNext(validationFeatures.address())
     }
 
     val pInstance = stack.callocPointer(1)
