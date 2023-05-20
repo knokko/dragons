@@ -138,7 +138,8 @@ class Pm2Converter : ProcModel2BaseListener() {
             instructions.add(Pm2Instruction(Pm2InstructionType.SmallerOrEqual, lineNumber = ctx.start.line))
         }
         // Note: the jumpOffset will be fixed later
-        instructions.add(Pm2Instruction(Pm2InstructionType.Jump, lineNumber = ctx.start.line, jumpOffset = -1))
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.start.line, value = Pm2IntValue(-1)))
+        instructions.add(Pm2Instruction(Pm2InstructionType.Jump, lineNumber = ctx.start.line))
     }
 
     override fun exitForLoopComparator1(ctx: ProcModel2Parser.ForLoopComparator1Context?) {
@@ -179,19 +180,20 @@ class Pm2Converter : ProcModel2BaseListener() {
         val jumpBackInstructionIndex = instructions.size
         val targetInstructionIndex = loopIndexStack.removeLast()
         instructions.add(Pm2Instruction(
-            Pm2InstructionType.Jump,
+            Pm2InstructionType.PushValue,
             lineNumber = ctx.start.line,
-            jumpOffset = targetInstructionIndex - jumpBackInstructionIndex
+            value = Pm2IntValue(targetInstructionIndex - jumpBackInstructionIndex - 1)
         ))
+        instructions.add(Pm2Instruction(Pm2InstructionType.Jump, lineNumber = ctx.start.line,))
         instructions.add(Pm2Instruction(Pm2InstructionType.Delete, lineNumber = ctx.start.line))
         instructions.add(Pm2Instruction(Pm2InstructionType.PopScope, lineNumber = ctx.start.line))
         instructions.add(Pm2Instruction(Pm2InstructionType.PopScope, lineNumber = ctx.start.line))
 
-        val exitInstructionIndex = targetInstructionIndex + 4
-        instructions[exitInstructionIndex] = Pm2Instruction(
-            Pm2InstructionType.Jump,
+        val exitOffsetInstructionIndex = targetInstructionIndex + 4
+        instructions[exitOffsetInstructionIndex] = Pm2Instruction(
+            Pm2InstructionType.PushValue,
             lineNumber = ctx.start.line,
-            jumpOffset = 1 + jumpBackInstructionIndex - exitInstructionIndex
+            value = Pm2IntValue(2 + jumpBackInstructionIndex - exitOffsetInstructionIndex)
         )
     }
 

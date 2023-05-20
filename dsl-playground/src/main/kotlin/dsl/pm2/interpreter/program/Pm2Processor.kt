@@ -25,7 +25,9 @@ internal class Pm2Processor {
             val instruction = program.instructions[instructionIndex]
             instructionIndex += try {
                 if (instruction.type == Pm2InstructionType.Jump) {
-                    if (valueStack.removeLast().booleanValue()) instruction.jumpOffset!! else 1
+                    val jumpOffset = valueStack.removeLast().intValue()
+                    val shouldJump = valueStack.removeLast().booleanValue()
+                    if (shouldJump) jumpOffset else 1
                 } else {
                     executeInstruction(instruction)
                     1

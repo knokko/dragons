@@ -22,12 +22,7 @@ class Pm2Instruction(
      * - When *type* is `InvokeBuiltinFunction`, this is the name of the function
      * - For all other instructions, this must be null.
      */
-    val name: String? = null,
-    /**
-     * When *type* is `Jump`, this is the number of instructions to skip. (0 is an endless loop, -1 jumps to
-     * previous instruction, and 1 jumps to the next instruction (basically a no-op instruction))
-     */
-    val jumpOffset: Int? = null
+    val name: String? = null
 ) {
     init {
         if (type != Pm2InstructionType.PushValue && value != null) {
@@ -45,7 +40,6 @@ class Pm2Instruction(
         var result = type.toString()
         if (value != null) result = "$result $value"
         if (name != null) result = "$result $name"
-        if (jumpOffset != null) result = "$result $jumpOffset"
         return result
     }
 }
