@@ -14,6 +14,7 @@ enum class Pm2InstructionType {
     SmallerOrEqual,
 
     Duplicate,
+    Swap,
     Delete,
 
     DeclareVariable,

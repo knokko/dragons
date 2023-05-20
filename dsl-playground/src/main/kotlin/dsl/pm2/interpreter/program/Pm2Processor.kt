@@ -39,6 +39,9 @@ internal class Pm2Processor {
 
         variables.popScope()
 
+        if (variables.hasScope()) throw IllegalStateException("All scopes should have been popped")
+        if (valueStack.isNotEmpty()) throw IllegalStateException("Value stack should be empty")
+
         if (vertices.isEmpty()) throw Pm2RuntimeError("Not a single triangle was produced")
 
         return vertices.map { it.toVertex() }
@@ -53,6 +56,12 @@ internal class Pm2Processor {
             Pm2InstructionType.PushProperty -> valueStack.add(valueStack.removeLast().getProperty(instruction.name!!))
 
             Pm2InstructionType.Duplicate -> valueStack.add(valueStack.last())
+            Pm2InstructionType.Swap -> {
+                val x = valueStack.removeLast()
+                val y = valueStack.removeLast()
+                valueStack.add(x)
+                valueStack.add(y)
+            }
             Pm2InstructionType.Delete -> valueStack.removeLast()
 
             Pm2InstructionType.Divide -> { val right = valueStack.removeLast(); valueStack.add(valueStack.removeLast() / right) }
