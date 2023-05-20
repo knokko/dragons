@@ -5,6 +5,8 @@ import dsl.pm2.interpreter.value.Pm2Value
 class Pm2VariableScope {
     private val scopes = mutableListOf<MutableMap<String, Pair<Pm2Type, Pm2Value>>>()
 
+    fun hasScope() = scopes.isNotEmpty()
+
     fun pushScope() {
         scopes.add(mutableMapOf())
     }

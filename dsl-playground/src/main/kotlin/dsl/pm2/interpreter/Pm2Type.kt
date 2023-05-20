@@ -12,6 +12,8 @@ class Pm2Type(
 
 object BuiltinTypes {
 
+    val VOID = Pm2Type("void", createDefaultValue = null, acceptValue = { value -> value is Pm2NoneValue })
+
     val FLOAT = Pm2Type("float", createDefaultValue = { Pm2FloatValue(0f) }, acceptValue = { value -> value is Pm2FloatValue })
 
     val INT = Pm2Type("int", createDefaultValue = { Pm2IntValue(0) }, acceptValue = { value -> value is Pm2IntValue })

@@ -15,18 +15,17 @@ class Pm2Types {
     fun defineType(name: String, type: Pm2Type) {
         val lastScope = scopes.last()
         if (lastScope.containsKey(name)) {
-            // TODO Handle this properly
-            throw IllegalArgumentException("Duplicate type $name")
+            throw Pm2CompileError("Duplicate type $name")
         }
 
         lastScope[name] = type
     }
 
-    fun getType(name: String): Pm2Type? {
+    fun getType(name: String): Pm2Type {
         for (scope in scopes.reversed()) {
             val maybeType = scope[name]
             if (maybeType != null) return maybeType
         }
-        return null
+        throw Pm2CompileError("Unknown type $name")
     }
 }

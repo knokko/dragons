@@ -21,7 +21,7 @@ variableReassignment : variableReassignmentTarget '=' expression ';';
 
 variableReassignmentTarget: IDENTIFIER ('.' IDENTIFIER)*;
 
-functionDeclaration : IDENTIFIER IDENTIFIER '(' ((IDENTIFIER ',')* IDENTIFIER)? ')' '{' innerStatement* '}';
+functionDeclaration : IDENTIFIER IDENTIFIER '(' ((IDENTIFIER IDENTIFIER ',')* IDENTIFIER IDENTIFIER)? ')' '{' innerStatement* expression? '}';
 
 functionInvocation : IDENTIFIER '(' ((expression ',')* expression)? ')';
 

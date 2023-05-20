@@ -51,15 +51,24 @@ private val program2 = """
     center.position = (0.0, 0.0);
     float radius = 0.3;
     
-    int numParts = 100;
+    Color blue() {
+        rgb(0.0, 0.0, 1.0)
+    }
+    
+    void noop() {}
+    
+    int numParts = 10;
     for (0 <= part < numParts) {
         Vertex edge1;
         float angle1 = 360.0 * float(part) / float(numParts);
         edge1.position = (center.position.x + radius * cos(angle1), center.position.y + radius * sin(angle1));
         
+        noop();
+        
         Vertex edge2;
         float angle2 = 360.0 * float(part + 1) / float(numParts);
         edge2.position = (center.position.x + radius * cos(angle2), center.position.y + radius * sin(angle2));
+        edge2.color = blue();
         
         produceTriangle(center, edge2, edge1);
     }

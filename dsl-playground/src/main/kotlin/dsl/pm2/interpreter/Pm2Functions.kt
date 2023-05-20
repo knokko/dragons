@@ -2,7 +2,7 @@ package dsl.pm2.interpreter
 
 class Pm2Functions {
 
-    private val scopes = mutableListOf<MutableMap<String, Pm2Function>>()
+    private val scopes = mutableListOf<MutableMap<Pm2FunctionSignature, Pm2Function>>()
 
     fun pushScope() {
         scopes.add(mutableMapOf())
@@ -12,21 +12,20 @@ class Pm2Functions {
         scopes.removeLast()
     }
 
-    fun defineUserFunction(name: String, function: Pm2Function) {
+    fun defineUserFunction(signature: Pm2FunctionSignature, function: Pm2Function) {
         val lastScope = scopes.last()
-        if (lastScope.containsKey(name)) {
-            // TODO Handle this properly
-            throw IllegalArgumentException("Duplicate function $name")
+        if (lastScope.containsKey(signature)) {
+            throw Pm2CompileError("Duplicate function $signature")
         }
 
-        lastScope[name] = function
+        lastScope[signature] = function
     }
 
-    fun getUserFunction(name: String): Pm2Function? {
+    fun getUserFunction(signature: Pm2FunctionSignature): Pm2Function {
         for (scope in scopes.reversed()) {
-            val maybeFunction = scope[name]
+            val maybeFunction = scope[signature]
             if (maybeFunction != null) return maybeFunction
         }
-        return null
+        throw Pm2CompileError("Unknown function $signature")
     }
 }

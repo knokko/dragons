@@ -7,6 +7,7 @@ import dsl.pm2.interpreter.instruction.Pm2InstructionType
 import dsl.pm2.interpreter.program.Pm2Program
 import dsl.pm2.interpreter.value.Pm2BooleanValue
 import dsl.pm2.interpreter.value.Pm2IntValue
+import dsl.pm2.interpreter.value.Pm2NoneValue
 import org.antlr.v4.runtime.tree.ErrorNode
 
 class Pm2Converter : ProcModel2BaseListener() {
@@ -16,6 +17,7 @@ class Pm2Converter : ProcModel2BaseListener() {
     private val functions = Pm2Functions()
 
     private val loopIndexStack = mutableListOf<Int>()
+    private val functionIndexStack = mutableListOf<Int>()
 
     lateinit var program: Pm2Program
 
@@ -25,9 +27,11 @@ class Pm2Converter : ProcModel2BaseListener() {
 
     override fun enterStart(ctx: ProcModel2Parser.StartContext?) {
         types.pushScope()
+        types.defineType("void", BuiltinTypes.VOID)
         types.defineType("float", BuiltinTypes.FLOAT)
         types.defineType("int", BuiltinTypes.INT)
         types.defineType("position", BuiltinTypes.POSITION)
+        types.defineType("Color", BuiltinTypes.COLOR)
         types.defineType("Vertex", BuiltinTypes.VERTEX)
 
         functions.pushScope()
@@ -39,12 +43,105 @@ class Pm2Converter : ProcModel2BaseListener() {
         program = Pm2Program(instructions)
     }
 
+    override fun enterFunctionDeclaration(ctx: ProcModel2Parser.FunctionDeclarationContext?) {
+
+        // This ensures that the program will 'jump over the function declaration'
+        // it prevents the function from being invoked when it is declared
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx!!.start.line, value = Pm2BooleanValue(true)))
+        functionIndexStack.add(instructions.size)
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.start.line, value = Pm2IntValue(-1)))
+        instructions.add(Pm2Instruction(Pm2InstructionType.Jump, lineNumber = ctx.start.line))
+
+        // And store the actual function
+        val startInstruction = instructions.size
+
+        // This ensures that all parameters are defined
+        val parameters = (2 until ctx.IDENTIFIER().size step 2).map { rawIndex ->
+            val parameterType = types.getType(ctx.IDENTIFIER(rawIndex).text)
+            val parameterName = ctx.IDENTIFIER(rawIndex + 1).text
+            Pair(parameterType, parameterName)
+        }
+
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushScope, lineNumber = ctx.start.line))
+        for ((parameterType, parameterName) in parameters.reversed()) {
+            instructions.add(Pm2Instruction(
+                Pm2InstructionType.DeclareVariable,
+                lineNumber = ctx.start.line,
+                variableType = parameterType,
+                name = parameterName
+            ))
+        }
+
+        val returnType = types.getType(ctx.IDENTIFIER(0).text)
+        val function = Pm2Function(startInstruction, returnType)
+
+        val name = ctx.IDENTIFIER(1).text
+        val signature = Pm2FunctionSignature(name, parameters.size)
+
+        functions.defineUserFunction(signature, function)
+    }
+
+    override fun exitFunctionDeclaration(ctx: ProcModel2Parser.FunctionDeclarationContext?) {
+
+        // The result is implicitly none when no result expression is given
+        if (ctx!!.expression() == null) {
+            instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.stop.line, value = Pm2NoneValue()))
+        }
+
+        // These two instructions are basically a type check
+        instructions.add(Pm2Instruction(
+            Pm2InstructionType.DeclareVariable,
+            lineNumber = ctx.stop.line,
+            variableType = types.getType(ctx.IDENTIFIER(0).text),
+            name = "\$result"
+        ))
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushVariable, lineNumber = ctx.stop.line, name = "\$result"))
+
+        // Swap the result with the return address
+        instructions.add(Pm2Instruction(Pm2InstructionType.Swap, lineNumber = ctx.stop.line))
+
+        val returnInstructionAddress = instructions.size + 5
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.stop.line, value = Pm2IntValue(returnInstructionAddress)))
+
+        // Jump offset = return address - address of return jump
+        instructions.add(Pm2Instruction(Pm2InstructionType.Subtract, lineNumber = ctx.stop.line))
+
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.stop.line, value = Pm2BooleanValue(true)))
+        instructions.add(Pm2Instruction(Pm2InstructionType.Swap, lineNumber = ctx.stop.line))
+        instructions.add(Pm2Instruction(Pm2InstructionType.PopScope, lineNumber = ctx.stop.line))
+        instructions.add(Pm2Instruction(Pm2InstructionType.Jump, lineNumber = ctx.stop.line))
+
+        // Finish the 'function declaration jump' that was created during enterFunctionDeclaration
+        val jumpOverIndex = functionIndexStack.removeLast()
+        val targetIndex = instructions.size
+        instructions[jumpOverIndex] = Pm2Instruction(
+            Pm2InstructionType.PushValue, lineNumber = ctx.start.line,
+            value = Pm2IntValue(targetIndex - jumpOverIndex - 1)
+        )
+    }
+
     override fun enterParameterDeclaration(ctx: ProcModel2Parser.ParameterDeclarationContext?) {
         TODO("Not yet implemented")
     }
 
     override fun exitParameterDeclaration(ctx: ProcModel2Parser.ParameterDeclarationContext?) {
         TODO("Not yet implemented")
+    }
+
+    override fun enterFunctionInvocation(ctx: ProcModel2Parser.FunctionInvocationContext?) {
+        val functionName = ctx!!.IDENTIFIER().text
+        val builtinFunction = Pm2BuiltinFunction.MAP[functionName]
+        if (builtinFunction == null) {
+
+            // I need to remember the return address via this instruction, but I don't know its value, yet
+            // I will supply it during exitFunctionInvocation()
+            functionIndexStack.add(instructions.size)
+            instructions.add(Pm2Instruction(
+                Pm2InstructionType.PushValue,
+                lineNumber = ctx.start.line,
+                value = Pm2IntValue(-1)
+            ))
+        }
     }
 
     override fun exitFunctionInvocation(ctx: ProcModel2Parser.FunctionInvocationContext?) {
@@ -60,13 +157,27 @@ class Pm2Converter : ProcModel2BaseListener() {
 
             instructions.add(Pm2Instruction(Pm2InstructionType.InvokeBuiltinFunction, lineNumber = ctx.start.line, name = functionName))
         } else {
-            println(functionName)
-            TODO("Add support for user-defined functions")
+            val functionSignature = Pm2FunctionSignature(functionName, ctx.expression().size)
+            val function = functions.getUserFunction(functionSignature)
+
+            // Jump to the function
+            instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.start.line, value = Pm2BooleanValue(true)))
+
+            val jumpInstructionIndex = instructions.size + 1
+            instructions.add(Pm2Instruction(
+                Pm2InstructionType.PushValue,
+                lineNumber = ctx.start.line,
+                value = Pm2IntValue(function.startInstruction - jumpInstructionIndex)
+            ))
+            instructions.add(Pm2Instruction(Pm2InstructionType.Jump, lineNumber = ctx.start.line))
+
+            // Fix the 'remember return address' instruction from enterFunctionInvocation()...
+            instructions[functionIndexStack.removeLast()] = Pm2Instruction(
+                Pm2InstructionType.PushValue,
+                lineNumber = ctx.start.line,
+                value = Pm2IntValue(jumpInstructionIndex + 1)
+            )
         }
-//        val function = context.getFunction(functionName) ?: throw IllegalArgumentException("Unknown function $functionName")
-//
-//        val parameters = Array(ctx.expression().size) { this.expressionEvaluator.pop() }.reversed()
-//        function.invokeChecked(parameters)
     }
 
     override fun exitInnerStatement(ctx: ProcModel2Parser.InnerStatementContext?) {
@@ -79,9 +190,8 @@ class Pm2Converter : ProcModel2BaseListener() {
 
     override fun exitVariableDeclaration(ctx: ProcModel2Parser.VariableDeclarationContext?) {
         val typeName = ctx!!.IDENTIFIER(0).text
-        val type = types.getType(typeName) ?: throw Pm2CompileError(
-            "Unknown type $typeName", ctx.start.line, ctx.start.charPositionInLine
-        ) // TODO Allow types that are not defined yet
+        val type = types.getType(typeName)
+        // TODO Allow types that are not defined yet
         if (ctx.expression() == null) {
             if (type.createDefaultValue == null) throw Pm2CompileError(
                 "Type $typeName doesn't have a default value", ctx.start.line, ctx.start.charPositionInLine
@@ -184,7 +294,8 @@ class Pm2Converter : ProcModel2BaseListener() {
             lineNumber = ctx.start.line,
             value = Pm2IntValue(targetInstructionIndex - jumpBackInstructionIndex - 1)
         ))
-        instructions.add(Pm2Instruction(Pm2InstructionType.Jump, lineNumber = ctx.start.line,))
+        instructions.add(Pm2Instruction(Pm2InstructionType.Jump, lineNumber = ctx.start.line))
+        instructions.add(Pm2Instruction(Pm2InstructionType.Delete, lineNumber = ctx.start.line))
         instructions.add(Pm2Instruction(Pm2InstructionType.Delete, lineNumber = ctx.start.line))
         instructions.add(Pm2Instruction(Pm2InstructionType.PopScope, lineNumber = ctx.start.line))
         instructions.add(Pm2Instruction(Pm2InstructionType.PopScope, lineNumber = ctx.start.line))
@@ -195,11 +306,5 @@ class Pm2Converter : ProcModel2BaseListener() {
             lineNumber = ctx.start.line,
             value = Pm2IntValue(2 + jumpBackInstructionIndex - exitOffsetInstructionIndex)
         )
-    }
-
-    fun dumpInstructions() {
-        for (instruction in instructions) {
-            println(instruction)
-        }
     }
 }
