@@ -21,61 +21,13 @@ import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkImageCreateInfo
 import org.lwjgl.vulkan.VkImageViewCreateInfo
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
+import java.io.File
 import java.lang.System.currentTimeMillis
-
-private val program1 = """
-    float minX = 2.0 * 0.1;
-    float minY;
-    float maxY = minY + 1.0;
-    
-    Vertex bottomLeft;
-    bottomLeft.position = (minX, minY);
-    
-    Vertex bottomRight;
-    bottomRight.position = (minX + 0.4, maxY);
-    
-    maxY = 1.3;
-    
-    Vertex topRight;
-    topRight.position = (minX + 0.5, maxY);
-    
-    Vertex topLeft;
-    topLeft.position = (minX, topRight.position.y);
-    
-    produceTriangle(bottomLeft, bottomRight, topRight);
-    produceTriangle(topRight, topLeft, bottomLeft);
-""".trimIndent()
-
-private val program2 = """
-    Vertex center;
-    center.position = (0.0, 0.0);
-    float radius = 0.3;
-    
-    Color blue() {
-        rgb(0.0, 0.0, 1.0)
-    }
-    
-    void noop() {}
-    
-    int numParts = 10;
-    for (0 <= part < numParts) {
-        Vertex edge1;
-        float angle1 = 360.0 * float(part) / float(numParts);
-        edge1.position = (center.position.x + radius * cos(angle1), center.position.y + radius * sin(angle1));
-        
-        noop();
-        
-        Vertex edge2;
-        float angle2 = 360.0 * float(part + 1) / float(numParts);
-        edge2.position = (center.position.x + radius * cos(angle2), center.position.y + radius * sin(angle2));
-        edge2.color = blue();
-        
-        produceTriangle(center, edge2, edge1);
-    }
-""".trimIndent()
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 
 fun main() {
-    val initialProgramCode = program2
+    val initialProgramCode = Files.readString(File("pm2-models/playground.pm2").toPath())
     val initialVertices = Pm2Program.compile(initialProgramCode).run()
 
     val graviksWindow = GraviksWindow(
@@ -231,6 +183,13 @@ fun main() {
             errorComponent.setText(runtimeError.message!!)
         }
     }, RectRegion.percentage(25, 7, 70, 13))
+
+    playgroundMenu.addComponent(TextButton("Save", icon = null, style = TextButtonStyle.textAndBorder(
+        baseColor = Color.rgbInt(100, 100, 200),
+        hoverColor = Color.rgbInt(70, 70, 255)
+    )) { _, _ ->
+        Files.write(File("pm2-models/playground.pm2").toPath(), codeArea.getText().toByteArray(StandardCharsets.UTF_8))
+    }, RectRegion.percentage(70, 7, 150, 13))
 
     createAndControlGruviksWindow(graviksWindow, playgroundMenu) {
         pm2Instance.allocations.destroyMesh(currentMesh)

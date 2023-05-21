@@ -1,0 +1,25 @@
+void produceCircle(float x, float y, float radius, int numParts, Color color) {
+    Vertex center;
+    center.position = (x, y);
+    center.color = color;
+
+    for (0 <= part < numParts) {
+        Vertex edge1;
+        float angle1 = 360.0 * float(part) / float(numParts);
+        edge1.position = (x + radius * cos(angle1), y + radius * sin(angle1));
+        edge1.color = color;
+
+        Vertex edge2;
+        float angle2 = 360.0 * float(part + 1) / float(numParts);
+        edge2.position = (x + radius * cos(angle2), y + radius * sin(angle2));
+        edge2.color = color;
+
+        produceTriangle(center, edge2, edge1);
+    }
+}
+
+float radius = 0.6;
+for (0 <= circle < 5) {
+    float angle = 360.0 * circle / 5.0;
+    produceCircle(radius * cos(angle), radius * sin(angle), 0.3, 10, rgb(0.9, 0.7, 0.0));
+}
