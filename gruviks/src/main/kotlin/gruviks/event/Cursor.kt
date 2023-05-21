@@ -110,3 +110,25 @@ class CursorMoveEvent(
         return result
     }
 }
+
+class CursorScrollEvent(
+    val cursor: Cursor,
+    position: EventPosition,
+    /**
+     * How far it should scroll:
+     * - 0f is a no-op
+     * - 1f is scrolling down '1 screen' (so after scrolling 1f, you would no longer see any content that was shown
+     * before the scroll started)
+     * - 0.5f is scrolling down 'half a screen' (so after scrolling 0.5f, half of the window would contain 'new' content)
+     * - -1f is scrolling up '1 screen'
+     */
+    val amount: Float,
+    val direction: ScrollDirection
+) : PositionedEvent(position) {
+    override fun copyWitChangedPosition(newPosition: EventPosition) = CursorScrollEvent(cursor, newPosition, amount, direction)
+}
+
+enum class ScrollDirection {
+    Horizontal,
+    Vertical
+}

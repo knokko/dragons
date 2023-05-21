@@ -17,6 +17,8 @@ class RawEventAdapter {
 
             val cursorState = lastCursorStates[event.cursor]
 
+            // If cursorState is null, no press event can be fired because the cursor position is unknown.
+            // This should normally not happen.
             if (event is RawCursorPressEvent && cursorState != null) {
                 result.add(CursorPressEvent(event.cursor, cursorState.position, event.button))
 
@@ -24,8 +26,10 @@ class RawEventAdapter {
                 if (buttonState != null) buttonState.pressTime = currentTimeMillis()
                 else cursorState.pressedButtons[event.button] = CursorButtonState(currentTimeMillis())
             }
-            // If cursorState is null, no press event can be fired because the cursor position is unknown.
-            // This should normally not happen.
+
+            if (event is RawCursorScrollEvent && cursorState != null) {
+                result.add(CursorScrollEvent(event.cursor, cursorState.position, event.amount, event.direction))
+            }
 
             if (event is RawCursorReleaseEvent && cursorState != null) {
 

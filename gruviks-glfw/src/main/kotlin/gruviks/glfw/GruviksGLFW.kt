@@ -4,15 +4,12 @@ import graviks.glfw.GraviksWindow
 import gruviks.component.Component
 import gruviks.component.RectangularDrawnRegion
 import gruviks.core.GruviksWindow
-import gruviks.event.Cursor
-import gruviks.event.EventPosition
+import gruviks.event.*
 import gruviks.event.raw.RawCursorLeaveEvent
 import gruviks.event.raw.RawCursorMoveEvent
 import gruviks.event.raw.RawCursorPressEvent
 import gruviks.event.raw.RawCursorReleaseEvent
 import gruviks.util.optimizeRecentDrawnRegions
-import gruviks.event.Key
-import gruviks.event.KeyType
 import gruviks.event.raw.*
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.system.MemoryStack
@@ -34,6 +31,7 @@ fun createAndControlGruviksWindow(
     val regionsToPresent = mutableListOf<RectangularDrawnRegion>()
 
     var lastPresentTime = 0L
+    var shiftDown = false
 
     graviksWindow.graviksContext?.run { gruviksWindow.render(this, true, null) }
 
@@ -51,6 +49,20 @@ fun createAndControlGruviksWindow(
         }
         if (action == GLFW_RELEASE) {
             gruviksWindow.fireEvent(RawCursorReleaseEvent(mouseCursor, button))
+        }
+    }
+
+    glfwSetScrollCallback(graviksWindow.windowHandle) { _, x, y ->
+
+        // There is no science behind the magic value 0.1: it just feels like a reasonable scale
+        val scale = 0.1f
+
+        if (x != 0.0) {
+            gruviksWindow.fireEvent(RawCursorScrollEvent(mouseCursor, x.toFloat() * scale, ScrollDirection.Horizontal))
+        }
+        if (y != 0.0) {
+            val direction = if (shiftDown) ScrollDirection.Horizontal else ScrollDirection.Vertical
+            gruviksWindow.fireEvent(RawCursorScrollEvent(mouseCursor, y.toFloat() * -scale, direction))
         }
     }
 
@@ -82,6 +94,11 @@ fun createAndControlGruviksWindow(
         }
         if (wasPressed == GLFW_RELEASE) {
             gruviksWindow.fireEvent(RawKeyReleaseEvent(key))
+        }
+
+        if (keyCode == GLFW_KEY_LEFT_SHIFT || keyCode == GLFW_KEY_RIGHT_SHIFT) {
+            if (wasPressed == GLFW_PRESS || wasPressed == GLFW_REPEAT) shiftDown = true
+            if (wasPressed == GLFW_RELEASE) shiftDown = false
         }
     }
     
