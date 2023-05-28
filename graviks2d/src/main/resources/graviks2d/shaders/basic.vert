@@ -2,12 +2,15 @@
 
 layout(location = 0) in vec2 inPosition;
 layout(location = 1) in int inOperationIndex;
+layout(location = 2) in int inScissorIndex;
 
-layout(location = 0) out int outOperationIndex;
-layout(location = 1) out vec2 outQuadCoordinates;
-layout(location = 2) out vec4 outTextColor;
-layout(location = 3) out vec4 outStrokeColor;
-layout(location = 4) out vec2 outStrokeDelta;
+layout(location = 0) out vec2 outPosition;
+layout(location = 1) out int outOperationIndex;
+layout(location = 2) out int outScissorIndex;
+layout(location = 3) out vec2 outQuadCoordinates;
+layout(location = 4) out vec4 outTextColor;
+layout(location = 5) out vec4 outStrokeColor;
+layout(location = 6) out vec2 outStrokeDelta;
 
 layout(set = 0, binding = 0) readonly buffer ShaderStorage {
     int operations[];
@@ -40,7 +43,10 @@ float decodeFloat(int rawValue) {
 }
 
 void main() {
+    outPosition = inPosition;
     gl_Position = vec4(inPosition.x * 2.0 - 1.0, inPosition.y * -2.0 + 1.0, 0.0, 1.0);
+
+    outScissorIndex = inScissorIndex;
 
     int operationCode = shaderStorage.operations[inOperationIndex];
 

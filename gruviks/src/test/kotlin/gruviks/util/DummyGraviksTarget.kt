@@ -4,6 +4,7 @@ import graviks2d.resource.image.ImageReference
 import graviks2d.resource.text.CharacterPosition
 import graviks2d.resource.text.FontReference
 import graviks2d.resource.text.TextStyle
+import graviks2d.target.GraviksScissor
 import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 
@@ -16,6 +17,10 @@ class DummyGraviksTarget(
     var drawRoundedRectCounter = 0
     var drawImageCounter = 0
     var drawStringCounter = 0
+
+    override fun setScissor(newScissor: GraviksScissor) = GraviksScissor(0f, 0f, 1f, 1f)
+
+    override fun getScissor() = GraviksScissor(0f, 0f, 1f, 1f)
 
     override fun fillTriangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Color) {
         fillTriangleCounter += 1

@@ -2,11 +2,13 @@
 
 layout(constant_id = 0) const int NUM_TEXTURES = 100;
 
-layout(location = 0) in flat int operationIndex;
-layout(location = 1) in vec2 quadCoordinates;
-layout(location = 2) in vec4 textColor;
-layout(location = 3) in vec4 strokeColor;
-layout(location = 4) in vec2 strokeDelta;
+layout(location = 0) in vec2 position;
+layout(location = 1) in flat int operationIndex;
+layout(location = 2) in flat int scissorIndex;
+layout(location = 3) in vec2 quadCoordinates;
+layout(location = 4) in vec4 textColor;
+layout(location = 5) in vec4 strokeColor;
+layout(location = 6) in vec2 strokeDelta;
 
 layout(location = 0) out vec4 outColor;
 
@@ -40,6 +42,15 @@ const int OP_CODE_DRAW_TEXT = 6;
 const int OP_CODE_DRAW_ROUNDED_RECT = 7;
 
 void main() {
+    float scissorMinX = decodeFloat(shaderStorage.operations[scissorIndex]);
+    float scissorMinY = decodeFloat(shaderStorage.operations[scissorIndex + 1]);
+    float scissorMaxX = decodeFloat(shaderStorage.operations[scissorIndex + 2]);
+    float scissorMaxY = decodeFloat(shaderStorage.operations[scissorIndex + 3]);
+
+    if (position.x < scissorMinX || position.x > scissorMaxX || position.y < scissorMinY || position.y > scissorMaxY) {
+        discard;
+    }
+
     int operationCode = shaderStorage.operations[operationIndex];
 
     if (operationCode == OP_CODE_FILL) {

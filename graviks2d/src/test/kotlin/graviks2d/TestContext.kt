@@ -7,6 +7,7 @@ import graviks2d.resource.image.ImagePair
 import graviks2d.resource.image.ImageReference
 import graviks2d.resource.image.createImagePair
 import graviks2d.resource.text.TextStyle
+import graviks2d.target.GraviksScissor
 import graviks2d.util.Color
 import graviks2d.util.HostImage
 import graviks2d.util.assertSuccess
@@ -297,6 +298,48 @@ class TestContext {
             assertColorEquals(backgroundColor, hostImage.getPixel(52, 20))
             assertColorEquals(color, hostImage.getPixel(20, 75))
             assertColorEquals(backgroundColor, hostImage.getPixel(20, 85))
+        }
+
+        graviks.destroy()
+    }
+
+    @Test
+    fun testSetScissor() {
+        val backgroundColor = Color.rgbInt(100, 0, 0)
+        val graviks = GraviksContext(
+            this.graviksInstance, 10, 10, initialBackgroundColor = backgroundColor
+        )
+
+        withTestImage(graviks, true) { update, hostImage ->
+            graviks.setScissor(GraviksScissor(0.1f, 0.2f, 0.3f, 0.4f))
+            graviks.fillRect(0f, 0f, 0.2f, 1f, Color.RED)
+            graviks.fillRect(0.2f, 0f, 1f, 1f, Color.GREEN)
+            graviks.setScissor(GraviksScissor(0.5f, 0.5f, 1f, 1f))
+            graviks.fillRect(0.2f, 0.4f, 0.8f, 0.9f, Color.BLUE)
+            update()
+            for (x in 0 until 10) {
+                assertColorEquals(backgroundColor, hostImage.getPixel(x, 0))
+                assertColorEquals(backgroundColor, hostImage.getPixel(x, 1))
+                assertColorEquals(backgroundColor, hostImage.getPixel(x, 4))
+                assertColorEquals(backgroundColor, hostImage.getPixel(x, 9))
+            }
+            for (y in 2 until 4) {
+                assertColorEquals(backgroundColor, hostImage.getPixel(0, y))
+                assertColorEquals(Color.RED, hostImage.getPixel(1, y))
+                assertColorEquals(Color.GREEN, hostImage.getPixel(2, y))
+                for (x in 3 until 10) {
+                    assertColorEquals(backgroundColor, hostImage.getPixel(x, y))
+                }
+            }
+            for (y in 5 until 9) {
+                assertColorEquals(backgroundColor, hostImage.getPixel(0, y))
+                assertColorEquals(backgroundColor, hostImage.getPixel(1, y))
+                for (x in 5 until 8) {
+                    assertColorEquals(Color.BLUE, hostImage.getPixel(x, y))
+                }
+                assertColorEquals(backgroundColor, hostImage.getPixel(8, y))
+                assertColorEquals(backgroundColor, hostImage.getPixel(9, y))
+            }
         }
 
         graviks.destroy()

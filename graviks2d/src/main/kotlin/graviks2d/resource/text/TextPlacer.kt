@@ -1,5 +1,6 @@
 package graviks2d.resource.text
 
+import java.lang.Integer.max
 import kotlin.math.roundToInt
 
 internal class PlacedCharacter(
@@ -115,7 +116,7 @@ internal fun placeText(
             var numCharsToDraw = 0
             for ((charWidth, extraAdvance) in if (discardRight) { charWidths } else { charWidths.reversed() }) {
                 val effectiveWidth = charWidth + extraAdvance
-                if (remainingWidth >= effectiveWidth) {
+                if (remainingWidth >= 0) {
                     remainingWidth -= effectiveWidth
                     numCharsToDraw += 1
                 } else {
@@ -128,7 +129,7 @@ internal fun placeText(
             } else {
                 orderedChars.chars.size - numCharsToDraw until orderedChars.chars.size
             }
-            val reducedWidth = availableWidth - remainingWidth
+            val reducedWidth = availableWidth - max(0, remainingWidth)
             if (textPosition == -1) {
                 Pair(pixelAvailableMinX, charsToDraw)
             } else if (textPosition == 1) {

@@ -7,6 +7,10 @@ import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
 
 interface GraviksTarget {
+    fun setScissor(newScissor: GraviksScissor): GraviksScissor
+
+    fun getScissor(): GraviksScissor
+
     fun fillTriangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Color)
 
     fun fillRect(x1: Float, y1: Float, x2: Float, y2: Float, color: Color)

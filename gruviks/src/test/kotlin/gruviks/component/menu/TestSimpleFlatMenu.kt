@@ -1,5 +1,6 @@
 package gruviks.component.menu
 
+import graviks2d.target.GraviksScissor
 import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 import gruviks.component.*
@@ -408,14 +409,16 @@ class TestSimpleFlatMenu {
         menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK, NO_KEYBOARD_FOCUS))
         menu.subscribeToEvents()
 
+        val defaultScissor = GraviksScissor(0f, 0f, 1f, 1f)
+        val scissor1 = GraviksScissor(0f, 0.5f, 0.5f, 1f)
         menu.addComponent(ClickDrawComponent(), RectRegion.percentage(0, 50, 50, 100))
         checkRenderResult(menu.render(target, true), ::checkEntireDrawnRegion)
 
         // The menu should have used 1 fillRect call to draw its background and the component should
         // also have called fillRect once
         checkFillRectCalls(
-            FillRectCall(0f, 0f, 1f, 1f, backgroundColor),
-            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED)
+            FillRectCall(0f, 0f, 1f, 1f, backgroundColor, defaultScissor),
+            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED, scissor1)
         )
 
         // If we draw again without forcing, nothing should happen
@@ -423,19 +426,20 @@ class TestSimpleFlatMenu {
         checkFillRectCalls()
 
         // If we add another component, only that component should be drawn, as well as the requested region behind it
+        val scissor2 = GraviksScissor(0f, 0f, 0.5f, 0.5f)
         menu.addComponent(ClickDrawComponent(), RectRegion.percentage(0, 0, 50, 50))
         checkRenderResult(menu.render(target, false), ::checkComponent2DrawnRegion)
         checkFillRectCalls(
-            FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, backgroundColor),
-            FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, Color.RED)
+            FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, backgroundColor, scissor2),
+            FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, Color.RED, scissor2)
         )
 
         // If we force a draw, both components and the background should be rendered
         checkRenderResult(menu.render(target, true), ::checkEntireDrawnRegion)
         checkFillRectCalls(
-            FillRectCall(0f, 0f, 1f, 1f, backgroundColor),
-            FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, Color.RED),
-            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED)
+            FillRectCall(0f, 0f, 1f, 1f, backgroundColor, defaultScissor),
+            FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, Color.RED, scissor2),
+            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED, scissor1)
         )
 
         // If we redraw after doing nothing, nothing should be redrawn
@@ -447,8 +451,8 @@ class TestSimpleFlatMenu {
         menu.processEvent(CursorClickEvent(Cursor(5), EventPosition(0.25f, 0.75f), 3))
         checkRenderResult(menu.render(target, false), ::checkComponent1DrawnRegion)
         checkFillRectCalls(
-            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, backgroundColor),
-            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED)
+            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, backgroundColor, scissor1),
+            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED, scissor1)
         )
 
         // If we redraw again after doing nothing, nothing should be redrawn
@@ -457,12 +461,18 @@ class TestSimpleFlatMenu {
 
         // When we shift the camera, the background should be redrawn, and the components should be drawn
         // at their new relative position
+        val shiftedScissor1 = GraviksScissor(
+            scissor1.minX - 0.4f, scissor1.minY - 0.2f, scissor1.maxX - 0.4f, scissor1.maxY - 0.2f
+        )
+        val shiftedScissor2 = GraviksScissor(
+            scissor2.minX - 0.4f, scissor2.minY - 0.2f, scissor2.maxX - 0.4f, scissor2.maxY - 0.2f
+        )
         menu.shiftCamera(Coordinate.percentage(40), Coordinate.percentage(20))
         checkRenderResult(menu.render(target, false), ::checkEntireDrawnRegion)
         checkFillRectCalls(
-            FillRectCall(0f, 0f, 1f, 1f, backgroundColor),
-            FillRectCall(-0.35f, -0.15f, 0.05f, 0.25f, Color.RED),
-            FillRectCall(-0.35f, 0.35f, 0.05f, 0.75f, Color.RED)
+            FillRectCall(0f, 0f, 1f, 1f, backgroundColor, defaultScissor),
+            FillRectCall(-0.35f, -0.15f, 0.05f, 0.25f, Color.RED, shiftedScissor2),
+            FillRectCall(-0.35f, 0.35f, 0.05f, 0.75f, Color.RED, shiftedScissor1)
         )
 
         // If we render again, nothing should happen
@@ -535,6 +545,7 @@ class TestSimpleFlatMenu {
         )
         checkFillRectCalls()
 
+        val scissor1 = GraviksScissor(0f, 0.5f, 0.5f, 1f)
         menu.addComponent(ClickDrawComponent(), RectRegion.percentage(0, 50, 50, 100))
         checkRenderResult(
                 menu.render(target, false), hasComponent1 = true, hasComponent2 = false,
@@ -543,7 +554,7 @@ class TestSimpleFlatMenu {
 
         // The menu should have drawn its only component
         checkFillRectCalls(
-            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED)
+            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED, scissor1)
         )
 
         // If we draw again without forcing, nothing should happen
@@ -554,13 +565,14 @@ class TestSimpleFlatMenu {
         checkFillRectCalls()
 
         // If we add another component, only that new component should be drawn
+        val scissor2 = GraviksScissor(0f, 0f, 0.5f, 0.5f)
         menu.addComponent(ClickDrawComponent(), RectRegion.percentage(0, 0, 50, 50))
         checkRenderResult(
                 menu.render(target, false), hasComponent1 = true, hasComponent2 = true,
                 didDrawComponent1 = false, didDrawComponent2 = true
         )
         checkFillRectCalls(
-            FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, Color.RED)
+            FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, Color.RED, scissor2)
         )
 
         // If we force a draw, both components should be rendered
@@ -569,8 +581,8 @@ class TestSimpleFlatMenu {
                 didDrawComponent1 = true, didDrawComponent2 = true
         )
         checkFillRectCalls(
-            FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, Color.RED),
-            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED)
+            FillRectCall(0.05f, 0.05f, 0.45f, 0.45f, Color.RED, scissor2),
+            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED, scissor1)
         )
 
         // If we redraw after doing nothing, nothing should be redrawn
@@ -587,7 +599,7 @@ class TestSimpleFlatMenu {
                 didDrawComponent1 = true, didDrawComponent2 = false
         )
         checkFillRectCalls(
-            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED)
+            FillRectCall(0.05f, 0.55f, 0.45f, 0.95f, Color.RED, scissor1)
         )
 
         // If we redraw again after doing nothing, nothing should be redrawn
@@ -627,11 +639,17 @@ class TestSimpleFlatMenu {
         }
 
         // When we shift the camera, the components should be drawn at their new position
+        val shiftedScissor1 = GraviksScissor(
+            scissor1.minX - 0.4f, scissor1.minY - 0.2f, scissor1.maxX - 0.4f, scissor1.maxY - 0.2f
+        )
+        val shiftedScissor2 = GraviksScissor(
+            scissor2.minX - 0.4f, scissor2.minY - 0.2f, scissor2.maxX - 0.4f, scissor2.maxY - 0.2f
+        )
         menu.shiftCamera(Coordinate.percentage(40), Coordinate.percentage(20))
         checkNewRenderResult(menu.render(target, false), true)
         checkFillRectCalls(
-            FillRectCall(-0.35f, -0.15f, 0.05f, 0.25f, Color.RED),
-            FillRectCall(-0.35f, 0.35f, 0.05f, 0.75f, Color.RED)
+            FillRectCall(-0.35f, -0.15f, 0.05f, 0.25f, Color.RED, shiftedScissor2),
+            FillRectCall(-0.35f, 0.35f, 0.05f, 0.75f, Color.RED, shiftedScissor1)
         )
 
         // If we render again, nothing should happen

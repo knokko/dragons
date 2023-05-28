@@ -236,7 +236,6 @@ class TextArea(
         lastLineHeight = lineHeight
 
         var maxY = textRegion.maxY + scrollOffsetY
-        // TODO Respect textRegion.minY
 
         val textToDraw = if (drawPlaceholder) splitLines(placeholder!!).map { TextInput(it, this::giveRenderFeedback) }.withIndex() else lineInputs.withIndex()
 
@@ -290,9 +289,12 @@ class TextArea(
 
                     val caretWidth =
                         lineHeight * target.getStringAspectRatio("|", textStyle.font) / target.getAspectRatio() / 4
-                    val caretX = if (characterPosition.isLeftToRight == flip) {
+                    var caretX = if (characterPosition.isLeftToRight == flip) {
                         characterPosition.maxX - caretWidth / 2
                     } else characterPosition.minX - caretWidth / 2
+
+                    if (caretX < caretWidth) caretX = caretWidth
+                    if (caretX > 1f - 2f * caretWidth) caretX = 1f - 2f * caretWidth
 
                     target.fillRect(caretX, minY, caretX + caretWidth, maxY, textStyle.fillColor)
                 }

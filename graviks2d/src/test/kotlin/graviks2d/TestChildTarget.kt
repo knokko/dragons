@@ -5,12 +5,38 @@ import graviks2d.resource.text.CharacterPosition
 import graviks2d.resource.text.FontReference
 import graviks2d.resource.text.TextStyle
 import graviks2d.target.ChildTarget
+import graviks2d.target.GraviksScissor
 import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import kotlin.math.absoluteValue
 
 class TestChildTarget {
+
+    @Test
+    fun testScissor() {
+        val parent = LoggedTarget()
+        val child = ChildTarget(parent, 0.1f, 0.2f, 0.3f, 0.4f)
+
+        fun assertSimilar(expected: GraviksScissor, actual: GraviksScissor) {
+            assertTrue((expected.minX - actual.minX).absoluteValue < 0.001f)
+            assertTrue((expected.minY - actual.minY).absoluteValue < 0.001f)
+            assertTrue((expected.maxX - actual.maxX).absoluteValue < 0.001f)
+            assertTrue((expected.maxY - actual.maxY).absoluteValue < 0.001f)
+        }
+
+        child.setScissor(GraviksScissor(0f, 0f, 1f, 1f))
+        val defaultScissor = GraviksScissor(0.1f, 0.2f, 0.3f, 0.4f)
+        assertSimilar(defaultScissor, parent.getScissor())
+
+        assertSimilar(GraviksScissor(0f, 0f, 1f, 1f), child.setScissor(
+            GraviksScissor(0.1f, 0.1f, 0.9f, 0.9f))
+        )
+        assertSimilar(GraviksScissor(0.12f, 0.22f, 0.28f, 0.38f), parent.currentScissor)
+        assertSimilar(GraviksScissor(0.1f, 0.1f, 0.9f, 0.9f), child.getScissor())
+    }
 
     @Test
     fun testFillTriangle() {
@@ -124,6 +150,15 @@ private class LoggedTarget : GraviksTarget {
     var x3 = 0f
     var y3 = 0f
     var radiusX = 0f
+    var currentScissor = GraviksScissor(0f, 0f, 1f, 1f)
+
+    override fun setScissor(newScissor: GraviksScissor): GraviksScissor {
+        val oldScissor = this.currentScissor
+        this.currentScissor = newScissor
+        return oldScissor
+    }
+
+    override fun getScissor() = this.currentScissor
 
     override fun fillTriangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Color) {
         this.x1 = x1

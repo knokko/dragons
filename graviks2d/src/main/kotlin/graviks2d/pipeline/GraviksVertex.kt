@@ -20,12 +20,17 @@ internal value class GraviksVertex(val address: Long) {
     get() = writeOnly()
     set(value) = memPutInt(address + OFFSET_OPERATION_INDEX, value)
 
+    var scissorIndex: Int
+    get() = writeOnly()
+    set(value) = memPutInt(address + OFFSET_SCISSOR_INDEX, value)
+
     companion object {
         const val OFFSET_X = 0
         const val OFFSET_Y = OFFSET_X + 4
         const val OFFSET_OPERATION_INDEX = OFFSET_Y + 4
+        const val OFFSET_SCISSOR_INDEX = OFFSET_OPERATION_INDEX + 4
 
-        const val BYTE_SIZE = OFFSET_OPERATION_INDEX + 4
+        const val BYTE_SIZE = OFFSET_SCISSOR_INDEX + 4
     }
 }
 

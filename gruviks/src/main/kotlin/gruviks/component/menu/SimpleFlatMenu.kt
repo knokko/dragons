@@ -1,6 +1,7 @@
 package gruviks.component.menu
 
 import graviks2d.target.ChildTarget
+import graviks2d.target.GraviksScissor
 import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 import gruviks.component.*
@@ -321,6 +322,7 @@ class SimpleFlatMenu(
                 val childTarget = ChildTarget(
                     target, transformedRegion.minX, transformedRegion.minY, transformedRegion.maxX, transformedRegion.maxY
                 )
+                val oldScissor = childTarget.setScissor(GraviksScissor(0f, 0f, 1f, 1f))
 
                 if (!shouldDrawBackground && backgroundColor.alpha > 0) {
                     for (backgroundRegion in node.component.regionsToRedrawBeforeNextRender()) {
@@ -355,6 +357,8 @@ class SimpleFlatMenu(
                             transformedRegion.maxY
                     ))
                 }
+
+                childTarget.setScissor(oldScissor)
             }
 
             val childRenderResult = node.agent.lastRenderResult

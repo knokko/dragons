@@ -12,13 +12,14 @@ import graviks2d.resource.image.ImageReference
 import graviks2d.resource.text.*
 import graviks2d.resource.text.TextShapeCache
 import graviks2d.resource.text.placeText
+import graviks2d.target.GraviksScissor
 import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.lwjgl.system.MemoryStack.stackPush
-import java.lang.IllegalStateException
 import java.lang.Integer.min
+import kotlin.IllegalStateException
 import kotlin.math.roundToInt
 
 class GraviksContext(
@@ -88,33 +89,64 @@ class GraviksContext(
     )
 
     private val queuedDrawCommands: MutableList<DrawCommand> = mutableListOf()
+    private val scissors = mutableMapOf<GraviksScissor, Int>()
     private var hasPendingCommand = false
 
+    private var currentScissor: GraviksScissor
+
     init {
+        if (vertexBufferSize < 6) throw IllegalArgumentException("vertexBufferSize must be at least 6")
+        if (operationBufferSize < 6) throw IllegalArgumentException("operationBufferSize must be at least 6")
+
+        currentScissor = GraviksScissor(0f, 0f, 1f, 1f)
+        this.putScissor(currentScissor, 2)
         this.pushRect(0f, 0f, 1f, 1f, vertexIndex = 0, operationIndex = 0)
+
         this.buffers.operationCpuBuffer.run {
             this.put(0, 1) // 1 is the op code for fill rect
             this.put(1, initialBackgroundColor.rawValue)
         }
         currentVertexIndex = 6 // The first 6 vertices are used for the color clear
-        currentOperationIndex = 2 // The first 2 operation values are used for the color clear
+        currentOperationIndex = 6 // The first 6 operation values are used for the color clear and default scissor
     }
 
     private fun encodeFloat(value: Float) = (1_000_000.toFloat() * value).roundToInt()
 
+    private fun putScissor(scissor: GraviksScissor, index: Int) {
+        this.buffers.operationCpuBuffer.run {
+            this.put(index, encodeFloat(scissor.minX))
+            this.put(index + 1, encodeFloat(scissor.minY))
+            this.put(index + 2, encodeFloat(scissor.maxX))
+            this.put(index + 3, encodeFloat(scissor.maxY))
+        }
+        scissors[scissor] = index
+    }
+
     private fun claimSpace(numVertices: Int, numOperationValues: Int): ContextSpaceClaim {
         handlePendingCommand()
 
-        var (operationIndex, didOperationFlush) = this.claimNextOperationIndex(numOperationValues)
+        var opValuesToClaim = numOperationValues
+        if (!scissors.containsKey(currentScissor)) opValuesToClaim += 4
+
+        var (operationIndex, didOperationFlush) = this.claimNextOperationIndex(opValuesToClaim)
 
         // Note: claimNextVertexIndex MUST be called as last to avoid weird situations when a flush() occurs BEFORE
         // the vertices are actually populated.
         val (vertexIndex, didVertexFlush) = this.claimNextVertexIndex(numVertices)
 
-        // If a vertex flush occurred, the operation index will be invalid and need to be recomputed
+        // If a vertex flush occurred, the operation index will be invalid and needs to be recomputed
         if (didVertexFlush) {
             // Note: claiming this operation index can NOT cause another hard flush because the operation buffer is empty
-            operationIndex = this.claimNextOperationIndex(numOperationValues).first
+
+            opValuesToClaim = numOperationValues
+            if (!scissors.containsKey(currentScissor)) opValuesToClaim += 4
+
+            operationIndex = this.claimNextOperationIndex(opValuesToClaim).first
+        }
+
+        if (!scissors.containsKey(currentScissor)) {
+            putScissor(currentScissor, operationIndex)
+            operationIndex += 4
         }
 
         return ContextSpaceClaim(
@@ -123,6 +155,14 @@ class GraviksContext(
             didHardFlush = didOperationFlush || didVertexFlush
         )
     }
+
+    override fun setScissor(newScissor: GraviksScissor): GraviksScissor {
+        val oldScissor = currentScissor
+        this.currentScissor = newScissor
+        return oldScissor
+    }
+
+    override fun getScissor() = this.currentScissor
 
     private fun claimNextVertexIndex(numVertices: Int): Pair<Int, Boolean> {
         var didHardFlush = false
@@ -204,6 +244,7 @@ class GraviksContext(
 
         currentVertexIndex = 0
         currentOperationIndex = 0
+        scissors.clear()
         textShapeCache.clear()
     }
 
@@ -233,18 +274,22 @@ class GraviksContext(
         x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, vertexIndex: Int,
         operationIndex1: Int, operationIndex2: Int, operationIndex3: Int
     ) {
+        val scissorIndex = scissors[currentScissor] ?: throw IllegalStateException("Current scissor is not stored")
         this.buffers.vertexCpuBuffer.run {
             this[vertexIndex].x = x1
             this[vertexIndex].y = y1
             this[vertexIndex].operationIndex = operationIndex1
+            this[vertexIndex].scissorIndex = scissorIndex
 
             this[vertexIndex + 1].x = x2
             this[vertexIndex + 1].y = y2
             this[vertexIndex + 1].operationIndex = operationIndex2
+            this[vertexIndex + 1].scissorIndex = scissorIndex
 
             this[vertexIndex + 2].x = x3
             this[vertexIndex + 2].y = y3
             this[vertexIndex + 2].operationIndex = operationIndex3
+            this[vertexIndex + 2].scissorIndex = scissorIndex
         }
     }
 
@@ -371,6 +416,8 @@ class GraviksContext(
         val placedChars = placeText(minX, yBottom, maxX, yTop, string, style, font, this.width, this.height, suggestLeftToRight)
 
         if (!dryRun) {
+            val oldScissor = this.getScissor()
+            this.setScissor(GraviksScissor(minX, yBottom, maxX, yTop).combine(oldScissor))
             for (placedChar in placedChars) {
                 font.borrowGlyphShape(placedChar.codepoint) { glyphShape ->
                     if (glyphShape.ttfVertices != null && placedChar.pixelWidth > 0 && placedChar.pixelHeight > 0) {
@@ -458,6 +505,8 @@ class GraviksContext(
                     }
                 }
             }
+
+            this.setScissor(oldScissor)
         }
         return placedChars.sortedBy { it.originalIndex }.map { it.position }
     }
