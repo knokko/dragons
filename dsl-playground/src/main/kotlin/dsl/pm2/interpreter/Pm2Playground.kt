@@ -135,9 +135,9 @@ fun main() {
     var sceneAccessMask = 0
     var sceneStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
 
-    val sceneComponent = Pm2SceneComponent(currentMesh) {
+    val sceneComponent = Pm2SceneComponent(currentMesh) { mesh, cameraMatrix ->
         pm2Scene.drawAndCopy(
-            pm2Instance, listOf(it), sceneSemaphore, graviksWindow.graviksInstance::synchronizedQueueSubmit,
+            pm2Instance, listOf(mesh), cameraMatrix, sceneSemaphore, graviksWindow.graviksInstance::synchronizedQueueSubmit,
             destImage = sceneImage, oldLayout = oldSceneLayout, srcAccessMask = sceneAccessMask, srcStageMask = sceneStageMask,
             newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
             dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,

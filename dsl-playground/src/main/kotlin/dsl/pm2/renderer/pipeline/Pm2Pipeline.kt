@@ -66,12 +66,18 @@ internal fun createGraphicsPipeline(vkDevice: VkDevice, info: Pm2PipelineInfo): 
 }
 
 private fun createPipelineLayout(vkDevice: VkDevice, stack: MemoryStack): Long {
+    val pushConstants = VkPushConstantRange.calloc(1, stack)
+    val pushCameraMatrix = pushConstants[0]
+    pushCameraMatrix.stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
+    pushCameraMatrix.offset(0)
+    pushCameraMatrix.size(3 * 2 * 4)
+
     // TODO Maybe create just 1 pipeline layout and reuse that
     val ciLayout = VkPipelineLayoutCreateInfo.calloc(stack)
     ciLayout.`sType$Default`()
     ciLayout.setLayoutCount(0)
     ciLayout.pSetLayouts(null)
-    ciLayout.pPushConstantRanges(null)
+    ciLayout.pPushConstantRanges(pushConstants)
 
     val pLayout = stack.callocLong(1)
     checkReturnValue(vkCreatePipelineLayout(vkDevice, ciLayout, null, pLayout), "CreatePipelineLayout")

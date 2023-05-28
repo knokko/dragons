@@ -3,6 +3,7 @@ package dsl.pm2.renderer
 import dsl.pm2.renderer.pipeline.Pm2Pipeline
 import dsl.pm2.renderer.pipeline.Pm2PipelineInfo
 import dsl.pm2.renderer.pipeline.createGraphicsPipeline
+import org.joml.Matrix3x2f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkCommandBuffer
@@ -18,11 +19,15 @@ class Pm2Instance(
     private val pipelines = ConcurrentHashMap<Pm2PipelineInfo, Pm2Pipeline>()
     val allocations = Pm2Allocations(device, vmaAllocator, queueFamilyIndex)
 
-    fun recordDraw(commandBuffer: VkCommandBuffer, pipelineInfo: Pm2PipelineInfo, meshes: List<Pm2Mesh>) {
+    fun recordDraw(commandBuffer: VkCommandBuffer, pipelineInfo: Pm2PipelineInfo, meshes: List<Pm2Mesh>, cameraMatrix: Matrix3x2f) {
         val pipeline = pipelines.computeIfAbsent(pipelineInfo) { info -> createGraphicsPipeline(device, info) }
 
         stackPush().use { stack ->
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vkPipeline)
+
+            val matrixBuffer = stack.callocFloat(3 * 2)
+            cameraMatrix.get(0, matrixBuffer)
+            vkCmdPushConstants(commandBuffer, pipeline.vkPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, matrixBuffer)
 
             // TODO Bind descriptor sets
             val vertexBuffers = mutableSetOf<Long>()

@@ -31,7 +31,7 @@ class Pm2Converter : ProcModel2BaseListener() {
         types.defineType("float", BuiltinTypes.FLOAT)
         types.defineType("int", BuiltinTypes.INT)
         types.defineType("position", BuiltinTypes.POSITION)
-        types.defineType("Color", BuiltinTypes.COLOR)
+        types.defineType("color", BuiltinTypes.COLOR)
         types.defineType("Vertex", BuiltinTypes.VERTEX)
 
         functions.pushScope()

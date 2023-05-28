@@ -1,6 +1,7 @@
 package dsl.pm2.renderer
 
 import dsl.pm2.renderer.pipeline.Pm2PipelineInfo
+import org.joml.Matrix3x2f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.util.vma.VmaAllocationCreateInfo
@@ -170,7 +171,8 @@ class Pm2Scene internal constructor(
     }
 
     fun drawAndCopy(
-        instance: Pm2Instance, meshes: List<Pm2Mesh>, signalSemaphore: Long?, submit: (VkSubmitInfo.Buffer, fence: Long) -> Int,
+        instance: Pm2Instance, meshes: List<Pm2Mesh>, cameraMatrix: Matrix3x2f,
+        signalSemaphore: Long?, submit: (VkSubmitInfo.Buffer, fence: Long) -> Int,
         destImage: Long, oldLayout: Int, srcAccessMask: Int, srcStageMask: Int,
         newLayout: Int, dstAccessMask: Int, dstStageMask: Int,
         offsetX: Int, offsetY: Int, blitSizeX: Int, blitSizeY: Int
@@ -230,7 +232,7 @@ class Pm2Scene internal constructor(
 
             vkCmdSetScissor(commandBuffer, 0, scissor)
 
-            instance.recordDraw(commandBuffer, pipelineInfo, meshes)
+            instance.recordDraw(commandBuffer, pipelineInfo, meshes, cameraMatrix)
 
             vkCmdEndRenderPass(commandBuffer)
 
