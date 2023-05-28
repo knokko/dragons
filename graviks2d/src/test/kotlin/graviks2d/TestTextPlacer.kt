@@ -8,12 +8,19 @@ class TestTextPlacer {
 
     @Test
     fun testIsPrimarilyLeftToRight() {
-        assertEquals(TextDirection.LeftToRight, getPrimaryDirection("Hello".codePoints().toArray()))
-        assertEquals(TextDirection.LeftToRight, getPrimaryDirection("Hm...".codePoints().toArray()))
-        assertEquals(TextDirection.LeftToRight, getPrimaryDirection(".".codePoints().toArray()))
-        assertEquals(TextDirection.LeftToRight, getPrimaryDirection("test12345".codePoints().toArray()))
-        assertEquals(TextDirection.RightToLeft, getPrimaryDirection("שייקס".codePoints().toArray()))
-        assertEquals(TextDirection.RightToLeft, getPrimaryDirection("ש12345קס".codePoints().toArray()))
+        assertEquals(TextDirection.LeftToRight, getPrimaryDirection("Hello".codePoints().toArray(), false))
+        assertEquals(TextDirection.LeftToRight, getPrimaryDirection("Hm...".codePoints().toArray(), false))
+        assertEquals(TextDirection.LeftToRight, getPrimaryDirection("Hello".codePoints().toArray(), true))
+        assertEquals(TextDirection.LeftToRight, getPrimaryDirection("Hm...".codePoints().toArray(), true))
+        assertEquals(TextDirection.LeftToRight, getPrimaryDirection(".".codePoints().toArray(), true))
+        assertEquals(TextDirection.RightToLeft, getPrimaryDirection(".".codePoints().toArray(), false))
+        assertEquals(TextDirection.LeftToRight, getPrimaryDirection("test12345".codePoints().toArray(), false))
+        assertEquals(TextDirection.LeftToRight, getPrimaryDirection("test12345".codePoints().toArray(), true))
+
+        assertEquals(TextDirection.RightToLeft, getPrimaryDirection("שייקס".codePoints().toArray(), false))
+        assertEquals(TextDirection.RightToLeft, getPrimaryDirection("ש12345קס".codePoints().toArray(), false))
+        assertEquals(TextDirection.RightToLeft, getPrimaryDirection("שייקס".codePoints().toArray(), true))
+        assertEquals(TextDirection.RightToLeft, getPrimaryDirection("ש12345קס".codePoints().toArray(), true))
     }
 
     @Test
@@ -128,9 +135,9 @@ class TestTextPlacer {
         expectedGroups: List<DirectionGroup>, expectedLeftToRight: BooleanArray, expectPrimarilyLeftToRight: Boolean
     ) {
         val codepoints = inputString.codePoints().toArray()
-        assertEquals(expectedGroups, groupText(codepoints, getPrimaryDirection(codepoints)))
+        assertEquals(expectedGroups, groupText(codepoints, getPrimaryDirection(codepoints, true)))
 
-        val orderedChars = orderChars(codepoints)
+        val orderedChars = orderChars(codepoints, true)
         assertArrayEquals(expected.map { it.code }.toIntArray(), orderedChars.chars)
         assertArrayEquals(expectedOriginalIndices, orderedChars.originalIndices)
 

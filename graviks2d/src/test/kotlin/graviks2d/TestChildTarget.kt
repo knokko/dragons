@@ -173,7 +173,8 @@ private class LoggedTarget : GraviksTarget {
         yTop: Float,
         string: String,
         style: TextStyle,
-        dryRun: Boolean
+        dryRun: Boolean,
+        suggestLeftToRight: Boolean
     ): List<CharacterPosition> {
         this.x1 = minX
         this.y1 = yBottom

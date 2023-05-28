@@ -364,15 +364,16 @@ class GraviksContext(
 
     override fun drawString(
         minX: Float, yBottom: Float, maxX: Float, yTop: Float,
-        string: String, style: TextStyle, dryRun: Boolean
+        string: String, style: TextStyle, dryRun: Boolean,
+        suggestLeftToRight: Boolean
     ): List<CharacterPosition> {
         val font = this.instance.fontManager.getFont(style.font)
-        val placedChars = placeText(minX, yBottom, maxX, yTop, string, style, font, this.width, this.height)
+        val placedChars = placeText(minX, yBottom, maxX, yTop, string, style, font, this.width, this.height, suggestLeftToRight)
 
         if (!dryRun) {
             for (placedChar in placedChars) {
                 font.borrowGlyphShape(placedChar.codepoint) { glyphShape ->
-                    if (glyphShape.ttfVertices != null) {
+                    if (glyphShape.ttfVertices != null && placedChar.pixelWidth > 0 && placedChar.pixelHeight > 0) {
 
                         val maxAntiAliasFactor = min(
                             this.textShapeCache.width / placedChar.pixelWidth,

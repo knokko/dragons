@@ -50,7 +50,8 @@ class DummyGraviksTarget(
         yTop: Float,
         string: String,
         style: TextStyle,
-        dryRun: Boolean
+        dryRun: Boolean,
+        suggestLeftToRight: Boolean
     ): List<CharacterPosition> {
         if (!dryRun) drawStringCounter += 1
         val numCodepoints = string.codePointCount(0, string.length)

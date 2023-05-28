@@ -23,9 +23,10 @@ class CharacterPosition(
 
 internal fun placeText(
     minX: Float, yBottom: Float, maxX: Float, yTop: Float,
-    string: String, style: TextStyle, font: StbTrueTypeFont, viewportWidth: Int, viewportHeight: Int
+    string: String, style: TextStyle, font: StbTrueTypeFont, viewportWidth: Int, viewportHeight: Int,
+    suggestLeftToRight: Boolean
 ): List<PlacedCharacter> {
-    val orderedChars = orderChars(string.codePoints().toArray())
+    val orderedChars = orderChars(string.codePoints().toArray(), suggestLeftToRight)
 
     // Good text rendering requires exact placement on pixels
     var pixelMinY = (yBottom * viewportHeight.toFloat()).roundToInt()
@@ -204,7 +205,7 @@ private fun getCharacterDirection(codepoint: Int): TextDirection {
     return TextDirection.Neutral
 }
 
-internal fun getPrimaryDirection(codepoints: IntArray): TextDirection {
+internal fun getPrimaryDirection(codepoints: IntArray, suggestLeftToRight: Boolean): TextDirection {
 
     for (codepoint in codepoints) {
         val direction = getCharacterDirection(codepoint)
@@ -213,7 +214,7 @@ internal fun getPrimaryDirection(codepoints: IntArray): TextDirection {
         }
     }
 
-    return TextDirection.LeftToRight
+    return if (suggestLeftToRight) TextDirection.LeftToRight else TextDirection.RightToLeft
 }
 
 internal class DirectionGroup(
@@ -340,8 +341,8 @@ internal class OrderedChars(
     val isPrimarilyLeftToRight: Boolean
 )
 
-internal fun orderChars(original: IntArray): OrderedChars {
-    val primaryDirection = getPrimaryDirection(original)
+internal fun orderChars(original: IntArray, suggestLeftToRight: Boolean): OrderedChars {
+    val primaryDirection = getPrimaryDirection(original, suggestLeftToRight)
 
     val directionGroups = groupText(original, primaryDirection)
 

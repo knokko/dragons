@@ -37,7 +37,8 @@ interface GraviksTarget {
 
     fun drawString(
         minX: Float, yBottom: Float, maxX: Float, yTop: Float,
-        string: String, style: TextStyle, dryRun: Boolean = false
+        string: String, style: TextStyle, dryRun: Boolean = false,
+        suggestLeftToRight: Boolean = true
     ): List<CharacterPosition>
 
     fun getStringAspectRatio(string: String, fontReference: FontReference?): Float
