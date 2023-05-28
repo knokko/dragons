@@ -28,7 +28,13 @@ import java.nio.file.Files
 
 fun main() {
     val initialProgramCode = Files.readString(File("pm2-models/playground.pm2").toPath())
-    val initialVertices = Pm2Program.compile(initialProgramCode).run()
+    val initialVertices = try {
+        Pm2Program.compile(initialProgramCode).run()
+    } catch (compileError: Pm2CompileError) { listOf(
+        Pm2Vertex(-0.8f, -0.7f, Color.RED),
+        Pm2Vertex(0.8f, -0.2f, Color.GREEN),
+        Pm2Vertex(-0.9f, 0.8f, Color.BLUE)
+    )}
 
     val graviksWindow = GraviksWindow(
         800, 800, "DSL Playground", true, "Gruviks Tester",
@@ -154,9 +160,9 @@ fun main() {
 
     val errorComponent = TextComponent("", TextStyle(fillColor = Color.RED, font = null))
 
-    val playgroundMenu = SimpleFlatMenu(SpaceLayout.GrowRight, Color.WHITE)
-    playgroundMenu.addComponent(errorComponent, RectRegion.percentage(0, 95, 300, 100))
-    playgroundMenu.addComponent(codeArea, RectRegion.percentage(0, 20, 300, 95))
+    val playgroundMenu = SimpleFlatMenu(SpaceLayout.Simple, Color.WHITE)
+    playgroundMenu.addComponent(errorComponent, RectRegion.percentage(0, 95, 100, 100))
+    playgroundMenu.addComponent(codeArea, RectRegion.percentage(0, 20, 100, 95))
     playgroundMenu.addComponent(sceneComponent, RectRegion.percentage(0, 0, 20, 20))
     playgroundMenu.addComponent(TextButton("Recompile", icon = null, style = TextButtonStyle.textAndBorder(
         baseColor = Color.rgbInt(100, 100, 200),
@@ -182,14 +188,14 @@ fun main() {
         } catch (runtimeError: Pm2RuntimeError) {
             errorComponent.setText(runtimeError.message!!)
         }
-    }, RectRegion.percentage(25, 7, 70, 13))
+    }, RectRegion.percentage(25, 7, 60, 13))
 
     playgroundMenu.addComponent(TextButton("Save", icon = null, style = TextButtonStyle.textAndBorder(
         baseColor = Color.rgbInt(100, 100, 200),
         hoverColor = Color.rgbInt(70, 70, 255)
     )) { _, _ ->
         Files.write(File("pm2-models/playground.pm2").toPath(), codeArea.getText().toByteArray(StandardCharsets.UTF_8))
-    }, RectRegion.percentage(70, 7, 150, 13))
+    }, RectRegion.percentage(70, 7, 100, 13))
 
     createAndControlGruviksWindow(graviksWindow, playgroundMenu) {
         pm2Instance.allocations.destroyMesh(currentMesh)
