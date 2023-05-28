@@ -85,10 +85,10 @@ internal class TextInput(
         }
     }
 
-    fun estimateCaretX(): Float {
-        if (drawnCharacterPositions.isEmpty()) return 0f
+    fun estimateCaretX(expectLeftToRight: Boolean, scrollOffsetX: Float): Float {
+        if (drawnCharacterPositions.isEmpty()) return -scrollOffsetX + if (expectLeftToRight) 0f else 1f
 
-        return if (caretPosition < drawnCharacterPositions.size) {
+        return scrollOffsetX + if (caretPosition < drawnCharacterPositions.size) {
             val position = drawnCharacterPositions[caretPosition]
             if (position.isLeftToRight) position.minX
             else position.maxX
