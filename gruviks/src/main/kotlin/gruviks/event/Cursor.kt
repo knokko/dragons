@@ -130,5 +130,6 @@ class CursorScrollEvent(
 
 enum class ScrollDirection {
     Horizontal,
-    Vertical
+    Vertical,
+    Zoom
 }

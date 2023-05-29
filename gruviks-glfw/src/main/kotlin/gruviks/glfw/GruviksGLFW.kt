@@ -32,6 +32,7 @@ fun createAndControlGruviksWindow(
 
     var lastPresentTime = 0L
     var shiftDown = false
+    var controlDown = false
 
     graviksWindow.graviksContext?.run { gruviksWindow.render(this, true, null) }
 
@@ -61,7 +62,7 @@ fun createAndControlGruviksWindow(
             gruviksWindow.fireEvent(RawCursorScrollEvent(mouseCursor, x.toFloat() * scale, ScrollDirection.Horizontal))
         }
         if (y != 0.0) {
-            val direction = if (shiftDown) ScrollDirection.Horizontal else ScrollDirection.Vertical
+            val direction = if (shiftDown) ScrollDirection.Horizontal else if (controlDown) ScrollDirection.Zoom else ScrollDirection.Vertical
             gruviksWindow.fireEvent(RawCursorScrollEvent(mouseCursor, y.toFloat() * -scale, direction))
         }
     }
@@ -99,6 +100,10 @@ fun createAndControlGruviksWindow(
         if (keyCode == GLFW_KEY_LEFT_SHIFT || keyCode == GLFW_KEY_RIGHT_SHIFT) {
             if (wasPressed == GLFW_PRESS || wasPressed == GLFW_REPEAT) shiftDown = true
             if (wasPressed == GLFW_RELEASE) shiftDown = false
+        }
+        if (keyCode == GLFW_KEY_LEFT_CONTROL || keyCode == GLFW_KEY_RIGHT_CONTROL) {
+            if (wasPressed == GLFW_PRESS || wasPressed == GLFW_REPEAT) controlDown = true
+            if (wasPressed == GLFW_RELEASE) controlDown = false
         }
     }
     
