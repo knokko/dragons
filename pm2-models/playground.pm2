@@ -1,25 +1,102 @@
-void produceCircle(float x, float y, float radius, int numParts, Color color) {
-    Vertex center;
-    center.position = (x, y);
-    center.color = color;
-
-    for (0 <= part < numParts) {
-        Vertex edge1;
-        float angle1 = 360.0 * float(part) / float(numParts);
-        edge1.position = (x + radius * cos(angle1), y + radius * sin(angle1));
-        edge1.color = color;
-
-        Vertex edge2;
-        float angle2 = 360.0 * float(part + 1) / float(numParts);
-        edge2.position = (x + radius * cos(angle2), y + radius * sin(angle2));
-        edge2.color = color;
-
-        produceTriangle(center, edge2, edge1);
-    }
+Vertex circlePoint(float centerX, float centerY, float radius, float angle) {
+	Vertex circlePoint;
+	circlePoint.position = (centerX + radius * cos(angle), centerY + radius * sin(angle));
+	
+	circlePoint
 }
 
-float radius = 0.6;
-for (0 <= circle < 5) {
-    float angle = 360.0 * circle / 5.0;
-    produceCircle(radius * cos(angle), radius * sin(angle), 0.3, 10, rgb(0.9, 0.7, 0.0));
+void produceCircle(float centerX, float centerY, float radius, int numParts, color color) {
+	Vertex center;
+	center.position = (centerX, centerY);
+	center.color = color;
+
+	for (0 <= currentPart < numParts) {
+		Vertex edge1 = circlePoint(centerX, centerY, radius, 360.0 * float(currentPart) / numParts);
+		edge1.color = color;
+
+		Vertex edge2 = circlePoint(centerX, centerY, radius, 360.0 * (float(currentPart) + 1.0) / numParts);
+		edge2.color = color;
+
+		produceTriangle(center, edge2, edge1);
+	}
+}
+
+void produceFlower(float startX, float startY, float stemLength, float stemRadius, color stemColor, float flowerRadius, color flowerColor, color leafColor) {
+	float currentX = startX;
+	float currentY = startY;
+	for (0 <= stemStep < 10) {
+		float nextX = currentX + stemLength * 0.01;
+		float nextY = currentY + stemLength * 0.1;
+
+		Vertex bottomLeft;
+		bottomLeft.position = (currentX - stemRadius, currentY);
+		bottomLeft.color = stemColor;
+		
+		Vertex bottomRight;
+		bottomRight.position = (currentX + stemRadius, currentY);
+		bottomRight.color = stemColor;
+		
+		Vertex topRight;
+		topRight.position = (nextX + stemRadius, nextY);
+		topRight.color = stemColor;
+
+		Vertex topLeft;
+		topLeft.position = (nextX - stemRadius, nextY);
+		topLeft.color = stemColor;
+
+		produceTriangle(bottomLeft, bottomRight, topRight);
+		produceTriangle(topRight, topLeft, bottomLeft);
+
+		currentX = nextX;
+		currentY = nextY;
+	}
+
+	float centerX = currentX;
+	float centerY = currentY + flowerRadius;
+
+	produceCircle(centerX, centerY, flowerRadius, 20, flowerColor);
+
+	int numLeaves = 5;
+	for (0 <= leaf < numLeaves) {
+		float baseAngle = 360.0 * float(leaf) / float(numLeaves);
+		float startAngleOffset = 150.0 / float(numLeaves);
+		float midAngleOffset = startAngleOffset * 0.4;
+		float endAngleOffset = 0.0 - startAngleOffset;
+
+		Vertex start1 = circlePoint(centerX, centerY, flowerRadius, baseAngle - startAngleOffset);
+		start1.color = leafColor;
+		Vertex start3 = circlePoint(centerX, centerY, flowerRadius, baseAngle + startAngleOffset);
+		start3.color = leafColor;
+		
+		Vertex mid1 = circlePoint(start1.position.x, start1.position.y, flowerRadius * 0.8, baseAngle - midAngleOffset);
+		mid1.color = leafColor;
+		Vertex mid3 = circlePoint(start3.position.x, start3.position.y, flowerRadius * 0.8, baseAngle + midAngleOffset);
+		mid3.color = leafColor;
+
+		Vertex end1 = circlePoint(mid1.position.x, mid1.position.y, flowerRadius * 0.5, baseAngle - endAngleOffset);
+		end1.color = leafColor;
+
+		Vertex end2 = circlePoint(mid3.position.x, mid3.position.y, flowerRadius * 0.5, baseAngle + endAngleOffset);
+		end2.color = leafColor;
+		
+		produceTriangle(start3, mid3, mid1);
+		produceTriangle(mid1, start1, start3);
+		produceTriangle(mid3, end2, end1);
+		produceTriangle(end1, mid1, mid3);
+	}
+}
+
+Random rng;
+float startY = 10.0;
+for (0 <= currentFlower < 70) {
+	float startX = -10.0 + 20.0 * rng.nextFloat;
+	float stemLength = 1.5 + 0.4 * rng.nextFloat;
+	float stemRadius = 0.1 + 0.03 * rng.nextFloat;
+	color stemColor = rgb(0.3 * rng.nextFloat, 0.5 + 0.5 * rng.nextFloat, 0.5 * rng.nextFloat);
+	float flowerRadius = 0.4 + 0.2 * rng.nextFloat;
+	color flowerColor = rgb(rng.nextFloat, rng.nextFloat, rng.nextFloat);
+	color leafColor = rgb(rng.nextFloat, rng.nextFloat, rng.nextFloat);
+	
+	produceFlower(startX, startY, stemLength, stemRadius, stemColor, flowerRadius, flowerColor, leafColor);
+	startY = startY - 0.5 * rng.nextFloat;
 }

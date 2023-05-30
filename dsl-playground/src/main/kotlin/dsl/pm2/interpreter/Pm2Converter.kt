@@ -33,6 +33,7 @@ class Pm2Converter : ProcModel2BaseListener() {
         types.defineType("position", BuiltinTypes.POSITION)
         types.defineType("color", BuiltinTypes.COLOR)
         types.defineType("Vertex", BuiltinTypes.VERTEX)
+        types.defineType("Random", BuiltinTypes.RANDOM)
 
         functions.pushScope()
     }
