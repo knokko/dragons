@@ -35,8 +35,8 @@ class Pm2SceneComponent(
             agent.giveFeedback(RenderFeedback())
         }
         if (event is CursorScrollEvent) {
-            if (event.direction == ScrollDirection.Horizontal) cameraMatrix.translate(-event.amount, 0f)
-            if (event.direction == ScrollDirection.Vertical) cameraMatrix.translate(0f, event.amount)
+            if (event.direction == ScrollDirection.Horizontal) cameraMatrix.translateLocal(-event.amount, 0f)
+            if (event.direction == ScrollDirection.Vertical) cameraMatrix.translateLocal(0f, -event.amount)
             if (event.direction == ScrollDirection.Zoom) {
                 val scale = if (event.amount >= 0f) 1f / (1f + event.amount) else 1f - event.amount
                 val cursorState = agent.cursorTracker.getCursorState(event.cursor)
