@@ -9,6 +9,7 @@ import gruviks.event.*
 import gruviks.feedback.RenderFeedback
 import gruviks.feedback.RequestKeyboardFocusFeedback
 import org.joml.Matrix3x2f
+import kotlin.math.absoluteValue
 
 class Pm2SceneComponent(
     private var mesh: Pm2Mesh? = null,
@@ -59,6 +60,13 @@ class Pm2SceneComponent(
 
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {
         if (mesh != null) {
+            val aspectRatio = target.getAspectRatio()
+            val cameraRatio = cameraMatrix.m11 / -cameraMatrix.m00
+
+            if ((aspectRatio - cameraRatio).absoluteValue > 0.001f) {
+                cameraMatrix.scale(cameraRatio / aspectRatio, 1f)
+            }
+
             val (image, imageView, semaphore) = this.renderScene(this.mesh!!, cameraMatrix)
             target.addWaitSemaphore(semaphore)
             target.drawVulkanImage(0f, 0f, 1f, 1f, image, imageView)
