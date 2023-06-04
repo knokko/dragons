@@ -133,9 +133,7 @@ internal fun createVulkanInstance(
         validationFeatures.`sType$Default`()
         validationFeatures.pEnabledValidationFeatures(stack.ints(
             VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
-            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
-            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
-            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT
+            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT
         ))
 
         ciInstance.pNext(validationFeatures.address())
