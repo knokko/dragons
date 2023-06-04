@@ -28,7 +28,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 fun main() {
-    val sourceFile = File("pm2-models/debug.pm2").toPath()
+    val sourceFile = File("pm2-models/playground.pm2").toPath()
     val initialProgramCode: String = try {
         Files.readString(sourceFile)
     } catch (notFound: IOException) {

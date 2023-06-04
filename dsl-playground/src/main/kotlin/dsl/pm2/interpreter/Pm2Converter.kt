@@ -235,11 +235,12 @@ class Pm2Converter : ProcModel2BaseListener() {
         val type = types.getType(typeName)
         // TODO Allow types that are not defined yet
         if (ctx.expression() == null) {
-            val createDefaultValue = type.createDefaultValue
-                    ?: throw Pm2CompileError(
-                        "Type $typeName doesn't have a default value", ctx.start.line, ctx.start.charPositionInLine
-                    )
-            instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.start.line, value = createDefaultValue()))
+            if (type.createDefaultValue == null) {
+                throw Pm2CompileError(
+                    "Type $typeName doesn't have a default value", ctx.start.line, ctx.start.charPositionInLine
+                )
+            }
+            instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.start.line, variableType = type))
         }
         instructions.add(Pm2Instruction(
             Pm2InstructionType.DeclareVariable,
