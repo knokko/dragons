@@ -23,6 +23,8 @@ enum class Pm2InstructionType {
 
     Jump,
     InvokeBuiltinFunction,
+    TransferVariable,
+    CreateDynamicMatrix,
 
     PushScope,
     PopScope

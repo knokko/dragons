@@ -10,12 +10,13 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker
 import kotlin.jvm.Throws
 
 class Pm2Program(
-    val instructions: List<Pm2Instruction>
+    val instructions: List<Pm2Instruction>,
+    val dynamicBlocks: List<List<Pm2Instruction>>
 ) {
 
     @Throws(Pm2RuntimeError::class)
-    fun run(): List<Pm2Vertex> {
-        return Pm2Processor().execute(this)
+    fun run(): Pm2Model {
+        return Pm2VertexProcessor(this).execute()
     }
 
     companion object {

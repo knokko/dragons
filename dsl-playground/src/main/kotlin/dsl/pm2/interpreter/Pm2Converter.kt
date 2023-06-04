@@ -12,7 +12,10 @@ import org.antlr.v4.runtime.tree.ErrorNode
 
 class Pm2Converter : ProcModel2BaseListener() {
 
-    private val instructions = mutableListOf<Pm2Instruction>()
+    private val baseInstructions = mutableListOf<Pm2Instruction>()
+    private var instructions = baseInstructions
+    private val dynamicDeclarations = mutableListOf<MutableList<Pm2Instruction>>()
+    private var isInsideDynamicDeclaration = false
     private val types = Pm2Types()
     private val functions = Pm2Functions()
 
@@ -32,8 +35,10 @@ class Pm2Converter : ProcModel2BaseListener() {
         types.defineType("int", BuiltinTypes.INT)
         types.defineType("position", BuiltinTypes.POSITION)
         types.defineType("color", BuiltinTypes.COLOR)
+        types.defineType("matrix", BuiltinTypes.MATRIX_INDEX)
         types.defineType("Vertex", BuiltinTypes.VERTEX)
         types.defineType("Random", BuiltinTypes.RANDOM)
+        types.defineType("Matrix", BuiltinTypes.MATRIX)
 
         functions.pushScope()
     }
@@ -41,7 +46,43 @@ class Pm2Converter : ProcModel2BaseListener() {
     override fun exitStart(ctx: ProcModel2Parser.StartContext?) {
         types.popScope()
         functions.popScope()
-        program = Pm2Program(instructions)
+        program = Pm2Program(instructions, dynamicDeclarations)
+    }
+
+    override fun enterDynamicDeclaration(ctx: ProcModel2Parser.DynamicDeclarationContext?) {
+        val identifiers = ctx!!.IDENTIFIER()
+        val typeName = identifiers[0].text
+        if (typeName != "Matrix") throw Pm2CompileError("Matrix is currently the only dynamic type")
+
+        if (isInsideDynamicDeclaration) throw Pm2CompileError("Nested dynamic declarations are forbidden")
+        isInsideDynamicDeclaration = true
+
+        if (identifiers.size % 2 == 0) throw Pm2CompileError("Missing name or type for transfer variable ${identifiers.last().text}")
+
+        for (index in 1 until identifiers.size step 2) {
+            val transferTypeName = identifiers[index].text
+            val transferVariableName = identifiers[index + 1].text
+            val transferVariableType = types.getType(transferTypeName) ?: throw Pm2CompileError("Unknown type $transferTypeName")
+            instructions.add(Pm2Instruction(
+                    Pm2InstructionType.TransferVariable, lineNumber = ctx.start.line,
+                    name = transferVariableName, variableType = transferVariableType
+            ))
+        }
+
+        val dynamicIndex = dynamicDeclarations.size
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.start.line, value = Pm2IntValue(dynamicIndex)))
+        instructions.add(Pm2Instruction(Pm2InstructionType.CreateDynamicMatrix, lineNumber = ctx.start.line))
+
+        val dynamicDeclaration = mutableListOf<Pm2Instruction>()
+        dynamicDeclarations.add(dynamicDeclaration)
+        instructions = dynamicDeclaration
+    }
+
+    override fun exitDynamicDeclaration(ctx: ProcModel2Parser.DynamicDeclarationContext?) {
+        if (!isInsideDynamicDeclaration) throw Pm2CompileError("There is no dynamic declaration to exit")
+        isInsideDynamicDeclaration = false
+
+        instructions = baseInstructions
     }
 
     override fun enterFunctionDeclaration(ctx: ProcModel2Parser.FunctionDeclarationContext?) {
@@ -194,9 +235,11 @@ class Pm2Converter : ProcModel2BaseListener() {
         val type = types.getType(typeName)
         // TODO Allow types that are not defined yet
         if (ctx.expression() == null) {
-            if (type.createDefaultValue == null) throw Pm2CompileError(
-                "Type $typeName doesn't have a default value", ctx.start.line, ctx.start.charPositionInLine
-            )
+            if (type.createDefaultValue == null) {
+                throw Pm2CompileError(
+                    "Type $typeName doesn't have a default value", ctx.start.line, ctx.start.charPositionInLine
+                )
+            }
             instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.start.line, variableType = type))
         }
         instructions.add(Pm2Instruction(

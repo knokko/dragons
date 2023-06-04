@@ -13,7 +13,7 @@ import kotlin.math.absoluteValue
 
 class Pm2SceneComponent(
     private var mesh: Pm2Mesh? = null,
-    private val renderScene: (Pm2Mesh, Matrix3x2f) -> Triple<Long, Long, Long>
+    private val renderScene: (Pm2Mesh, Matrix3x2f) -> (Triple<Long, Long, Long>?)
 ) : Component() {
 
     private val cameraMatrix = Matrix3x2f().scale(1f, -1f)
@@ -67,9 +67,12 @@ class Pm2SceneComponent(
                 cameraMatrix.scale(cameraRatio / aspectRatio, 1f)
             }
 
-            val (image, imageView, semaphore) = this.renderScene(this.mesh!!, cameraMatrix)
-            target.addWaitSemaphore(semaphore)
-            target.drawVulkanImage(0f, 0f, 1f, 1f, image, imageView)
+            val renderedScene = this.renderScene(this.mesh!!, cameraMatrix)
+            if (renderedScene != null) {
+                val (image, imageView, semaphore) = renderedScene
+                target.addWaitSemaphore(semaphore)
+                target.drawVulkanImage(0f, 0f, 1f, 1f, image, imageView)
+            }
         }
 
         return RenderResult(

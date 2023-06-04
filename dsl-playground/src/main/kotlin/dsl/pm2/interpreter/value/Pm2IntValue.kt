@@ -28,4 +28,6 @@ class Pm2IntValue(private val value: Int) : Pm2Value() {
     }
 
     override fun toString() = "IntValue($value)"
+
+    override fun copy() = this
 }

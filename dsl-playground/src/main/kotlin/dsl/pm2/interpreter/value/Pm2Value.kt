@@ -4,7 +4,7 @@ import dsl.pm2.interpreter.Pm2RuntimeError
 
 abstract class Pm2Value {
 
-    @kotlin.jvm.Throws(Pm2RuntimeError::class)
+    @Throws(Pm2RuntimeError::class)
     inline fun <reified T> castTo(): T {
         if (this is T) {
             return this
@@ -12,6 +12,8 @@ abstract class Pm2Value {
             throw Pm2RuntimeError("Expected ${T::class.simpleName}, but found $this")
         }
     }
+
+    abstract fun copy(): Pm2Value
 
     @Throws(Pm2RuntimeError::class)
     open fun setProperty(propertyName: String, newValue: Pm2Value) {

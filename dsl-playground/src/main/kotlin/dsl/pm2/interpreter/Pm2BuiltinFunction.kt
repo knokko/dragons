@@ -35,6 +35,9 @@ class Pm2BuiltinFunction(
         val INT = Pm2BuiltinFunction(listOf(BuiltinTypes.FLOAT), BuiltinTypes.INT)
         val SIN = Pm2BuiltinFunction(listOf(BuiltinTypes.FLOAT), BuiltinTypes.FLOAT)
         val COS = Pm2BuiltinFunction(listOf(BuiltinTypes.FLOAT), BuiltinTypes.FLOAT)
+        val TRANSLATE_MATRIX = Pm2BuiltinFunction(listOf(BuiltinTypes.MATRIX, BuiltinTypes.FLOAT, BuiltinTypes.FLOAT), null)
+        val ROTATE_MATRIX = Pm2BuiltinFunction(listOf(BuiltinTypes.MATRIX, BuiltinTypes.FLOAT), null)
+        val SCALE_MATRIX = Pm2BuiltinFunction(listOf(BuiltinTypes.MATRIX, BuiltinTypes.FLOAT, BuiltinTypes.FLOAT), null)
 
         val MAP = mutableMapOf(
             Pair("produceTriangle", PRODUCE_TRIANGLE),
@@ -43,7 +46,10 @@ class Pm2BuiltinFunction(
             Pair("int", INT),
             Pair("float", FLOAT),
             Pair("sin", SIN),
-            Pair("cos", COS)
+            Pair("cos", COS),
+            Pair("translate", TRANSLATE_MATRIX),
+            Pair("rotate", ROTATE_MATRIX),
+            Pair("scale", SCALE_MATRIX)
         )
     }
 }

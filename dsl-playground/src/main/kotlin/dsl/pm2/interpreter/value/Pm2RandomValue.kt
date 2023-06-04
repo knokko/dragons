@@ -10,4 +10,6 @@ class Pm2RandomValue(val rng: Random) : Pm2Value() {
             else -> super.getProperty(propertyName)
         }
     }
+
+    override fun copy() = Pm2RandomValue(TODO("Copy matrix..."))
 }

@@ -1,5 +1,7 @@
 package dsl.pm2.renderer
 
+import dsl.pm2.interpreter.Pm2RuntimeError
+import dsl.pm2.interpreter.program.Pm2MatrixProcessor
 import dsl.pm2.renderer.pipeline.Pm2PipelineInfo
 import org.joml.Matrix3x2f
 import org.lwjgl.system.MemoryStack.stackPush
@@ -7,16 +9,24 @@ import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.util.vma.VmaAllocationCreateInfo
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
+import kotlin.jvm.Throws
+
+/**
+ * The size in bytes of a 3x2 float matrix. Due to alignment rules, this is 48 bytes, which is twice as large as
+ * I was hoping.
+ */
+internal const val MATRIX_SIZE = 48
 
 class Pm2Scene internal constructor(
     private val vkDevice: VkDevice,
+    vkDescriptorSetLayout: Long,
     private val vmaAllocator: Long,
     private val queueFamilyIndex: Int,
     private val backgroundRed: Int,
     private val backgroundGreen: Int,
     private val backgroundBlue: Int,
     private val width: Int,
-    private val height: Int
+    private val height: Int,
 ) {
     private val colorImage: Long
     private val colorImageAllocation: Long
@@ -27,6 +37,12 @@ class Pm2Scene internal constructor(
     private val commandPool: Long
     private val commandBuffer: VkCommandBuffer
     private val fence: Long
+
+    private val descriptorPool: Long
+    private val descriptorSet: Long
+    private var matrixBufferAllocation = 0L
+    private var matrixBuffer = 0L
+    private var matrixBufferCount = 0
 
     init {
         stackPush().use { stack ->
@@ -167,9 +183,89 @@ class Pm2Scene internal constructor(
             val pFence = stack.callocLong(1)
             checkReturnValue(vkCreateFence(vkDevice, ciFence, null, pFence), "CreateFence")
             fence = pFence[0]
+
+            val descriptorPoolSizes = VkDescriptorPoolSize.calloc(1, stack)
+            descriptorPoolSizes.type(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+            descriptorPoolSizes.descriptorCount(1)
+
+            val ciDescriptorPool = VkDescriptorPoolCreateInfo.calloc(stack)
+            ciDescriptorPool.`sType$Default`()
+            ciDescriptorPool.flags(0)
+            ciDescriptorPool.maxSets(1)
+            ciDescriptorPool.pPoolSizes(descriptorPoolSizes)
+
+            val pDescriptorPool = stack.callocLong(1)
+            checkReturnValue(vkCreateDescriptorPool(
+                    vkDevice, ciDescriptorPool, null, pDescriptorPool
+            ), "CreateDescriptorPool")
+            descriptorPool = pDescriptorPool[0]
+
+            val aiDescriptorSet = VkDescriptorSetAllocateInfo.calloc(stack)
+            aiDescriptorSet.`sType$Default`()
+            aiDescriptorSet.descriptorPool(descriptorPool)
+            aiDescriptorSet.pSetLayouts(stack.longs(vkDescriptorSetLayout))
+
+            val pDescriptorSet = stack.callocLong(1)
+            checkReturnValue(vkAllocateDescriptorSets(
+                    vkDevice, aiDescriptorSet, pDescriptorSet
+            ), "AllocateDescriptorSets")
+            descriptorSet = pDescriptorSet[0]
         }
     }
 
+    private fun ensureMatrixBuffer(numMatrices: Int) {
+        if (numMatrices > matrixBufferCount) {
+            if (matrixBufferAllocation != 0L) {
+                vmaDestroyBuffer(vmaAllocator, matrixBuffer, matrixBufferAllocation)
+            }
+
+            stackPush().use { stack ->
+                val ciBuffer = VkBufferCreateInfo.calloc(stack)
+                ciBuffer.`sType$Default`()
+                ciBuffer.flags(0)
+                ciBuffer.size(MATRIX_SIZE.toLong() * numMatrices)
+                ciBuffer.usage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT or VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+                ciBuffer.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
+
+                // Not all hardware supports uniform buffers larger than 16KB
+                if (ciBuffer.size() > 16_000L) throw Pm2RuntimeError("Too many dynamic matrices: $numMatrices")
+
+                // TODO Optionally use storage buffers instead
+
+                val ciAllocation = VmaAllocationCreateInfo.calloc(stack)
+                ciAllocation.usage(VMA_MEMORY_USAGE_AUTO)
+
+                val pBuffer = stack.callocLong(1)
+                val pAllocation = stack.callocPointer(1)
+
+                checkReturnValue(vmaCreateBuffer(
+                        vmaAllocator, ciBuffer, ciAllocation, pBuffer, pAllocation, null
+                ), "VmaCreateBuffer")
+
+                matrixBufferAllocation = pAllocation[0]
+                matrixBuffer = pBuffer[0]
+                matrixBufferCount = numMatrices
+
+                val descriptorBufferWrites = VkDescriptorBufferInfo.calloc(1, stack)
+                descriptorBufferWrites.buffer(matrixBuffer)
+                descriptorBufferWrites.offset(0)
+                descriptorBufferWrites.range(MATRIX_SIZE.toLong() * matrixBufferCount)
+
+                val descriptorWrites = VkWriteDescriptorSet.calloc(1, stack)
+                descriptorWrites.`sType$Default`()
+                descriptorWrites.dstSet(descriptorSet)
+                descriptorWrites.dstBinding(0)
+                descriptorWrites.dstArrayElement(0)
+                descriptorWrites.descriptorCount(1)
+                descriptorWrites.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+                descriptorWrites.pBufferInfo(descriptorBufferWrites)
+
+                vkUpdateDescriptorSets(vkDevice, descriptorWrites, null)
+            }
+        }
+    }
+
+    @Throws(Pm2RuntimeError::class)
     fun drawAndCopy(
         instance: Pm2Instance, meshes: List<Pm2Mesh>, cameraMatrix: Matrix3x2f,
         signalSemaphore: Long?, submit: (VkSubmitInfo.Buffer, fence: Long) -> Int,
@@ -177,6 +273,18 @@ class Pm2Scene internal constructor(
         newLayout: Int, dstAccessMask: Int, dstStageMask: Int,
         offsetX: Int, offsetY: Int, blitSizeX: Int, blitSizeY: Int
     ) {
+        val requiredNumMatrices = meshes.sumOf { it.matrices.size }
+        ensureMatrixBuffer(requiredNumMatrices)
+
+        val meshesWithMatrices = meshes.map { mesh ->
+            val matrices = mesh.matrices.map {
+                if (it != null) {
+                    Pm2MatrixProcessor(it).execute()
+                } else Matrix3x2f()
+            }
+            Pair(mesh, matrices)
+        }
+
         val pipelineInfo = Pm2PipelineInfo(renderPass, 0) { stack, blendState ->
             val blendAttachments = VkPipelineColorBlendAttachmentState.calloc(1, stack)
             val blendAttachment = blendAttachments[0]
@@ -206,6 +314,41 @@ class Pm2Scene internal constructor(
 
             checkReturnValue(vkBeginCommandBuffer(commandBuffer, biCommands), "BeginCommandBuffer")
 
+            var matrixIndex = 0
+            val meshesWithMatrixIndices = mutableListOf<Pair<Pm2Mesh, Int>>()
+            val hostMatrixBuffer = stack.calloc(MATRIX_SIZE * requiredNumMatrices).asFloatBuffer()
+            for ((mesh, matrices) in meshesWithMatrices) {
+                meshesWithMatrixIndices.add(Pair(mesh, matrixIndex))
+                for (matrix in matrices) {
+
+                    // Yeah... alignment rules...
+                    val bufferIndex = MATRIX_SIZE * matrixIndex / Float.SIZE_BYTES
+                    hostMatrixBuffer.put(bufferIndex, matrix.m00)
+                    hostMatrixBuffer.put(bufferIndex + 1, matrix.m01)
+                    hostMatrixBuffer.put(bufferIndex + 4, matrix.m10)
+                    hostMatrixBuffer.put(bufferIndex + 5, matrix.m11)
+                    hostMatrixBuffer.put(bufferIndex + 8, matrix.m20)
+                    hostMatrixBuffer.put(bufferIndex + 9, matrix.m21)
+                    matrixIndex += 1
+                }
+            }
+            vkCmdUpdateBuffer(commandBuffer, matrixBuffer, 0, hostMatrixBuffer)
+
+            val bufferBarrier = VkBufferMemoryBarrier.calloc(1, stack)
+            bufferBarrier.`sType$Default`()
+            bufferBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+            bufferBarrier.dstAccessMask(VK_ACCESS_SHADER_READ_BIT)
+            bufferBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+            bufferBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+            bufferBarrier.buffer(matrixBuffer)
+            bufferBarrier.offset(0)
+            bufferBarrier.size(VK_WHOLE_SIZE)
+
+            vkCmdPipelineBarrier(
+                    commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0,
+                    null, bufferBarrier, null
+            )
+
             val clearValues = VkClearValue.calloc(1, stack)
             clearValues.color().float32(0, backgroundRed / 255f)
             clearValues.color().float32(1, backgroundGreen / 255f)
@@ -232,7 +375,7 @@ class Pm2Scene internal constructor(
 
             vkCmdSetScissor(commandBuffer, 0, scissor)
 
-            instance.recordDraw(commandBuffer, pipelineInfo, meshes, cameraMatrix)
+            instance.recordDraw(commandBuffer, pipelineInfo, descriptorSet, meshesWithMatrixIndices, cameraMatrix)
 
             vkCmdEndRenderPass(commandBuffer)
 
@@ -331,5 +474,9 @@ class Pm2Scene internal constructor(
         vkDestroyFramebuffer(vkDevice, framebuffer, null)
         vkDestroyImageView(vkDevice, colorImageView, null)
         vmaDestroyImage(vmaAllocator, colorImage, colorImageAllocation)
+        if (matrixBufferCount > 0) {
+            vmaDestroyBuffer(vmaAllocator, matrixBuffer, matrixBufferAllocation)
+        }
+        vkDestroyDescriptorPool(vkDevice, descriptorPool, null)
     }
 }

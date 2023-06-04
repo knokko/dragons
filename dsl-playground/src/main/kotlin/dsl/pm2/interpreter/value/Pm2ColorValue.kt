@@ -24,4 +24,6 @@ class Pm2ColorValue(private val red: Float, private val green: Float, private va
     }
 
     override fun toString() = "rgb($red, $green, $blue)"
+
+    override fun copy() = this
 }
