@@ -35,7 +35,6 @@ internal abstract class Pm2BaseProcessor(
         }
 
         variables.popScope()
-
     }
 
     protected open fun executeInstruction(instruction: Pm2Instruction) {
@@ -80,6 +79,7 @@ internal abstract class Pm2BaseProcessor(
 
     protected open fun invokeBuiltinFunction(name: String) {
         when (name) {
+            "print" -> Pm2BuiltinFunction.PRINT.invoke(valueStack) { parameters -> println(parameters[0]); null }
             "constructPosition" -> Pm2BuiltinFunction.CONSTRUCT_POSITION.invoke(valueStack) { parameters ->
                 Pm2PositionValue(parameters[0].floatValue(), parameters[1].floatValue())
             }

@@ -28,6 +28,7 @@ class Pm2BuiltinFunction(
     }
 
     companion object {
+        val PRINT = Pm2BuiltinFunction(listOf(BuiltinTypes.ANY), null)
         val PRODUCE_TRIANGLE = Pm2BuiltinFunction(listOf(BuiltinTypes.VERTEX, BuiltinTypes.VERTEX, BuiltinTypes.VERTEX), null)
         val CONSTRUCT_POSITION = Pm2BuiltinFunction(listOf(BuiltinTypes.FLOAT, BuiltinTypes.FLOAT), BuiltinTypes.POSITION)
         val RGB = Pm2BuiltinFunction(listOf(BuiltinTypes.FLOAT, BuiltinTypes.FLOAT, BuiltinTypes.FLOAT), BuiltinTypes.COLOR)
@@ -40,6 +41,7 @@ class Pm2BuiltinFunction(
         val SCALE_MATRIX = Pm2BuiltinFunction(listOf(BuiltinTypes.MATRIX, BuiltinTypes.FLOAT, BuiltinTypes.FLOAT), null)
 
         val MAP = mutableMapOf(
+            Pair("print", PRINT),
             Pair("produceTriangle", PRODUCE_TRIANGLE),
             Pair("constructPosition", CONSTRUCT_POSITION),
             Pair("rgb", RGB),
