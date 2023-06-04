@@ -8,7 +8,7 @@ import org.joml.Math.*
 import kotlin.jvm.Throws
 
 internal abstract class Pm2BaseProcessor(
-        protected val instructions: List<Pm2Instruction>
+        private val instructions: List<Pm2Instruction>
 ) {
     protected val variables = Pm2VariableScope()
     protected val valueStack = mutableListOf<Pm2Value>()
