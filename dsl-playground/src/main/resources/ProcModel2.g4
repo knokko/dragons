@@ -15,6 +15,8 @@ innerStatement :
 
 parameterDeclaration : PARAMETER_TYPE 'parameter' IDENTIFIER IDENTIFIER ';';
 
+dynamicDeclaration: 'dynamic' IDENTIFIER ('<' (IDENTIFIER IDENTIFIER ',')* IDENTIFIER IDENTIFIER '>')? '{' innerStatement* expression '}';
+
 variableDeclaration : IDENTIFIER IDENTIFIER ('=' expression)? ';';
 
 variableReassignment : variableReassignmentTarget '=' expression ';';
@@ -36,7 +38,8 @@ expression :
     expression DIVIDE expression |
     expression TIMES expression |
     expression MINUS expression |
-    expression PLUS expression;
+    expression PLUS expression |
+    dynamicDeclaration;
 
 variableProperty : '.' IDENTIFIER;
 

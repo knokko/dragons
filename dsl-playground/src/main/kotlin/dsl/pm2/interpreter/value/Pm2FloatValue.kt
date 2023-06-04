@@ -37,4 +37,6 @@ class Pm2FloatValue(private val value: Float) : Pm2Value() {
     }
 
     override fun toString() = "FloatValue($value)"
+
+    override fun copy() = this
 }

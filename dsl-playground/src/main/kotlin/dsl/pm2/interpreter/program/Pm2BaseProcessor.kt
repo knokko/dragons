@@ -1,28 +1,25 @@
 package dsl.pm2.interpreter.program
 
-import dsl.pm2.interpreter.Pm2BuiltinFunction
-import dsl.pm2.interpreter.Pm2RuntimeError
-import dsl.pm2.interpreter.Pm2VariableScope
-import dsl.pm2.interpreter.Pm2Vertex
+import dsl.pm2.interpreter.*
 import dsl.pm2.interpreter.instruction.Pm2Instruction
 import dsl.pm2.interpreter.instruction.Pm2InstructionType
 import dsl.pm2.interpreter.value.*
 import org.joml.Math.*
 import kotlin.jvm.Throws
 
-internal class Pm2Processor {
-    private val variables = Pm2VariableScope()
-    private val valueStack = mutableListOf<Pm2Value>()
-
-    private val vertices = mutableListOf<Pm2VertexValue>()
+internal abstract class Pm2BaseProcessor(
+        protected val instructions: List<Pm2Instruction>
+) {
+    protected val variables = Pm2VariableScope()
+    protected val valueStack = mutableListOf<Pm2Value>()
 
     @Throws(Pm2RuntimeError::class)
-    fun execute(program: Pm2Program): List<Pm2Vertex> {
+    protected fun executeInstructions() {
         variables.pushScope()
 
         var instructionIndex = 0
-        while (instructionIndex < program.instructions.size) {
-            val instruction = program.instructions[instructionIndex]
+        while (instructionIndex < instructions.size) {
+            val instruction = instructions[instructionIndex]
             instructionIndex += try {
                 if (instruction.type == Pm2InstructionType.Jump) {
                     val jumpOffset = valueStack.removeLast().intValue()
@@ -39,19 +36,13 @@ internal class Pm2Processor {
 
         variables.popScope()
 
-        if (variables.hasScope()) throw IllegalStateException("All scopes should have been popped")
-        if (valueStack.isNotEmpty()) throw IllegalStateException("Value stack should be empty")
-
-        if (vertices.isEmpty()) throw Pm2RuntimeError("Not a single triangle was produced")
-
-        return vertices.map { it.toVertex() }
     }
 
-    private fun executeInstruction(instruction: Pm2Instruction) {
+    protected open fun executeInstruction(instruction: Pm2Instruction) {
         when (instruction.type) {
             Pm2InstructionType.PushValue -> valueStack.add(instruction.value ?: instruction.variableType!!.createDefaultValue!!.invoke())
             Pm2InstructionType.PushVariable -> valueStack.add(
-                variables.getVariable(instruction.name!!) ?: throw Pm2RuntimeError("Undefined variable ${instruction.name}")
+                    variables.getVariable(instruction.name!!) ?: throw Pm2RuntimeError("Undefined variable ${instruction.name}")
             )
             Pm2InstructionType.PushProperty -> valueStack.add(valueStack.removeLast().getProperty(instruction.name!!))
 
@@ -73,7 +64,7 @@ internal class Pm2Processor {
             Pm2InstructionType.SmallerOrEqual -> { val right = valueStack.removeLast(); valueStack.add(Pm2BooleanValue(valueStack.removeLast() <= right)) }
 
             Pm2InstructionType.DeclareVariable -> variables.defineVariable(
-                instruction.variableType!!, instruction.name!!, valueStack.removeLast()
+                    instruction.variableType!!, instruction.name!!, valueStack.removeLast()
             )
             Pm2InstructionType.ReassignVariable -> variables.reassignVariable(instruction.name!!, valueStack.removeLast())
             Pm2InstructionType.SetProperty -> { val newValue = valueStack.removeLast(); valueStack.removeLast().setProperty(instruction.name!!, newValue) }
@@ -87,14 +78,8 @@ internal class Pm2Processor {
         }
     }
 
-    private fun invokeBuiltinFunction(name: String) {
+    protected open fun invokeBuiltinFunction(name: String) {
         when (name) {
-            "produceTriangle" -> Pm2BuiltinFunction.PRODUCE_TRIANGLE.invoke(valueStack) { parameters ->
-                vertices.add(parameters[0].castTo())
-                vertices.add(parameters[1].castTo())
-                vertices.add(parameters[2].castTo())
-                null
-            }
             "constructPosition" -> Pm2BuiltinFunction.CONSTRUCT_POSITION.invoke(valueStack) { parameters ->
                 Pm2PositionValue(parameters[0].floatValue(), parameters[1].floatValue())
             }
@@ -105,6 +90,18 @@ internal class Pm2Processor {
             "float" -> Pm2BuiltinFunction.FLOAT.invoke(valueStack) { parameters -> Pm2FloatValue(parameters[0].intValue().toFloat()) }
             "sin" -> Pm2BuiltinFunction.SIN.invoke(valueStack) { parameters -> Pm2FloatValue(sin(toRadians(parameters[0].floatValue()))) }
             "cos" -> Pm2BuiltinFunction.COS.invoke(valueStack) { parameters -> Pm2FloatValue(cos(toRadians(parameters[0].floatValue()))) }
+            "translate" -> Pm2BuiltinFunction.TRANSLATE_MATRIX.invoke(valueStack) { parameters ->
+                parameters[0].castTo<Pm2MatrixValue>().matrix.translate(parameters[1].floatValue(), parameters[2].floatValue())
+                null
+            }
+            "rotate" -> Pm2BuiltinFunction.ROTATE_MATRIX.invoke(valueStack) { parameters ->
+                parameters[0].castTo<Pm2MatrixValue>().matrix.rotate(toRadians(parameters[1].floatValue()))
+                null
+            }
+            "scale" -> Pm2BuiltinFunction.SCALE_MATRIX.invoke(valueStack) { parameters ->
+                parameters[0].castTo<Pm2MatrixValue>().matrix.scale(parameters[1].floatValue(), parameters[2].floatValue())
+                null
+            }
             else -> throw Pm2RuntimeError("Unknown built-in function $name")
         }
     }

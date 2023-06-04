@@ -22,19 +22,25 @@ import org.lwjgl.vulkan.VkImageCreateInfo
 import org.lwjgl.vulkan.VkImageViewCreateInfo
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
 import java.io.File
+import java.io.IOException
 import java.lang.System.currentTimeMillis
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 fun main() {
-    val initialProgramCode = Files.readString(File("pm2-models/playground.pm2").toPath())
-    val initialVertices = try {
+    val sourceFile = File("pm2-models/debug.pm2").toPath()
+    val initialProgramCode: String = try {
+        Files.readString(sourceFile)
+    } catch (notFound: IOException) {
+        "Insert source code here"
+    }
+    val initialModel = try {
         Pm2Program.compile(initialProgramCode).run()
-    } catch (compileError: Pm2CompileError) { listOf(
-        Pm2Vertex(-0.8f, -0.7f, Color.RED),
-        Pm2Vertex(0.8f, -0.2f, Color.GREEN),
-        Pm2Vertex(-0.9f, 0.8f, Color.BLUE)
-    )}
+    } catch (compileError: Pm2CompileError) { Pm2Model(listOf(
+        Pm2Vertex(-0.8f, -0.7f, Color.RED, 0),
+        Pm2Vertex(0.8f, -0.2f, Color.GREEN, 0),
+        Pm2Vertex(-0.9f, 0.8f, Color.BLUE, 0)
+    ), emptyList())}
 
     val graviksWindow = GraviksWindow(
         800, 800, "DSL Playground", true, "Gruviks Tester",
@@ -120,11 +126,12 @@ fun main() {
         graviksWindow.graviksInstance.queueFamilyIndex
     )
 
-    var currentMesh = pm2Instance.allocations.allocateMesh(initialVertices)
+    var currentMesh = pm2Instance.allocations.allocateMesh(initialModel)
 
     // TODO Create some method for this
     val pm2Scene = Pm2Scene(
         graviksWindow.graviksInstance.device,
+        pm2Instance.descriptorSetLayout,
         graviksWindow.graviksInstance.vmaAllocator,
         graviksWindow.graviksInstance.queueFamilyIndex,
         20, 200, 250,
@@ -135,18 +142,25 @@ fun main() {
     var sceneAccessMask = 0
     var sceneStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
 
+    val errorComponent = TextComponent("", TextStyle(fillColor = Color.RED, font = null))
+
     val sceneComponent = Pm2SceneComponent(currentMesh) { mesh, cameraMatrix ->
-        pm2Scene.drawAndCopy(
-            pm2Instance, listOf(mesh), cameraMatrix, sceneSemaphore, graviksWindow.graviksInstance::synchronizedQueueSubmit,
-            destImage = sceneImage, oldLayout = oldSceneLayout, srcAccessMask = sceneAccessMask, srcStageMask = sceneStageMask,
-            newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-            dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            offsetX = 0, offsetY = 0, blitSizeX = width, blitSizeY = height
-        )
-        oldSceneLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        sceneAccessMask = VK_ACCESS_SHADER_READ_BIT
-        sceneStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-        Triple(sceneImage, sceneImageView, sceneSemaphore)
+        try {
+            pm2Scene.drawAndCopy(
+                    pm2Instance, listOf(mesh), cameraMatrix, sceneSemaphore, graviksWindow.graviksInstance::synchronizedQueueSubmit,
+                    destImage = sceneImage, oldLayout = oldSceneLayout, srcAccessMask = sceneAccessMask, srcStageMask = sceneStageMask,
+                    newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+                    dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    offsetX = 0, offsetY = 0, blitSizeX = width, blitSizeY = height
+            )
+            oldSceneLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            sceneAccessMask = VK_ACCESS_SHADER_READ_BIT
+            sceneStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+            Triple(sceneImage, sceneImageView, sceneSemaphore)
+        } catch (runtimeError: Pm2RuntimeError) {
+            errorComponent.setText(runtimeError.message!!)
+            null
+        }
     }
 
     val codeArea = TextArea(initialProgramCode, squareTextAreaStyle(
@@ -157,8 +171,6 @@ fun main() {
         lineHeight = 0.04f,
         placeholderStyle = null
     ))
-
-    val errorComponent = TextComponent("", TextStyle(fillColor = Color.RED, font = null))
 
     val playgroundMenu = SimpleFlatMenu(SpaceLayout.Simple, Color.WHITE)
     playgroundMenu.addComponent(errorComponent, RectRegion.percentage(0, 95, 100, 100))
@@ -194,7 +206,7 @@ fun main() {
         baseColor = Color.rgbInt(100, 100, 200),
         hoverColor = Color.rgbInt(70, 70, 255)
     )) { _, _ ->
-        Files.write(File("pm2-models/playground.pm2").toPath(), codeArea.getText().toByteArray(StandardCharsets.UTF_8))
+        Files.write(sourceFile, codeArea.getText().toByteArray(StandardCharsets.UTF_8))
     }, RectRegion.percentage(70, 7, 100, 13))
 
     createAndControlGruviksWindow(graviksWindow, playgroundMenu) {

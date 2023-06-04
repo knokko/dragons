@@ -1,0 +1,21 @@
+int two = 2;
+int three = 3;
+
+Vertex red;
+red.position = (-0.8, -0.7);
+red.color = rgb(1.0, 0.0, 0.0);
+red.matrix = dynamic Matrix <int two> {
+	Matrix matrix;
+	translate(matrix, 0.9, -0.8);
+	matrix
+};
+
+Vertex green;
+green.position = (0.8, -0.2);
+green.color = rgb(0.0, 1.0, 0.0);
+
+Vertex blue;
+blue.position = (-0.6, 0.8);
+blue.color = rgb(0.0, 0.0, 1.0);
+
+produceTriangle(red, green, blue);

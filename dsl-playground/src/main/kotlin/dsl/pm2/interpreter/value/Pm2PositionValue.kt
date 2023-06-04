@@ -17,4 +17,6 @@ class Pm2PositionValue(private val x: Float, private val y: Float) : Pm2Value() 
     }
 
     override fun toString() = "PositionValue($x, $y)"
+
+    override fun copy() = this
 }

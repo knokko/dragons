@@ -12,12 +12,13 @@ class Pm2Instruction(
      */
     val value: Pm2Value? = null,
     /**
-     * When *type* is `DeclareVariable`, this is the type of the variable to be declared. For all other instructions,
-     * this must be null.
+     * When *type* is `DeclareVariable` or `TransferVariable`, this is the type of the variable to be declared.
+     * For all other instructions, this must be null.
      */
     val variableType: Pm2Type? = null,
     /**
-     * - When *type* is `PushVariable`, `DeclareVariable`, or `ReassignVariable`, this is the name of the variable.
+     * - When *type* is `PushVariable`, `DeclareVariable`, `ReassignVariable`, or `TransferVariable`,
+     * this is the name of the variable.
      * - When *type* is `PushProperty` or `SetProperty`, this is the name of the property.
      * - When *type* is `InvokeBuiltinFunction`, this is the name of the function
      * - For all other instructions, this must be null.
@@ -29,9 +30,18 @@ class Pm2Instruction(
             throw IllegalArgumentException("Type $type must not have a value")
         }
 
+        if ((type != Pm2InstructionType.DeclareVariable && type != Pm2InstructionType.TransferVariable) && variableType != null) {
+            throw IllegalArgumentException("Type $type must not have a variable type")
+        }
+        if ((type == Pm2InstructionType.DeclareVariable || type == Pm2InstructionType.TransferVariable) && variableType == null) {
+            throw IllegalArgumentException("DeclareVariable and TransferVariable instructions must have a type")
+        }
+
         if ((type == Pm2InstructionType.PushVariable || type == Pm2InstructionType.DeclareVariable
                     || type == Pm2InstructionType.ReassignVariable || type == Pm2InstructionType.PushProperty
-                    || type == Pm2InstructionType.SetProperty || type == Pm2InstructionType.InvokeBuiltinFunction)) {
+                    || type == Pm2InstructionType.SetProperty || type == Pm2InstructionType.InvokeBuiltinFunction
+                    || type == Pm2InstructionType.TransferVariable
+                )) {
             if (name == null) throw IllegalArgumentException("Type $type must have a name")
         } else if (name != null) throw IllegalArgumentException("Type $type must not have a name")
     }

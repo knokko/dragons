@@ -17,20 +17,8 @@ class Pm2PipelineInfo(
             && this.subpass == other.subpass && this.setBlendState == other.setBlendState
 }
 
-internal class Pm2Pipeline(
-    val vkPipeline: Long,
-    val vkPipelineLayout: Long
-) {
-    fun destroy(vkDevice: VkDevice) {
-        vkDestroyPipeline(vkDevice, vkPipeline, null)
-        vkDestroyPipelineLayout(vkDevice, vkPipelineLayout, null)
-    }
-}
-
-internal fun createGraphicsPipeline(vkDevice: VkDevice, info: Pm2PipelineInfo): Pm2Pipeline {
+internal fun createGraphicsPipeline(vkDevice: VkDevice, info: Pm2PipelineInfo, pipelineLayout: Long): Long {
     return stackPush().use { stack ->
-        val layout = createPipelineLayout(vkDevice, stack)
-
         val ciPipeline = VkGraphicsPipelineCreateInfo.calloc(1, stack)
         ciPipeline.`sType$Default`()
         ciPipeline.flags(0)
@@ -49,7 +37,8 @@ internal fun createGraphicsPipeline(vkDevice: VkDevice, info: Pm2PipelineInfo): 
         info.setBlendState(stack, blendState)
         ciPipeline.pColorBlendState(blendState)
         ciPipeline.pDynamicState(createDynamicState(stack))
-        ciPipeline.layout(layout)
+        ciPipeline.pMultisampleState(createMultisampleState(stack))
+        ciPipeline.layout(pipelineLayout)
         ciPipeline.renderPass(info.renderPass)
         ciPipeline.subpass(info.subpass)
 
@@ -61,27 +50,45 @@ internal fun createGraphicsPipeline(vkDevice: VkDevice, info: Pm2PipelineInfo): 
         vkDestroyShaderModule(vkDevice, vertexShaderModule, null)
         vkDestroyShaderModule(vkDevice, fragmentShaderModule, null)
 
-        Pm2Pipeline(pPipeline[0], layout)
+        pPipeline[0]
     }
 }
 
-private fun createPipelineLayout(vkDevice: VkDevice, stack: MemoryStack): Long {
+internal fun createPipelineLayout(vkDevice: VkDevice, stack: MemoryStack): Pair<Long, Long> {
+    val descriptorBindings = VkDescriptorSetLayoutBinding.calloc(1, stack)
+    descriptorBindings.binding(0)
+    descriptorBindings.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+    descriptorBindings.descriptorCount(1)
+    descriptorBindings.stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
+
+    val ciDescriptorLayout = VkDescriptorSetLayoutCreateInfo.calloc(stack)
+    ciDescriptorLayout.`sType$Default`()
+    ciDescriptorLayout.flags(0)
+    ciDescriptorLayout.pBindings(descriptorBindings)
+
+    val pDescriptorLayout = stack.callocLong(1)
+    checkReturnValue(vkCreateDescriptorSetLayout(
+            vkDevice, ciDescriptorLayout, null, pDescriptorLayout
+    ), "CreateDescriptorSetLayout")
+
+    val descriptorSetLayout = pDescriptorLayout[0]
+
     val pushConstants = VkPushConstantRange.calloc(1, stack)
     val pushCameraMatrix = pushConstants[0]
     pushCameraMatrix.stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
     pushCameraMatrix.offset(0)
-    pushCameraMatrix.size(3 * 2 * 4)
+    pushCameraMatrix.size(4 + 3 * 2 * 4) // 1 int and 1 3x2 matrix
 
     // TODO Maybe create just 1 pipeline layout and reuse that
     val ciLayout = VkPipelineLayoutCreateInfo.calloc(stack)
     ciLayout.`sType$Default`()
     ciLayout.setLayoutCount(0)
-    ciLayout.pSetLayouts(null)
+    ciLayout.pSetLayouts(stack.longs(descriptorSetLayout))
     ciLayout.pPushConstantRanges(pushConstants)
 
     val pLayout = stack.callocLong(1)
     checkReturnValue(vkCreatePipelineLayout(vkDevice, ciLayout, null, pLayout), "CreatePipelineLayout")
-    return pLayout[0]
+    return Pair(pLayout[0], descriptorSetLayout)
 }
 
 private fun createDynamicState(stack: MemoryStack): VkPipelineDynamicStateCreateInfo {

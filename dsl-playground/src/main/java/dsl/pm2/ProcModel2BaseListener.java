@@ -1,4 +1,4 @@
-// Generated from java-escape by ANTLR 4.11.1
+// Generated from /home/knokko/programming/kotlin/dragons/dsl-playground/src/main/resources/ProcModel2.g4 by ANTLR 4.12.0
 package dsl.pm2;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -60,6 +60,18 @@ public class ProcModel2BaseListener implements ProcModel2Listener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitParameterDeclaration(ProcModel2Parser.ParameterDeclarationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterDynamicDeclaration(ProcModel2Parser.DynamicDeclarationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitDynamicDeclaration(ProcModel2Parser.DynamicDeclarationContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

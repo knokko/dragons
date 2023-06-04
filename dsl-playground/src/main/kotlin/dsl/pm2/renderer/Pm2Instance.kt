@@ -1,8 +1,9 @@
 package dsl.pm2.renderer
 
-import dsl.pm2.renderer.pipeline.Pm2Pipeline
+import dsl.pm2.interpreter.Pm2RuntimeError
 import dsl.pm2.renderer.pipeline.Pm2PipelineInfo
 import dsl.pm2.renderer.pipeline.createGraphicsPipeline
+import dsl.pm2.renderer.pipeline.createPipelineLayout
 import org.joml.Matrix3x2f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK10.*
@@ -16,28 +17,50 @@ class Pm2Instance(
     queueFamilyIndex: Int
 ) {
 
-    private val pipelines = ConcurrentHashMap<Pm2PipelineInfo, Pm2Pipeline>()
+    private val pipelines = ConcurrentHashMap<Pm2PipelineInfo, Long>()
     val allocations = Pm2Allocations(device, vmaAllocator, queueFamilyIndex)
 
-    fun recordDraw(commandBuffer: VkCommandBuffer, pipelineInfo: Pm2PipelineInfo, meshes: List<Pm2Mesh>, cameraMatrix: Matrix3x2f) {
-        val pipeline = pipelines.computeIfAbsent(pipelineInfo) { info -> createGraphicsPipeline(device, info) }
+    private val pipelineLayout: Long
+    val descriptorSetLayout: Long
+
+    init {
+        stackPush().use { stack ->
+            val (pipelineLayout, descriptorSetLayout) = createPipelineLayout(device, stack)
+            this.pipelineLayout = pipelineLayout
+            this.descriptorSetLayout = descriptorSetLayout
+        }
+    }
+
+    @Throws(Pm2RuntimeError::class)
+    fun recordDraw(
+            commandBuffer: VkCommandBuffer, pipelineInfo: Pm2PipelineInfo, descriptorSet: Long,
+            meshesWithMatrices: List<Pair<Pm2Mesh, Int>>, cameraMatrix: Matrix3x2f
+    ) {
+        val pipeline = pipelines.computeIfAbsent(pipelineInfo) { info -> createGraphicsPipeline(device, info, pipelineLayout) }
 
         stackPush().use { stack ->
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vkPipeline)
+            val pushBuffer = stack.callocInt(1)
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline)
+            vkCmdBindDescriptorSets(
+                    commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
+                    0, stack.longs(descriptorSet), null
+            )
 
             val matrixBuffer = stack.callocFloat(3 * 2)
             cameraMatrix.get(0, matrixBuffer)
-            vkCmdPushConstants(commandBuffer, pipeline.vkPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, matrixBuffer)
+            vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, matrixBuffer)
 
-            // TODO Bind descriptor sets
             val vertexBuffers = mutableSetOf<Long>()
-            for (mesh in meshes) vertexBuffers.add(mesh.vkBuffer)
+            for (mesh in meshesWithMatrices) vertexBuffers.add(mesh.first.vertexBuffer)
 
             for (vertexBuffer in vertexBuffers) {
-                val currentMeshes = meshes.filter { it.vkBuffer == vertexBuffer }
+                val currentMeshes = meshesWithMatrices.filter { it.first.vertexBuffer == vertexBuffer }
                 vkCmdBindVertexBuffers(commandBuffer, 0, stack.longs(vertexBuffer), stack.longs(0))
                 // TODO Experiment with optimizations
-                for (mesh in currentMeshes) {
+                for ((mesh, matrixIndexOffset) in currentMeshes) {
+
+                    pushBuffer.put(0, matrixIndexOffset)
+                    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 2 * 3 * 4, pushBuffer)
                     vkCmdDraw(commandBuffer, mesh.numVertices, 1, mesh.vertexOffset, 0)
                 }
             }
@@ -45,8 +68,10 @@ class Pm2Instance(
     }
 
     fun destroy() {
-        pipelines.forEachValue(50) { pipeline -> pipeline.destroy(device)}
+        pipelines.forEachValue(50) { pipeline -> vkDestroyPipeline(device, pipeline, null) }
         pipelines.clear()
+        vkDestroyPipelineLayout(device, pipelineLayout, null)
+        vkDestroyDescriptorSetLayout(device, descriptorSetLayout, null)
         allocations.destroy()
     }
 }

@@ -4,9 +4,18 @@ import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkPipelineColorBlendStateCreateInfo
 import org.lwjgl.vulkan.VkPipelineDepthStencilStateCreateInfo
+import org.lwjgl.vulkan.VkPipelineMultisampleStateCreateInfo
 import org.lwjgl.vulkan.VkPipelineRasterizationStateCreateInfo
 import org.lwjgl.vulkan.VkPipelineViewportStateCreateInfo
 
+internal fun createMultisampleState(stack: MemoryStack): VkPipelineMultisampleStateCreateInfo {
+    val ciMulti = VkPipelineMultisampleStateCreateInfo.calloc(stack)
+    ciMulti.`sType$Default`()
+    ciMulti.rasterizationSamples(VK_SAMPLE_COUNT_1_BIT)
+    ciMulti.sampleShadingEnable(false)
+
+    return ciMulti
+}
 internal fun createViewportState(stack: MemoryStack): VkPipelineViewportStateCreateInfo {
     val ciViewport = VkPipelineViewportStateCreateInfo.calloc(stack)
     ciViewport.`sType$Default`()
