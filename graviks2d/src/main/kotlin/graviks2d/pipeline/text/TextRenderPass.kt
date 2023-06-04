@@ -64,7 +64,7 @@ internal fun createTextRenderPass(
     subpassDependency.srcStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
     subpassDependency.dstStageMask(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
     subpassDependency.srcAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-    subpassDependency.dstAccessMask(VK_ACCESS_SHADER_READ_BIT)
+    subpassDependency.dstAccessMask(VK_ACCESS_INPUT_ATTACHMENT_READ_BIT)
     subpassDependency.dependencyFlags(VK_DEPENDENCY_BY_REGION_BIT)
 
     val ciRenderPass = VkRenderPassCreateInfo.calloc(stack)
