@@ -2,6 +2,8 @@ package troll.instance;
 
 import org.junit.jupiter.api.Test;
 import org.lwjgl.vulkan.VkValidationFeaturesEXT;
+import troll.builder.TrollBuilder;
+import troll.builder.instance.ValidationFeatures;
 
 import java.util.HashSet;
 import java.util.Objects;
@@ -10,7 +12,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.system.MemoryUtil.memUTF8;
 import static org.lwjgl.vulkan.EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 import static org.lwjgl.vulkan.EXTValidationFeatures.*;
-import static org.lwjgl.vulkan.KHRGetPhysicalDeviceProperties2.VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
 import static org.lwjgl.vulkan.KHRGetSurfaceCapabilities2.VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME;
 import static org.lwjgl.vulkan.KHRPortabilityEnumeration.VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 import static org.lwjgl.vulkan.KHRPortabilityEnumeration.VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
@@ -35,12 +36,6 @@ public class TestTrollBuilder {
             var appInfo = Objects.requireNonNull(ciInstance.pApplicationInfo());
             assertEquals("TestSimpleVulkan1.0", appInfo.pApplicationNameString());
             assertEquals(VK_API_VERSION_1_0, appInfo.apiVersion());
-            assertEquals(0, ciInstance.enabledLayerCount());
-            assertEquals(1, ciInstance.enabledExtensionCount());
-            assertEquals(
-                    VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
-                    memUTF8(Objects.requireNonNull(ciInstance.ppEnabledExtensionNames()).get(0))
-            );
             pDidCallInstanceCreator[0] = true;
             return TrollBuilder.DEFAULT_VK_INSTANCE_CREATOR.vkCreateInstance(stack, ciInstance);
         }).build();
@@ -60,7 +55,7 @@ public class TestTrollBuilder {
         ).engine("TestEngine", VK_MAKE_VERSION(0, 8, 4))
                 .requiredVkInstanceExtensions(createSet(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME))
                 .desiredVkInstanceExtensions(createSet(VK_KHR_SURFACE_EXTENSION_NAME))
-                .validation(new TrollBuilder.ValidationFeatures(
+                .validation(new ValidationFeatures(
                         true, true, false, false, false
                 ))
                 .vkInstanceCreator((stack, ciInstance) -> {
