@@ -26,6 +26,7 @@ import static org.lwjgl.vulkan.KHRGetPhysicalDeviceProperties2.VK_KHR_GET_PHYSIC
 import static org.lwjgl.vulkan.KHRPortabilityEnumeration.VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
 import static org.lwjgl.vulkan.KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 import static org.lwjgl.vulkan.VK10.*;
+import static troll.builder.TrollSwapchainBuilder.createSurface;
 import static troll.exceptions.VulkanFailureException.assertVkSuccess;
 
 public class TrollBuilder {
@@ -49,6 +50,7 @@ public class TrollBuilder {
     long window = 0;
     int windowWidth = 0;
     int windowHeight = 0;
+    TrollSwapchainBuilder swapchainBuilder;
     boolean initGLFW = true;
 
     String engineName = "TrollEngine";
@@ -94,12 +96,15 @@ public class TrollBuilder {
      * @param window The GLFW window to use, or 0 to create a new one of the given size
      * @param width The width of the window content, in pixels
      * @param height The height of the window content, in pixels
+     * @param swapchainBuilder Specifies the desired configuration of the swapchain to be created. Can be null
+     *                         if no window is created.
      * @return this
      */
-    public TrollBuilder window(long window, int width, int height) {
+    public TrollBuilder window(long window, int width, int height, TrollSwapchainBuilder swapchainBuilder) {
         this.window = window;
         this.windowWidth = width;
         this.windowHeight = height;
+        this.swapchainBuilder = swapchainBuilder;
         return this;
     }
 
@@ -220,8 +225,12 @@ public class TrollBuilder {
         var instanceResult = TrollInstanceBuilder.createInstance(this);
         var deviceResult = TrollDeviceBuilder.createDevice(this, instanceResult.vkInstance());
 
+        var windowSurface = deviceResult.windowSurface() != 0L ?
+                createSurface(deviceResult.vkPhysicalDevice(), deviceResult.windowSurface()) : null;
+        var swapchainSettings = windowSurface != null ? swapchainBuilder.chooseSwapchainSettings(windowSurface) : null;
+
         return new TrollInstance(
-                window, deviceResult.windowSurface(),
+                window, windowSurface, swapchainSettings,
                 instanceResult.vkInstance(), deviceResult.vkPhysicalDevice(), deviceResult.vkDevice(),
                 instanceResult.enabledExtensions(), deviceResult.enabledExtensions(),
                 deviceResult.queueFamilies(), deviceResult.vmaAllocator()

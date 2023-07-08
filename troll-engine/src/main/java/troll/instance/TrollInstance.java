@@ -7,8 +7,12 @@ import troll.buffer.TrollBuffers;
 import troll.commands.TrollCommands;
 import troll.debug.TrollDebug;
 import troll.descriptors.TrollDescriptors;
+import troll.images.TrollImages;
 import troll.pipelines.TrollPipelines;
 import troll.queue.QueueFamilies;
+import troll.surface.WindowSurface;
+import troll.swapchain.SwapchainSettings;
+import troll.swapchain.TrollSwapchains;
 import troll.sync.TrollSync;
 
 import java.util.Collections;
@@ -22,7 +26,9 @@ import static org.lwjgl.vulkan.VK10.vkDestroyInstance;
 public class TrollInstance {
 
     private final long glfwWindow;
-    private final long glfwWindowSurface;
+    private final WindowSurface windowSurface;
+    public final SwapchainSettings swapchainSettings;
+
     private final VkInstance vkInstance;
     private final VkPhysicalDevice vkPhysicalDevice;
     private final VkDevice vkDevice;
@@ -31,22 +37,25 @@ public class TrollInstance {
     private final long vmaAllocator;
 
     public final TrollBuffers buffers;
+    public final TrollImages images;
     public final TrollDescriptors descriptors;
     public final TrollPipelines pipelines;
     public final TrollCommands commands;
     public final TrollSync sync;
+    public final TrollSwapchains swapchains;
     public final TrollDebug debug;
 
     private boolean destroyed = false;
 
     public TrollInstance(
-            long glfwWindow, long glfwWindowSurface,
+            long glfwWindow, WindowSurface windowSurface, SwapchainSettings swapchainSettings,
             VkInstance vkInstance, VkPhysicalDevice vkPhysicalDevice, VkDevice vkDevice,
             Set<String> instanceExtensions, Set<String> deviceExtensions,
             QueueFamilies queueFamilies, long vmaAllocator
     ) {
         this.glfwWindow = glfwWindow;
-        this.glfwWindowSurface = glfwWindowSurface;
+        this.windowSurface = windowSurface;
+        this.swapchainSettings = swapchainSettings;
         this.vkInstance = vkInstance;
         this.vkPhysicalDevice = vkPhysicalDevice;
         this.vkDevice = vkDevice;
@@ -56,10 +65,12 @@ public class TrollInstance {
         this.vmaAllocator = vmaAllocator;
 
         this.buffers = new TrollBuffers(this);
+        this.images = new TrollImages(this);
         this.descriptors = new TrollDescriptors(this);
         this.pipelines = new TrollPipelines(this);
         this.commands = new TrollCommands(this);
         this.sync = new TrollSync(this);
+        this.swapchains = swapchainSettings != null ? new TrollSwapchains(this) : null;
         this.debug = new TrollDebug(this);
     }
 
@@ -77,10 +88,10 @@ public class TrollInstance {
         return glfwWindow;
     }
 
-    public long glfwWindowSurface() {
+    public WindowSurface windowSurface() {
         checkDestroyed();
         checkWindow();
-        return glfwWindowSurface;
+        return windowSurface;
     }
 
     public VkInstance vkInstance() {
@@ -113,6 +124,7 @@ public class TrollInstance {
 
         vmaDestroyAllocator(vmaAllocator);
         vkDestroyDevice(vkDevice, null);
+        if (windowSurface != null) windowSurface.destroy(vkInstance);
         vkDestroyInstance(vkInstance, null);
         if (glfwWindow != 0L) glfwDestroyWindow(glfwWindow);
 
