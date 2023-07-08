@@ -5,6 +5,7 @@ import troll.exceptions.MissingVulkanExtensionException;
 import troll.exceptions.MissingVulkanLayerException;
 
 import java.util.HashSet;
+import java.util.Set;
 
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.vulkan.EXTValidationFeatures.*;
@@ -16,7 +17,7 @@ import static troll.exceptions.VulkanFailureException.assertVkSuccess;
 
 class TrollInstanceBuilder {
 
-    static VkInstance createInstance(TrollBuilder builder) {
+    static Result createInstance(TrollBuilder builder) {
 
         var supportedLayers = new HashSet<String>();
         try (var stack = stackPush()) {
@@ -127,6 +128,8 @@ class TrollInstanceBuilder {
 
             vkInstance = builder.vkInstanceCreator.vkCreateInstance(stack, ciInstance);
         }
-        return vkInstance;
+        return new Result(vkInstance, enabledExtensions);
     }
+
+    record Result(VkInstance vkInstance, Set<String> enabledExtensions) {}
 }

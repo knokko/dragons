@@ -17,7 +17,11 @@ import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFWVulkan.*;
 import static org.lwjgl.system.MemoryUtil.memUTF8;
 import static org.lwjgl.vulkan.EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+import static org.lwjgl.vulkan.EXTMemoryBudget.VK_EXT_MEMORY_BUDGET_EXTENSION_NAME;
 import static org.lwjgl.vulkan.EXTValidationFeatures.*;
+import static org.lwjgl.vulkan.KHRBindMemory2.VK_KHR_BIND_MEMORY_2_EXTENSION_NAME;
+import static org.lwjgl.vulkan.KHRDedicatedAllocation.VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME;
+import static org.lwjgl.vulkan.KHRGetMemoryRequirements2.VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME;
 import static org.lwjgl.vulkan.KHRGetPhysicalDeviceProperties2.VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
 import static org.lwjgl.vulkan.KHRPortabilityEnumeration.VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
 import static org.lwjgl.vulkan.KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
@@ -201,6 +205,10 @@ public class TrollBuilder {
         // Nice for VMA
         if (VK_API_VERSION_MAJOR(apiVersion) == 1 && VK_API_VERSION_MINOR(apiVersion) == 0) {
             this.desiredVulkanInstanceExtensions.add(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+            this.desiredVulkanDeviceExtensions.add(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
+            this.desiredVulkanDeviceExtensions.add(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+            this.desiredVulkanDeviceExtensions.add(VK_KHR_BIND_MEMORY_2_EXTENSION_NAME);
+            this.desiredVulkanDeviceExtensions.add(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
         }
 
         if (validationFeatures != null) {
@@ -209,12 +217,14 @@ public class TrollBuilder {
             this.requiredVulkanLayers.add("VK_LAYER_KHRONOS_validation");
         }
 
-        var vkInstance = TrollInstanceBuilder.createInstance(this);
-        var deviceResult = TrollDeviceBuilder.createDevice(this, vkInstance);
+        var instanceResult = TrollInstanceBuilder.createInstance(this);
+        var deviceResult = TrollDeviceBuilder.createDevice(this, instanceResult.vkInstance());
 
         return new TrollInstance(
                 window, deviceResult.windowSurface(),
-                vkInstance, deviceResult.vkPhysicalDevice(), deviceResult.vkDevice(), deviceResult.queueFamilies()
+                instanceResult.vkInstance(), deviceResult.vkPhysicalDevice(), deviceResult.vkDevice(),
+                instanceResult.enabledExtensions(), deviceResult.enabledExtensions(),
+                deviceResult.queueFamilies(), deviceResult.vmaAllocator()
         );
     }
 }

@@ -2,16 +2,24 @@ package troll.builder;
 
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
+import org.lwjgl.util.vma.VmaAllocatorCreateInfo;
+import org.lwjgl.util.vma.VmaVulkanFunctions;
 import org.lwjgl.vulkan.*;
 import troll.exceptions.NoVkPhysicalDeviceException;
 import troll.queue.QueueFamilies;
 import troll.queue.QueueFamily;
+import troll.queue.TrollQueue;
 
 import java.nio.ByteBuffer;
 import java.util.*;
 
 import static org.lwjgl.glfw.GLFWVulkan.glfwCreateWindowSurface;
 import static org.lwjgl.system.MemoryStack.stackPush;
+import static org.lwjgl.util.vma.Vma.*;
+import static org.lwjgl.vulkan.EXTMemoryBudget.VK_EXT_MEMORY_BUDGET_EXTENSION_NAME;
+import static org.lwjgl.vulkan.KHRBindMemory2.VK_KHR_BIND_MEMORY_2_EXTENSION_NAME;
+import static org.lwjgl.vulkan.KHRDedicatedAllocation.VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME;
+import static org.lwjgl.vulkan.KHRGetMemoryRequirements2.VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME;
 import static org.lwjgl.vulkan.KHRSurface.vkGetPhysicalDeviceSurfaceSupportKHR;
 import static org.lwjgl.vulkan.VK10.*;
 import static org.lwjgl.vulkan.VK11.vkGetPhysicalDeviceFeatures2;
@@ -22,8 +30,10 @@ class TrollDeviceBuilder {
     static Result createDevice(TrollBuilder builder, VkInstance vkInstance) {
         VkPhysicalDevice vkPhysicalDevice;
         VkDevice vkDevice;
+        Set<String> enabledExtensions;
         long windowSurface;
         QueueFamilies queueFamilies;
+        long vmaAllocator;
 
         try (var stack = stackPush()) {
 
@@ -65,7 +75,7 @@ class TrollDeviceBuilder {
                 }
             }
 
-            Set<String> enabledExtensions = new HashSet<>(builder.requiredVulkanDeviceExtensions);
+            enabledExtensions = new HashSet<>(builder.requiredVulkanDeviceExtensions);
             for (var extension : builder.desiredVulkanDeviceExtensions) {
                 if (supportedExtensions.contains(extension)) enabledExtensions.add(extension);
             }
@@ -74,6 +84,7 @@ class TrollDeviceBuilder {
             for (var extension : enabledExtensions) {
                 ppEnabledExtensions.put(stack.UTF8(extension));
             }
+            ppEnabledExtensions.flip();
 
             if (VK_API_VERSION_MAJOR(builder.apiVersion) != 1) {
                 throw new UnsupportedOperationException("Unknown api major version: " + VK_API_VERSION_MAJOR(builder.apiVersion));
@@ -196,20 +207,54 @@ class TrollDeviceBuilder {
                     queueFamilyMap.get(queueFamilyMapping.transferFamilyIndex()),
                     queueFamilyMap.get(queueFamilyMapping.presentFamilyIndex())
             );
+
+            var vmaVulkanFunctions = VmaVulkanFunctions.calloc(stack);
+            vmaVulkanFunctions.set(vkInstance, vkDevice);
+
+            int vmaFlags = 0;
+            if (enabledExtensions.contains(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
+                    && enabledExtensions.contains(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME)
+            ) {
+                vmaFlags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
+            }
+            if (enabledExtensions.contains(VK_KHR_BIND_MEMORY_2_EXTENSION_NAME)) {
+                vmaFlags |= VMA_ALLOCATOR_CREATE_KHR_BIND_MEMORY2_BIT;
+            }
+            if (enabledExtensions.contains(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME)) {
+                vmaFlags |= VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+            }
+
+            var ciAllocator = VmaAllocatorCreateInfo.calloc(stack);
+            ciAllocator.flags(vmaFlags);
+            ciAllocator.physicalDevice(vkPhysicalDevice);
+            ciAllocator.device(vkDevice);
+            ciAllocator.instance(vkInstance);
+            ciAllocator.pVulkanFunctions(vmaVulkanFunctions);
+            ciAllocator.vulkanApiVersion(builder.apiVersion);
+
+            var pAllocator = stack.callocPointer(1);
+
+            assertVkSuccess(vmaCreateAllocator(
+                    ciAllocator, pAllocator
+            ), "VmaCreateAllocator", "TrollDeviceBuilder");
+            vmaAllocator = pAllocator.get(0);
         }
 
-        return new Result(vkPhysicalDevice, vkDevice, windowSurface, queueFamilies);
+        return new Result(vkPhysicalDevice, vkDevice, enabledExtensions, windowSurface, queueFamilies, vmaAllocator);
     }
 
     private static QueueFamily getQueueFamily(MemoryStack stack, VkDevice vkDevice, int familyIndex, int queueCount) {
-        List<VkQueue> queues = new ArrayList<>(queueCount);
+        List<TrollQueue> queues = new ArrayList<>(queueCount);
         for (int queueIndex = 0; queueIndex < queueCount; queueIndex++) {
             var pQueue = stack.callocPointer(1);
             vkGetDeviceQueue(vkDevice, familyIndex, queueIndex, pQueue);
-            queues.add(new VkQueue(pQueue.get(0), vkDevice));
+            queues.add(new TrollQueue(new VkQueue(pQueue.get(0), vkDevice)));
         }
-        return new QueueFamily(Collections.unmodifiableList(queues));
+        return new QueueFamily(familyIndex, Collections.unmodifiableList(queues));
     }
 
-    record Result(VkPhysicalDevice vkPhysicalDevice, VkDevice vkDevice, long windowSurface, QueueFamilies queueFamilies) {}
+    record Result(
+            VkPhysicalDevice vkPhysicalDevice, VkDevice vkDevice, Set<String> enabledExtensions,
+            long windowSurface, QueueFamilies queueFamilies, long vmaAllocator
+    ) {}
 }
