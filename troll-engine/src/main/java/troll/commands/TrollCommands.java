@@ -3,7 +3,7 @@ package troll.commands;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 import troll.instance.TrollInstance;
-import troll.sync.BufferUsage;
+import troll.sync.ResourceUsage;
 
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.vulkan.VK10.*;
@@ -79,7 +79,7 @@ public class TrollCommands {
     public void bufferBarrier(
             MemoryStack stack, VkCommandBuffer commandBuffer,
             long vkBuffer, long offset, long size,
-            BufferUsage srcUsage, BufferUsage dstUsage
+            ResourceUsage srcUsage, ResourceUsage dstUsage
     ) {
         var bufferBarrier = VkBufferMemoryBarrier.calloc(1, stack);
         bufferBarrier.sType$Default();
@@ -99,7 +99,7 @@ public class TrollCommands {
 
     public void transitionLayout(
             MemoryStack stack, VkCommandBuffer commandBuffer, long vkImage, int oldLayout, int newLayout,
-            BufferUsage oldUsage, BufferUsage newUsage // TODO ImageUsage class?
+            ResourceUsage oldUsage, ResourceUsage newUsage
     ) {
         var pImageBarrier = VkImageMemoryBarrier.calloc(1, stack);
         pImageBarrier.sType$Default();

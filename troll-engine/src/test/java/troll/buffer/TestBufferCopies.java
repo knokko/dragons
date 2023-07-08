@@ -3,7 +3,7 @@ package troll.buffer;
 import org.junit.jupiter.api.Test;
 import troll.builder.TrollBuilder;
 import troll.builder.instance.ValidationFeatures;
-import troll.sync.BufferUsage;
+import troll.sync.ResourceUsage;
 import troll.sync.WaitSemaphore;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -54,8 +54,8 @@ public class TestBufferCopies {
             );
             instance.commands.bufferBarrier(
                     stack, commandBuffer, middleBuffer.vkBuffer(), 0, 100,
-                    new BufferUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
-                    new BufferUsage(VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
+                    new ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
+                    new ResourceUsage(VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
             );
             instance.commands.copyBuffer(
                     commandBuffer, stack, 100, middleBuffer.vkBuffer(), 0,

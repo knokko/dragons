@@ -5,7 +5,7 @@ import org.lwjgl.vulkan.VkPresentInfoKHR;
 import troll.builder.TrollBuilder;
 import troll.builder.TrollSwapchainBuilder;
 import troll.builder.instance.ValidationFeatures;
-import troll.sync.BufferUsage;
+import troll.sync.ResourceUsage;
 import troll.sync.WaitSemaphore;
 
 import java.util.Objects;
@@ -64,8 +64,8 @@ public class SimpleWindowPlayground {
             instance.commands.transitionLayout(
                     stack, commandBuffer, swapchainImage,
                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    new BufferUsage(0, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT),
-                    new BufferUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
+                    new ResourceUsage(0, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT),
+                    new ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
             );
 
             float alpha = 0.821f;
@@ -79,8 +79,8 @@ public class SimpleWindowPlayground {
             instance.commands.transitionLayout(
                     stack, commandBuffer, swapchainImage,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                    new BufferUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
-                    new BufferUsage(0, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT)
+                    new ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
+                    new ResourceUsage(0, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT)
             );
 
             assertVkSuccess(vkEndCommandBuffer(commandBuffer), "EndCommandBuffer", "Fill");
