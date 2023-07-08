@@ -4,6 +4,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkBufferMemoryBarrier;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkFenceCreateInfo;
+import org.lwjgl.vulkan.VkSemaphoreCreateInfo;
 import troll.instance.TrollInstance;
 
 import static org.lwjgl.system.MemoryStack.stackPush;
@@ -33,5 +34,19 @@ public class TrollSync {
         }
     }
 
+    public long createSemaphore(String name) {
+        try (var stack = stackPush()) {
+            var ciSemaphore = VkSemaphoreCreateInfo.calloc(stack);
+            ciSemaphore.sType$Default();
+            ciSemaphore.flags(0);
 
+            var pSemaphore = stack.callocLong(1);
+            assertVkSuccess(vkCreateSemaphore(
+                    instance.vkDevice(), ciSemaphore, null, pSemaphore
+            ), "CreateSemaphore", name);
+            long semaphore = pSemaphore.get(0);
+            instance.debug.name(stack, semaphore, VK_OBJECT_TYPE_SEMAPHORE, name);
+            return semaphore;
+        }
+    }
 }
