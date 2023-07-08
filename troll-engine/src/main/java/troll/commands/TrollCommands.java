@@ -96,4 +96,25 @@ public class TrollCommands {
                 0, null, bufferBarrier, null
         );
     }
+
+    public void transitionLayout(
+            MemoryStack stack, VkCommandBuffer commandBuffer, long vkImage, int oldLayout, int newLayout,
+            BufferUsage oldUsage, BufferUsage newUsage // TODO ImageUsage class?
+    ) {
+        var pImageBarrier = VkImageMemoryBarrier.calloc(1, stack);
+        pImageBarrier.sType$Default();
+        pImageBarrier.srcAccessMask(oldUsage.accessMask());
+        pImageBarrier.dstAccessMask(newUsage.accessMask());
+        pImageBarrier.oldLayout(oldLayout);
+        pImageBarrier.newLayout(newLayout);
+        pImageBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
+        pImageBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
+        pImageBarrier.image(vkImage);
+        instance.images.subresourceRange(stack, pImageBarrier.subresourceRange(), VK_IMAGE_ASPECT_COLOR_BIT);
+
+        vkCmdPipelineBarrier(
+                commandBuffer, oldUsage.stageMask(), newUsage.stageMask(), 0,
+                null, null, pImageBarrier
+        );
+    }
 }
