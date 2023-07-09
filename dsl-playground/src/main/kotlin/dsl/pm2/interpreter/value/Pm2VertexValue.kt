@@ -44,7 +44,7 @@ class Pm2VertexValue : Pm2Value() {
 
     override fun copy(): Pm2Value {
         val copy = Pm2VertexValue()
-        copy.position = this.position
+        if (this::position.isInitialized) copy.position = this.position
         copy.color = this.color
         copy.matrix = this.matrix
         return copy
