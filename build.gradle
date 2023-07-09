@@ -124,7 +124,8 @@ project(':troll-engine') {
         testImplementation "org.lwjgl:lwjgl-glfw"
 
         testRuntimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
-        testRuntimeOnly "org.lwjgl:lwjgl-glfw-natives"
+        testRuntimeOnly "org.lwjgl:lwjgl-glfw::$lwjglNatives"
+        testRuntimeOnly "org.lwjgl:lwjgl-vma::$lwjglNatives"
         // TODO Maybe MacOS?
     }
 }

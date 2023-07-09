@@ -11,10 +11,10 @@ public record WindowSurface(
         long vkSurface,
         Set<SurfaceFormat> formats,
         Set<Integer> presentModes,
-        VkSurfaceCapabilitiesKHR initialCapabilities
+        VkSurfaceCapabilitiesKHR capabilities
 ) {
     public void destroy(VkInstance vkInstance) {
         vkDestroySurfaceKHR(vkInstance, vkSurface, null);
-        initialCapabilities.free();
+        capabilities.free();
     }
 }

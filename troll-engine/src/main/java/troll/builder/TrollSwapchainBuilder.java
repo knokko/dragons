@@ -97,7 +97,7 @@ public class TrollSwapchainBuilder {
         return new SwapchainSettings(
                 imageUsage,
                 surfaceFormatPicker.chooseSurfaceFormat(windowSurface.formats()),
-                compositeAlphaPicker.chooseCompositeAlpha(windowSurface.initialCapabilities().supportedCompositeAlpha())
+                compositeAlphaPicker.chooseCompositeAlpha(windowSurface.capabilities().supportedCompositeAlpha())
         );
     }
 }
