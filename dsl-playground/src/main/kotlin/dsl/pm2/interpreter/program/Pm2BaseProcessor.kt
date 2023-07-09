@@ -8,7 +8,7 @@ import org.joml.Math.*
 import kotlin.jvm.Throws
 
 internal abstract class Pm2BaseProcessor(
-        protected val instructions: List<Pm2Instruction>
+        private val instructions: List<Pm2Instruction>
 ) {
     protected val variables = Pm2VariableScope()
     protected val valueStack = mutableListOf<Pm2Value>()
@@ -39,7 +39,7 @@ internal abstract class Pm2BaseProcessor(
 
     protected open fun executeInstruction(instruction: Pm2Instruction) {
         when (instruction.type) {
-            Pm2InstructionType.PushValue -> valueStack.add(instruction.value ?: instruction.variableType!!.createDefaultValue!!.invoke())
+            Pm2InstructionType.PushValue -> valueStack.add(instruction.value?.copy() ?: instruction.variableType!!.createDefaultValue!!.invoke())
             Pm2InstructionType.PushVariable -> valueStack.add(
                     variables.getVariable(instruction.name!!) ?: throw Pm2RuntimeError("Undefined variable ${instruction.name}")
             )

@@ -29,22 +29,11 @@ class Pm2Instruction(
         if (type != Pm2InstructionType.PushValue && value != null) {
             throw IllegalArgumentException("Type $type must not have a value")
         }
-
-        if ((
-                type != Pm2InstructionType.DeclareVariable
-                && type != Pm2InstructionType.TransferVariable
-                && type != Pm2InstructionType.PushValue
-        ) && variableType != null) {
+        if ((type != Pm2InstructionType.DeclareVariable && type != Pm2InstructionType.TransferVariable) && variableType != null) {
             throw IllegalArgumentException("Type $type must not have a variable type")
         }
         if ((type == Pm2InstructionType.DeclareVariable || type == Pm2InstructionType.TransferVariable) && variableType == null) {
             throw IllegalArgumentException("DeclareVariable and TransferVariable instructions must have a type")
-        }
-
-        if (type == Pm2InstructionType.DeclareVariable) {
-            if ((variableType == null) == (value == null)) {
-                throw IllegalArgumentException("DeclareVariable must either have a variableType or a value")
-            }
         }
 
         if ((type == Pm2InstructionType.PushVariable || type == Pm2InstructionType.DeclareVariable

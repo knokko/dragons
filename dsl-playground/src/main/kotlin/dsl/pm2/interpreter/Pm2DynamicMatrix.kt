@@ -7,4 +7,5 @@ class Pm2DynamicMatrix(
         val instructions: List<Pm2Instruction>,
         val transferredVariables: Map<String, Pair<Pm2Type, Pm2Value>>
 ) {
+    override fun toString() = "DynamicMatrix(${instructions.size} instructions, transfers $transferredVariables)"
 }
