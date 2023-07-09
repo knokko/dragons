@@ -1,8 +1,6 @@
 package troll.sync;
 
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.VkBufferMemoryBarrier;
-import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkFenceCreateInfo;
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo;
 import troll.instance.TrollInstance;
@@ -48,5 +46,14 @@ public class TrollSync {
             instance.debug.name(stack, semaphore, VK_OBJECT_TYPE_SEMAPHORE, name);
             return semaphore;
         }
+    }
+
+    public void waitAndReset(MemoryStack stack, long fence, long timeout) {
+        assertVkSuccess(vkWaitForFences(
+                instance.vkDevice(), stack.longs(fence), true, timeout
+        ), "WaitForFences", "SwapchainAcquire");
+        assertVkSuccess(vkResetFences(
+                instance.vkDevice(), stack.longs(fence)
+        ), "ResetFences", "SwapchainAcquire");
     }
 }
