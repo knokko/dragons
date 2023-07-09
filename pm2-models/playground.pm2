@@ -5,23 +5,30 @@ Vertex circlePoint(float centerX, float centerY, float radius, float angle) {
 	circlePoint
 }
 
-void produceCircle(float centerX, float centerY, float radius, int numParts, color color) {
+void produceCircle(float centerX, float centerY, matrix matrix, float radius, int numParts, color color) {
 	Vertex center;
 	center.position = (centerX, centerY);
 	center.color = color;
+	center.matrix = matrix;
 
 	for (0 <= currentPart < numParts) {
 		Vertex edge1 = circlePoint(centerX, centerY, radius, 360.0 * float(currentPart) / numParts);
 		edge1.color = color;
+		edge1.matrix = matrix;
 
 		Vertex edge2 = circlePoint(centerX, centerY, radius, 360.0 * (float(currentPart) + 1.0) / numParts);
 		edge2.color = color;
+		edge2.matrix = matrix;
 
 		produceTriangle(center, edge2, edge1);
 	}
 }
 
-void produceFlower(float startX, float startY, float stemLength, float stemRadius, color stemColor, float flowerRadius, color flowerColor, color leafColor) {
+void produceFlower(
+		float startX, float startY, matrix matrix,
+		float stemLength, float stemRadius, color stemColor, 
+		float flowerRadius, color flowerColor, color leafColor
+) {
 	float currentX = startX;
 	float currentY = startY;
 	for (0 <= stemStep < 10) {
@@ -31,18 +38,22 @@ void produceFlower(float startX, float startY, float stemLength, float stemRadiu
 		Vertex bottomLeft;
 		bottomLeft.position = (currentX - stemRadius, currentY);
 		bottomLeft.color = stemColor;
+		bottomLeft.matrix = matrix;
 		
 		Vertex bottomRight;
 		bottomRight.position = (currentX + stemRadius, currentY);
 		bottomRight.color = stemColor;
+		bottomRight.matrix = matrix;
 		
 		Vertex topRight;
 		topRight.position = (nextX + stemRadius, nextY);
 		topRight.color = stemColor;
+		topRight.matrix = matrix;
 
 		Vertex topLeft;
 		topLeft.position = (nextX - stemRadius, nextY);
 		topLeft.color = stemColor;
+		topLeft.matrix = matrix;
 
 		produceTriangle(bottomLeft, bottomRight, topRight);
 		produceTriangle(topRight, topLeft, bottomLeft);
@@ -54,7 +65,7 @@ void produceFlower(float startX, float startY, float stemLength, float stemRadiu
 	float centerX = currentX;
 	float centerY = currentY + flowerRadius;
 
-	produceCircle(centerX, centerY, flowerRadius, 20, flowerColor);
+	produceCircle(centerX, centerY, matrix, flowerRadius, 20, flowerColor);
 
 	int numLeaves = 5;
 	for (0 <= leaf < numLeaves) {
@@ -65,19 +76,25 @@ void produceFlower(float startX, float startY, float stemLength, float stemRadiu
 
 		Vertex start1 = circlePoint(centerX, centerY, flowerRadius, baseAngle - startAngleOffset);
 		start1.color = leafColor;
+		start1.matrix = matrix;
 		Vertex start3 = circlePoint(centerX, centerY, flowerRadius, baseAngle + startAngleOffset);
 		start3.color = leafColor;
+		start3.matrix = matrix;
 		
 		Vertex mid1 = circlePoint(start1.position.x, start1.position.y, flowerRadius * 0.8, baseAngle - midAngleOffset);
 		mid1.color = leafColor;
+		mid1.matrix = matrix;
 		Vertex mid3 = circlePoint(start3.position.x, start3.position.y, flowerRadius * 0.8, baseAngle + midAngleOffset);
 		mid3.color = leafColor;
+		mid3.matrix = matrix;
 
 		Vertex end1 = circlePoint(mid1.position.x, mid1.position.y, flowerRadius * 0.5, baseAngle - endAngleOffset);
 		end1.color = leafColor;
+		end1.matrix = matrix;
 
 		Vertex end2 = circlePoint(mid3.position.x, mid3.position.y, flowerRadius * 0.5, baseAngle + endAngleOffset);
 		end2.color = leafColor;
+		end2.matrix = matrix;
 		
 		produceTriangle(start3, mid3, mid1);
 		produceTriangle(mid1, start1, start3);
@@ -87,6 +104,7 @@ void produceFlower(float startX, float startY, float stemLength, float stemRadiu
 }
 
 Random rng;
+
 float startY = 10.0;
 for (0 <= currentFlower < 70) {
 	float startX = -10.0 + 20.0 * rng.nextFloat;
@@ -97,6 +115,12 @@ for (0 <= currentFlower < 70) {
 	color flowerColor = rgb(rng.nextFloat, rng.nextFloat, rng.nextFloat);
 	color leafColor = rgb(rng.nextFloat, rng.nextFloat, rng.nextFloat);
 	
-	produceFlower(startX, startY, stemLength, stemRadius, stemColor, flowerRadius, flowerColor, leafColor);
+	matrix thisMatrix = dynamic Matrix <float startX, float startY> {
+		Matrix thisMatrix;
+		Random rng;
+		translate(thisMatrix, startX, startY + 1.0 * rng.nextFloat);
+		thisMatrix
+	};
+	produceFlower(0.0, 0.0, thisMatrix, stemLength, stemRadius, stemColor, flowerRadius, flowerColor, leafColor);
 	startY = startY - 0.5 * rng.nextFloat;
 }
