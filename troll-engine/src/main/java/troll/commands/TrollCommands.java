@@ -33,7 +33,7 @@ public class TrollCommands {
         }
     }
 
-    public VkCommandBuffer[] createPrimaryBuffer(long commandPool, int amount, String name) {
+    public VkCommandBuffer[] createPrimaryBuffers(long commandPool, int amount, String name) {
         try (var stack = stackPush()) {
             var aiCommandBuffer = VkCommandBufferAllocateInfo.calloc(stack);
             aiCommandBuffer.sType$Default();
@@ -116,5 +116,22 @@ public class TrollCommands {
                 commandBuffer, oldUsage.stageMask(), newUsage.stageMask(), 0,
                 null, null, pImageBarrier
         );
+    }
+
+    public void dynamicViewportAndScissor(MemoryStack stack, VkCommandBuffer commandBuffer, int width, int height) {
+        var pViewport = VkViewport.calloc(1, stack);
+        pViewport.x(0f);
+        pViewport.y(0f);
+        pViewport.width((float) width);
+        pViewport.height((float) height);
+        pViewport.minDepth(0f);
+        pViewport.maxDepth(1f);
+
+        var pScissor = VkRect2D.calloc(1, stack);
+        pScissor.offset().set(0, 0);
+        pScissor.extent().set(width, height);
+
+        vkCmdSetViewport(commandBuffer, 0, pViewport);
+        vkCmdSetScissor(commandBuffer, 0, pScissor);
     }
 }
