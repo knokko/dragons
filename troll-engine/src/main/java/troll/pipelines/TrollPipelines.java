@@ -20,14 +20,13 @@ public class TrollPipelines {
     }
 
     public long createLayout(
-            MemoryStack stack, long descriptorSetLayout,
-            VkPushConstantRange.Buffer pushConstants, String name
+            MemoryStack stack, VkPushConstantRange.Buffer pushConstants, String name, long... descriptorSetLayouts
     ) {
         var ciLayout = VkPipelineLayoutCreateInfo.calloc(stack);
         ciLayout.sType$Default();
         ciLayout.flags(0);
         ciLayout.setLayoutCount(1);
-        ciLayout.pSetLayouts(stack.longs(descriptorSetLayout));
+        ciLayout.pSetLayouts(stack.longs(descriptorSetLayouts));
         ciLayout.pPushConstantRanges(pushConstants);
 
         var pLayout = stack.callocLong(1);
@@ -97,5 +96,106 @@ public class TrollPipelines {
         instance.debug.name(stack, pipeline, VK_OBJECT_TYPE_PIPELINE, name);
         vkDestroyShaderModule(instance.vkDevice(), shaderModule, null);
         return pipeline;
+    }
+
+    public void shaderStages(
+            MemoryStack stack, VkGraphicsPipelineCreateInfo ciPipeline, ShaderInfo... shaders
+    ) {
+        var ciShaderStages = VkPipelineShaderStageCreateInfo.calloc(shaders.length, stack);
+        for (int index = 0; index < shaders.length; index++) {
+            var shader = shaders[index];
+            var ciShader = ciShaderStages.get(index);
+            ciShader.sType$Default();
+            ciShader.stage(shader.stage());
+            ciShader.module(shader.module());
+            ciShader.pName(stack.UTF8("main"));
+            ciShader.pSpecializationInfo(shader.specialization());
+        }
+
+        ciPipeline.stageCount(shaders.length);
+        ciPipeline.pStages(ciShaderStages);
+    }
+
+    public void dynamicStates(MemoryStack stack, VkGraphicsPipelineCreateInfo ciPipeline, int... dynamicStates) {
+        var ciDynamic = VkPipelineDynamicStateCreateInfo.calloc(stack);
+        ciDynamic.sType$Default();
+        ciDynamic.pDynamicStates(stack.ints(dynamicStates));
+
+        ciPipeline.pDynamicState(ciDynamic);
+    }
+
+    public void dynamicViewports(MemoryStack stack, VkGraphicsPipelineCreateInfo ciPipeline, int numViewports) {
+        var ciViewport = VkPipelineViewportStateCreateInfo.calloc(stack);
+        ciViewport.sType$Default();
+        ciViewport.viewportCount(numViewports);
+        ciViewport.pViewports(null);
+        ciViewport.scissorCount(numViewports);
+        ciViewport.pScissors(null);
+
+        ciPipeline.pViewportState(ciViewport);
+    }
+
+    public void simpleRasterization(MemoryStack stack, VkGraphicsPipelineCreateInfo ciPipeline, int cullMode) {
+        var ciRaster = VkPipelineRasterizationStateCreateInfo.calloc(stack);
+        ciRaster.sType$Default();
+        ciRaster.depthClampEnable(false);
+        ciRaster.rasterizerDiscardEnable(false);
+        ciRaster.polygonMode(VK_POLYGON_MODE_FILL);
+        ciRaster.cullMode(cullMode);
+        ciRaster.frontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE);
+        ciRaster.depthBiasEnable(false);
+        ciRaster.lineWidth(1f);
+
+        ciPipeline.pRasterizationState(ciRaster);
+    }
+
+    public void simpleInputAssembly(MemoryStack stack, VkGraphicsPipelineCreateInfo ciPipeline) {
+        var ciInputAssembly = VkPipelineInputAssemblyStateCreateInfo.calloc(stack);
+        ciInputAssembly.sType$Default();
+        ciInputAssembly.topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        ciInputAssembly.primitiveRestartEnable(false);
+
+        ciPipeline.pInputAssemblyState(ciInputAssembly);
+    }
+
+    public void noMultisampling(MemoryStack stack, VkGraphicsPipelineCreateInfo ciPipeline) {
+        var ciMultisample = VkPipelineMultisampleStateCreateInfo.calloc(stack);
+        ciMultisample.sType$Default();
+        ciMultisample.rasterizationSamples(VK_SAMPLE_COUNT_1_BIT);
+        ciMultisample.sampleShadingEnable(false);
+
+        ciPipeline.pMultisampleState(ciMultisample);
+    }
+
+    public void noDepthStencil(MemoryStack stack, VkGraphicsPipelineCreateInfo ciPipeline) {
+        var ciDepthStencil = VkPipelineDepthStencilStateCreateInfo.calloc(stack);
+        ciDepthStencil.sType$Default();
+        ciDepthStencil.depthTestEnable(false);
+        ciDepthStencil.depthWriteEnable(false);
+        ciDepthStencil.depthCompareOp(VK_COMPARE_OP_ALWAYS);
+        ciDepthStencil.depthBoundsTestEnable(false);
+        ciDepthStencil.stencilTestEnable(false);
+
+        ciPipeline.pDepthStencilState(ciDepthStencil);
+    }
+
+    public void noColorBlending(MemoryStack stack, VkGraphicsPipelineCreateInfo ciPipeline, int attachmentCount) {
+        var pAttachments = VkPipelineColorBlendAttachmentState.calloc(attachmentCount, stack);
+        for (int index = 0; index < attachmentCount; index++) {
+            var attachment = pAttachments.get(index);
+            attachment.blendEnable(false);
+            attachment.colorWriteMask(
+                    VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                            VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+            );
+        }
+
+        var ciColorBlend = VkPipelineColorBlendStateCreateInfo.calloc(stack);
+        ciColorBlend.sType$Default();
+        ciColorBlend.logicOpEnable(false);
+        ciColorBlend.attachmentCount(attachmentCount);
+        ciColorBlend.pAttachments(pAttachments);
+
+        ciPipeline.pColorBlendState(ciColorBlend);
     }
 }
