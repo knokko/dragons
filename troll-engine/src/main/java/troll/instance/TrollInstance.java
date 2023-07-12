@@ -122,7 +122,7 @@ public class TrollInstance {
     public void destroy() {
         checkDestroyed();
 
-        swapchains.destroy();
+        if (swapchains != null) swapchains.destroy();
         vmaDestroyAllocator(vmaAllocator);
         vkDestroyDevice(vkDevice, null);
         if (windowSurface != null) windowSurface.destroy(vkInstance);
