@@ -1,4 +1,4 @@
-package troll.playground;
+package troll.demos;
 
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.vulkan.KHRSurface;
@@ -56,12 +56,9 @@ public class SimpleWindowPlayground {
                 VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                 instance.queueFamilies().graphics().index(), "Fill"
         );
-        var commandBuffers = instance.commands.createPrimaryBuffer(commandPool, 5, "Fill");
+        var commandBuffers = instance.commands.createPrimaryBuffers(commandPool, 5, "Fill");
 
-        long[] commandFences = new long[commandBuffers.length];
-        for (int index = 0; index < commandFences.length; index++) {
-            commandFences[index] = instance.sync.createFence(true, "Acquire" + index);
-        }
+        long[] commandFences = instance.sync.createFences(true, commandBuffers.length, "Acquire");
 
         long oldSwapchainID = -1;
 

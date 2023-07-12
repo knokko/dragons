@@ -130,6 +130,27 @@ project(':troll-engine') {
     }
 }
 
+project(':troll-demos') {
+    dependencies {
+        implementation project(':troll-engine')
+        implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+        implementation "org.lwjgl:lwjgl"
+        implementation "org.lwjgl:lwjgl-vma"
+        implementation "org.lwjgl:lwjgl-vulkan"
+        implementation "org.lwjgl:lwjgl-glfw"
+
+        runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
+        runtimeOnly "org.lwjgl:lwjgl-glfw::$lwjglNatives"
+        runtimeOnly "org.lwjgl:lwjgl-vma::$lwjglNatives"
+        // TODO Maybe MacOS?
+    }
+    shadowJar {
+        manifest {
+            attributes ('Main-Class': 'troll.demos.SimplePipelinePlayground')
+        }
+    }
+}
+
 project(':graviks2d') {
     dependencies {
         implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
