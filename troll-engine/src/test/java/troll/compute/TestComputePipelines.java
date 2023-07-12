@@ -53,7 +53,7 @@ public class TestComputePipelines {
             sizePushConstant.size(8);
 
             long pipelineLayout = instance.pipelines.createLayout(
-                    stack, descriptorSetLayout, pushConstants, "FillBuffer-PipelineLayout"
+                    stack, pushConstants, "FillBuffer-PipelineLayout", descriptorSetLayout
             );
             long computePipeline = instance.pipelines.createComputePipeline(
                     stack, pipelineLayout, "troll/compute/fill.comp.spv", "FillBuffer"
@@ -87,12 +87,12 @@ public class TestComputePipelines {
 
             vkUpdateDescriptorSets(instance.vkDevice(), descriptorWrites, null);
 
-            long fence = instance.sync.createFence(false, "Filling");
+            long fence = instance.sync.createFences(false, 1, "Filling")[0];
 
             long commandPool = instance.commands.createPool(
                     0, instance.queueFamilies().graphics().index(), "Filling"
             );
-            var commandBuffer = instance.commands.createPrimaryBuffer(
+            var commandBuffer = instance.commands.createPrimaryBuffers(
                     commandPool, 1, "Filling"
             )[0];
             instance.commands.begin(commandBuffer, stack, "Filling");

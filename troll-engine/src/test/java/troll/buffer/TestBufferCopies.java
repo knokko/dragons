@@ -38,11 +38,11 @@ public class TestBufferCopies {
         }
 
         try (var stack = stackPush()) {
-            var fence = instance.sync.createFence(false, "Copying");
+            var fence = instance.sync.createFences(false, 1, "Copying")[0];
             var commandPool = instance.commands.createPool(
                     0, instance.queueFamilies().graphics().index(), "Copy"
             );
-            var commandBuffer = instance.commands.createPrimaryBuffer(
+            var commandBuffer = instance.commands.createPrimaryBuffers(
                     commandPool, 1, "Copy"
             )[0];
 
