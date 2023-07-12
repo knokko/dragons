@@ -2,6 +2,9 @@ package troll.swapchain;
 
 import troll.instance.TrollInstance;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.vulkan.KHRSwapchain.*;
 import static org.lwjgl.vulkan.VK10.*;
@@ -14,6 +17,7 @@ class Swapchain {
     final SwapchainImage[] images;
     final int width, height, presentMode;
     final long[] acquireFences, acquireSemaphores, presentSemaphores;
+    final Collection<Runnable> destructionCallbacks = new ArrayList<>();
 
     private int acquireIndex;
     private int outOfDateIndex = -1;
@@ -40,17 +44,13 @@ class Swapchain {
             ), "GetSwapchainImagesKHR", "images");
 
             this.images = new SwapchainImage[numImages];
-            this.acquireSemaphores = new long[numImages];
-            this.acquireFences = new long[numImages];
-            this.presentSemaphores = new long[numImages];
+            this.acquireSemaphores = instance.sync.createSemaphores("AcquireSwapchainImage", numImages);
+            this.acquireFences = instance.sync.createFences(true, numImages, "AcquireSwapchainImage");
+            this.presentSemaphores = instance.sync.createSemaphores("PresentSwapchainImage", numImages);
             for (int index = 0; index < numImages; index++) {
                 long vkImage = pImages.get(index);
                 images[index] = new SwapchainImage(vkImage, index);
                 instance.debug.name(stack, vkImage, VK_OBJECT_TYPE_IMAGE, "SwapchainImage" + index);
-
-                acquireSemaphores[index] = instance.sync.createSemaphore("AcquireSwapchainImage" + index);
-                acquireFences[index] = instance.sync.createFence(true, "AcquireSwapchainImage" + index);
-                presentSemaphores[index] = instance.sync.createSemaphore("PresentSwapchainImage" + index);
             }
         }
     }
@@ -102,6 +102,7 @@ class Swapchain {
                 }
             }
         }
+        for (var callback : destructionCallbacks) callback.run();
         for (long fence : acquireFences) vkDestroyFence(instance.vkDevice(), fence, null);
         for (long semaphore : acquireSemaphores) vkDestroySemaphore(instance.vkDevice(), semaphore, null);
         for (long semaphore : presentSemaphores) vkDestroySemaphore(instance.vkDevice(), semaphore, null);

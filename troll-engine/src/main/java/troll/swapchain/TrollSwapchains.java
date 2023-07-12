@@ -103,11 +103,13 @@ public class TrollSwapchains {
                 currentSwapchain.vkSwapchain,
                 swapchainImage.vkImage,
                 swapchainImage.index,
+                currentSwapchain.images.length,
                 swapchainImage.acquireSemaphore,
                 swapchainImage.presentSemaphore,
                 currentSwapchain.width,
                 currentSwapchain.height,
-                currentSwapchainID
+                currentSwapchainID,
+                currentSwapchain.destructionCallbacks::add
         );
     }
 
