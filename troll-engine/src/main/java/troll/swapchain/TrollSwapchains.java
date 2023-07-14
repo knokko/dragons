@@ -7,6 +7,7 @@ import troll.instance.TrollInstance;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import static java.lang.Math.max;
 import static org.lwjgl.glfw.GLFW.glfwGetFramebufferSize;
@@ -40,6 +41,10 @@ public class TrollSwapchains {
     }
 
     public void presentImage(AcquireResult acquired) {
+        presentImage(acquired, null);
+    }
+
+    public void presentImage(AcquireResult acquired, Consumer<VkPresentInfoKHR> beforePresentCallback) {
         if (isOutOfDate) return;
         try (var stack = stackPush()) {
             var presentInfo = VkPresentInfoKHR.calloc(stack);
@@ -49,6 +54,7 @@ public class TrollSwapchains {
             presentInfo.pSwapchains(stack.longs(acquired.vkSwapchain()));
             presentInfo.pImageIndices(stack.ints(acquired.imageIndex()));
             presentInfo.pResults(stack.callocInt(1));
+            if (beforePresentCallback != null) beforePresentCallback.accept(presentInfo);
 
             int presentResult = vkQueuePresentKHR(
                     instance.queueFamilies().present().queues().get(0).vkQueue(), presentInfo

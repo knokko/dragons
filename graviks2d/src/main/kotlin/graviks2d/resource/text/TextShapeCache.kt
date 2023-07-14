@@ -85,8 +85,8 @@ internal class TextShapeCache(
         this.rectanglePackingBuffer = STBRPRect.calloc(rectanglePackingBufferSize)
 
         stackPush().use { stack ->
-            val vmaAllocator = this.context.instance.vmaAllocator
-            val vkDevice = this.context.instance.device
+            val vmaAllocator = this.context.instance.troll.vmaAllocator()
+            val vkDevice = this.context.instance.troll.vkDevice()
 
             val ciTextAtlas = VkImageCreateInfo.calloc(stack)
             ciTextAtlas.`sType$Default`()
@@ -363,8 +363,8 @@ internal class TextShapeCache(
     }
 
     fun destroy() {
-        val vmaAllocator = this.context.instance.vmaAllocator
-        val vkDevice = this.context.instance.device
+        val vmaAllocator = this.context.instance.troll.vmaAllocator()
+        val vkDevice = this.context.instance.troll.vkDevice()
 
         vkDestroyFramebuffer(vkDevice, this.textAtlasFramebuffer, null)
         vmaDestroyBuffer(vmaAllocator, this.countVertexBuffer, this.countVertexBufferAllocation)

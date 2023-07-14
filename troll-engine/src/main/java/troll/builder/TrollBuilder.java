@@ -37,7 +37,7 @@ public class TrollBuilder {
         return new VkInstance(pInstance.get(0), ciInstance);
     };
 
-    public static final VkDeviceCreator DEFAULT_VK_DEVICE_CREATOR = (stack, physicalDevice, ciDevice) -> {
+    public static final VkDeviceCreator DEFAULT_VK_DEVICE_CREATOR = (stack, physicalDevice, deviceExtensions, ciDevice) -> {
         var pDevice = stack.callocPointer(1);
         assertVkSuccess(vkCreateDevice(physicalDevice, ciDevice, null, pDevice), "CreateDevice", "TrollBuilder");
         return new VkDevice(pDevice.get(0), physicalDevice, ciDevice);
@@ -235,5 +235,6 @@ public class TrollBuilder {
                 instanceResult.enabledExtensions(), deviceResult.enabledExtensions(),
                 deviceResult.queueFamilies(), deviceResult.vmaAllocator()
         );
+        // TODO Debug messenger!
     }
 }

@@ -59,7 +59,7 @@ internal class ContextBuffers(
 
             assertSuccess(
                 vmaCreateBuffer(
-                    this.context.instance.vmaAllocator,
+                    this.context.instance.troll.vmaAllocator(),
                     ciVertexBuffer, ciVertexAllocation, pVertexBuffer, pVertexAllocation, vertexAllocationInfo
                 ), "vmaCreateBuffer"
             )
@@ -94,7 +94,7 @@ internal class ContextBuffers(
             val pOperationAllocation = stack.callocPointer(1)
             assertSuccess(
                 vmaCreateBuffer(
-                    this.context.instance.vmaAllocator,
+                    this.context.instance.troll.vmaAllocator(),
                     ciOperationBuffer, ciOperationAllocation,
                     pOperationBuffer, pOperationAllocation, operationAllocationInfo
                 ), "vmaCreateBuffer"
@@ -108,7 +108,7 @@ internal class ContextBuffers(
     }
 
     fun destroy() {
-        vmaDestroyBuffer(this.context.instance.vmaAllocator, this.operationVkBuffer, this.operationBufferAllocation)
-        vmaDestroyBuffer(this.context.instance.vmaAllocator, this.vertexVkBuffer, this.vertexBufferAllocation)
+        vmaDestroyBuffer(this.context.instance.troll.vmaAllocator(), this.operationVkBuffer, this.operationBufferAllocation)
+        vmaDestroyBuffer(this.context.instance.troll.vmaAllocator(), this.vertexVkBuffer, this.vertexBufferAllocation)
     }
 }

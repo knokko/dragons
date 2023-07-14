@@ -122,7 +122,7 @@ private class CachedImage(
 
     suspend fun destroy(instance: GraviksInstance) {
         val imagePair = this.imagePair.await()
-        vkDestroyImageView(instance.device, imagePair.vkImageView, null)
-        vmaDestroyImage(instance.vmaAllocator, imagePair.vkImage, imagePair.vmaAllocation)
+        vkDestroyImageView(instance.troll.vkDevice(), imagePair.vkImageView, null)
+        vmaDestroyImage(instance.troll.vmaAllocator(), imagePair.vkImage, imagePair.vmaAllocation)
     }
 }

@@ -2,181 +2,137 @@ package graviks.glfw
 
 import graviks2d.context.GraviksContext
 import graviks2d.core.GraviksInstance
-import org.lwjgl.glfw.GLFW.*
-import org.lwjgl.glfw.GLFWVulkan.glfwCreateWindowSurface
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
-import org.lwjgl.system.MemoryUtil.NULL
-import org.lwjgl.util.vma.Vma.vmaDestroyAllocator
 import org.lwjgl.vulkan.*
-import org.lwjgl.vulkan.EXTDebugUtils.vkDestroyDebugUtilsMessengerEXT
+import org.lwjgl.vulkan.KHRGetPhysicalDeviceProperties2.VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
+import org.lwjgl.vulkan.KHRGetPhysicalDeviceProperties2.vkGetPhysicalDeviceFeatures2KHR
 import org.lwjgl.vulkan.KHRIncrementalPresent.VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME
+import org.lwjgl.vulkan.KHRPresentId.VK_KHR_PRESENT_ID_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRPresentWait.VK_KHR_PRESENT_WAIT_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRPresentWait.vkWaitForPresentKHR
-import org.lwjgl.vulkan.KHRSurface.vkDestroySurfaceKHR
+import org.lwjgl.vulkan.KHRSurface.VK_PRESENT_MODE_FIFO_KHR
 import org.lwjgl.vulkan.KHRSwapchain.*
 import org.lwjgl.vulkan.VK10.*
+import troll.builder.TrollBuilder
+import troll.builder.TrollBuilder.DEFAULT_VK_DEVICE_CREATOR
+import troll.builder.TrollSwapchainBuilder
+import troll.builder.device.SimpleDeviceSelector
+import troll.builder.instance.ValidationFeatures
+import troll.builder.swapchain.SimpleSurfaceFormatPicker
+import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.instance.TrollInstance
 import java.lang.System.nanoTime
 
 class GraviksWindow(
     initialWidth: Int,
     initialHeight: Int,
-    title: String,
     enableValidation: Boolean,
     applicationName: String,
     applicationVersion: Int,
     preferPowerfulDevice: Boolean,
-    monitor: Long = NULL,
-    shareWindow: Long = NULL,
     private val createContext: (instance: GraviksInstance, width: Int, height: Int) -> GraviksContext
 ) {
 
-    val windowHandle: Long
-    private val windowSurface: Long
-    private val queue: VkQueue
+    val troll: TrollInstance
     val graviksInstance: GraviksInstance
 
-    private val acquireFence: Long
-    private val copySemaphore: Long
-    private val debugMessenger: Long
     val canAwaitPresent: Boolean
     private var lastPresentId = 0
     val hasIncrementalPresent: Boolean
 
-    // Swapchain-dependant variables
-    private var swapchain: Long? = null
-    private var swapchainFormat: Int? = null
-    private var swapchainImages: LongArray? = null
-    var graviksContext: GraviksContext? = null
-    private var shouldResize = false
+    var currentGraviksContext: GraviksContext? = null
 
     init {
-        if (!glfwInit()) throw RuntimeException("Failed to initialize GLFW")
+        val deviceSelector = if (preferPowerfulDevice)
+            SimpleDeviceSelector(VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+        else SimpleDeviceSelector(VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU, VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
 
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API)
-        windowHandle = glfwCreateWindow(initialWidth, initialHeight, title, monitor, shareWindow)
+        val validationFeatures = if (enableValidation)
+            ValidationFeatures(false, false, false, true, true)
+        else null
 
-        if (windowHandle == NULL) throw RuntimeException("Failed to create window")
+        var canAwaitPresent = false
 
-        glfwSetWindowRefreshCallback(windowHandle) {
-            presentFrame(false, null)
-        }
-
-        glfwSetFramebufferSizeCallback(windowHandle) { _, _, _->
-            shouldResize = true
-        }
-
-        val (vkInstance, debugMessenger) = createVulkanInstance(enableValidation, applicationName, applicationVersion)
-        this.debugMessenger = debugMessenger
-        windowSurface = stackPush().use { stack ->
-            val pSurface = stack.callocLong(1)
-            assertSuccess(glfwCreateWindowSurface(vkInstance, windowHandle, null, pSurface))
-            pSurface[0]
-        }
-
-        val (vkPhysicalDevice, queueFamilyIndex) = chooseVulkanPhysicalDevice(vkInstance, windowSurface, preferPowerfulDevice)
-        val (vkDevice, deviceExtensions, queue) = createVulkanDevice(vkPhysicalDevice, queueFamilyIndex)
-        this.canAwaitPresent = deviceExtensions.contains(VK_KHR_PRESENT_WAIT_EXTENSION_NAME)
-        this.hasIncrementalPresent = deviceExtensions.contains(VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME)
-
-        this.queue = queue
-        val vmaAllocator = createVulkanMemoryAllocator(vkInstance, vkPhysicalDevice, vkDevice, deviceExtensions)
-
-        graviksInstance = GraviksInstance(
-            vkInstance, vkPhysicalDevice, vkDevice, vmaAllocator, queueFamilyIndex,
-            { pSubmitInfo, fence -> vkQueueSubmit(queue, pSubmitInfo, fence) }
+        this.troll = TrollBuilder(
+            VK_API_VERSION_1_0, applicationName, applicationVersion
         )
+            .window(0L, initialWidth, initialHeight, TrollSwapchainBuilder(
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT
+            ).surfaceFormatPicker(SimpleSurfaceFormatPicker(VK_FORMAT_B8G8R8A8_UNORM)))
+            .physicalDeviceSelector(deviceSelector)
+            .desiredVkInstanceExtensions(listOf(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+            .desiredVkDeviceExtensions(listOf(
+                VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME,
+                VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
+                VK_KHR_PRESENT_ID_EXTENSION_NAME
+            ))
+            .validation(validationFeatures)
+            .vkDeviceCreator { stack, vkPhysicalDevice, deviceExtensions, ciDevice ->
+                if (deviceExtensions.contains(VK_KHR_PRESENT_WAIT_EXTENSION_NAME)) {
+                    val presentWaitSupport = VkPhysicalDevicePresentWaitFeaturesKHR.calloc(stack)
+                    presentWaitSupport.`sType$Default`()
 
-        acquireFence = stackPush().use { stack ->
-            val ciFence = VkFenceCreateInfo.calloc(stack)
-            ciFence.`sType$Default`()
+                    val presentIdSupport = VkPhysicalDevicePresentIdFeaturesKHR.calloc(stack)
+                    presentIdSupport.`sType$Default`()
+                    presentIdSupport.pNext(presentWaitSupport.address())
 
-            val pFence = stack.callocLong(1)
-            assertSuccess(vkCreateFence(vkDevice, ciFence, null, pFence))
-            pFence[0]
-        }
+                    val supportedFeatures2 = VkPhysicalDeviceFeatures2.calloc(stack)
+                    supportedFeatures2.`sType$Default`()
+                    supportedFeatures2.pNext(presentIdSupport.address())
 
-        copySemaphore = stackPush().use { stack ->
-            val ciSemaphore = VkSemaphoreCreateInfo.calloc(stack)
-            ciSemaphore.`sType$Default`()
+                    vkGetPhysicalDeviceFeatures2KHR(
+                        vkPhysicalDevice,
+                        supportedFeatures2
+                    )
 
-            val pSemaphore = stack.callocLong(1)
-            assertSuccess(vkCreateSemaphore(vkDevice, ciSemaphore, null, pSemaphore))
-            pSemaphore[0]
-        }
+                    if (presentWaitSupport.presentWait() && presentIdSupport.presentId()) {
+                        ciDevice.pNext(presentIdSupport)
+                        ciDevice.pNext(presentWaitSupport)
+                        canAwaitPresent = true
+                        // TODO Test this!
+                    }
+                }
+                DEFAULT_VK_DEVICE_CREATOR.vkCreateDevice(stack, vkPhysicalDevice, deviceExtensions, ciDevice)
+            }
+            .build()
 
-        createSwapchain()
-    }
+        this.canAwaitPresent = canAwaitPresent
+        this.hasIncrementalPresent = troll.deviceExtensions.contains(VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME)
 
-    private fun createSwapchain() {
-        val (actualInitialWidth, actualInitialHeight) = stackPush().use { stack ->
-            val pWidth = stack.callocInt(1)
-            val pHeight = stack.callocInt(1)
-            glfwGetFramebufferSize(windowHandle, pWidth, pHeight)
-            Pair(pWidth[0], pHeight[0])
-        }
-
-        if (actualInitialWidth == 0 || actualInitialHeight == 0) {
-            this.swapchain = null
-            this.swapchainFormat = null
-            this.swapchainImages = null
-            this.graviksContext = null
-            return
-        }
-
-        val (swapchain, swapchainFormat, swapchainImages) = createVulkanSwapchain(
-            graviksInstance.physicalDevice, graviksInstance.device, windowSurface, actualInitialWidth, actualInitialHeight
-        )
-        this.swapchain = swapchain
-        this.swapchainFormat = swapchainFormat
-        this.swapchainImages = swapchainImages
-
-        this.graviksContext = createContext(graviksInstance, actualInitialWidth, actualInitialHeight)
-    }
-
-    fun shouldResize() = shouldResize
-
-    fun resize() {
-        destroySwapchain()
-        createSwapchain()
-        shouldResize = false
+        graviksInstance = GraviksInstance(troll)
     }
 
     fun presentFrame(waitUntilVisible: Boolean, fillPresentRegions: ((MemoryStack) -> VkRectLayerKHR.Buffer)?) {
+        drawAndPresent(waitUntilVisible, null, fillPresentRegions)
+    }
+
+    fun drawAndPresent(
+        waitUntilVisible: Boolean,
+        drawFunction: ((GraviksContext) -> Unit)?,
+        fillPresentRegions: ((MemoryStack) -> VkRectLayerKHR.Buffer)?
+    ) {
         if (waitUntilVisible && !canAwaitPresent) {
             throw UnsupportedOperationException("Waiting until presentation is not supported by the Vulkan implementation")
         }
 
-        // The swapchain will be null when the window is minified. In this case, we should not do anything
-        if (swapchain == null) return
+        // The swapchain image will be null when the window is minified. In this case, we should not do anything
+        val swapchainImage = troll.swapchains.acquireNextImage(VK_PRESENT_MODE_FIFO_KHR) ?: return
 
-        // Presentation can take a long time if the window is minimized (on some systems)
-        val timeout = -1L
+        if (currentGraviksContext == null || currentGraviksContext!!.width != swapchainImage.width || currentGraviksContext!!.height != swapchainImage.height) {
+            if (currentGraviksContext != null) currentGraviksContext!!.destroy()
+            currentGraviksContext = createContext(graviksInstance, swapchainImage.width, swapchainImage.height)
+        }
+        val graviksContext = currentGraviksContext!!
+
+        if (drawFunction != null) drawFunction(graviksContext)
 
         stackPush().use { stack ->
-            val pImageIndex = stack.callocInt(1)
-            val acquireResult = vkAcquireNextImageKHR(
-                graviksInstance.device, swapchain!!, timeout, VK_NULL_HANDLE, acquireFence, pImageIndex
-            )
-            if (acquireResult == VK_SUBOPTIMAL_KHR || acquireResult == VK_ERROR_OUT_OF_DATE_KHR) {
-                shouldResize = true
-            } else if (acquireResult != VK_SUCCESS) {
-                throw RuntimeException("vkAcquireNextImageKHR returned $acquireResult")
-            }
 
-            if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) {
-                assertSuccess(vkResetFences(graviksInstance.device, stack.longs(acquireFence)))
-                return
-            }
-
-            val imageIndex = pImageIndex[0]
-
-            assertSuccess(vkWaitForFences(graviksInstance.device, stack.longs(acquireFence), true, timeout))
-            assertSuccess(vkResetFences(graviksInstance.device, stack.longs(acquireFence)))
-
-            graviksContext!!.copyColorImageTo(
-                destImage = swapchainImages!![imageIndex], destImageFormat = swapchainFormat,
-                destBuffer = null, signalSemaphore = copySemaphore,
+            graviksContext.addWaitSemaphore(swapchainImage.acquireSemaphore) // TODO Watch the dstStageMask!
+            graviksContext.copyColorImageTo(
+                destImage = swapchainImage.vkImage, destImageFormat = troll.swapchainSettings.surfaceFormat.format,
+                destBuffer = null, signalSemaphore = swapchainImage.presentSemaphore,
                 originalImageLayout = VK_IMAGE_LAYOUT_UNDEFINED, finalImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                 imageSrcAccessMask = 0, imageSrcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                 // There is no need to give proper destinations masks since vkQueuePresentKHR takes care of that
@@ -211,55 +167,25 @@ class GraviksWindow(
                 presentIdInfo.address()
             } else 0L
 
-            val presentInfo = VkPresentInfoKHR.calloc(stack)
-            presentInfo.`sType$Default`()
-            if (waitUntilVisible) presentInfo.pNext(presentIdAddress)
-            else presentInfo.pNext(incrementalPresentAddress)
-            presentInfo.pWaitSemaphores(stack.longs(copySemaphore))
-            presentInfo.swapchainCount(1)
-            presentInfo.pSwapchains(stack.longs(swapchain!!))
-            presentInfo.pImageIndices(pImageIndex)
-
-            val presentResult = vkQueuePresentKHR(queue, presentInfo)
-            if (presentResult == VK_SUBOPTIMAL_KHR || presentResult == VK_ERROR_OUT_OF_DATE_KHR) {
-                shouldResize = true
-            } else if (presentResult != VK_SUCCESS) {
-                throw RuntimeException("vkQueuePresentKHR returned $presentResult")
+            troll.swapchains.presentImage(swapchainImage) { presentInfo ->
+                if (waitUntilVisible) presentInfo.pNext(presentIdAddress)
+                else presentInfo.pNext(incrementalPresentAddress)
             }
 
             if (waitUntilVisible) {
                 val startTime = nanoTime()
-                assertSuccess(vkWaitForPresentKHR(graviksInstance.device, swapchain!!, pPresentId[0], 1_000_000_000L))
+                assertVkSuccess(vkWaitForPresentKHR(
+                    troll.vkDevice(), swapchainImage.vkSwapchain, pPresentId[0], 1_000_000_000L
+                ), "WaitForPresentKHR", "GraviksWindow")
                 println("presentation took ${(nanoTime() - startTime) / 1000} microseconds")
                 lastPresentId += 1
             }
         }
     }
 
-    private fun destroySwapchain() {
-        vkDeviceWaitIdle(graviksInstance.device)
-        if (swapchain != null) {
-            graviksContext!!.destroy()
-            vkDestroySwapchainKHR(graviksInstance.device, swapchain!!, null)
-        }
-    }
-
     fun destroy() {
-        destroySwapchain()
-        vkDestroyFence(graviksInstance.device, acquireFence, null)
-        vkDestroySemaphore(graviksInstance.device, copySemaphore, null)
+        if (currentGraviksContext != null) currentGraviksContext!!.destroy()
         graviksInstance.destroy()
-
-        vmaDestroyAllocator(graviksInstance.vmaAllocator)
-        vkDestroyDevice(graviksInstance.device, null)
-
-        vkDestroySurfaceKHR(graviksInstance.instance, windowSurface, null)
-        if (debugMessenger != NULL) {
-            vkDestroyDebugUtilsMessengerEXT(graviksInstance.instance, debugMessenger, null)
-        }
-        vkDestroyInstance(graviksInstance.instance, null)
-
-        glfwDestroyWindow(windowHandle)
-        glfwTerminate()
+        troll.destroy()
     }
 }

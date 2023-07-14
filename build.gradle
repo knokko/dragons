@@ -153,6 +153,7 @@ project(':troll-demos') {
 
 project(':graviks2d') {
     dependencies {
+        compileOnly project(':troll-engine')
         implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
         implementation "org.lwjgl:lwjgl-stb"
 
@@ -168,12 +169,14 @@ project(':graviks2d') {
         runtimeOnly "org.lwjgl:lwjgl-stb::$lwjglNatives"
 
         testImplementation project(':graviks-glfw')
+        testImplementation project(':troll-engine')
     }
 }
 
 project(':graviks-glfw') {
     dependencies {
         implementation project(':graviks2d')
+        implementation project(':troll-engine')
 
         implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
 
@@ -193,6 +196,7 @@ project(':graviks-glfw') {
 project(':gruviks') {
     dependencies {
         implementation project(':graviks2d')
+        implementation project(':troll-engine')
     }
 }
 
@@ -201,6 +205,7 @@ project(':gruviks-glfw') {
         implementation project(':graviks2d')
         implementation project(':gruviks')
         implementation project(':graviks-glfw')
+        implementation project(':troll-engine')
 
         implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
         implementation "org.lwjgl:lwjgl"

@@ -24,167 +24,33 @@ import org.lwjgl.system.MemoryUtil.*
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.util.vma.VmaAllocationCreateInfo
 import org.lwjgl.util.vma.VmaAllocationInfo
-import org.lwjgl.util.vma.VmaAllocatorCreateInfo
-import org.lwjgl.util.vma.VmaVulkanFunctions
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
 import org.opentest4j.AssertionFailedError
+import troll.builder.TrollBuilder
+import troll.builder.instance.ValidationFeatures
+import troll.instance.TrollInstance
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_INT_ARGB
 import java.io.File
-import java.nio.ByteBuffer
 import java.nio.file.Files
 import javax.imageio.ImageIO
 import kotlin.math.absoluteValue
 
-const val VALIDATION_LAYER_NAME = "VK_LAYER_KHRONOS_validation"
-
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestContext {
 
-    private val vkInstance: VkInstance
-    private val vkPhysicalDevice: VkPhysicalDevice
-    private val vkDevice: VkDevice
-    private val graphicsQueueIndex: Int
-    private val queue: VkQueue
-    private val vmaAllocator: Long
+    private val troll: TrollInstance
     private val graviksInstance: GraviksInstance
 
     init {
-        val hasDebugUtils = stackPush().use { stack ->
-            val pNumAvailableExtensions = stack.callocInt(1)
-            assertSuccess(
-                    vkEnumerateInstanceExtensionProperties(null as ByteBuffer?, pNumAvailableExtensions, null),
-                    "vkEnumerateInstanceExtensionProperties"
-            )
+        this.troll = TrollBuilder(
+            VK_API_VERSION_1_0, "TestGraviksContext", VK_MAKE_VERSION(0, 5, 0)
+        )
+            .validation(ValidationFeatures(false, false, false, true, true))
+            .build()
 
-            val availableExtensions = VkExtensionProperties.calloc(pNumAvailableExtensions[0], stack)
-            assertSuccess(
-                    vkEnumerateInstanceExtensionProperties(null as ByteBuffer?, pNumAvailableExtensions, availableExtensions),
-                    "vkEnumerateInstanceExtensionProperties"
-            )
-
-            for (extension in availableExtensions) {
-                if (extension.extensionNameString() == EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME) {
-                    return@use true
-                }
-            }
-
-            false
-        }
-
-        val hasValidationLayer = stackPush().use { stack ->
-            val pNumAvailableLayers = stack.callocInt(1)
-            assertSuccess(
-                    vkEnumerateInstanceLayerProperties(pNumAvailableLayers, null),
-                    "vkEnumerateInstanceLayerProperties"
-            )
-
-            val availableLayers = VkLayerProperties.calloc(pNumAvailableLayers[0], stack)
-            assertSuccess(
-                    vkEnumerateInstanceLayerProperties(pNumAvailableLayers, availableLayers),
-                    "vkEnumerateInstanceLayerProperties"
-            )
-
-            for (layer in availableLayers) {
-                if (layer.layerNameString() == VALIDATION_LAYER_NAME) {
-                    return@use true
-                }
-            }
-
-            false
-        }
-
-        val enableDebug = hasDebugUtils && hasValidationLayer
-
-        stackPush().use { stack ->
-            val ciInstance = VkInstanceCreateInfo.calloc(stack)
-            ciInstance.`sType$Default`()
-            if (enableDebug) {
-                ciInstance.ppEnabledLayerNames(stack.pointers(stack.UTF8(VALIDATION_LAYER_NAME)))
-                ciInstance.ppEnabledExtensionNames(stack.pointers(stack.UTF8(EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME)))
-            }
-            val pInstance = stack.callocPointer(1)
-            assertSuccess(
-                vkCreateInstance(ciInstance, null, pInstance),
-                "vkCreateInstance"
-            )
-            this.vkInstance = VkInstance(pInstance[0], ciInstance)
-
-            val pNumDevices = stack.ints(1)
-            val pDevices = stack.callocPointer(1)
-            assertSuccess(
-                vkEnumeratePhysicalDevices(vkInstance, pNumDevices, pDevices),
-                "vkEnumeratePhysicalDevices"
-            )
-            if (pNumDevices[0] < 1) {
-                throw UnsupportedOperationException("At least 1 physical device is required, but got ${pNumDevices[0]}")
-            }
-            this.vkPhysicalDevice = VkPhysicalDevice(pDevices[0], vkInstance) // Just pick the first device
-
-            val pNumQueueFamilies = stack.callocInt(1)
-            vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, pNumQueueFamilies, null)
-            val numQueueFamilies = pNumQueueFamilies[0]
-
-            val queueFamilies = VkQueueFamilyProperties.calloc(numQueueFamilies, stack)
-            vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, pNumQueueFamilies, queueFamilies)
-
-            var graphicsQueueIndex: Int? = null
-            for ((queueIndex, queue) in queueFamilies.withIndex()) {
-                if ((queue.queueFlags() and VK_QUEUE_GRAPHICS_BIT) != 0) {
-                    graphicsQueueIndex = queueIndex
-                    break
-                }
-            }
-            this.graphicsQueueIndex = graphicsQueueIndex!!
-
-            val ciQueues = VkDeviceQueueCreateInfo.calloc(1, stack)
-            val ciQueue = ciQueues[0]
-            ciQueue.`sType$Default`()
-            ciQueue.queueFamilyIndex(this.graphicsQueueIndex)
-            ciQueue.pQueuePriorities(stack.floats(1f))
-
-            val ciDevice = VkDeviceCreateInfo.calloc(stack)
-            ciDevice.`sType$Default`()
-            ciDevice.pQueueCreateInfos(ciQueues)
-
-            val pDevice = stack.callocPointer(1)
-            assertSuccess(
-                vkCreateDevice(vkPhysicalDevice, ciDevice, null, pDevice),
-                "vkCreateDevice"
-            )
-            this.vkDevice = VkDevice(pDevice[0], vkPhysicalDevice, ciDevice)
-
-            val pQueue = stack.callocPointer(1)
-            vkGetDeviceQueue(vkDevice, this.graphicsQueueIndex, 0, pQueue)
-            this.queue = VkQueue(pQueue[0], vkDevice)
-
-            val vmaVulkanFunctions = VmaVulkanFunctions.calloc(stack)
-            vmaVulkanFunctions.set(vkInstance, vkDevice)
-
-            val ciAllocator = VmaAllocatorCreateInfo.calloc(stack)
-            ciAllocator.vulkanApiVersion(VK_API_VERSION_1_0)
-            ciAllocator.physicalDevice(vkPhysicalDevice)
-            ciAllocator.device(vkDevice)
-            ciAllocator.instance(vkInstance)
-            ciAllocator.pVulkanFunctions(vmaVulkanFunctions)
-
-            val pAllocator = stack.callocPointer(1)
-            assertSuccess(
-                vmaCreateAllocator(ciAllocator, pAllocator),
-                "vmaCreateAllocator"
-            )
-            this.vmaAllocator = pAllocator[0]
-
-            this.graviksInstance = GraviksInstance(
-                vkInstance, vkPhysicalDevice, vkDevice, vmaAllocator,
-                this.graphicsQueueIndex, queueSubmit = { pSubmitInfo, fence ->
-                    synchronized(this.queue) {
-                        vkQueueSubmit(queue, pSubmitInfo, fence)
-                    }
-                }
-            )
-        }
+        this.graviksInstance = GraviksInstance(troll)
     }
 
     private fun withTestImage(context: GraviksContext, flipY: Boolean, test: (() -> Unit, HostImage) -> Unit) {
@@ -207,7 +73,7 @@ class TestContext {
             val pTestAllocation = stack.callocPointer(1)
             val testAllocationInfo = VmaAllocationInfo.calloc(stack)
             assertSuccess(
-                vmaCreateBuffer(vmaAllocator, ciTestBuffer, ciTestAllocation, pTestBuffer, pTestAllocation, testAllocationInfo),
+                vmaCreateBuffer(troll.vmaAllocator(), ciTestBuffer, ciTestAllocation, pTestBuffer, pTestAllocation, testAllocationInfo),
                 "vmaCreateBuffer"
             )
             val testBuffer = pTestBuffer[0]
@@ -218,7 +84,7 @@ class TestContext {
                 destImage = null, destBuffer = testBuffer, destImageFormat = null, shouldAwaitCompletion = true
             )}, HostImage(context.width, context.height, testHostBuffer, flipY))
 
-            vmaDestroyBuffer(vmaAllocator, testBuffer, testAllocation)
+            vmaDestroyBuffer(troll.vmaAllocator(), testBuffer, testAllocation)
         }
     }
 
@@ -480,10 +346,10 @@ class TestContext {
             assertImageEquals("drawImage.png", hostImage)
         }
 
-        vkDestroyImageView(this.graviksInstance.device, image1.vkImageView, null)
-        vkDestroyImageView(this.graviksInstance.device, image2.vkImageView, null)
-        vmaDestroyImage(this.graviksInstance.vmaAllocator, image1.vkImage, image1.vmaAllocation)
-        vmaDestroyImage(this.graviksInstance.vmaAllocator, image2.vkImage, image2.vmaAllocation)
+        vkDestroyImageView(troll.vkDevice(), image1.vkImageView, null)
+        vkDestroyImageView(troll.vkDevice(), image2.vkImageView, null)
+        vmaDestroyImage(troll.vmaAllocator(), image1.vkImage, image1.vmaAllocation)
+        vmaDestroyImage(troll.vmaAllocator(), image2.vkImage, image2.vmaAllocation)
 
         graviks.destroy()
     }
@@ -517,8 +383,8 @@ class TestContext {
             assertImageEquals("drawImage.png", hostImage)
         }
 
-        vkDestroyImageView(this.graviksInstance.device, image1.vkImageView, null)
-        vmaDestroyImage(this.graviksInstance.vmaAllocator, image1.vkImage, image1.vmaAllocation)
+        vkDestroyImageView(troll.vkDevice(), image1.vkImageView, null)
+        vmaDestroyImage(troll.vmaAllocator(), image1.vkImage, image1.vmaAllocation)
 
         graviks.destroy()
     }
@@ -685,10 +551,7 @@ class TestContext {
         val backgroundColor = Color.WHITE
 
         val graviksInstance = GraviksInstance(
-            vkInstance, vkPhysicalDevice, vkDevice, vmaAllocator,
-            graphicsQueueIndex, maxNumDescriptorImages = 2, queueSubmit = { pSubmitInfo, fence ->
-                vkQueueSubmit(queue, pSubmitInfo, fence)
-            }
+            troll, maxNumDescriptorImages = 2
         )
 
         val graviks = GraviksContext(graviksInstance, 20, 20, initialBackgroundColor = backgroundColor)
@@ -810,7 +673,7 @@ class TestContext {
             val pDestImageAllocation = stack.callocPointer(1)
             assertSuccess(
                 vmaCreateImage(
-                    vmaAllocator, ciDestImage, ciDestImageAllocation,
+                    troll.vmaAllocator(), ciDestImage, ciDestImageAllocation,
                     pDestImage, pDestImageAllocation, null
                 ), "vmaCreateImage"
             )
@@ -842,7 +705,7 @@ class TestContext {
             val pDestBufferAllocation = stack.callocPointer(1)
             val destBufferAllocationInfo = VmaAllocationInfo.calloc(stack)
             assertSuccess(
-                vmaCreateBuffer(vmaAllocator, ciDestBuffer, ciDestBufferAllocation, pDestBuffer, pDestBufferAllocation, destBufferAllocationInfo),
+                vmaCreateBuffer(troll.vmaAllocator(), ciDestBuffer, ciDestBufferAllocation, pDestBuffer, pDestBufferAllocation, destBufferAllocationInfo),
                 "vmaCreateBuffer"
             )
             val destBuffer = pDestBuffer[0]
@@ -852,11 +715,11 @@ class TestContext {
             val ciCommandPool = VkCommandPoolCreateInfo.calloc(stack)
             ciCommandPool.`sType$Default`()
             ciCommandPool.flags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
-            ciCommandPool.queueFamilyIndex(graphicsQueueIndex)
+            ciCommandPool.queueFamilyIndex(troll.queueFamilies().graphics.index)
 
             val pCommandPool = stack.callocLong(1)
             assertSuccess(
-                vkCreateCommandPool(graviks.instance.device, ciCommandPool, null, pCommandPool),
+                vkCreateCommandPool(troll.vkDevice(), ciCommandPool, null, pCommandPool),
                 "vkCreateCommandPool"
             )
             val commandPool = pCommandPool[0]
@@ -869,10 +732,10 @@ class TestContext {
 
             val pCommandBuffer = stack.callocPointer(1)
             assertSuccess(
-                vkAllocateCommandBuffers(graviks.instance.device, aiCommandBuffer, pCommandBuffer),
+                vkAllocateCommandBuffers(troll.vkDevice(), aiCommandBuffer, pCommandBuffer),
                 "vkAllocateCommandBuffers"
             )
-            val commandBuffer = VkCommandBuffer(pCommandBuffer[0], graviks.instance.device)
+            val commandBuffer = VkCommandBuffer(pCommandBuffer[0], troll.vkDevice())
 
             val biCommandBuffer = VkCommandBufferBeginInfo.calloc(stack)
             biCommandBuffer.`sType$Default`()
@@ -907,30 +770,26 @@ class TestContext {
 
             assertSuccess(vkEndCommandBuffer(commandBuffer), "vkEndCommandBuffer")
 
-            val siCopy = VkSubmitInfo.calloc(stack)
-            siCopy.`sType$Default`()
-            siCopy.waitSemaphoreCount(0)
-            siCopy.pCommandBuffers(pCommandBuffer)
-            siCopy.pSignalSemaphores(null)
-
             val ciCopyFence = VkFenceCreateInfo.calloc(stack)
             ciCopyFence.`sType$Default`()
 
             val pCopyFence = stack.callocLong(1)
             assertSuccess(
-                vkCreateFence(graviks.instance.device, ciCopyFence, null, pCopyFence),
+                vkCreateFence(troll.vkDevice(), ciCopyFence, null, pCopyFence),
                 "vkCreateFence"
             )
             val copyFence = pCopyFence[0]
 
-            assertSuccess(vkQueueSubmit(queue, siCopy, copyFence), "vkQueueSubmit")
+            troll.queueFamilies().graphics.queues.random().submit(
+                commandBuffer, "TestContext.testBlitColorImage", emptyArray(), copyFence
+            )
             assertSuccess(
-                vkWaitForFences(graviks.instance.device, pCopyFence, true, 1_000_000_000),
+                vkWaitForFences(troll.vkDevice(), pCopyFence, true, 1_000_000_000),
                 "vkWaitForFences"
             )
 
-            vkDestroyFence(graviks.instance.device, copyFence, null)
-            vkDestroyCommandPool(graviks.instance.device, commandPool, null)
+            vkDestroyFence(troll.vkDevice(), copyFence, null)
+            vkDestroyCommandPool(troll.vkDevice(), commandPool, null)
 
             for (x in 0 until graviks.width) {
                 for (y in 0 until graviks.height) {
@@ -942,8 +801,8 @@ class TestContext {
                 }
             }
 
-            vmaDestroyImage(vmaAllocator, destImage, destImageAllocation)
-            vmaDestroyBuffer(vmaAllocator, destBuffer, destBufferAllocation)
+            vmaDestroyImage(troll.vmaAllocator(), destImage, destImageAllocation)
+            vmaDestroyBuffer(troll.vmaAllocator(), destBuffer, destBufferAllocation)
         }
 
         graviks.destroy()
@@ -952,8 +811,6 @@ class TestContext {
     @AfterAll
     fun destroyGraviksInstance() {
         this.graviksInstance.destroy()
-        vmaDestroyAllocator(this.vmaAllocator)
-        vkDestroyDevice(this.vkDevice, null)
-        vkDestroyInstance(this.vkInstance, null)
+        this.troll.destroy()
     }
 }

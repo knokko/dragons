@@ -43,7 +43,7 @@ internal class ContextTargetImages(
             val pColorAllocation = stack.callocPointer(1)
             assertSuccess(
                 vmaCreateImage(
-                    this.context.instance.vmaAllocator,
+                    this.context.instance.troll.vmaAllocator(),
                     ciColorImage, ciColorAllocation,
                     pColorImage, pColorAllocation, null
                 ), "vmaCreateImage"
@@ -72,7 +72,7 @@ internal class ContextTargetImages(
 
             val pColorView = stack.callocLong(1)
             assertSuccess(
-                vkCreateImageView(this.context.instance.device, ciColorView, null, pColorView),
+                vkCreateImageView(this.context.instance.troll.vkDevice(), ciColorView, null, pColorView),
                 "vkCreateImageView"
             )
             this.colorImageView = pColorView[0]
@@ -88,7 +88,7 @@ internal class ContextTargetImages(
 
             val pFramebuffer = stack.callocLong(1)
             assertSuccess(
-                vkCreateFramebuffer(context.instance.device, ciFramebuffer, null, pFramebuffer),
+                vkCreateFramebuffer(context.instance.troll.vkDevice(), ciFramebuffer, null, pFramebuffer),
                 "vkCreateFramebuffer"
             )
             this.framebuffer = pFramebuffer[0]
@@ -96,8 +96,8 @@ internal class ContextTargetImages(
     }
 
     fun destroy() {
-        val vkDevice = this.context.instance.device
-        val vmaAllocator = this.context.instance.vmaAllocator
+        val vkDevice = this.context.instance.troll.vkDevice()
+        val vmaAllocator = this.context.instance.troll.vmaAllocator()
 
         vkDestroyFramebuffer(vkDevice, this.framebuffer, null)
         vkDestroyImageView(vkDevice, this.colorImageView, null)

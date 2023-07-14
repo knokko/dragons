@@ -39,7 +39,7 @@ internal class ContextDescriptors(
 
             val pPool = stack.callocLong(1)
             assertSuccess(
-                vkCreateDescriptorPool(this.instance.device, ciPool, null, pPool),
+                vkCreateDescriptorPool(this.instance.troll.vkDevice(), ciPool, null, pPool),
                 "vkCreateDescriptorPool"
             )
             this.descriptorPool = pPool[0]
@@ -51,7 +51,7 @@ internal class ContextDescriptors(
 
             val pSet = stack.callocLong(1)
             assertSuccess(
-                vkAllocateDescriptorSets(this.instance.device, aiSet, pSet),
+                vkAllocateDescriptorSets(this.instance.troll.vkDevice(), aiSet, pSet),
                 "vkAllocateDescriptorSets"
             )
             this.descriptorSet = pSet[0]
@@ -120,11 +120,11 @@ internal class ContextDescriptors(
             textTextureWrite.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
             textTextureWrite.pImageInfo(textTextureDescriptors)
 
-            vkUpdateDescriptorSets(this.instance.device, writes, null)
+            vkUpdateDescriptorSets(this.instance.troll.vkDevice(), writes, null)
         }
     }
 
     fun destroy() {
-        vkDestroyDescriptorPool(this.instance.device, this.descriptorPool, null)
+        vkDestroyDescriptorPool(this.instance.troll.vkDevice(), this.descriptorPool, null)
     }
 }

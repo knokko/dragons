@@ -20,18 +20,18 @@ internal class GraviksPipeline(
     init {
         stackPush().use { stack ->
 
-            val (pipelineLayout, descriptorSetLayout) = createGraviksPipelineLayout(instance.device, stack, instance.maxNumDescriptorImages)
+            val (pipelineLayout, descriptorSetLayout) = createGraviksPipelineLayout(instance.troll.vkDevice(), stack, instance.maxNumDescriptorImages)
             this.vkPipelineLayout = pipelineLayout
             this.vkDescriptorSetLayout = descriptorSetLayout
             val renderPass = createGraviksRenderPass(
-                instance.device, TARGET_COLOR_FORMAT, stack
+                instance.troll.vkDevice(), TARGET_COLOR_FORMAT, stack
             )
             this.vkRenderPass = renderPass
 
             val ciPipelines = VkGraphicsPipelineCreateInfo.calloc(1, stack)
             val ciPipeline = ciPipelines[0]
             ciPipeline.`sType$Default`()
-            val shaderStages = createGraviksShaderStages(instance.device, instance.maxNumDescriptorImages, stack)
+            val shaderStages = createGraviksShaderStages(instance.troll.vkDevice(), instance.maxNumDescriptorImages, stack)
             ciPipeline.pStages(shaderStages)
             ciPipeline.pVertexInputState(createGraviksPipelineVertexInput(stack))
             ciPipeline.pInputAssemblyState(createGraviksPipelineInputAssembly(stack))
@@ -46,20 +46,20 @@ internal class GraviksPipeline(
 
             val pPipeline = stack.callocLong(1)
             assertSuccess(
-                vkCreateGraphicsPipelines(instance.device, VK_NULL_HANDLE, ciPipelines, null, pPipeline),
+                vkCreateGraphicsPipelines(instance.troll.vkDevice(), VK_NULL_HANDLE, ciPipelines, null, pPipeline),
                 "vkCreateGraphicsPipeline"
             )
             this.vkPipeline = pPipeline[0]
 
-            vkDestroyShaderModule(instance.device, shaderStages[0].module(), null)
-            vkDestroyShaderModule(instance.device, shaderStages[1].module(), null)
+            vkDestroyShaderModule(instance.troll.vkDevice(), shaderStages[0].module(), null)
+            vkDestroyShaderModule(instance.troll.vkDevice(), shaderStages[1].module(), null)
         }
     }
 
     fun destroy() {
-        vkDestroyPipeline(this.instance.device, this.vkPipeline, null)
-        vkDestroyPipelineLayout(this.instance.device, this.vkPipelineLayout, null)
-        vkDestroyDescriptorSetLayout(this.instance.device, this.vkDescriptorSetLayout, null)
-        vkDestroyRenderPass(this.instance.device, this.vkRenderPass, null)
+        vkDestroyPipeline(this.instance.troll.vkDevice(), this.vkPipeline, null)
+        vkDestroyPipelineLayout(this.instance.troll.vkDevice(), this.vkPipelineLayout, null)
+        vkDestroyDescriptorSetLayout(this.instance.troll.vkDevice(), this.vkDescriptorSetLayout, null)
+        vkDestroyRenderPass(this.instance.troll.vkDevice(), this.vkRenderPass, null)
     }
 }

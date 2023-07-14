@@ -152,7 +152,7 @@ fun main() {
     profiler.start()
 
     val graviksWindow = GraviksWindow(
-        1000, 800, "Gruviks Tester", false, "Gruviks Tester",
+        1000, 800, true, "Gruviks Tester",
         VK_MAKE_VERSION(0, 1, 0), true
     ) { instance, width, height ->
         GraviksContext(instance, width, height)

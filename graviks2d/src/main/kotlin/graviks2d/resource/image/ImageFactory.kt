@@ -91,7 +91,7 @@ internal fun createImagePair(
         val pImage = stack.callocLong(1)
         val pImageAllocation = stack.callocPointer(1)
         assertSuccess(
-            vmaCreateImage(instance.vmaAllocator, ciImage, ciImageAllocation, pImage, pImageAllocation, null),
+            vmaCreateImage(instance.troll.vmaAllocator(), ciImage, ciImageAllocation, pImage, pImageAllocation, null),
             "vmaCreateImage"
         )
         val image = pImage[0]
@@ -115,7 +115,7 @@ internal fun createImagePair(
         val pAllocationInfo = VmaAllocationInfo.calloc(stack)
         assertSuccess(
             vmaCreateBuffer(
-                instance.vmaAllocator, ciStagingBuffer, ciStagingBufferAllocation,
+                instance.troll.vmaAllocator(), ciStagingBuffer, ciStagingBufferAllocation,
                 pStagingBuffer, pStagingAllocation, pAllocationInfo
             ),
             "vmaCreateBuffer"
@@ -129,11 +129,11 @@ internal fun createImagePair(
         val ciCommandPool = VkCommandPoolCreateInfo.calloc(stack)
         ciCommandPool.`sType$Default`()
         ciCommandPool.flags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
-        ciCommandPool.queueFamilyIndex(instance.queueFamilyIndex)
+        ciCommandPool.queueFamilyIndex(instance.troll.queueFamilies().graphics.index)
 
         val pCommandPool = stack.callocLong(1)
         assertSuccess(
-            vkCreateCommandPool(instance.device, ciCommandPool, null, pCommandPool),
+            vkCreateCommandPool(instance.troll.vkDevice(), ciCommandPool, null, pCommandPool),
             "vkCreateCommandPool"
         )
         val commandPool = pCommandPool[0]
@@ -146,10 +146,10 @@ internal fun createImagePair(
 
         val pCommandBuffer = stack.callocPointer(1)
         assertSuccess(
-            vkAllocateCommandBuffers(instance.device, aiCommandBuffer, pCommandBuffer),
+            vkAllocateCommandBuffers(instance.troll.vkDevice(), aiCommandBuffer, pCommandBuffer),
             "vkAllocateCommandBuffers"
         )
-        val commandBuffer = VkCommandBuffer(pCommandBuffer[0], instance.device)
+        val commandBuffer = VkCommandBuffer(pCommandBuffer[0], instance.troll.vkDevice())
 
         val biCommandBuffer = VkCommandBufferBeginInfo.calloc(stack)
         biCommandBuffer.`sType$Default`()
@@ -238,30 +238,29 @@ internal fun createImagePair(
 
         val pFence = stack.callocLong(1)
         assertSuccess(
-            vkCreateFence(instance.device, ciFence, null, pFence),
+            vkCreateFence(instance.troll.vkDevice(), ciFence, null, pFence),
             "vkCreateFence"
         )
 
-        assertSuccess(
-            instance.synchronizedQueueSubmit(pSubmitInfo, pFence[0]),
-            "synchronizedQueueSubmit"
+        instance.troll.queueFamilies().graphics.queues.random().submit(
+            commandBuffer, "ImageFactory.createImagePair", emptyArray(), pFence.get(0)
         )
 
         assertSuccess(
-            vkWaitForFences(instance.device, pFence, true, 10_000_000_000L),
+            vkWaitForFences(instance.troll.vkDevice(), pFence, true, 10_000_000_000L),
             "vkWaitForFences"
         )
-        vkDestroyFence(instance.device, pFence[0], null)
-        vkDestroyCommandPool(instance.device, commandPool, null)
+        vkDestroyFence(instance.troll.vkDevice(), pFence[0], null)
+        vkDestroyCommandPool(instance.troll.vkDevice(), commandPool, null)
 
         memFree(imagePixelByteBuffer)
-        vmaDestroyBuffer(instance.vmaAllocator, stagingBuffer, stagingAllocation)
+        vmaDestroyBuffer(instance.troll.vmaAllocator(), stagingBuffer, stagingAllocation)
         memFree(imageRawByteBuffer)
 
         Pair(image, imageAllocation)
     }
 
-    val imageView = createImageView(instance.device, image)
+    val imageView = createImageView(instance.troll.vkDevice(), image)
     return ImagePair(vkImage = image, vkImageView = imageView, vmaAllocation = allocation, width = width, height = height)
 }
 

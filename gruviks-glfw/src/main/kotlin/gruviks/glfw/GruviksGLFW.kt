@@ -34,17 +34,17 @@ fun createAndControlGruviksWindow(
     var shiftDown = false
     var controlDown = false
 
-    graviksWindow.graviksContext?.run { gruviksWindow.render(this, true, null) }
+    val windowHandle = graviksWindow.graviksInstance.troll.glfwWindow()
 
-    glfwSetCursorPosCallback(graviksWindow.windowHandle) { _, newRawX, newRawY ->
-        graviksWindow.graviksContext?.run {
+    glfwSetCursorPosCallback(windowHandle) { _, newRawX, newRawY ->
+        graviksWindow.currentGraviksContext?.run {
             val newX = newRawX.toFloat() / this.width.toFloat()
             val newY = 1f - newRawY.toFloat() / this.height.toFloat()
             gruviksWindow.fireEvent(RawCursorMoveEvent(mouseCursor, EventPosition(newX, newY)))
         }
     }
 
-    glfwSetMouseButtonCallback(graviksWindow.windowHandle) { _, button, action, _ ->
+    glfwSetMouseButtonCallback(windowHandle) { _, button, action, _ ->
         if (action == GLFW_PRESS) {
             gruviksWindow.fireEvent(RawCursorPressEvent(mouseCursor, button))
         }
@@ -53,7 +53,7 @@ fun createAndControlGruviksWindow(
         }
     }
 
-    glfwSetScrollCallback(graviksWindow.windowHandle) { _, x, y ->
+    glfwSetScrollCallback(windowHandle) { _, x, y ->
 
         // There is no science behind the magic value 0.1: it just feels like a reasonable scale
         val scale = 0.1f
@@ -67,17 +67,17 @@ fun createAndControlGruviksWindow(
         }
     }
 
-    glfwSetCursorEnterCallback(graviksWindow.windowHandle) { _, entered ->
+    glfwSetCursorEnterCallback(windowHandle) { _, entered ->
         if (!entered) {
             gruviksWindow.fireEvent(RawCursorLeaveEvent(mouseCursor))
         }
     }
 
-    glfwSetCharCallback(graviksWindow.windowHandle) { _, codePoint ->
+    glfwSetCharCallback(windowHandle) { _, codePoint ->
         gruviksWindow.fireEvent(RawKeyTypeEvent(codePoint))
     }
 
-    glfwSetKeyCallback(graviksWindow.windowHandle) { _, keyCode, _, wasPressed, _ ->
+    glfwSetKeyCallback(windowHandle) { _, keyCode, _, wasPressed, _ ->
         val keyType = when (keyCode) {
             GLFW_KEY_LEFT -> KeyType.Left
             GLFW_KEY_RIGHT -> KeyType.Right
@@ -106,20 +106,29 @@ fun createAndControlGruviksWindow(
             if (wasPressed == GLFW_RELEASE) controlDown = false
         }
     }
-    
-    while (!glfwWindowShouldClose(graviksWindow.windowHandle) && !gruviksWindow.shouldExit()) {
+
+    glfwSetWindowRefreshCallback(graviksWindow.troll.glfwWindow()) {
+        graviksWindow.drawAndPresent(false, { graviksContext ->
+            gruviksWindow.render(graviksContext, true, mutableListOf())
+        }, null)
+    }
+
+    glfwSetWindowPosCallback(graviksWindow.troll.glfwWindow()) { _, _, _ ->
+        graviksWindow.drawAndPresent(false, { graviksContext ->
+            gruviksWindow.render(graviksContext, false, mutableListOf())
+        }, null)
+    }
+
+    var lastContext = graviksWindow.currentGraviksContext
+    while (!glfwWindowShouldClose(windowHandle) && !gruviksWindow.shouldExit()) {
         glfwPollEvents()
 
-        var forceRender = false
-        if (graviksWindow.shouldResize()) {
-            graviksWindow.resize()
-            forceRender = true
-        }
+        val currentContext = graviksWindow.currentGraviksContext
 
         gruviksWindow.fireEvent(RawUpdateEvent())
 
-        graviksWindow.graviksContext?.run {
-            gruviksWindow.render(this, forceRender, regionsToPresent)
+        currentContext?.run {
+            gruviksWindow.render(this, currentContext != lastContext || true, regionsToPresent)
 
             if (regionsToPresent.isNotEmpty()) {
 
@@ -139,11 +148,12 @@ fun createAndControlGruviksWindow(
                 regionsToPresent.clear()
             }
         }
+        lastContext = currentContext
 
         sleep(1)
     }
 
-    vkDeviceWaitIdle(graviksWindow.graviksInstance.device)
+    vkDeviceWaitIdle(graviksWindow.troll.vkDevice())
     destroyFunction()
     graviksWindow.destroy()
 }

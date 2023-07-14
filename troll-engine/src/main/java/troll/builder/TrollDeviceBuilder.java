@@ -194,7 +194,7 @@ class TrollDeviceBuilder {
             ciDevice.ppEnabledExtensionNames(ppEnabledExtensions);
             if (enabledFeatures2 == null) ciDevice.pEnabledFeatures(enabledFeatures10);
 
-            vkDevice = builder.vkDeviceCreator.vkCreateDevice(stack, vkPhysicalDevice, ciDevice);
+            vkDevice = builder.vkDeviceCreator.vkCreateDevice(stack, vkPhysicalDevice, enabledExtensions, ciDevice);
 
             var queueFamilyMap = new HashMap<Integer, QueueFamily>();
             for (var entry : uniqueQueueFamilies.entrySet()) {

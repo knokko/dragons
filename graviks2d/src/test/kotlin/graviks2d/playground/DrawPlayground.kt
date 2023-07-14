@@ -13,90 +13,19 @@ import org.lwjgl.system.MemoryUtil.memByteBuffer
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.util.vma.VmaAllocationCreateInfo
 import org.lwjgl.util.vma.VmaAllocationInfo
-import org.lwjgl.util.vma.VmaAllocatorCreateInfo
-import org.lwjgl.util.vma.VmaVulkanFunctions
 import org.lwjgl.vulkan.*
-import org.lwjgl.vulkan.EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME
 import org.lwjgl.vulkan.VK10.*
+import troll.builder.TrollBuilder
+import troll.builder.instance.ValidationFeatures
 import java.io.File
 
 fun main() {
     stackPush().use { stack ->
-        val ciInstance = VkInstanceCreateInfo.calloc(stack)
-        ciInstance.`sType$Default`()
-        ciInstance.ppEnabledLayerNames(stack.pointers(stack.UTF8("VK_LAYER_KHRONOS_validation")))
-        ciInstance.ppEnabledExtensionNames(stack.pointers(stack.UTF8(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)))
-
-        val pInstance = stack.callocPointer(1)
-        assertSuccess(
-            vkCreateInstance(ciInstance, null, pInstance),
-            "vkCreateInstance"
+        val troll = TrollBuilder(
+            VK_API_VERSION_1_0, "DrawPlayground", VK_MAKE_VERSION(0, 1, 0)
         )
-        val vkInstance = VkInstance(pInstance[0], ciInstance)
-
-        val pNumDevices = stack.ints(1)
-        val pDevices = stack.callocPointer(1)
-        assertSuccess(
-            vkEnumeratePhysicalDevices(vkInstance, pNumDevices, pDevices),
-            "vkEnumeratePhysicalDevices"
-        )
-        if (pNumDevices[0] < 1) {
-            throw UnsupportedOperationException("At least 1 physical device is required, but got ${pNumDevices[0]}")
-        }
-        val vkPhysicalDevice = VkPhysicalDevice(pDevices[0], vkInstance) // Just pick the first device
-
-        val pNumQueueFamilies = stack.callocInt(1)
-        vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, pNumQueueFamilies, null)
-        val numQueueFamilies = pNumQueueFamilies[0]
-
-        val queueFamilies = VkQueueFamilyProperties.calloc(numQueueFamilies, stack)
-        vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, pNumQueueFamilies, queueFamilies)
-
-        var graphicsQueueIndex: Int? = null
-        for ((queueIndex, queue) in queueFamilies.withIndex()) {
-            if ((queue.queueFlags() and VK_QUEUE_GRAPHICS_BIT) != 0) {
-                graphicsQueueIndex = queueIndex
-                break
-            }
-        }
-
-        val ciQueues = VkDeviceQueueCreateInfo.calloc(1, stack)
-        val ciQueue = ciQueues[0]
-        ciQueue.`sType$Default`()
-        ciQueue.queueFamilyIndex(graphicsQueueIndex!!)
-        ciQueue.pQueuePriorities(stack.floats(1f))
-
-        val ciDevice = VkDeviceCreateInfo.calloc(stack)
-        ciDevice.`sType$Default`()
-        ciDevice.pQueueCreateInfos(ciQueues)
-
-        val pDevice = stack.callocPointer(1)
-        assertSuccess(
-            vkCreateDevice(vkPhysicalDevice, ciDevice, null, pDevice),
-            "vkCreateDevice"
-        )
-        val vkDevice = VkDevice(pDevice[0], vkPhysicalDevice, ciDevice)
-
-        val pQueue = stack.callocPointer(1)
-        vkGetDeviceQueue(vkDevice, graphicsQueueIndex, 0, pQueue)
-        val queue = VkQueue(pQueue[0], vkDevice)
-
-        val vmaVulkanFunctions = VmaVulkanFunctions.calloc(stack)
-        vmaVulkanFunctions.set(vkInstance, vkDevice)
-
-        val ciAllocator = VmaAllocatorCreateInfo.calloc(stack)
-        ciAllocator.vulkanApiVersion(VK_API_VERSION_1_0)
-        ciAllocator.physicalDevice(vkPhysicalDevice)
-        ciAllocator.device(vkDevice)
-        ciAllocator.instance(vkInstance)
-        ciAllocator.pVulkanFunctions(vmaVulkanFunctions)
-
-        val pAllocator = stack.callocPointer(1)
-        assertSuccess(
-            vmaCreateAllocator(ciAllocator, pAllocator),
-            "vmaCreateAllocator"
-        )
-        val vmaAllocator = pAllocator[0]
+            .validation(ValidationFeatures(false, false, false, true, true))
+            .build()
 
         val width = 1000
         val height = 4700
@@ -118,7 +47,7 @@ fun main() {
         val pTestAllocation = stack.callocPointer(1)
         val testAllocationInfo = VmaAllocationInfo.calloc(stack)
         assertSuccess(
-            vmaCreateBuffer(vmaAllocator, ciTestBuffer, ciTestAllocation, pTestBuffer, pTestAllocation, testAllocationInfo),
+            vmaCreateBuffer(troll.vmaAllocator(), ciTestBuffer, ciTestAllocation, pTestBuffer, pTestAllocation, testAllocationInfo),
             "vmaCreateBuffer"
         )
         val testBuffer = pTestBuffer[0]
@@ -126,12 +55,7 @@ fun main() {
         val testHostBuffer = memByteBuffer(testAllocationInfo.pMappedData(), width * height * 4)
         val testHostImage = HostImage(width, height, testHostBuffer, false)
 
-        val graviksInstance = GraviksInstance(
-            vkInstance, vkPhysicalDevice, vkDevice, vmaAllocator,
-            graphicsQueueIndex, { pSubmitInfo, fence ->
-                vkQueueSubmit(queue, pSubmitInfo, fence)
-            }
-        )
+        val graviksInstance = GraviksInstance(troll)
 
         val graviks = GraviksContext(
             graviksInstance, width, height, initialBackgroundColor = Color.rgbInt(200, 100, 150),
@@ -190,9 +114,7 @@ fun main() {
         graviks.destroy()
         graviksInstance.destroy()
 
-        vmaDestroyBuffer(vmaAllocator, testBuffer, testAllocation)
-        vmaDestroyAllocator(vmaAllocator)
-        vkDestroyDevice(vkDevice, null)
-        vkDestroyInstance(vkInstance, null)
+        vmaDestroyBuffer(troll.vmaAllocator(), testBuffer, testAllocation)
+        troll.destroy()
     }
 }

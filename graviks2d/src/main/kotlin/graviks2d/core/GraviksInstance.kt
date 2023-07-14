@@ -14,24 +14,10 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.util.vma.Vma.vmaDestroyImage
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
+import troll.instance.TrollInstance
 
 class GraviksInstance(
-    val instance: VkInstance,
-    val physicalDevice: VkPhysicalDevice,
-    val device: VkDevice,
-    val vmaAllocator: Long,
-    val queueFamilyIndex: Int,
-    /**
-     * This instance will use `queueSubmit` instead of `vkQueueSubmit`. This method is expected to call `vkQueueSubmit`,
-     * but possibly in a synchronized manner. This method has 2 purposes:
-     * - The user can choose which `VkQueue` will be used by this `Graviks2dInstance`.
-     * - If the user also needs this `VkQueue` for other purposes, the user can put synchronization logic inside this
-     * method (since the `queue` used in `vkQueueSubmit` **must** be externally synchronized). Note that this
-     * `Graviks2dInstance` will synchronize all calls to `queueSubmit`, so user synchronization is only needed if the
-     * used `VkQueue` is also used for other purposes.
-     */
-    private val queueSubmit: (VkSubmitInfo.Buffer, Long) -> Int,
-
+    val troll: TrollInstance,
     defaultFont: FontReference = FontReference.fromClassLoaderPath("graviks2d/fonts/default.ttf"),
 
     val maxNumDescriptorImages: Int = 100,
@@ -39,32 +25,26 @@ class GraviksInstance(
 ) {
 
     internal val fontManager = FontManager(defaultFont)
-    internal val textureSampler = createTextureSampler(this.device, VK_FILTER_NEAREST)
-    internal val smoothTextureSampler = createTextureSampler(this.device, VK_FILTER_LINEAR)
+    internal val textureSampler = createTextureSampler(troll.vkDevice(), VK_FILTER_NEAREST)
+    internal val smoothTextureSampler = createTextureSampler(troll.vkDevice(), VK_FILTER_LINEAR)
     internal val pipeline = GraviksPipeline(this)
-    internal val textPipelines = TextPipeline(this.device)
+    internal val textPipelines = TextPipeline(troll.vkDevice())
     internal val coroutineScope = CoroutineScope(Dispatchers.IO)
     internal val imageCache = ImageCache(this, softImageLimit)
     internal var dummyImage = createDummyImage(this)
-
-    fun synchronizedQueueSubmit(pSubmitInfo: VkSubmitInfo.Buffer, fence: Long): Int {
-        return synchronized(queueSubmit) {
-            queueSubmit(pSubmitInfo, fence)
-        }
-    }
 
     /**
      * Note: you must destroy all contexts **before** destroying this instance.
      */
     fun destroy() {
-        vkDestroyImageView(device, dummyImage.vkImageView, null)
-        vmaDestroyImage(vmaAllocator, dummyImage.vkImage, dummyImage.vmaAllocation)
+        vkDestroyImageView(troll.vkDevice(), dummyImage.vkImageView, null)
+        vmaDestroyImage(troll.vmaAllocator(), dummyImage.vkImage, dummyImage.vmaAllocation)
         imageCache.destroy()
         coroutineScope.cancel()
         textPipelines.destroy()
         pipeline.destroy()
-        vkDestroySampler(device, textureSampler, null)
-        vkDestroySampler(device, smoothTextureSampler, null)
+        vkDestroySampler(troll.vkDevice(), textureSampler, null)
+        vkDestroySampler(troll.vkDevice(), smoothTextureSampler, null)
     }
 }
 

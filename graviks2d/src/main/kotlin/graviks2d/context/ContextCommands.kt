@@ -7,6 +7,7 @@ import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
+import troll.sync.WaitSemaphore
 
 internal class ContextCommands(
     private val context: GraviksContext
@@ -29,11 +30,11 @@ internal class ContextCommands(
             val ciCommandPool = VkCommandPoolCreateInfo.calloc(stack)
             ciCommandPool.`sType$Default`()
             ciCommandPool.flags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
-            ciCommandPool.queueFamilyIndex(context.instance.queueFamilyIndex)
+            ciCommandPool.queueFamilyIndex(context.instance.troll.queueFamilies().graphics.index)
 
             val pCommandPool = stack.callocLong(1)
             assertSuccess(
-                vkCreateCommandPool(context.instance.device, ciCommandPool, null, pCommandPool),
+                vkCreateCommandPool(context.instance.troll.vkDevice(), ciCommandPool, null, pCommandPool),
                 "vkCreateCommandPool"
             )
             this.commandPool = pCommandPool[0]
@@ -46,17 +47,17 @@ internal class ContextCommands(
 
             val pCommandBuffer = stack.callocPointer(1)
             assertSuccess(
-                vkAllocateCommandBuffers(context.instance.device, aiCommandBuffer, pCommandBuffer),
+                vkAllocateCommandBuffers(context.instance.troll.vkDevice(), aiCommandBuffer, pCommandBuffer),
                 "vkAllocateCommandBuffers"
             )
-            this.commandBuffer = VkCommandBuffer(pCommandBuffer[0], context.instance.device)
+            this.commandBuffer = VkCommandBuffer(pCommandBuffer[0], context.instance.troll.vkDevice())
 
             val ciFence = VkFenceCreateInfo.calloc(stack)
             ciFence.`sType$Default`()
 
             val pFence = stack.callocLong(1)
             assertSuccess(
-                vkCreateFence(context.instance.device, ciFence, null, pFence),
+                vkCreateFence(context.instance.troll.vkDevice(), ciFence, null, pFence),
                 "vkCreateFence"
             )
             this.fence = pFence[0]
@@ -72,7 +73,7 @@ internal class ContextCommands(
         if (hasPendingSubmission) throw IllegalStateException("Can't reset command buffer with pending submission")
 
         assertSuccess(
-            vkResetCommandPool(this.context.instance.device, this.commandPool, 0),
+            vkResetCommandPool(this.context.instance.troll.vkDevice(), this.commandPool, 0),
             "vkResetCommandPool"
         )
 
@@ -89,8 +90,7 @@ internal class ContextCommands(
     }
 
     private fun endSubmitCommandBuffer(
-        stack: MemoryStack, signalSemaphore: Long?,
-        submissionMarker: CompletableDeferred<Unit>?
+        signalSemaphore: Long?, submissionMarker: CompletableDeferred<Unit>?
     ) {
 
         if (!isStillRecording) throw IllegalStateException("No commands are recorded")
@@ -99,32 +99,14 @@ internal class ContextCommands(
             vkEndCommandBuffer(this.commandBuffer), "vkEndCommandBuffer"
         )
 
-        val pSubmitInfo = VkSubmitInfo.calloc(1, stack)
-        val submitInfo = pSubmitInfo[0]
-        submitInfo.`sType$Default`()
-        submitInfo.waitSemaphoreCount(waitSemaphores.size)
-        if (waitSemaphores.isNotEmpty()) {
-            val pWaitSemaphores = stack.callocLong(waitSemaphores.size)
-            val pWaitDstStageMasks = stack.callocInt(waitSemaphores.size)
-            for ((index, semaphore) in waitSemaphores.withIndex()) {
-                pWaitSemaphores.put(index, semaphore)
-                pWaitDstStageMasks.put(index, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
-            }
-            submitInfo.pWaitSemaphores(pWaitSemaphores)
-            submitInfo.pWaitDstStageMask(pWaitDstStageMasks)
-        }
-        waitSemaphores.clear()
-        if (signalSemaphore != null) {
-            submitInfo.pSignalSemaphores(stack.longs(signalSemaphore))
-        } else {
-            submitInfo.pSignalSemaphores(null)
-        }
-        submitInfo.pCommandBuffers(stack.pointers(this.commandBuffer.address()))
+        val signalSemaphores = if (signalSemaphore != null) longArrayOf(signalSemaphore) else LongArray(0)
 
-        assertSuccess(
-            this.context.instance.synchronizedQueueSubmit(pSubmitInfo, this.fence),
-            "synchronizedQueueSubmit"
+        this.context.instance.troll.queueFamilies().graphics.queues.random().submit(
+            commandBuffer, "ContextCommands.endSubmitCommandBuffer",
+            waitSemaphores.map { WaitSemaphore(it, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT) }.toTypedArray(), // TODO Wait... is this always the right stage?
+            fence, *signalSemaphores
         )
+        waitSemaphores.clear()
 
         submissionMarker?.complete(Unit)
         isStillRecording = false
@@ -138,11 +120,11 @@ internal class ContextCommands(
         // If this simple command can't complete within this timeout, something is wrong
         val timeout = 10_000_000_000L
         assertSuccess(
-            vkWaitForFences(this.context.instance.device, stack.longs(this.fence), true, timeout),
+            vkWaitForFences(this.context.instance.troll.vkDevice(), stack.longs(this.fence), true, timeout),
             "vkWaitForFences"
         )
         assertSuccess(
-            vkResetFences(this.context.instance.device, stack.longs(this.fence)),
+            vkResetFences(this.context.instance.troll.vkDevice(), stack.longs(this.fence)),
             "vkResetFences"
         )
 
@@ -153,7 +135,7 @@ internal class ContextCommands(
         stack: MemoryStack, signalSemaphore: Long?,
         submissionMarker: CompletableDeferred<Unit>?
     ) {
-        endSubmitCommandBuffer(stack, signalSemaphore, submissionMarker)
+        endSubmitCommandBuffer(signalSemaphore, submissionMarker)
         awaitPendingSubmission(stack)
     }
 
@@ -338,7 +320,7 @@ internal class ContextCommands(
             if (shouldAwaitCompletion) {
                 endSubmitWaitCommandBuffer(stack, signalSemaphore, submissionMarker)
             } else {
-                endSubmitCommandBuffer(stack, signalSemaphore, submissionMarker)
+                endSubmitCommandBuffer(signalSemaphore, submissionMarker)
             }
         }
     }
@@ -428,7 +410,7 @@ internal class ContextCommands(
         if (isStillRecording && hasDrawnBefore) throw IllegalStateException("Can't destroy ContextCommands while commands are being recorded")
         if (hasPendingSubmission) stackPush().use { stack -> awaitPendingSubmission(stack) }
 
-        vkDestroyCommandPool(context.instance.device, this.commandPool, null)
-        vkDestroyFence(context.instance.device, this.fence, null)
+        vkDestroyCommandPool(context.instance.troll.vkDevice(), this.commandPool, null)
+        vkDestroyFence(context.instance.troll.vkDevice(), this.fence, null)
     }
 }
