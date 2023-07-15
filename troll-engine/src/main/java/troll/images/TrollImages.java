@@ -1,11 +1,12 @@
 package troll.images;
 
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.VkFramebufferCreateInfo;
-import org.lwjgl.vulkan.VkImageSubresourceRange;
-import org.lwjgl.vulkan.VkImageViewCreateInfo;
+import org.lwjgl.util.vma.VmaAllocationCreateInfo;
+import org.lwjgl.vulkan.*;
 import troll.instance.TrollInstance;
 
+import static org.lwjgl.util.vma.Vma.VMA_MEMORY_USAGE_AUTO;
+import static org.lwjgl.util.vma.Vma.vmaCreateImage;
 import static org.lwjgl.vulkan.VK10.*;
 import static troll.exceptions.VulkanFailureException.assertVkSuccess;
 
@@ -25,6 +26,48 @@ public class TrollImages {
         range.baseArrayLayer(0);
         range.layerCount(1);
         return range;
+    }
+
+    public VkImageSubresourceLayers subresourceLayers(MemoryStack stack, VkImageSubresourceLayers range, int aspectMask) {
+        if (range == null) range = VkImageSubresourceLayers.calloc(stack);
+        range.aspectMask(aspectMask);
+        range.mipLevel(0);
+        range.baseArrayLayer(0);
+        range.layerCount(1);
+        return range;
+    }
+
+    public VmaImage createSimple(
+            MemoryStack stack, int width, int height,
+            int format, int samples, int usage, int aspectMask, String name
+    ) {
+        var ciImage = VkImageCreateInfo.calloc(stack);
+        ciImage.sType$Default();
+        ciImage.imageType(VK_IMAGE_TYPE_2D);
+        ciImage.format(format);
+        ciImage.extent().set(width, height, 1);
+        ciImage.mipLevels(1);
+        ciImage.arrayLayers(1);
+        ciImage.samples(samples);
+        ciImage.tiling(VK_IMAGE_TILING_OPTIMAL);
+        ciImage.usage(usage);
+        ciImage.sharingMode(VK_SHARING_MODE_EXCLUSIVE);
+        ciImage.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+
+        var ciAllocation = VmaAllocationCreateInfo.calloc(stack);
+        ciAllocation.usage(VMA_MEMORY_USAGE_AUTO);
+
+        var pImage = stack.callocLong(1);
+        var pAllocation = stack.callocPointer(1);
+        assertVkSuccess(vmaCreateImage(
+                instance.vmaAllocator(), ciImage, ciAllocation, pImage, pAllocation, null
+        ), "VmaCreateImage", name);
+        long image = pImage.get(0);
+        long allocation = pAllocation.get(0);
+        instance.debug.name(stack, image, VK_OBJECT_TYPE_IMAGE, name);
+
+        long view = createView(stack, image, format, aspectMask, name);
+        return new VmaImage(image, view, allocation, width, height);
     }
 
     public long createView(MemoryStack stack, long image, int format, int aspectMask, String name) {
@@ -66,5 +109,35 @@ public class TrollImages {
         long framebuffer = pFramebuffer.get(0);
         instance.debug.name(stack, framebuffer, VK_OBJECT_TYPE_FRAMEBUFFER, name);
         return framebuffer;
+    }
+
+    public long simpleSampler(
+            MemoryStack stack, int magMinFilter, int mipMapMode, int addressMode, String name
+    ) {
+        var ciSampler = VkSamplerCreateInfo.calloc(stack);
+        ciSampler.sType$Default();
+        ciSampler.magFilter(magMinFilter);
+        ciSampler.minFilter(magMinFilter);
+        ciSampler.mipmapMode(mipMapMode);
+        ciSampler.addressModeU(addressMode);
+        ciSampler.addressModeV(addressMode);
+        ciSampler.addressModeW(addressMode);
+        ciSampler.mipLodBias(0f);
+        ciSampler.anisotropyEnable(false);
+        ciSampler.compareEnable(false);
+        ciSampler.compareOp(VK_COMPARE_OP_ALWAYS);
+        ciSampler.minLod(0f);
+        ciSampler.maxLod(0f);
+        ciSampler.borderColor(VK_BORDER_COLOR_INT_OPAQUE_BLACK);
+        ciSampler.unnormalizedCoordinates(false);
+
+        var pSampler = stack.callocLong(1);
+        assertVkSuccess(vkCreateSampler(
+                instance.vkDevice(), ciSampler, null, pSampler),
+                "CreateSampler", name
+        );
+        long sampler = pSampler.get(0);
+        instance.debug.name(stack, sampler, VK_OBJECT_TYPE_SAMPLER, name);
+        return sampler;
     }
 }
