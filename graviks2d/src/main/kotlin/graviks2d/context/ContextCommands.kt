@@ -1,12 +1,13 @@
 package graviks2d.context
 
 import graviks2d.resource.text.rasterizeTextAtlas
-import graviks2d.util.assertSuccess
 import kotlinx.coroutines.CompletableDeferred
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
+import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.sync.ResourceUsage
 import troll.sync.WaitSemaphore
 
 internal class ContextCommands(
@@ -25,45 +26,15 @@ internal class ContextCommands(
     private var hasPendingSubmission = false
 
     init {
-        stackPush().use { stack ->
-
-            val ciCommandPool = VkCommandPoolCreateInfo.calloc(stack)
-            ciCommandPool.`sType$Default`()
-            ciCommandPool.flags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
-            ciCommandPool.queueFamilyIndex(context.instance.troll.queueFamilies().graphics.index)
-
-            val pCommandPool = stack.callocLong(1)
-            assertSuccess(
-                vkCreateCommandPool(context.instance.troll.vkDevice(), ciCommandPool, null, pCommandPool),
-                "vkCreateCommandPool"
-            )
-            this.commandPool = pCommandPool[0]
-
-            val aiCommandBuffer = VkCommandBufferAllocateInfo.calloc(stack)
-            aiCommandBuffer.`sType$Default`()
-            aiCommandBuffer.commandPool(commandPool)
-            aiCommandBuffer.level(VK_COMMAND_BUFFER_LEVEL_PRIMARY)
-            aiCommandBuffer.commandBufferCount(1)
-
-            val pCommandBuffer = stack.callocPointer(1)
-            assertSuccess(
-                vkAllocateCommandBuffers(context.instance.troll.vkDevice(), aiCommandBuffer, pCommandBuffer),
-                "vkAllocateCommandBuffers"
-            )
-            this.commandBuffer = VkCommandBuffer(pCommandBuffer[0], context.instance.troll.vkDevice())
-
-            val ciFence = VkFenceCreateInfo.calloc(stack)
-            ciFence.`sType$Default`()
-
-            val pFence = stack.callocLong(1)
-            assertSuccess(
-                vkCreateFence(context.instance.troll.vkDevice(), ciFence, null, pFence),
-                "vkCreateFence"
-            )
-            this.fence = pFence[0]
-
-            this.initImageLayouts()
-        }
+        val troll = context.instance.troll
+        this.commandPool = troll.commands.createPool(
+            VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+            troll.queueFamilies().graphics.index,
+            "GraviksContextCommandPool"
+        )
+        this.commandBuffer = troll.commands.createPrimaryBuffers(this.commandPool, 1, "GraviksContextCommandBuffer")[0]
+        this.fence = troll.sync.createFences(false, 1, "GraviksContextCommandFence")[0]
+        this.initImageLayouts()
     }
 
     private fun resetBeginCommandBuffer(stack: MemoryStack) {
@@ -72,20 +43,12 @@ internal class ContextCommands(
 
         if (hasPendingSubmission) throw IllegalStateException("Can't reset command buffer with pending submission")
 
-        assertSuccess(
+        assertVkSuccess(
             vkResetCommandPool(this.context.instance.troll.vkDevice(), this.commandPool, 0),
-            "vkResetCommandPool"
+            "vkResetCommandPool", "ContextCommands"
         )
 
-        val biCommandBuffer = VkCommandBufferBeginInfo.calloc(stack)
-        biCommandBuffer.`sType$Default`()
-        biCommandBuffer.flags(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
-
-        assertSuccess(
-            vkBeginCommandBuffer(this.commandBuffer, biCommandBuffer),
-            "vkBeginCommandBuffer"
-        )
-
+        context.instance.troll.commands.begin(commandBuffer, stack, "GraviksContextCommands")
         isStillRecording = true
     }
 
@@ -95,8 +58,8 @@ internal class ContextCommands(
 
         if (!isStillRecording) throw IllegalStateException("No commands are recorded")
 
-        assertSuccess(
-            vkEndCommandBuffer(this.commandBuffer), "vkEndCommandBuffer"
+        assertVkSuccess(
+            vkEndCommandBuffer(this.commandBuffer), "vkEndCommandBuffer", "ContextCommands"
         )
 
         val signalSemaphores = if (signalSemaphore != null) longArrayOf(signalSemaphore) else LongArray(0)
@@ -119,14 +82,7 @@ internal class ContextCommands(
 
         // If this simple command can't complete within this timeout, something is wrong
         val timeout = 10_000_000_000L
-        assertSuccess(
-            vkWaitForFences(this.context.instance.troll.vkDevice(), stack.longs(this.fence), true, timeout),
-            "vkWaitForFences"
-        )
-        assertSuccess(
-            vkResetFences(this.context.instance.troll.vkDevice(), stack.longs(this.fence)),
-            "vkResetFences"
-        )
+        context.instance.troll.sync.waitAndReset(stack, fence, timeout)
 
         hasPendingSubmission = false
     }
@@ -144,51 +100,12 @@ internal class ContextCommands(
 
             resetBeginCommandBuffer(stack)
 
-            transitionColorImageLayout(
-                stack, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                0, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
+            context.instance.troll.commands.transitionLayout(
+                stack, commandBuffer, context.targetImages.colorImage.vkImage,
+                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, null,
+                ResourceUsage(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
             )
         }
-    }
-
-    private fun transitionColorImageLayout(
-        stack: MemoryStack, currentLayout: Int, desiredLayout: Int,
-        srcStageMask: Int, dstStageMask: Int, srcAccessMask: Int, dstAccessMask: Int
-    ) {
-        transitionImageLayout(
-            stack, this.context.targetImages.colorImage, currentLayout, desiredLayout,
-            srcStageMask, dstStageMask, srcAccessMask, dstAccessMask
-        )
-    }
-
-    private fun transitionImageLayout(
-        stack: MemoryStack, image: Long, currentLayout: Int, desiredLayout: Int,
-        srcStageMask: Int, dstStageMask: Int, srcAccessMask: Int, dstAccessMask: Int
-    ) {
-
-        val imageBarriers = VkImageMemoryBarrier.calloc(1, stack)
-        val imageBarrier = imageBarriers[0]
-        imageBarrier.`sType$Default`()
-        imageBarrier.srcAccessMask(srcAccessMask)
-        imageBarrier.dstAccessMask(dstAccessMask)
-        imageBarrier.oldLayout(currentLayout)
-        imageBarrier.newLayout(desiredLayout)
-        imageBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-        imageBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-        imageBarrier.image(image)
-        imageBarrier.subresourceRange {
-            it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-            it.baseMipLevel(0)
-            it.baseArrayLayer(0)
-            it.levelCount(1)
-            it.layerCount(1)
-        }
-
-        vkCmdPipelineBarrier(
-            this.commandBuffer, srcStageMask, dstStageMask, 0,
-            null, null, imageBarriers
-        )
     }
 
     fun addWaitSemaphore(semaphore: Long) {
@@ -210,18 +127,13 @@ internal class ContextCommands(
                 resetBeginCommandBuffer(stack)
             }
 
-            transitionColorImageLayout(
-                stack, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT
+            val troll = context.instance.troll
+            troll.commands.transitionLayout(
+                stack, commandBuffer, context.targetImages.colorImage.vkImage,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                ResourceUsage(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
+                ResourceUsage(VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
             )
-
-            fun populateSubresource(srr: VkImageSubresourceLayers) {
-                srr.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                srr.mipLevel(0)
-                srr.baseArrayLayer(0)
-                srr.layerCount(1)
-            }
 
             if (destImage != null) {
                 fun checkPresent(value: Int?, name: String) {
@@ -238,83 +150,47 @@ internal class ContextCommands(
                 checkPresent(imageDstStageMask, "imageDstStageMask")
 
                 if (originalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-                    transitionImageLayout(
-                        stack, destImage,
-                        currentLayout = originalImageLayout!!, desiredLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                        srcStageMask = imageSrcStageMask!!, dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
-                        srcAccessMask = imageSrcAccessMask!!, dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT
+                    troll.commands.transitionLayout(
+                        stack, commandBuffer, destImage, originalImageLayout!!, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        ResourceUsage(imageSrcAccessMask!!, imageSrcStageMask!!),
+                        ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
                     )
                 }
 
                 if (destImageFormat == TARGET_COLOR_FORMAT) {
-
-                    val imageCopyRegions = VkImageCopy.calloc(1, stack)
-                    val copyRegion = imageCopyRegions[0]
-                    populateSubresource(copyRegion.srcSubresource())
-                    copyRegion.srcOffset { it.set(0, 0, 0) }
-                    populateSubresource(copyRegion.dstSubresource())
-                    copyRegion.dstOffset { it.set(0, 0, 0) }
-                    copyRegion.extent { it.set(this.context.width, this.context.height, 1) }
-
-                    vkCmdCopyImage(
-                        this.commandBuffer,
-                        this.context.targetImages.colorImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                        destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                        imageCopyRegions
+                    troll.commands.copyImage(
+                        commandBuffer, stack, context.width, context.height, VK_IMAGE_ASPECT_COLOR_BIT,
+                        context.targetImages.colorImage.vkImage, destImage
                     )
                 } else {
-                    val imageCopyRegions = VkImageBlit.calloc(1, stack)
-                    val copyRegion = imageCopyRegions[0]
-                    populateSubresource(copyRegion.srcSubresource())
-                    copyRegion.srcOffsets { offsets ->
-                        offsets[0].set(0, 0, 0)
-                        offsets[1].set(this.context.width, this.context.height, 1)
-                    }
-                    populateSubresource(copyRegion.dstSubresource())
-                    copyRegion.dstOffsets { offsets ->
-                        offsets[0].set(0, 0, 0)
-                        offsets[1].set(this.context.width, this.context.height, 1)
-                    }
-
-                    vkCmdBlitImage(
-                        this.commandBuffer,
-                        this.context.targetImages.colorImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                        destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                        imageCopyRegions, VK_FILTER_NEAREST
+                    troll.commands.blitImage(
+                        commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, VK_FILTER_NEAREST,
+                        context.targetImages.colorImage.vkImage, context.width, context.height,
+                        destImage, context.width, context.height
                     )
                 }
 
                 if (finalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-                    transitionImageLayout(
-                        stack, destImage,
-                        currentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, desiredLayout = finalImageLayout!!,
-                        srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask = imageDstStageMask!!,
-                        srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT, dstAccessMask = imageDstAccessMask!!
+                    troll.commands.transitionLayout(
+                        stack, commandBuffer, destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, finalImageLayout!!,
+                        ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
+                        ResourceUsage(imageDstAccessMask!!, imageDstStageMask!!)
                     )
                 }
             }
 
             if (destBuffer != null) {
-                val bufferCopyRegions = VkBufferImageCopy.calloc(1, stack)
-                val copyRegion = bufferCopyRegions[0]
-                copyRegion.bufferOffset(0)
-                copyRegion.bufferRowLength(this.context.width)
-                copyRegion.bufferImageHeight(this.context.height)
-                populateSubresource(copyRegion.imageSubresource())
-                copyRegion.imageOffset { it.set(0, 0, 0) }
-                copyRegion.imageExtent { it.set(this.context.width, this.context.height, 1) }
-
-                vkCmdCopyImageToBuffer(
-                    this.commandBuffer,
-                    this.context.targetImages.colorImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    destBuffer, bufferCopyRegions
+                troll.commands.copyImageToBuffer(
+                    commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, context.targetImages.colorImage.vkImage,
+                    context.width, context.height, destBuffer
                 )
             }
 
-            transitionColorImageLayout(
-                stack, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
+            troll.commands.transitionLayout(
+                stack, commandBuffer, context.targetImages.colorImage.vkImage,
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                ResourceUsage(VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
+                ResourceUsage(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
             )
 
             if (shouldAwaitCompletion) {
@@ -332,7 +208,7 @@ internal class ContextCommands(
                 resetBeginCommandBuffer(stack)
             }
 
-            rasterizeTextAtlas(commandBuffer, this.context.textShapeCache, !hasDrawnBefore)
+            rasterizeTextAtlas(context.instance.troll, commandBuffer, this.context.textShapeCache, !hasDrawnBefore)
 
             hasDrawnBefore = true
 
@@ -376,7 +252,7 @@ internal class ContextCommands(
                         vkCmdBindVertexBuffers(
                             this.commandBuffer,
                             0,
-                            stack.longs(this.context.buffers.vertexVkBuffer),
+                            stack.longs(this.context.buffers.vertexBuffer.buffer.vkBuffer),
                             stack.longs(0L)
                         )
                         vkCmdBindDescriptorSets(

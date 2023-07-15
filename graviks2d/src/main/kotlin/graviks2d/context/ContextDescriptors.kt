@@ -1,14 +1,15 @@
 package graviks2d.context
 
 import graviks2d.core.GraviksInstance
-import graviks2d.util.assertSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
+import troll.buffer.VmaBuffer
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 internal class ContextDescriptors(
     private val instance: GraviksInstance,
-    private val operationBuffer: Long,
+    private val operationBuffer: VmaBuffer,
     private val textAtlasImageView: Long
 ) {
 
@@ -38,34 +39,21 @@ internal class ContextDescriptors(
             ciPool.pPoolSizes(poolSizes)
 
             val pPool = stack.callocLong(1)
-            assertSuccess(
+            assertVkSuccess(
                 vkCreateDescriptorPool(this.instance.troll.vkDevice(), ciPool, null, pPool),
-                "vkCreateDescriptorPool"
+                "vkCreateDescriptorPool", "GraviksContextDescriptors"
             )
             this.descriptorPool = pPool[0]
-
-            val aiSet = VkDescriptorSetAllocateInfo.calloc(stack)
-            aiSet.`sType$Default`()
-            aiSet.descriptorPool(this.descriptorPool)
-            aiSet.pSetLayouts(stack.longs(this.instance.pipeline.vkDescriptorSetLayout))
-
-            val pSet = stack.callocLong(1)
-            assertSuccess(
-                vkAllocateDescriptorSets(this.instance.troll.vkDevice(), aiSet, pSet),
-                "vkAllocateDescriptorSets"
-            )
-            this.descriptorSet = pSet[0]
+            this.descriptorSet = instance.troll.descriptors.allocate(
+                stack, 1, descriptorPool, "GraviksDescriptors", instance.pipeline.vkDescriptorSetLayout
+            )[0]
         }
         this.updateDescriptors(emptyArray())
     }
 
     fun updateDescriptors(imageViews: Array<Long>) {
         stackPush().use { stack ->
-            val operationBufferDescriptors = VkDescriptorBufferInfo.calloc(1, stack)
-            val operationBufferDescriptor = operationBufferDescriptors[0]
-            operationBufferDescriptor.buffer(operationBuffer)
-            operationBufferDescriptor.offset(0)
-            operationBufferDescriptor.range(VK_WHOLE_SIZE)
+            val operationBufferDescriptors = instance.troll.descriptors.bufferInfo(stack, operationBuffer)
 
             val textureSamplerDescriptors = VkDescriptorImageInfo.calloc(2, stack)
             textureSamplerDescriptors[0].sampler(instance.textureSampler)

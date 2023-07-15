@@ -4,6 +4,7 @@ import graviks2d.core.GraviksInstance
 import kotlinx.coroutines.*
 import org.lwjgl.util.vma.Vma.vmaDestroyImage
 import org.lwjgl.vulkan.VK10.vkDestroyImageView
+import troll.images.VmaImage
 import java.nio.file.Files
 
 internal class ImageCache(
@@ -100,7 +101,7 @@ internal class ImageCache(
 
 internal class BorrowedImage(
     val imageReference: ImageReference,
-    val imagePair: Deferred<ImagePair>
+    val imagePair: Deferred<VmaImage>
 ) {
     internal var wasReturned = false
 
@@ -116,7 +117,7 @@ internal class BorrowedImage(
 private class CachedImage(
     var numberOfBorrows: Int,
     val imageReference: ImageReference,
-    val imagePair: Deferred<ImagePair>
+    val imagePair: Deferred<VmaImage>
 ) {
     var lastReturnTime = 0L
 

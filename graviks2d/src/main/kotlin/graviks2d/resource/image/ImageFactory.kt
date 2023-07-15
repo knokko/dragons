@@ -1,54 +1,22 @@
 package graviks2d.resource.image
 
 import graviks2d.core.GraviksInstance
-import graviks2d.util.assertSuccess
 import org.lwjgl.stb.STBImage.stbi_info_from_memory
 import org.lwjgl.stb.STBImage.stbi_load_from_memory
 import org.lwjgl.stb.STBImageWrite.stbi_write_png_to_func
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.*
 import org.lwjgl.util.vma.Vma.*
-import org.lwjgl.util.vma.VmaAllocationCreateInfo
-import org.lwjgl.util.vma.VmaAllocationInfo
-import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
+import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.images.VmaImage
+import troll.sync.ResourceUsage
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 
-internal fun createImageView(vkDevice: VkDevice, vkImage: Long): Long {
-    return stackPush().use { stack ->
-        val ciImageView = VkImageViewCreateInfo.calloc(stack)
-        ciImageView.`sType$Default`()
-        ciImageView.image(vkImage)
-        ciImageView.viewType(VK_IMAGE_VIEW_TYPE_2D)
-        ciImageView.format(VK_FORMAT_R8G8B8A8_UNORM)
-        ciImageView.components().set(
-            VK_COMPONENT_SWIZZLE_IDENTITY,
-            VK_COMPONENT_SWIZZLE_IDENTITY,
-            VK_COMPONENT_SWIZZLE_IDENTITY,
-            VK_COMPONENT_SWIZZLE_IDENTITY
-        )
-        ciImageView.subresourceRange {
-            it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-            it.levelCount(1)
-            it.layerCount(1)
-            it.baseMipLevel(0)
-            it.baseArrayLayer(0)
-        }
-
-        val pImageView = stack.callocLong(1)
-        assertSuccess(
-            vkCreateImageView(vkDevice, ciImageView, null, pImageView),
-            "vkCreateImageView"
-        )
-
-        pImageView[0]
-    }
-}
-
 internal fun createImagePair(
     instance: GraviksInstance, imageInput: InputStream, pathDescription: String
-): ImagePair {
+): VmaImage {
     val imageByteArray = imageInput.readAllBytes()
 
     val imageRawByteBuffer = memCalloc(imageByteArray.size)
@@ -57,7 +25,11 @@ internal fun createImagePair(
     val width: Int
     val height: Int
 
-    val (image, allocation) = stackPush().use { stack ->
+    val name: String = if (pathDescription.contains("/"))
+        pathDescription.substring(pathDescription.lastIndexOf('/') + 1)
+    else pathDescription
+
+    return stackPush().use { stack ->
         val pWidth = stack.callocInt(1)
         val pHeight = stack.callocInt(1)
         val pComponents = stack.callocInt(1)
@@ -71,200 +43,63 @@ internal fun createImagePair(
         val imagePixelByteBuffer = stbi_load_from_memory(imageRawByteBuffer, pWidth, pHeight, pComponents, 4)
             ?: throw IllegalArgumentException("Can't decode image at path $pathDescription")
 
-        val ciImage = VkImageCreateInfo.calloc(stack)
-        ciImage.`sType$Default`()
-        ciImage.imageType(VK_IMAGE_TYPE_2D)
-        ciImage.format(VK_FORMAT_R8G8B8A8_UNORM)
-        ciImage.extent().set(width, height, 1)
-        ciImage.mipLevels(1)
-        ciImage.arrayLayers(1)
-        ciImage.samples(VK_SAMPLE_COUNT_1_BIT)
-        ciImage.tiling(VK_IMAGE_TILING_OPTIMAL)
-        ciImage.usage(VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT)
-        ciImage.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-        ciImage.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-
-        val ciImageAllocation = VmaAllocationCreateInfo.calloc(stack)
-        ciImageAllocation.flags(0)
-        ciImageAllocation.usage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
-
-        val pImage = stack.callocLong(1)
-        val pImageAllocation = stack.callocPointer(1)
-        assertSuccess(
-            vmaCreateImage(instance.troll.vmaAllocator(), ciImage, ciImageAllocation, pImage, pImageAllocation, null),
-            "vmaCreateImage"
+        val image = instance.troll.images.createSimple(
+            stack, width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
+            VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_IMAGE_ASPECT_COLOR_BIT, name
         )
-        val image = pImage[0]
-        val imageAllocation = pImageAllocation[0]
 
-        val ciStagingBuffer = VkBufferCreateInfo.calloc(stack)
-        ciStagingBuffer.`sType$Default`()
-        ciStagingBuffer.size(imagePixelByteBuffer.capacity().toLong())
-        ciStagingBuffer.usage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
-        ciStagingBuffer.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-
-        val ciStagingBufferAllocation = VmaAllocationCreateInfo.calloc(stack)
-        ciStagingBufferAllocation.flags(
-            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-                    or VMA_ALLOCATION_CREATE_MAPPED_BIT
+        val stagingBuffer = instance.troll.buffers.createMapped(
+            imagePixelByteBuffer.capacity().toLong(),
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "$name-staging"
         )
-        ciStagingBufferAllocation.usage(VMA_MEMORY_USAGE_AUTO)
 
-        val pStagingBuffer = stack.callocLong(1)
-        val pStagingAllocation = stack.callocPointer(1)
-        val pAllocationInfo = VmaAllocationInfo.calloc(stack)
-        assertSuccess(
-            vmaCreateBuffer(
-                instance.troll.vmaAllocator(), ciStagingBuffer, ciStagingBufferAllocation,
-                pStagingBuffer, pStagingAllocation, pAllocationInfo
-            ),
-            "vmaCreateBuffer"
-        )
-        val stagingBuffer = pStagingBuffer[0]
-        val stagingAllocation = pStagingAllocation[0]
-
-        val stagingByteBuffer = memByteBuffer(pAllocationInfo.pMappedData(), imagePixelByteBuffer.capacity())
+        val stagingByteBuffer = memByteBuffer(stagingBuffer.hostAddress, imagePixelByteBuffer.capacity())
         memCopy(imagePixelByteBuffer, stagingByteBuffer)
 
-        val ciCommandPool = VkCommandPoolCreateInfo.calloc(stack)
-        ciCommandPool.`sType$Default`()
-        ciCommandPool.flags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
-        ciCommandPool.queueFamilyIndex(instance.troll.queueFamilies().graphics.index)
-
-        val pCommandPool = stack.callocLong(1)
-        assertSuccess(
-            vkCreateCommandPool(instance.troll.vkDevice(), ciCommandPool, null, pCommandPool),
-            "vkCreateCommandPool"
+        val commandPool = instance.troll.commands.createPool(
+            VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, instance.troll.queueFamilies().graphics.index, "$name-transfer"
         )
-        val commandPool = pCommandPool[0]
-
-        val aiCommandBuffer = VkCommandBufferAllocateInfo.calloc(stack)
-        aiCommandBuffer.`sType$Default`()
-        aiCommandBuffer.commandPool(commandPool)
-        aiCommandBuffer.level(VK_COMMAND_BUFFER_LEVEL_PRIMARY)
-        aiCommandBuffer.commandBufferCount(1)
-
-        val pCommandBuffer = stack.callocPointer(1)
-        assertSuccess(
-            vkAllocateCommandBuffers(instance.troll.vkDevice(), aiCommandBuffer, pCommandBuffer),
-            "vkAllocateCommandBuffers"
+        val commandBuffer = instance.troll.commands.createPrimaryBuffers(commandPool, 1, "$name-transfer")[0]
+        instance.troll.commands.begin(commandBuffer, stack, "$name-transfer")
+        instance.troll.commands.transitionLayout(
+            stack, commandBuffer, image.vkImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            null, ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
         )
-        val commandBuffer = VkCommandBuffer(pCommandBuffer[0], instance.troll.vkDevice())
-
-        val biCommandBuffer = VkCommandBufferBeginInfo.calloc(stack)
-        biCommandBuffer.`sType$Default`()
-        biCommandBuffer.flags(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
-
-        assertSuccess(
-            vkBeginCommandBuffer(commandBuffer, biCommandBuffer),
-            "vkBeginCommandBuffer"
+        instance.troll.commands.copyBufferToImage(
+            commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, image.vkImage, width, height, stagingBuffer.buffer.vkBuffer
+        )
+        instance.troll.commands.transitionLayout(
+            stack, commandBuffer, image.vkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
+            ResourceUsage(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
         )
 
-        val preCopyBarriers = VkImageMemoryBarrier.calloc(1, stack)
-        val preCopyBarrier = preCopyBarriers[0]
-        preCopyBarrier.`sType$Default`()
-        preCopyBarrier.srcAccessMask(0)
-        preCopyBarrier.dstAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
-        preCopyBarrier.oldLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-        preCopyBarrier.newLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-        preCopyBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-        preCopyBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-        preCopyBarrier.image(image)
-        preCopyBarrier.subresourceRange {
-            it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-            it.baseMipLevel(0)
-            it.levelCount(1)
-            it.baseArrayLayer(0)
-            it.layerCount(1)
-        }
+        assertVkSuccess(vkEndCommandBuffer(commandBuffer), "vkEndCommandBuffer", "GraviksImageFactory-$name")
 
-        vkCmdPipelineBarrier(
-            commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-            0, null, null, preCopyBarriers
-        )
-
-        val copyRegions = VkBufferImageCopy.calloc(1, stack)
-        val copyRegion = copyRegions[0]
-        copyRegion.bufferOffset(0)
-        copyRegion.bufferRowLength(width)
-        copyRegion.bufferImageHeight(height)
-        copyRegion.imageSubresource {
-            it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-            it.layerCount(1)
-            it.baseArrayLayer(0)
-            it.mipLevel(0)
-        }
-        copyRegion.imageOffset().set(0, 0, 0)
-        copyRegion.imageExtent().set(width, height, 1)
-
-        vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyRegions)
-
-        val postCopyBarriers = VkImageMemoryBarrier.calloc(1, stack)
-        val postCopyBarrier = postCopyBarriers[0]
-        postCopyBarrier.`sType$Default`()
-        postCopyBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
-        postCopyBarrier.dstAccessMask(VK_ACCESS_SHADER_READ_BIT)
-        postCopyBarrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-        postCopyBarrier.newLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-        postCopyBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-        postCopyBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-        postCopyBarrier.image(image)
-        postCopyBarrier.subresourceRange {
-            it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-            it.baseMipLevel(0)
-            it.levelCount(1)
-            it.baseArrayLayer(0)
-            it.layerCount(1)
-        }
-
-        vkCmdPipelineBarrier(
-            commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            0, null, null, postCopyBarriers
-        )
-
-        assertSuccess(
-            vkEndCommandBuffer(commandBuffer), "vkEndCommandBuffer"
-        )
-
-        val pSubmitInfo = VkSubmitInfo.calloc(1, stack)
-        val submitInfo = pSubmitInfo[0]
-        submitInfo.`sType$Default`()
-        submitInfo.waitSemaphoreCount(0)
-        submitInfo.pCommandBuffers(stack.pointers(commandBuffer.address()))
-        submitInfo.pSignalSemaphores(null)
-
-        val ciFence = VkFenceCreateInfo.calloc(stack)
-        ciFence.`sType$Default`()
-
-        val pFence = stack.callocLong(1)
-        assertSuccess(
-            vkCreateFence(instance.troll.vkDevice(), ciFence, null, pFence),
-            "vkCreateFence"
-        )
+        val fence = instance.troll.sync.createFences(false, 1, "fence-transfer-$name")[0]
 
         instance.troll.queueFamilies().graphics.queues.random().submit(
-            commandBuffer, "ImageFactory.createImagePair", emptyArray(), pFence.get(0)
+            commandBuffer, "ImageFactory.createImagePair-$name", emptyArray(), fence
         )
 
-        assertSuccess(
-            vkWaitForFences(instance.troll.vkDevice(), pFence, true, 10_000_000_000L),
-            "vkWaitForFences"
+        assertVkSuccess(
+            vkWaitForFences(instance.troll.vkDevice(), stack.longs(fence), true, 10_000_000_000L),
+            "vkWaitForFences", "ImageFactory.createImagePair-$name"
         )
-        vkDestroyFence(instance.troll.vkDevice(), pFence[0], null)
+        vkDestroyFence(instance.troll.vkDevice(), fence, null)
         vkDestroyCommandPool(instance.troll.vkDevice(), commandPool, null)
 
         memFree(imagePixelByteBuffer)
-        vmaDestroyBuffer(instance.troll.vmaAllocator(), stagingBuffer, stagingAllocation)
+        vmaDestroyBuffer(instance.troll.vmaAllocator(), stagingBuffer.buffer.vkBuffer, stagingBuffer.buffer.vmaAllocation)
         memFree(imageRawByteBuffer)
 
-        Pair(image, imageAllocation)
+        image
     }
-
-    val imageView = createImageView(instance.troll.vkDevice(), image)
-    return ImagePair(vkImage = image, vkImageView = imageView, vmaAllocation = allocation, width = width, height = height)
 }
 
-internal fun createDummyImage(instance: GraviksInstance): ImagePair {
+internal fun createDummyImage(instance: GraviksInstance): VmaImage {
     val singlePixelData = memCalloc(4)
     var dummyInput: ByteArrayInputStream? = null
     if (!stbi_write_png_to_func({ _, address, size ->
@@ -279,7 +114,3 @@ internal fun createDummyImage(instance: GraviksInstance): ImagePair {
 
     return createImagePair(instance, dummyInput!!, "DummyImage")
 }
-
-internal class ImagePair(
-    val vkImage: Long, val vkImageView: Long, val vmaAllocation: Long, val width: Int, val height: Int
-)

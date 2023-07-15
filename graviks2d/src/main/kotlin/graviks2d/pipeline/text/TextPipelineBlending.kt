@@ -4,7 +4,6 @@ import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkPipelineColorBlendAttachmentState
 import org.lwjgl.vulkan.VkPipelineColorBlendStateCreateInfo
-import org.lwjgl.vulkan.VkPipelineMultisampleStateCreateInfo
 
 internal fun createTextCountPipelineColorBlend(
     stack: MemoryStack
@@ -40,17 +39,4 @@ internal fun createTextOddPipelineColorBlend(
     ciColorBlend.pAttachments(attachments)
 
     return ciColorBlend
-}
-
-internal fun createTextPipelineMultisampleState(
-    stack: MemoryStack
-): VkPipelineMultisampleStateCreateInfo {
-    // Note: instead of using multisampling, the text renderer simply claims bigger space for some characters and
-    // downscales them when drawing
-    val ciMultisample = VkPipelineMultisampleStateCreateInfo.calloc(stack)
-    ciMultisample.`sType$Default`()
-    ciMultisample.rasterizationSamples(VK_SAMPLE_COUNT_1_BIT)
-    ciMultisample.sampleShadingEnable(false)
-
-    return ciMultisample
 }

@@ -1,9 +1,9 @@
 package graviks2d.pipeline
 
-import graviks2d.util.assertSuccess
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 internal fun createGraviksRenderPass(
     vkDevice: VkDevice, colorFormat: Int, stack: MemoryStack
@@ -38,9 +38,9 @@ internal fun createGraviksRenderPass(
     ciRenderPass.pSubpasses(subpasses)
 
     val pRenderPass = stack.callocLong(1)
-    assertSuccess(
+    assertVkSuccess(
         vkCreateRenderPass(vkDevice, ciRenderPass, null, pRenderPass),
-        "vkCreateRenderPass"
+        "vkCreateRenderPass", "GraviksCore"
     )
     return pRenderPass[0]
 }

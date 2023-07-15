@@ -8,7 +8,6 @@ import graviks2d.pipeline.text.OPERATION_CORRECT_START
 import graviks2d.pipeline.text.OPERATION_INCREMENT
 import graviks2d.pipeline.text.TextCountVertex
 import graviks2d.pipeline.text.TextVertexBuffer
-import graviks2d.util.assertSuccess
 import org.lwjgl.stb.STBRPContext
 import org.lwjgl.stb.STBRPNode
 import org.lwjgl.stb.STBRPRect
@@ -20,13 +19,10 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memByteBuffer
 import org.lwjgl.system.MemoryUtil.memFloatBuffer
 import org.lwjgl.util.vma.Vma.*
-import org.lwjgl.util.vma.VmaAllocationCreateInfo
-import org.lwjgl.util.vma.VmaAllocationInfo
 import org.lwjgl.vulkan.VK10.*
-import org.lwjgl.vulkan.VkBufferCreateInfo
-import org.lwjgl.vulkan.VkFramebufferCreateInfo
-import org.lwjgl.vulkan.VkImageCreateInfo
-import org.lwjgl.vulkan.VkImageViewCreateInfo
+import troll.buffer.MappedVmaBuffer
+import troll.buffer.VmaBuffer
+import troll.images.VmaImage
 
 internal class TextShapeCache(
     val context: GraviksContext,
@@ -37,22 +33,13 @@ internal class TextShapeCache(
     rectanglePackingNodeBufferSize: Int
 ) {
 
-    val textCountAtlas: Long
-    val textCountAtlasView: Long
-    private val textCountAtlasAllocation: Long
-
-    val textOddAtlas: Long
-    val textOddAtlasView: Long
-    private val textOddAtlasAllocation: Long
+    val textCountAtlas: VmaImage
+    val textOddAtlas: VmaImage
 
     val textAtlasFramebuffer: Long
 
-    val countVertexBuffer: Long
-    private val countVertexBufferAllocation: Long
-    private val hostVertexBuffer: TextVertexBuffer
-
-    val oddVertexBuffer: Long
-    private val oddVertexBufferAllocation: Long
+    val countVertexBuffer: MappedVmaBuffer
+    val oddVertexBuffer: VmaBuffer
 
     val descriptorPool: Long
     val descriptorSet: Long
@@ -84,117 +71,33 @@ internal class TextShapeCache(
         stbrp_init_target(this.rectanglePackingContext, width, height, this.rectanglePackingNodes)
         this.rectanglePackingBuffer = STBRPRect.calloc(rectanglePackingBufferSize)
 
+        val troll = context.instance.troll
         stackPush().use { stack ->
-            val vmaAllocator = this.context.instance.troll.vmaAllocator()
-            val vkDevice = this.context.instance.troll.vkDevice()
-
-            val ciTextAtlas = VkImageCreateInfo.calloc(stack)
-            ciTextAtlas.`sType$Default`()
-            ciTextAtlas.imageType(VK_IMAGE_TYPE_2D)
-            ciTextAtlas.format(TEXT_COLOR_FORMAT)
-            ciTextAtlas.extent().set(this.width, this.height, 1)
-            ciTextAtlas.mipLevels(1)
-            ciTextAtlas.arrayLayers(1)
-            ciTextAtlas.samples(VK_SAMPLE_COUNT_1_BIT)
-            ciTextAtlas.tiling(VK_IMAGE_TILING_OPTIMAL)
-            ciTextAtlas.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-            ciTextAtlas.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-
-            val ciTextAtlasAllocation = VmaAllocationCreateInfo.calloc(stack)
-            ciTextAtlasAllocation.usage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
-
-            val pTextAtlas = stack.callocLong(1)
-            val pTextAtlasAllocation = stack.callocPointer(1)
-            ciTextAtlas.usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT or VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
-            assertSuccess(
-                vmaCreateImage(vmaAllocator, ciTextAtlas, ciTextAtlasAllocation, pTextAtlas, pTextAtlasAllocation, null),
-                "vmaCreateImage"
+            this.textCountAtlas = troll.images.createSimple(
+                stack, this.width, this.height, TEXT_COLOR_FORMAT, VK_SAMPLE_COUNT_1_BIT,
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT or VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT, "GraviksTextCountAtlas"
             )
-            this.textCountAtlas = pTextAtlas[0]
-            this.textCountAtlasAllocation = pTextAtlasAllocation[0]
-
-            ciTextAtlas.usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT or VK_IMAGE_USAGE_SAMPLED_BIT)
-            assertSuccess(
-                vmaCreateImage(vmaAllocator, ciTextAtlas, ciTextAtlasAllocation, pTextAtlas, pTextAtlasAllocation, null),
-                "vmaCreateImage"
+            this.textOddAtlas = troll.images.createSimple(
+                stack, this.width, this.height, TEXT_COLOR_FORMAT, VK_SAMPLE_COUNT_1_BIT,
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT, "GraviksTextOddAtlas"
             )
-            this.textOddAtlas = pTextAtlas[0]
-            this.textOddAtlasAllocation = pTextAtlasAllocation[0]
 
-            val ciTextAtlasView = VkImageViewCreateInfo.calloc(stack)
-            ciTextAtlasView.`sType$Default`()
-            // Set the .image field later
-            ciTextAtlasView.viewType(VK_IMAGE_VIEW_TYPE_2D)
-            ciTextAtlasView.format(TEXT_COLOR_FORMAT)
-            ciTextAtlasView.components().set(
-                VK_COMPONENT_SWIZZLE_IDENTITY,
-                VK_COMPONENT_SWIZZLE_IDENTITY,
-                VK_COMPONENT_SWIZZLE_IDENTITY,
-                VK_COMPONENT_SWIZZLE_IDENTITY
-            )
-            ciTextAtlasView.subresourceRange {
-                it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                it.baseMipLevel(0)
-                it.levelCount(1)
-                it.baseArrayLayer(0)
-                it.layerCount(1)
-            }
-
-            val pTextAtlasView = stack.callocLong(1)
-            ciTextAtlasView.image(this.textCountAtlas)
-            assertSuccess(
-                vkCreateImageView(vkDevice, ciTextAtlasView, null, pTextAtlasView),
-                "vkCreateImageView"
-            )
-            this.textCountAtlasView = pTextAtlasView[0]
-
-            ciTextAtlasView.image(this.textOddAtlas)
-            assertSuccess(
-                vkCreateImageView(vkDevice, ciTextAtlasView, null, pTextAtlasView),
-                "vkCreateImageView"
-            )
-            this.textOddAtlasView = pTextAtlasView[0]
-
-            val ciVertexBuffer = VkBufferCreateInfo.calloc(stack)
-            ciVertexBuffer.`sType$Default`()
             val vertexBufferByteSize = this.vertexBufferSize.toLong() * TextCountVertex.BYTE_SIZE
             if (vertexBufferByteSize > Int.MAX_VALUE) {
                 throw IllegalArgumentException("vertexBufferSize ($vertexBufferSize vertices -> $vertexBufferByteSize bytes) is too large")
             }
-            // the .size field will be set later
-            ciVertexBuffer.usage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
-            ciVertexBuffer.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-
-            val ciVertexAllocation = VmaAllocationCreateInfo.calloc(stack)
-            ciVertexAllocation.flags(
-                VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT or
-                        VMA_ALLOCATION_CREATE_MAPPED_BIT
+            this.countVertexBuffer = troll.buffers.createMapped(
+                vertexBufferByteSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, "GraviksTextCountVertices"
             )
-            ciVertexAllocation.usage(VMA_MEMORY_USAGE_AUTO)
 
-            val pVertexBuffer = stack.callocLong(1)
-            val pVertexAllocation = stack.callocPointer(1)
-            val vertexInfo = VmaAllocationInfo.calloc(stack)
-
-            ciVertexBuffer.size(vertexBufferByteSize)
-            assertSuccess(
-                vmaCreateBuffer(vmaAllocator, ciVertexBuffer, ciVertexAllocation, pVertexBuffer, pVertexAllocation, vertexInfo),
-                "vmaCreateBuffer"
+            val oddVertexBuffer = troll.buffers.createMapped(
+                6L * 2 * 4, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, "GraviksTextOddVertices"
             )
-            this.countVertexBuffer = pVertexBuffer[0]
-            this.countVertexBufferAllocation = pVertexAllocation[0]
-            val hostVertexByteBuffer = memByteBuffer(vertexInfo.pMappedData(), vertexBufferByteSize.toInt())
-            this.hostVertexBuffer = TextVertexBuffer.createAtBuffer(hostVertexByteBuffer, this.vertexBufferSize)
+            this.oddVertexBuffer = oddVertexBuffer.buffer
 
-            val oddVertexBufferSize = 6L * 2 * 4
-            ciVertexBuffer.size(oddVertexBufferSize)
-            assertSuccess(
-                vmaCreateBuffer(vmaAllocator, ciVertexBuffer, ciVertexAllocation, pVertexBuffer, pVertexAllocation, vertexInfo),
-                "vmaCreateBuffer"
-            )
-            this.oddVertexBuffer = pVertexBuffer[0]
-            this.oddVertexBufferAllocation = pVertexAllocation[0]
-            val hostVertexOddByteBuffer = memFloatBuffer(vertexInfo.pMappedData(), 6 * 2)
+            val hostVertexOddByteBuffer = memFloatBuffer(oddVertexBuffer.hostAddress, 6 * 2)
             hostVertexOddByteBuffer.put(0, -1f)
             hostVertexOddByteBuffer.put(1, -1f)
             hostVertexOddByteBuffer.put(2, 1f)
@@ -208,25 +111,14 @@ internal class TextShapeCache(
             hostVertexOddByteBuffer.put(10, -1f)
             hostVertexOddByteBuffer.put(11, -1f)
 
-            val ciFramebuffer = VkFramebufferCreateInfo.calloc(stack)
-            ciFramebuffer.`sType$Default`()
-            ciFramebuffer.renderPass(this.context.instance.textPipelines.vkRenderPass)
-            ciFramebuffer.attachmentCount(2)
-            ciFramebuffer.pAttachments(stack.longs(this.textCountAtlasView, this.textOddAtlasView))
-            ciFramebuffer.width(this.width)
-            ciFramebuffer.height(this.height)
-            ciFramebuffer.layers(1)
-
-            val pFramebuffer = stack.callocLong(1)
-            assertSuccess(
-                vkCreateFramebuffer(vkDevice, ciFramebuffer, null, pFramebuffer),
-                "vkCreateFramebuffer"
+            this.textAtlasFramebuffer = troll.images.createFramebuffer(
+                stack, context.instance.textPipelines.vkRenderPass, width, height, "GraviksTextFramebuffer",
+                textCountAtlas.vkImageView, textOddAtlas.vkImageView
             )
-            this.textAtlasFramebuffer = pFramebuffer[0]
 
             val (descriptorPool, descriptorSet) = createTextOddPipelineDescriptors(
-                vkDevice, stack, this.context.instance.textPipelines.oddDescriptorSetLayout,
-                this.textCountAtlasView
+                troll, stack, this.context.instance.textPipelines.oddDescriptorSetLayout,
+                this.textCountAtlas.vkImageView
             )
             this.descriptorPool = descriptorPool
             this.descriptorSet = descriptorSet
@@ -309,6 +201,10 @@ internal class TextShapeCache(
                 }
 
                 val (currentX, currentY) = transformPoint(x(), y())
+                val hostVertexBuffer = TextVertexBuffer.createAtBuffer(
+                    memByteBuffer(countVertexBuffer.hostAddress, countVertexBuffer.buffer.size.toInt()),
+                    vertexBufferSize
+                )
 
                 if (type() == STBTT_vline || type() == STBTT_vcurve) {
                     hostVertexBuffer[currentVertexIndex].run {
@@ -367,12 +263,12 @@ internal class TextShapeCache(
         val vkDevice = this.context.instance.troll.vkDevice()
 
         vkDestroyFramebuffer(vkDevice, this.textAtlasFramebuffer, null)
-        vmaDestroyBuffer(vmaAllocator, this.countVertexBuffer, this.countVertexBufferAllocation)
-        vmaDestroyBuffer(vmaAllocator, this.oddVertexBuffer, this.oddVertexBufferAllocation)
-        vkDestroyImageView(vkDevice, this.textOddAtlasView, null)
-        vmaDestroyImage(vmaAllocator, this.textOddAtlas, this.textOddAtlasAllocation)
-        vkDestroyImageView(vkDevice, this.textCountAtlasView, null)
-        vmaDestroyImage(vmaAllocator, this.textCountAtlas, this.textCountAtlasAllocation)
+        vmaDestroyBuffer(vmaAllocator, this.countVertexBuffer.buffer.vkBuffer, this.countVertexBuffer.buffer.vmaAllocation)
+        vmaDestroyBuffer(vmaAllocator, this.oddVertexBuffer.vkBuffer, this.oddVertexBuffer.vmaAllocation)
+        vkDestroyImageView(vkDevice, this.textOddAtlas.vkImageView, null)
+        vmaDestroyImage(vmaAllocator, this.textOddAtlas.vkImage, this.textOddAtlas.vmaAllocation)
+        vkDestroyImageView(vkDevice, this.textCountAtlas.vkImageView, null)
+        vmaDestroyImage(vmaAllocator, this.textCountAtlas.vkImage, this.textCountAtlas.vmaAllocation)
         vkDestroyDescriptorPool(vkDevice, this.descriptorPool, null)
 
         this.rectanglePackingBuffer.free()

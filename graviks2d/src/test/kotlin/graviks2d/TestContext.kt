@@ -3,14 +3,12 @@ package graviks2d
 import graviks2d.context.GraviksContext
 import graviks2d.core.GraviksInstance
 import graviks2d.resource.image.ImageCache
-import graviks2d.resource.image.ImagePair
 import graviks2d.resource.image.ImageReference
 import graviks2d.resource.image.createImagePair
 import graviks2d.resource.text.TextStyle
 import graviks2d.target.GraviksScissor
 import graviks2d.util.Color
 import graviks2d.util.HostImage
-import graviks2d.util.assertSuccess
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -22,14 +20,12 @@ import org.lwjgl.stb.STBImage.stbi_load_from_memory
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.*
 import org.lwjgl.util.vma.Vma.*
-import org.lwjgl.util.vma.VmaAllocationCreateInfo
-import org.lwjgl.util.vma.VmaAllocationInfo
-import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
 import org.opentest4j.AssertionFailedError
 import troll.builder.TrollBuilder
 import troll.builder.instance.ValidationFeatures
-import troll.instance.TrollInstance
+import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.images.VmaImage
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_INT_ARGB
 import java.io.File
@@ -40,52 +36,25 @@ import kotlin.math.absoluteValue
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestContext {
 
-    private val troll: TrollInstance
-    private val graviksInstance: GraviksInstance
-
-    init {
-        this.troll = TrollBuilder(
-            VK_API_VERSION_1_0, "TestGraviksContext", VK_MAKE_VERSION(0, 5, 0)
-        )
-            .validation(ValidationFeatures(false, false, false, true, true))
-            .build()
-
-        this.graviksInstance = GraviksInstance(troll)
-    }
+    private val troll = TrollBuilder(
+        VK_API_VERSION_1_0, "TestGraviksContext", VK_MAKE_VERSION(0, 5, 0)
+    )
+        .validation(ValidationFeatures(false, false, false, true, true))
+        .build()
+    private val graviksInstance = GraviksInstance(troll)
 
     private fun withTestImage(context: GraviksContext, flipY: Boolean, test: (() -> Unit, HostImage) -> Unit) {
-        stackPush().use { stack ->
+        val testBuffer = troll.buffers.createMapped(
+            context.width * context.height * 4L, VK_BUFFER_USAGE_TRANSFER_DST_BIT, "TestReadback"
+        )
 
-            val ciTestBuffer = VkBufferCreateInfo.calloc(stack)
-            ciTestBuffer.`sType$Default`()
-            ciTestBuffer.size((context.width * context.height * 4).toLong())
-            ciTestBuffer.usage(VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-            ciTestBuffer.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
+        val testHostBuffer = memByteBuffer(testBuffer.hostAddress, context.width * context.height * 4)
 
-            val ciTestAllocation = VmaAllocationCreateInfo.calloc(stack)
-            ciTestAllocation.flags(
-                VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT or
-                        VMA_ALLOCATION_CREATE_MAPPED_BIT
-            )
-            ciTestAllocation.usage(VMA_MEMORY_USAGE_AUTO)
+        test({ context.copyColorImageTo(
+            destImage = null, destBuffer = testBuffer.buffer.vkBuffer, destImageFormat = null, shouldAwaitCompletion = true
+        )}, HostImage(context.width, context.height, testHostBuffer, flipY))
 
-            val pTestBuffer = stack.callocLong(1)
-            val pTestAllocation = stack.callocPointer(1)
-            val testAllocationInfo = VmaAllocationInfo.calloc(stack)
-            assertSuccess(
-                vmaCreateBuffer(troll.vmaAllocator(), ciTestBuffer, ciTestAllocation, pTestBuffer, pTestAllocation, testAllocationInfo),
-                "vmaCreateBuffer"
-            )
-            val testBuffer = pTestBuffer[0]
-            val testAllocation = pTestAllocation[0]
-            val testHostBuffer = memByteBuffer(testAllocationInfo.pMappedData(), context.width * context.height * 4)
-
-            test({ context.copyColorImageTo(
-                destImage = null, destBuffer = testBuffer, destImageFormat = null, shouldAwaitCompletion = true
-            )}, HostImage(context.width, context.height, testHostBuffer, flipY))
-
-            vmaDestroyBuffer(troll.vmaAllocator(), testBuffer, testAllocation)
-        }
+        vmaDestroyBuffer(troll.vmaAllocator(), testBuffer.buffer.vkBuffer, testBuffer.buffer.vmaAllocation)
     }
 
     private fun assertImageEquals(expectedFileName: String, actual: HostImage) {
@@ -333,7 +302,7 @@ class TestContext {
         inputImage2.close()
 
         withTestImage(graviks, true) { update, hostImage ->
-            fun drawFlippedImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImagePair) {
+            fun drawFlippedImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: VmaImage) {
                 graviks.drawVulkanImage(xLeft, 1f - yTop, xRight, 1f - yBottom, image.vkImage, image.vkImageView)
             }
 
@@ -370,7 +339,7 @@ class TestContext {
                 graviks.drawImage(xLeft, 1f - yTop, xRight, 1f - yBottom, image)
             }
 
-            fun drawFlippedImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: ImagePair) {
+            fun drawFlippedImage(xLeft: Float, yBottom: Float, xRight: Float, yTop: Float, image: VmaImage) {
                 graviks.drawVulkanImage(xLeft, 1f - yTop, xRight, 1f - yBottom, image.vkImage, image.vkImageView)
             }
 
@@ -653,139 +622,44 @@ class TestContext {
         )
 
         stackPush().use { stack ->
-            val ciDestImage = VkImageCreateInfo.calloc(stack)
-            ciDestImage.`sType$Default`()
-            ciDestImage.imageType(VK_IMAGE_TYPE_2D)
-            ciDestImage.format(VK_FORMAT_B8G8R8A8_UNORM)
-            ciDestImage.extent().set(graviks.width, graviks.height, 1)
-            ciDestImage.mipLevels(1)
-            ciDestImage.arrayLayers(1)
-            ciDestImage.samples(VK_SAMPLE_COUNT_1_BIT)
-            ciDestImage.tiling(VK_IMAGE_TILING_OPTIMAL)
-            ciDestImage.usage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT or VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-            ciDestImage.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-            ciDestImage.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-
-            val ciDestImageAllocation = VmaAllocationCreateInfo.calloc(stack)
-            ciDestImageAllocation.usage(VMA_MEMORY_USAGE_AUTO_PREFER_HOST)
-
-            val pDestImage = stack.callocLong(1)
-            val pDestImageAllocation = stack.callocPointer(1)
-            assertSuccess(
-                vmaCreateImage(
-                    troll.vmaAllocator(), ciDestImage, ciDestImageAllocation,
-                    pDestImage, pDestImageAllocation, null
-                ), "vmaCreateImage"
+            val destImage = troll.images.createSimple(
+                stack, graviks.width, graviks.height, VK_FORMAT_B8G8R8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT or VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT, false, "TestDestImage"
             )
-            val destImage = pDestImage[0]
-            val destImageAllocation = pDestImageAllocation[0]
 
             graviks.copyColorImageTo(
-                destImage = destImage, destBuffer = null, destImageFormat = VK_FORMAT_B8G8R8A8_UNORM,
+                destImage = destImage.vkImage, destBuffer = null, destImageFormat = VK_FORMAT_B8G8R8A8_UNORM,
                 originalImageLayout = VK_IMAGE_LAYOUT_UNDEFINED, finalImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 imageSrcAccessMask = 0, imageSrcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                 imageDstAccessMask = VK_ACCESS_TRANSFER_READ_BIT, imageDstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
                 shouldAwaitCompletion = true
             )
 
-            val ciDestBuffer = VkBufferCreateInfo.calloc(stack)
-            ciDestBuffer.`sType$Default`()
-            ciDestBuffer.size((graviks.width * graviks.height * 4).toLong())
-            ciDestBuffer.usage(VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-            ciDestBuffer.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-
-            val ciDestBufferAllocation = VmaAllocationCreateInfo.calloc(stack)
-            ciDestBufferAllocation.flags(
-                VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT or
-                        VMA_ALLOCATION_CREATE_MAPPED_BIT
-            )
-            ciDestBufferAllocation.usage(VMA_MEMORY_USAGE_AUTO)
-
-            val pDestBuffer = stack.callocLong(1)
-            val pDestBufferAllocation = stack.callocPointer(1)
-            val destBufferAllocationInfo = VmaAllocationInfo.calloc(stack)
-            assertSuccess(
-                vmaCreateBuffer(troll.vmaAllocator(), ciDestBuffer, ciDestBufferAllocation, pDestBuffer, pDestBufferAllocation, destBufferAllocationInfo),
-                "vmaCreateBuffer"
-            )
-            val destBuffer = pDestBuffer[0]
-            val destBufferAllocation = pDestBufferAllocation[0]
-            val destHostBuffer = memByteBuffer(destBufferAllocationInfo.pMappedData(), graviks.width * graviks.height * 4)
-
-            val ciCommandPool = VkCommandPoolCreateInfo.calloc(stack)
-            ciCommandPool.`sType$Default`()
-            ciCommandPool.flags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
-            ciCommandPool.queueFamilyIndex(troll.queueFamilies().graphics.index)
-
-            val pCommandPool = stack.callocLong(1)
-            assertSuccess(
-                vkCreateCommandPool(troll.vkDevice(), ciCommandPool, null, pCommandPool),
-                "vkCreateCommandPool"
-            )
-            val commandPool = pCommandPool[0]
-
-            val aiCommandBuffer = VkCommandBufferAllocateInfo.calloc(stack)
-            aiCommandBuffer.`sType$Default`()
-            aiCommandBuffer.commandPool(commandPool)
-            aiCommandBuffer.level(VK_COMMAND_BUFFER_LEVEL_PRIMARY)
-            aiCommandBuffer.commandBufferCount(1)
-
-            val pCommandBuffer = stack.callocPointer(1)
-            assertSuccess(
-                vkAllocateCommandBuffers(troll.vkDevice(), aiCommandBuffer, pCommandBuffer),
-                "vkAllocateCommandBuffers"
-            )
-            val commandBuffer = VkCommandBuffer(pCommandBuffer[0], troll.vkDevice())
-
-            val biCommandBuffer = VkCommandBufferBeginInfo.calloc(stack)
-            biCommandBuffer.`sType$Default`()
-            assertSuccess(vkBeginCommandBuffer(commandBuffer, biCommandBuffer), "vkBeginCommandBuffer")
-
-            val copyRegions = VkBufferImageCopy.calloc(1, stack)
-            val copyRegion = copyRegions[0]
-            copyRegion.imageSubresource {
-                it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                it.baseArrayLayer(0)
-                it.layerCount(1)
-                it.mipLevel(0)
-            }
-            copyRegion.imageExtent().set(graviks.width, graviks.height, 1)
-
-            vkCmdCopyImageToBuffer(commandBuffer, destImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destBuffer, copyRegions)
-
-            val bufferBarriers = VkBufferMemoryBarrier.calloc(1, stack)
-            val bufferBarrier = bufferBarriers[0]
-            bufferBarrier.`sType$Default`()
-            bufferBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
-            bufferBarrier.dstAccessMask(VK_ACCESS_HOST_READ_BIT)
-            bufferBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-            bufferBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-            bufferBarrier.buffer(destBuffer)
-            bufferBarrier.size(VK_WHOLE_SIZE)
-
-            vkCmdPipelineBarrier(
-                commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0,
-                null, bufferBarriers, null
+            val destBuffer = troll.buffers.createMapped(
+                graviks.width * graviks.height * 4L, VK_BUFFER_USAGE_TRANSFER_DST_BIT, "TestDestBuffer"
             )
 
-            assertSuccess(vkEndCommandBuffer(commandBuffer), "vkEndCommandBuffer")
+            val destHostBuffer = memByteBuffer(destBuffer.hostAddress, graviks.width * graviks.height * 4)
 
-            val ciCopyFence = VkFenceCreateInfo.calloc(stack)
-            ciCopyFence.`sType$Default`()
-
-            val pCopyFence = stack.callocLong(1)
-            assertSuccess(
-                vkCreateFence(troll.vkDevice(), ciCopyFence, null, pCopyFence),
-                "vkCreateFence"
+            val commandPool = troll.commands.createPool(
+                VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, troll.queueFamilies().graphics.index, "TestCopy"
             )
-            val copyFence = pCopyFence[0]
+            val commandBuffer = troll.commands.createPrimaryBuffers(commandPool, 1, "TestCopy")[0]
+            troll.commands.begin(commandBuffer, stack, "TestGraviksContextCopy")
+            troll.commands.copyImageToBuffer(
+                commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, destImage.vkImage,
+                graviks.width, graviks.height, destBuffer.buffer.vkBuffer
+            )
 
+            assertVkSuccess(vkEndCommandBuffer(commandBuffer), "vkEndCommandBuffer", "TestGraviksContextCopy")
+            val copyFence = troll.sync.createFences(false, 1, "TestGraviksContextCopyFence")[0]
             troll.queueFamilies().graphics.queues.random().submit(
                 commandBuffer, "TestContext.testBlitColorImage", emptyArray(), copyFence
             )
-            assertSuccess(
-                vkWaitForFences(troll.vkDevice(), pCopyFence, true, 1_000_000_000),
-                "vkWaitForFences"
+            assertVkSuccess(
+                vkWaitForFences(troll.vkDevice(), stack.longs(copyFence), true, 1_000_000_000),
+                "vkWaitForFences", "TestGraviksContextCopy"
             )
 
             vkDestroyFence(troll.vkDevice(), copyFence, null)
@@ -801,8 +675,8 @@ class TestContext {
                 }
             }
 
-            vmaDestroyImage(troll.vmaAllocator(), destImage, destImageAllocation)
-            vmaDestroyBuffer(troll.vmaAllocator(), destBuffer, destBufferAllocation)
+            vmaDestroyImage(troll.vmaAllocator(), destImage.vkImage, destImage.vmaAllocation)
+            vmaDestroyBuffer(troll.vmaAllocator(), destBuffer.buffer.vkBuffer, destBuffer.buffer.vmaAllocation)
         }
 
         graviks.destroy()

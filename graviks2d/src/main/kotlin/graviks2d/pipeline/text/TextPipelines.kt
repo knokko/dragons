@@ -1,19 +1,17 @@
 package graviks2d.pipeline.text
 
-import graviks2d.pipeline.createGraviksPipelineDynamics
-import graviks2d.pipeline.createGraviksPipelineInputAssembly
-import graviks2d.pipeline.createGraviksPipelineRasterization
-import graviks2d.pipeline.createGraviksPipelineViewport
-import graviks2d.util.assertSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK10.*
-import org.lwjgl.vulkan.VkDevice
+import org.lwjgl.vulkan.VkDescriptorSetLayoutBinding
 import org.lwjgl.vulkan.VkGraphicsPipelineCreateInfo
+import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.instance.TrollInstance
+import troll.pipelines.ShaderInfo
 
 const val TEXT_COLOR_FORMAT = VK_FORMAT_R8_UNORM
 
 internal class TextPipeline(
-    val vkDevice: VkDevice
+    val troll: TrollInstance
 ) {
     val countPipeline: Long
     val countPipelineLayout: Long
@@ -26,12 +24,25 @@ internal class TextPipeline(
         // TODO Pipeline cache
         stackPush().use { stack ->
 
-            this.countPipelineLayout = createTextCountPipelineLayout(vkDevice, stack)
-            val (oddPipelineLayout, oddDescriptorSetLayout) = createTextOddPipelineLayout(vkDevice, stack)
-            this.oddPipelineLayout = oddPipelineLayout
-            this.oddDescriptorSetLayout = oddDescriptorSetLayout
-            val renderPass = createTextRenderPass(vkDevice, stack)
+            val oddLayoutBindings = VkDescriptorSetLayoutBinding.calloc(1, stack)
+            val oddLayoutBinding = oddLayoutBindings[0]
+            oddLayoutBinding.binding(0)
+            oddLayoutBinding.descriptorType(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
+            oddLayoutBinding.descriptorCount(1)
+            oddLayoutBinding.stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT)
+
+            this.countPipelineLayout = troll.pipelines.createLayout(stack, null, "GraviksTextCount")
+            this.oddDescriptorSetLayout = troll.descriptors.createLayout(stack, oddLayoutBindings, "GraviksTextOdd")
+            this.oddPipelineLayout = troll.pipelines.createLayout(stack, null ,"GraviksTextOdd", oddDescriptorSetLayout)
+            val renderPass = createTextRenderPass(troll.vkDevice(), stack)
             this.vkRenderPass = renderPass
+
+            val textCountVertexShader = troll.pipelines.createShaderModule(
+                stack, "graviks2d/shaders/textCount.vert.spv", "TextCountVertex"
+            )
+            val textCountFragmentShader = troll.pipelines.createShaderModule(
+                stack, "graviks2d/shaders/textCount.frag.spv", "TextCountFragment"
+            )
 
             val ciPipelines = VkGraphicsPipelineCreateInfo.calloc(2, stack)
             val ciCountPipeline = ciPipelines[0]
@@ -39,55 +50,74 @@ internal class TextPipeline(
             // Note: the following is shared with the regular graviks pipeline:
             // inputAssembly, viewportState, dynamicState, rasterizationState
             ciCountPipeline.`sType$Default`()
-            val countStages = createTextCountShaderStages(vkDevice, stack)
-            ciCountPipeline.pStages(countStages)
+            troll.pipelines.shaderStages(
+                stack, ciCountPipeline,
+                ShaderInfo(VK_SHADER_STAGE_VERTEX_BIT, textCountVertexShader, null),
+                ShaderInfo(VK_SHADER_STAGE_FRAGMENT_BIT, textCountFragmentShader, null)
+            )
             ciCountPipeline.pVertexInputState(createTextCountPipelineVertexInput(stack))
-            ciCountPipeline.pInputAssemblyState(createGraviksPipelineInputAssembly(stack))
-            ciCountPipeline.pViewportState(createGraviksPipelineViewport(stack))
-            ciCountPipeline.pDynamicState(createGraviksPipelineDynamics(stack))
-            ciCountPipeline.pRasterizationState(createGraviksPipelineRasterization(stack))
-            ciCountPipeline.pMultisampleState(createTextPipelineMultisampleState(stack))
+            troll.pipelines.simpleInputAssembly(stack, ciCountPipeline)
+            troll.pipelines.dynamicViewports(stack, ciCountPipeline, 1)
+            troll.pipelines.dynamicStates(
+                stack, ciCountPipeline, VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR
+            )
+            troll.pipelines.simpleRasterization(stack, ciCountPipeline, VK_CULL_MODE_NONE)
+            // Note: instead of using multisampling, the text renderer simply claims bigger space for some characters and
+            // downscales them when drawing
+            troll.pipelines.noMultisampling(stack, ciCountPipeline)
             ciCountPipeline.pColorBlendState(createTextCountPipelineColorBlend(stack))
             ciCountPipeline.layout(this.countPipelineLayout)
             ciCountPipeline.renderPass(vkRenderPass)
             ciCountPipeline.subpass(0)
 
+            val textOddVertexShader = troll.pipelines.createShaderModule(
+                stack, "graviks2d/shaders/textOdd.vert.spv", "TextOddVertex"
+            )
+            val textOddFragmentShader = troll.pipelines.createShaderModule(
+                stack, "graviks2d/shaders/textOdd.frag.spv", "TextOddFragment"
+            )
+
             val ciOddPipeline = ciPipelines[1]
             ciOddPipeline.`sType$Default`()
-            val oddStages = createTextOddShaderStages(vkDevice, stack)
-            ciOddPipeline.pStages(oddStages)
+            troll.pipelines.shaderStages(
+                stack, ciOddPipeline,
+                ShaderInfo(VK_SHADER_STAGE_VERTEX_BIT, textOddVertexShader, null),
+                ShaderInfo(VK_SHADER_STAGE_FRAGMENT_BIT, textOddFragmentShader, null)
+            )
             ciOddPipeline.pVertexInputState(createTextOddPipelineVertexInput(stack))
-            ciOddPipeline.pInputAssemblyState(createGraviksPipelineInputAssembly(stack))
-            ciOddPipeline.pViewportState(createGraviksPipelineViewport(stack))
-            ciOddPipeline.pDynamicState(createGraviksPipelineDynamics(stack))
-            ciOddPipeline.pRasterizationState(createGraviksPipelineRasterization(stack))
-            ciOddPipeline.pMultisampleState(createTextPipelineMultisampleState(stack))
+            troll.pipelines.simpleInputAssembly(stack, ciOddPipeline)
+            troll.pipelines.dynamicViewports(stack, ciOddPipeline, 1)
+            troll.pipelines.dynamicStates(
+                stack, ciOddPipeline, VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR
+            )
+            troll.pipelines.simpleRasterization(stack, ciOddPipeline, VK_CULL_MODE_NONE)
+            troll.pipelines.noMultisampling(stack, ciOddPipeline)
             ciOddPipeline.pColorBlendState(createTextOddPipelineColorBlend(stack))
             ciOddPipeline.layout(this.oddPipelineLayout)
             ciOddPipeline.renderPass(this.vkRenderPass)
             ciOddPipeline.subpass(1)
 
             val pPipelines = stack.callocLong(2)
-            assertSuccess(
-                vkCreateGraphicsPipelines(vkDevice, VK_NULL_HANDLE, ciPipelines, null, pPipelines),
-                "vkCreateGraphicsPipeline"
+            assertVkSuccess(
+                vkCreateGraphicsPipelines(troll.vkDevice(), VK_NULL_HANDLE, ciPipelines, null, pPipelines),
+                "vkCreateGraphicsPipeline", "GraviksTextPipeline"
             )
             this.countPipeline = pPipelines[0]
             this.oddPipeline = pPipelines[1]
 
-            vkDestroyShaderModule(vkDevice, countStages[0].module(), null)
-            vkDestroyShaderModule(vkDevice, countStages[1].module(), null)
-            vkDestroyShaderModule(vkDevice, oddStages[0].module(), null)
-            vkDestroyShaderModule(vkDevice, oddStages[1].module(), null)
+            vkDestroyShaderModule(troll.vkDevice(), textCountVertexShader, null)
+            vkDestroyShaderModule(troll.vkDevice(), textCountFragmentShader, null)
+            vkDestroyShaderModule(troll.vkDevice(), textOddVertexShader, null)
+            vkDestroyShaderModule(troll.vkDevice(), textOddFragmentShader, null)
         }
     }
 
     fun destroy() {
-        vkDestroyPipeline(this.vkDevice, this.countPipeline, null)
-        vkDestroyPipelineLayout(this.vkDevice, this.countPipelineLayout, null)
-        vkDestroyPipeline(this.vkDevice, this.oddPipeline, null)
-        vkDestroyPipelineLayout(this.vkDevice, this.oddPipelineLayout, null)
-        vkDestroyDescriptorSetLayout(this.vkDevice, this.oddDescriptorSetLayout, null)
-        vkDestroyRenderPass(this.vkDevice, this.vkRenderPass, null)
+        vkDestroyPipeline(troll.vkDevice(), this.countPipeline, null)
+        vkDestroyPipelineLayout(troll.vkDevice(), this.countPipelineLayout, null)
+        vkDestroyPipeline(troll.vkDevice(), this.oddPipeline, null)
+        vkDestroyPipelineLayout(troll.vkDevice(), this.oddPipelineLayout, null)
+        vkDestroyDescriptorSetLayout(troll.vkDevice(), this.oddDescriptorSetLayout, null)
+        vkDestroyRenderPass(troll.vkDevice(), this.vkRenderPass, null)
     }
 }

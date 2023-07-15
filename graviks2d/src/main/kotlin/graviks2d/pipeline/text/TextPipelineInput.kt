@@ -1,9 +1,10 @@
 package graviks2d.pipeline.text
 
-import graviks2d.util.assertSuccess
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
+import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.instance.TrollInstance
 
 internal fun createTextCountPipelineVertexInput(
     stack: MemoryStack
@@ -60,58 +61,8 @@ internal fun createTextOddPipelineVertexInput(
     return ciVertexInput
 }
 
-internal fun createTextCountPipelineLayout(vkDevice: VkDevice, stack: MemoryStack): Long {
-
-    val ciLayout = VkPipelineLayoutCreateInfo.calloc(stack)
-    ciLayout.`sType$Default`()
-    ciLayout.pSetLayouts(null)
-    ciLayout.pPushConstantRanges(null)
-
-    val pLayout = stack.callocLong(1)
-    assertSuccess(
-        vkCreatePipelineLayout(vkDevice, ciLayout, null, pLayout),
-        "vkCreatePipelineLayout"
-    )
-    return pLayout[0]
-}
-
-internal fun createTextOddPipelineLayout(
-    vkDevice: VkDevice, stack: MemoryStack
-): Pair<Long, Long> {
-    val setLayoutBindings = VkDescriptorSetLayoutBinding.calloc(1, stack)
-    val setLayoutBinding = setLayoutBindings[0]
-    setLayoutBinding.binding(0)
-    setLayoutBinding.descriptorType(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
-    setLayoutBinding.descriptorCount(1)
-    setLayoutBinding.stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT)
-
-    val ciSetLayout = VkDescriptorSetLayoutCreateInfo.calloc(stack)
-    ciSetLayout.`sType$Default`()
-    ciSetLayout.pBindings(setLayoutBindings)
-
-    val pSetLayout = stack.callocLong(1)
-    assertSuccess(
-        vkCreateDescriptorSetLayout(vkDevice, ciSetLayout, null, pSetLayout),
-        "vkCreateDescriptorSetLayout"
-    )
-    val setLayout = pSetLayout[0]
-
-    val ciPipelineLayout = VkPipelineLayoutCreateInfo.calloc(stack)
-    ciPipelineLayout.`sType$Default`()
-    ciPipelineLayout.pSetLayouts(pSetLayout)
-    ciPipelineLayout.pPushConstantRanges(null)
-
-    val pPipelineLayout = stack.callocLong(1)
-    assertSuccess(
-        vkCreatePipelineLayout(vkDevice, ciPipelineLayout, null, pPipelineLayout),
-        "vkCreatePipelineLayout"
-    )
-    val pipelineLayout = pPipelineLayout[0]
-    return Pair(pipelineLayout, setLayout)
-}
-
 internal fun createTextOddPipelineDescriptors(
-    vkDevice: VkDevice, stack: MemoryStack, descriptorSetLayout: Long, countImageView: Long
+    troll: TrollInstance, stack: MemoryStack, descriptorSetLayout: Long, countImageView: Long
 ): Pair<Long, Long> {
     val poolSizes = VkDescriptorPoolSize.calloc(1, stack)
     val poolSize = poolSizes[0]
@@ -124,23 +75,15 @@ internal fun createTextOddPipelineDescriptors(
     ciDescriptorPool.pPoolSizes(poolSizes)
 
     val pDescriptorPool = stack.callocLong(1)
-    assertSuccess(
-        vkCreateDescriptorPool(vkDevice, ciDescriptorPool, null, pDescriptorPool),
-        "vkCreateDescriptorPool"
+    assertVkSuccess(
+        vkCreateDescriptorPool(troll.vkDevice(), ciDescriptorPool, null, pDescriptorPool),
+        "vkCreateDescriptorPool", "GraviksTextDescriptorPool"
     )
     val descriptorPool = pDescriptorPool[0]
 
-    val aiDescriptorSet = VkDescriptorSetAllocateInfo.calloc(stack)
-    aiDescriptorSet.`sType$Default`()
-    aiDescriptorSet.descriptorPool(descriptorPool)
-    aiDescriptorSet.pSetLayouts(stack.longs(descriptorSetLayout))
-
-    val pDescriptorSet = stack.callocLong(1)
-    assertSuccess(
-        vkAllocateDescriptorSets(vkDevice, aiDescriptorSet, pDescriptorSet),
-        "vkAllocateDescriptorSets"
-    )
-    val descriptorSet = pDescriptorSet[0]
+    val descriptorSet = troll.descriptors.allocate(
+        stack, 1, descriptorPool, "GraviksTextOdd", descriptorSetLayout
+    )[0]
 
     val descriptorImages = VkDescriptorImageInfo.calloc(1, stack)
     val descriptorImage = descriptorImages[0]
@@ -157,7 +100,7 @@ internal fun createTextOddPipelineDescriptors(
     descriptorWrite.dstBinding(0)
     descriptorWrite.pImageInfo(descriptorImages)
 
-    vkUpdateDescriptorSets(vkDevice, descriptorWrites, null)
+    vkUpdateDescriptorSets(troll.vkDevice(), descriptorWrites, null)
 
     return Pair(descriptorPool, descriptorSet)
 }
