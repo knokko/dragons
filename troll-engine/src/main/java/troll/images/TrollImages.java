@@ -41,6 +41,13 @@ public class TrollImages {
             MemoryStack stack, int width, int height,
             int format, int samples, int usage, int aspectMask, String name
     ) {
+        return createSimple(stack, width, height, format, samples, usage, aspectMask, true, name);
+    }
+
+    public VmaImage createSimple(
+            MemoryStack stack, int width, int height,
+            int format, int samples, int usage, int aspectMask, boolean createView, String name
+    ) {
         var ciImage = VkImageCreateInfo.calloc(stack);
         ciImage.sType$Default();
         ciImage.imageType(VK_IMAGE_TYPE_2D);
@@ -66,7 +73,7 @@ public class TrollImages {
         long allocation = pAllocation.get(0);
         instance.debug.name(stack, image, VK_OBJECT_TYPE_IMAGE, name);
 
-        long view = createView(stack, image, format, aspectMask, name);
+        long view = createView ? createView(stack, image, format, aspectMask, name) : 0L;
         return new VmaImage(image, view, allocation, width, height);
     }
 
