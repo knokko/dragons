@@ -198,4 +198,31 @@ public class TrollPipelines {
 
         ciPipeline.pColorBlendState(ciColorBlend);
     }
+
+    public void simpleColorBlending(MemoryStack stack, VkGraphicsPipelineCreateInfo ciPipeline, int attachmentCount) {
+        var attachments = VkPipelineColorBlendAttachmentState.calloc(attachmentCount, stack);
+        for (int index = 0; index < attachmentCount; index++) {
+            var attachment = attachments.get(index);
+            attachment.blendEnable(true);
+            attachment.srcColorBlendFactor(VK_BLEND_FACTOR_SRC_ALPHA);
+            attachment.dstColorBlendFactor(VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
+            attachment.colorBlendOp(VK_BLEND_OP_ADD);
+            attachment.srcAlphaBlendFactor(VK_BLEND_FACTOR_SRC_ALPHA);
+            attachment.dstAlphaBlendFactor(VK_BLEND_FACTOR_DST_ALPHA);
+            attachment.alphaBlendOp(VK_BLEND_OP_MAX);
+            attachment.colorWriteMask(
+                    VK_COLOR_COMPONENT_R_BIT |
+                    VK_COLOR_COMPONENT_G_BIT |
+                    VK_COLOR_COMPONENT_B_BIT |
+                    VK_COLOR_COMPONENT_A_BIT
+            );
+        }
+
+        var ciColorBlend = VkPipelineColorBlendStateCreateInfo.calloc(stack);
+        ciColorBlend.sType$Default();
+        ciColorBlend.logicOpEnable(false);
+        ciColorBlend.pAttachments(attachments);
+
+        ciPipeline.pColorBlendState(ciColorBlend);
+    }
 }
