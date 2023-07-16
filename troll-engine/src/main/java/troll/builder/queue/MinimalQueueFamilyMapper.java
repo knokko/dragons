@@ -5,7 +5,6 @@ import org.lwjgl.vulkan.VkQueueFamilyProperties;
 import static org.lwjgl.vulkan.VK10.VK_QUEUE_COMPUTE_BIT;
 import static org.lwjgl.vulkan.VK10.VK_QUEUE_GRAPHICS_BIT;
 
-// TODO Test this
 public class MinimalQueueFamilyMapper implements QueueFamilyMapper {
 
     @Override

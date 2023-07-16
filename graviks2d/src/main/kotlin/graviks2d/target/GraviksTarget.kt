@@ -5,6 +5,7 @@ import graviks2d.resource.text.CharacterPosition
 import graviks2d.resource.text.FontReference
 import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
+import troll.sync.WaitSemaphore
 
 interface GraviksTarget {
     fun setScissor(newScissor: GraviksScissor): GraviksScissor
@@ -35,7 +36,7 @@ interface GraviksTarget {
     }
 
     @Throws(UnsupportedOperationException::class)
-    fun addWaitSemaphore(vkSemaphore: Long) {
+    fun addWaitSemaphore(semaphore: WaitSemaphore) {
         throw UnsupportedOperationException("This implementation (${this::class.java.simpleName}) doesn't support this")
     }
 

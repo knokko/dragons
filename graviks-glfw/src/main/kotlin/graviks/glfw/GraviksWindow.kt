@@ -22,6 +22,7 @@ import troll.builder.instance.ValidationFeatures
 import troll.builder.swapchain.SimpleSurfaceFormatPicker
 import troll.exceptions.VulkanFailureException.assertVkSuccess
 import troll.instance.TrollInstance
+import troll.sync.WaitSemaphore
 import java.lang.System.nanoTime
 
 class GraviksWindow(
@@ -90,7 +91,6 @@ class GraviksWindow(
                         ciDevice.pNext(presentIdSupport)
                         ciDevice.pNext(presentWaitSupport)
                         canAwaitPresent = true
-                        // TODO Test this!
                     }
                 }
                 DEFAULT_VK_DEVICE_CREATOR.vkCreateDevice(stack, vkPhysicalDevice, deviceExtensions, ciDevice)
@@ -129,7 +129,7 @@ class GraviksWindow(
 
         stackPush().use { stack ->
 
-            graviksContext.addWaitSemaphore(swapchainImage.acquireSemaphore) // TODO Watch the dstStageMask!
+            graviksContext.addWaitSemaphore(WaitSemaphore(swapchainImage.acquireSemaphore, VK_PIPELINE_STAGE_TRANSFER_BIT))
             graviksContext.copyColorImageTo(
                 destImage = swapchainImage.vkImage, destImageFormat = troll.swapchainSettings.surfaceFormat.format,
                 destBuffer = null, signalSemaphore = swapchainImage.presentSemaphore,

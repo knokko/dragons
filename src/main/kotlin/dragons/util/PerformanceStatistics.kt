@@ -65,7 +65,7 @@ private class StatisticsTracker {
                         }
                     } else "Memory query failed"
                 } else {
-                    // TODO UNIX support
+                    // TODO Replace this with my profiling module
                     totalMemory = "Unsupported OS"
                 }
 

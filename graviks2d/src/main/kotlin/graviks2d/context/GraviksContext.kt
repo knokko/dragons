@@ -18,6 +18,7 @@ import graviks2d.util.Color
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.lwjgl.system.MemoryStack.stackPush
+import troll.sync.WaitSemaphore
 import java.lang.Integer.min
 import kotlin.IllegalStateException
 import kotlin.math.roundToInt
@@ -393,8 +394,8 @@ class GraviksContext(
         drawImage(xLeft, yBottom, xRight, yTop, imageIndex)
     }
 
-    override fun addWaitSemaphore(vkSemaphore: Long) {
-        this.commands.addWaitSemaphore(vkSemaphore)
+    override fun addWaitSemaphore(semaphore: WaitSemaphore) {
+        this.commands.addWaitSemaphore(semaphore)
     }
 
     override fun getImageSize(image: ImageReference): Pair<Int, Int> {

@@ -5,6 +5,7 @@ import graviks2d.resource.text.CharacterPosition
 import graviks2d.resource.text.FontReference
 import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
+import troll.sync.WaitSemaphore
 
 class ChildTarget(
     private val parent: GraviksTarget,
@@ -88,8 +89,8 @@ class ChildTarget(
         }
     }
 
-    override fun addWaitSemaphore(vkSemaphore: Long) {
-        this.parent.addWaitSemaphore(vkSemaphore)
+    override fun addWaitSemaphore(semaphore: WaitSemaphore) {
+        this.parent.addWaitSemaphore(semaphore)
     }
 
     override fun getImageSize(image: ImageReference) = parent.getImageSize(image)

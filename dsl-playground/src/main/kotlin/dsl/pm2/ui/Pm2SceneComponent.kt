@@ -9,6 +9,7 @@ import gruviks.event.*
 import gruviks.feedback.RenderFeedback
 import gruviks.feedback.RequestKeyboardFocusFeedback
 import org.joml.Matrix3x2f
+import org.lwjgl.vulkan.VK10.VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
 import kotlin.math.absoluteValue
 
 class Pm2SceneComponent(
@@ -70,7 +71,7 @@ class Pm2SceneComponent(
             val renderedScene = this.renderScene(this.mesh!!, cameraMatrix)
             if (renderedScene != null) {
                 val (image, imageView, semaphore) = renderedScene
-                target.addWaitSemaphore(semaphore)
+                target.addWaitSemaphore(WaitSemaphore(semaphore, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT))
                 target.drawVulkanImage(0f, 0f, 1f, 1f, image, imageView)
             }
         }

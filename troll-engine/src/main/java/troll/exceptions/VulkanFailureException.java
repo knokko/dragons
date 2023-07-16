@@ -17,7 +17,6 @@ public class VulkanFailureException extends RuntimeException {
         throw new VulkanFailureException(functionName, result, context);
     }
 
-    // TODO Test this
     static String generateMessage(String functionName, int result, String context) {
 
         // First try the constants starting with VK_ERROR_

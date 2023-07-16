@@ -18,7 +18,7 @@ internal class ContextCommands(
     private val commandBuffer: VkCommandBuffer
     private val fence: Long
 
-    private val waitSemaphores = mutableListOf<Long>()
+    private val waitSemaphores = mutableListOf<WaitSemaphore>()
 
     private var hasDrawnBefore = false
 
@@ -66,8 +66,7 @@ internal class ContextCommands(
 
         this.context.instance.troll.queueFamilies().graphics.queues.random().submit(
             commandBuffer, "ContextCommands.endSubmitCommandBuffer",
-            waitSemaphores.map { WaitSemaphore(it, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT) }.toTypedArray(), // TODO Wait... is this always the right stage?
-            fence, *signalSemaphores
+            waitSemaphores.toTypedArray(), fence, *signalSemaphores
         )
         waitSemaphores.clear()
 
@@ -108,7 +107,7 @@ internal class ContextCommands(
         }
     }
 
-    fun addWaitSemaphore(semaphore: Long) {
+    fun addWaitSemaphore(semaphore: WaitSemaphore) {
         waitSemaphores.add(semaphore)
     }
 
