@@ -128,7 +128,7 @@ fun createAndControlGruviksWindow(
         gruviksWindow.fireEvent(RawUpdateEvent())
 
         currentContext?.run {
-            gruviksWindow.render(this, currentContext != lastContext || true, regionsToPresent)
+            gruviksWindow.render(this, currentContext != lastContext, regionsToPresent)
 
             if (regionsToPresent.isNotEmpty()) {
 
@@ -141,7 +141,13 @@ fun createAndControlGruviksWindow(
                 }
                 lastPresentTime = currentTimeMillis()
 
-                graviksWindow.presentFrame(false) { stack ->
+                graviksWindow.drawAndPresent(false, { newContext ->
+                    // This work-around is needed to avoid a blink after resizing
+                    if (newContext !== this) {
+                        regionsToPresent.clear()
+                        gruviksWindow.render(newContext, true, regionsToPresent)
+                    }
+                }) { stack ->
                     val optimizedRegions = optimizeRecentDrawnRegions(regionsToPresent)
                     allocatePresentRegions(stack, optimizedRegions, width, height)
                 }
