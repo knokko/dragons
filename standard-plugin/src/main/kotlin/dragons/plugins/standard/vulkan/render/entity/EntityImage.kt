@@ -2,7 +2,6 @@ package dragons.plugins.standard.vulkan.render.entity
 
 import dragons.state.StaticGraphicsState
 import dragons.vulkan.memory.VulkanImage
-import dragons.vulkan.util.assertVkSuccess
 import dragons.vulkan.util.assertVmaSuccess
 import graviks2d.util.Color
 import org.lwjgl.system.MemoryStack.stackPush
@@ -12,6 +11,7 @@ import org.lwjgl.util.vma.VmaAllocationCreateInfo
 import org.lwjgl.util.vma.VmaAllocationInfo
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 import java.nio.ByteBuffer
 import javax.imageio.ImageIO
 
@@ -58,7 +58,7 @@ private fun createPrefilledColorOrHeightImage(
     val pImageAllocation = stack.callocPointer(1)
 
     assertVmaSuccess(
-        vmaCreateImage(graphicsState.vmaAllocator, ciImage, ciImageAllocation, pImage, pImageAllocation, null),
+        vmaCreateImage(graphicsState.troll.vmaAllocator(), ciImage, ciImageAllocation, pImage, pImageAllocation, null),
         "CreateImage", "Prefilled entity"
     )
     val image = pImage[0]
@@ -80,7 +80,7 @@ private fun createPrefilledColorOrHeightImage(
     val pBufferAllocation = stack.callocPointer(1)
 
     assertVmaSuccess(
-        vmaCreateBuffer(graphicsState.vmaAllocator, ciBuffer, ciBufferAllocation, pBuffer, pBufferAllocation, bufferInfo),
+        vmaCreateBuffer(graphicsState.troll.vmaAllocator(), ciBuffer, ciBufferAllocation, pBuffer, pBufferAllocation, bufferInfo),
         "CreateBuffer", "Prefilled entity (staging)"
     )
     val stagingBuffer = pBuffer[0]
@@ -96,7 +96,7 @@ private fun createPrefilledColorOrHeightImage(
 
     val pCommandPool = stack.callocLong(1)
     assertVkSuccess(
-        vkCreateCommandPool(graphicsState.vkDevice, ciCommandPool, null, pCommandPool),
+        vkCreateCommandPool(graphicsState.troll.vkDevice(), ciCommandPool, null, pCommandPool),
         "CreateCommandPool", "Entity image transfer"
     )
     val commandPool = pCommandPool[0]
@@ -110,10 +110,10 @@ private fun createPrefilledColorOrHeightImage(
     val pCommandBuffer = stack.callocPointer(1)
 
     assertVkSuccess(
-        vkAllocateCommandBuffers(graphicsState.vkDevice, aiCommandBuffer, pCommandBuffer),
+        vkAllocateCommandBuffers(graphicsState.troll.vkDevice(), aiCommandBuffer, pCommandBuffer),
         "AllocateCommandBuffers", "Entity image transfer"
     )
-    val commandBuffer = VkCommandBuffer(pCommandBuffer[0], graphicsState.vkDevice)
+    val commandBuffer = VkCommandBuffer(pCommandBuffer[0], graphicsState.troll.vkDevice())
 
     val biCommandBuffer = VkCommandBufferBeginInfo.calloc(stack)
     biCommandBuffer.`sType$Default`()
@@ -190,32 +190,29 @@ private fun createPrefilledColorOrHeightImage(
         vkEndCommandBuffer(commandBuffer), "EndCommandBuffer", "Entity image transfer"
     )
 
-    val pSubmit = VkSubmitInfo.calloc(1, stack)
-    pSubmit.`sType$Default`()
-    pSubmit.waitSemaphoreCount(0)
-    pSubmit.pCommandBuffers(stack.pointers(commandBuffer))
-
     val ciFence = VkFenceCreateInfo.calloc(stack)
     ciFence.`sType$Default`()
 
     val pFence = stack.callocLong(1)
     assertVkSuccess(
-        vkCreateFence(graphicsState.vkDevice, ciFence, null, pFence),
+        vkCreateFence(graphicsState.troll.vkDevice(), ciFence, null, pFence),
         "CreateFence", "Entity image transfer"
     )
     val fence = pFence[0]
 
-    graphicsState.queueManager.generalQueueFamily.getRandomBackgroundQueue().submit(pSubmit, fence)
+    graphicsState.queueManager.generalQueueFamily.getRandomBackgroundQueue().submit(
+        commandBuffer, "Prefilled entity image", emptyArray(), fence
+    )
 
     assertVkSuccess(
-        vkWaitForFences(graphicsState.vkDevice, pFence, true, 1_000_000_000L),
+        vkWaitForFences(graphicsState.troll.vkDevice(), pFence, true, 1_000_000_000L),
         "WaitForFences", "Entity image transfer"
     )
-    vkDestroyFence(graphicsState.vkDevice, fence, null)
+    vkDestroyFence(graphicsState.troll.vkDevice(), fence, null)
 
-    vmaDestroyBuffer(graphicsState.vmaAllocator, stagingBuffer, bufferAllocation)
+    vmaDestroyBuffer(graphicsState.troll.vmaAllocator(), stagingBuffer, bufferAllocation)
 
-    vkDestroyCommandPool(graphicsState.vkDevice, commandPool, null)
+    vkDestroyCommandPool(graphicsState.troll.vkDevice(), commandPool, null)
 
     val ciImageView = VkImageViewCreateInfo.calloc(stack)
     ciImageView.`sType$Default`()
@@ -236,7 +233,7 @@ private fun createPrefilledColorOrHeightImage(
 
     val pImageView = stack.callocLong(1)
     assertVkSuccess(
-        vkCreateImageView(graphicsState.vkDevice, ciImageView, null, pImageView),
+        vkCreateImageView(graphicsState.troll.vkDevice(), ciImageView, null, pImageView),
         "CreateImageView", "Entity image transfer"
     )
     val imageView = pImageView[0]

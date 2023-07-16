@@ -64,7 +64,7 @@ internal class ChunkLoader(
         val graphics = gameState.graphics
         val (scope, colorImages, heightImages) = runBlocking {
             val scope = packMemoryClaims(
-                graphics.vkDevice, graphics.queueManager, graphics.memoryInfo,
+                graphics.troll.vkDevice(), graphics.queueManager, graphics.memoryInfo,
                 gameState.coroutineScope, allClaims, location.toString()
             )
 
@@ -82,7 +82,7 @@ internal class ChunkLoader(
         if (vertexAndIndexBuffer != null) {
             descriptorSet = descriptors.borrowDescriptorSet()
             updateBasicDynamicDescriptorSet(
-                graphics.vkDevice, descriptorSet, colorImages = colorImages, heightImages = heightImages
+                graphics.troll.vkDevice(), descriptorSet, colorImages = colorImages, heightImages = heightImages
             )
 
             tileRenderer.addChunk(
@@ -97,7 +97,7 @@ internal class ChunkLoader(
 
     fun unloadChunk(location: ChunkLocation, loadedChunks: MutableMap<ChunkLocation, ChunkEntry>) {
         val chunkEntry = loadedChunks.remove(location) ?: throw IllegalStateException("Unloading chunk that is not loaded")
-        chunkEntry.destroy(gameState.graphics.vkDevice)
+        chunkEntry.destroy(gameState.graphics.troll.vkDevice())
         if (chunkEntry.descriptorSet != null) {
             descriptors.returnDescriptorSet(chunkEntry.descriptorSet)
         }

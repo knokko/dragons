@@ -4,12 +4,13 @@ import dragons.plugins.standard.vulkan.pipeline.BasicGraphicsPipeline
 import dragons.plugins.standard.vulkan.render.entity.StandardEntityRenderer
 import dragons.plugins.standard.vulkan.render.tile.StandardTileRenderer
 import dragons.vulkan.queue.QueueFamily
-import dragons.vulkan.util.assertVkSuccess
 import dragons.world.render.SceneRenderTarget
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
+import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.sync.WaitSemaphore
 
 internal class SceneCommands(
     private val vkDevice: VkDevice, private val queueFamily: QueueFamily,
@@ -156,46 +157,14 @@ internal class SceneCommands(
         this.shouldRecordCommandsAgain = false
     }
 
-    fun submit(waitSemaphores: LongArray, waitStageMasks: IntArray, signalSemaphores: LongArray) {
-        if (waitSemaphores.size != waitStageMasks.size) {
-            throw IllegalArgumentException("#of waitSemaphores (${waitSemaphores.size}) is not equal to #of waitStageMasks (${waitStageMasks.size})")
-        }
-
-        stackPush().use { stack ->
-            val pSubmits = VkSubmitInfo.calloc(1, stack)
-            val pSubmit = pSubmits[0]
-            pSubmit.`sType$Default`()
-            pSubmit.waitSemaphoreCount(waitSemaphores.size)
-            if (waitSemaphores.isNotEmpty()) {
-
-                val pWaitSemaphores = stack.callocLong(waitSemaphores.size)
-                for ((index, semaphore) in waitSemaphores.withIndex()) {
-                    pWaitSemaphores.put(index, semaphore)
-                }
-                pSubmit.pWaitSemaphores(pWaitSemaphores)
-
-                val pWaitStageMasks = stack.callocInt(waitStageMasks.size)
-                for ((index, stageMask) in waitStageMasks.withIndex()) {
-                    pWaitStageMasks.put(index, stageMask)
-                }
-                pSubmit.pWaitDstStageMask(pWaitStageMasks)
-            }
-            pSubmit.pCommandBuffers(stack.pointers(this.commandBuffer.address()))
-            if (signalSemaphores.isNotEmpty()) {
-
-                val pSignalSemaphores = stack.callocLong(signalSemaphores.size)
-                for ((index, semaphore) in signalSemaphores.withIndex()) {
-                    pSignalSemaphores.put(index, semaphore)
-                }
-                pSubmit.pSignalSemaphores(pSignalSemaphores)
-            }
-
-            assertVkSuccess(
-                vkResetFences(this.vkDevice, this.submissionFence),
-                "ResetFences", "SceneCommands"
-            )
-            this.queueFamily.getRandomPriorityQueue().submit(pSubmits, this.submissionFence)
-        }
+    fun submit(waitSemaphores: Array<WaitSemaphore>, signalSemaphores: LongArray) {
+        assertVkSuccess(
+            vkResetFences(this.vkDevice, this.submissionFence),
+            "ResetFences", "SceneCommands"
+        )
+        this.queueFamily.getRandomPriorityQueue().submit(
+            this.commandBuffer, "SceneCommands.submit", waitSemaphores, this.submissionFence, *signalSemaphores
+        )
     }
 
     fun destroy() {

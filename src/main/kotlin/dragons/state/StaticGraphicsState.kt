@@ -6,17 +6,12 @@ import dragons.vulkan.memory.MemoryInfo
 import dragons.vulkan.memory.scope.MemoryScope
 import dragons.vulkan.queue.QueueManager
 import graviks2d.core.GraviksInstance
-import org.lwjgl.vulkan.VkDevice
-import org.lwjgl.vulkan.VkInstance
-import org.lwjgl.vulkan.VkPhysicalDevice
+import troll.instance.TrollInstance
 
 class StaticGraphicsState(
-    val vkInstance: VkInstance,
-    val vkPhysicalDevice: VkPhysicalDevice,
-    val memoryInfo: MemoryInfo,
-    val vkDevice: VkDevice,
+    val troll: TrollInstance,
     val queueManager: QueueManager,
-    val vmaAllocator: Long,
+    val memoryInfo: MemoryInfo,
 
     val renderImageInfo: RenderImageInfo,
 

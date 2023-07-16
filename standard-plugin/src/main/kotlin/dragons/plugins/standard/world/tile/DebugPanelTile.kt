@@ -18,7 +18,6 @@ import dragons.util.getStandardOutputHistory
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim
-import dragons.vulkan.util.assertVkSuccess
 import dragons.world.tile.SmallTile
 import dragons.world.tile.TileProperties
 import dragons.world.tile.TileState
@@ -32,6 +31,8 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
+import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.sync.WaitSemaphore
 
 private const val PANEL_WIDTH = 4000
 private const val PANEL_HEIGHT = 5000
@@ -118,10 +119,10 @@ class DebugPanelTile(
             isFirstRender = false
         }
 
-        override fun getWaitSemaphores(tile: SmallTile): Collection<Pair<Long, Int>> {
+        override fun getWaitSemaphores(tile: SmallTile): Collection<WaitSemaphore> {
             return if (submissionMarker != null) {
                 runBlocking { submissionMarker!!.await() }
-                val result: List<Pair<Long, Int>> = listOf(Pair(panelSemaphore, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT))
+                val result: List<WaitSemaphore> = listOf(WaitSemaphore(panelSemaphore, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT))
 
                 submissionMarker = null
                 result
@@ -183,7 +184,7 @@ class DebugPanelTile(
 
                     val pSemaphore = stack.callocLong(1)
                     assertVkSuccess(
-                        vkCreateSemaphore(agent.gameState.graphics.vkDevice, ciSemaphore, null, pSemaphore),
+                        vkCreateSemaphore(agent.gameState.graphics.troll.vkDevice(), ciSemaphore, null, pSemaphore),
                         "CreateSemaphore", "standard-plugin debug panel"
                     )
                     pSemaphore[0]

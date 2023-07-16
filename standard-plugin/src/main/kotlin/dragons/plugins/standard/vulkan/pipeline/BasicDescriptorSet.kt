@@ -2,10 +2,10 @@ package dragons.plugins.standard.vulkan.pipeline
 
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
-import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 fun createBasicStaticDescriptorPool(vkDevice: VkDevice): Long {
     return stackPush().use { stack ->

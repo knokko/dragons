@@ -5,6 +5,7 @@ import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkInstance
 import org.lwjgl.vulkan.VkInstanceCreateInfo
 import org.lwjgl.vulkan.VkPhysicalDevice
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 /**
  * Creates a minimal, but valid VkInstance

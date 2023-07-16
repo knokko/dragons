@@ -7,7 +7,6 @@ import dragons.geometry.Distance
 import dragons.vr.controls.DragonControls
 import dragons.vr.openxr.*
 import dragons.vr.openxr.createOpenXrInstance
-import dragons.vulkan.queue.DeviceQueue
 import org.lwjgl.PointerBuffer
 import org.lwjgl.openxr.*
 import org.lwjgl.openxr.EXTDebugUtils.xrDestroyDebugUtilsMessengerEXT
@@ -19,6 +18,7 @@ import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
+import troll.queue.TrollQueue
 import java.lang.Thread.sleep
 
 internal fun tryInitOpenXR(initProps: GameInitProperties, logger: Logger): VrManager {
@@ -52,7 +52,7 @@ internal class OpenXrManager(
     private val camera = XrCamera()
 
     private lateinit var graphicsState: StaticGraphicsState
-    private lateinit var vkQueue: DeviceQueue
+    private lateinit var vkQueue: TrollQueue
     private lateinit var xrSession: XrSession
     private lateinit var sessionState: SessionState
     private lateinit var renderSpace: XrSpace
@@ -158,9 +158,9 @@ internal class OpenXrManager(
         stackPush().use { stack ->
             val graphicsBinding = XrGraphicsBindingVulkan2KHR.calloc(stack)
             graphicsBinding.`type$Default`()
-            graphicsBinding.instance(graphicsState.vkInstance)
-            graphicsBinding.physicalDevice(graphicsState.vkPhysicalDevice)
-            graphicsBinding.device(graphicsState.vkDevice)
+            graphicsBinding.instance(graphicsState.troll.vkInstance())
+            graphicsBinding.physicalDevice(graphicsState.troll.vkPhysicalDevice())
+            graphicsBinding.device(graphicsState.troll.vkDevice())
             graphicsBinding.queueFamilyIndex(graphicsState.queueManager.generalQueueFamily.index)
             graphicsBinding.queueIndex(graphicsState.queueManager.generalQueueFamily.getFirstPriorityQueueIndex())
 
@@ -202,7 +202,7 @@ internal class OpenXrManager(
                     xrWaitFrame(xrSession, null, frameState), "WaitFrame"
                 )
 
-                synchronized(this.vkQueue.handle) {
+                synchronized(this.vkQueue) {
                     assertXrSuccess(
                         xrBeginFrame(xrSession, null), "BeginFrame"
                     )
@@ -215,7 +215,7 @@ internal class OpenXrManager(
 
                     this.acquiredSwapchainImageIndices = this.swapchains.map { swapchain ->
                         val pSwapchainImageIndex = stack.callocInt(1)
-                        synchronized(this.vkQueue.handle) {
+                        synchronized(this.vkQueue) {
                             // TODO Investigate why this can crash with XR_ERROR_CALL_ORDER_INVALID, see callOrderInvalid.log
                             assertXrSuccess(
                                 xrAcquireSwapchainImage(swapchain.handle, null, pSwapchainImageIndex),
@@ -263,7 +263,7 @@ internal class OpenXrManager(
                     }
                     if (waitSemaphore != null) {
                         resolveHelper.resolve(
-                            graphicsState.vkDevice,
+                            graphicsState.troll.vkDevice(),
                             this.acquiredSwapchainImageIndices[0],
                             this.acquiredSwapchainImageIndices[1],
                             graphicsState.queueManager, waitSemaphore, takeScreenshot
@@ -271,7 +271,7 @@ internal class OpenXrManager(
                     }
 
                     for (swapchain in swapchains) {
-                        synchronized(this.vkQueue.handle) {
+                        synchronized(this.vkQueue) {
                             assertXrSuccess(
                                 xrReleaseSwapchainImage(swapchain.handle, null),
                                 "ReleaseSwapchainImage"
@@ -315,7 +315,7 @@ internal class OpenXrManager(
                 eiFrame.environmentBlendMode(XR_ENVIRONMENT_BLEND_MODE_OPAQUE)
                 eiFrame.layers(layers)
 
-                synchronized(this.vkQueue.handle) {
+                synchronized(this.vkQueue) {
                     assertXrSuccess(
                         xrEndFrame(xrSession, eiFrame), "EndFrame"
                     )
@@ -330,12 +330,12 @@ internal class OpenXrManager(
     }
 
     override fun destroy() {
-        this.resolveHelper.destroy(graphicsState.vkDevice)
+        this.resolveHelper.destroy(graphicsState.troll.vkDevice())
         lastViews.free()
         xrDestroySpace(renderSpace)
         for (swapchain in swapchains) {
             for (swapchainImage in swapchain.images) {
-                vkDestroyImageView(graphicsState.vkDevice, swapchainImage.fullView!!, null)
+                vkDestroyImageView(graphicsState.troll.vkDevice(), swapchainImage.fullView!!, null)
             }
             xrDestroySwapchain(swapchain.handle)
         }

@@ -4,7 +4,6 @@ import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanInstanceActor
 import dragons.plugin.interfaces.vulkan.VulkanInstanceCreationListener
 import dragons.plugin.interfaces.vulkan.VulkanInstanceDestructionListener
-import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.EXTDebugUtils.*
 import org.lwjgl.vulkan.EXTValidationFeatures.*
@@ -13,6 +12,7 @@ import org.lwjgl.vulkan.VkDebugUtilsMessengerCallbackDataEXT
 import org.lwjgl.vulkan.VkDebugUtilsMessengerCreateInfoEXT
 import org.lwjgl.vulkan.VkValidationFeaturesEXT
 import org.slf4j.LoggerFactory.getLogger
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 class DebugVulkanInstance: VulkanInstanceActor, VulkanInstanceCreationListener, VulkanInstanceDestructionListener {
 
@@ -102,7 +102,7 @@ class DebugVulkanInstance: VulkanInstanceActor, VulkanInstanceCreationListener, 
                 logger.info("Creating debug utils messenger...")
                 assertVkSuccess(
                     vkCreateDebugUtilsMessengerEXT(agent.vulkanInstance, ciMessenger, null, pMessenger),
-                    "CreateDebugUtilsMessengerEXT"
+                    "CreateDebugUtilsMessengerEXT", null
                 )
                 logger.info("Created debug utils messenger")
                 debugMessenger = pMessenger[0]

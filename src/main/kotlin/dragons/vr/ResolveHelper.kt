@@ -5,10 +5,11 @@ import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.queue.QueueManager
-import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
+import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.sync.WaitSemaphore
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_INT_ARGB
@@ -44,7 +45,7 @@ class ResolveHelper(
         leftScreenshotHostBuffer = graphicsState.coreMemory.leftScreenshotBuffer.first,
         rightScreenshotStagingBuffer = graphicsState.coreMemory.rightScreenshotBuffer.second,
         rightScreenshotHostBuffer = graphicsState.coreMemory.rightScreenshotBuffer.first,
-        vkDevice = graphicsState.vkDevice, queueManager = graphicsState.queueManager, renderImageInfo = graphicsState.renderImageInfo
+        vkDevice = graphicsState.troll.vkDevice(), queueManager = graphicsState.queueManager, renderImageInfo = graphicsState.renderImageInfo
     )
 
     private val resolveCommandPool: Long
@@ -332,7 +333,10 @@ class ResolveHelper(
             // TODO Return a semaphore rather than waiting on a fence
             // But note that this would only be useful once I implement a multithreaded rendering pipeline...
 
-            queueManager.generalQueueFamily.getRandomPriorityQueue().submit(pSubmitInfo, this.fence)
+            queueManager.generalQueueFamily.getRandomPriorityQueue().submit(
+                this.resolveCommandBuffers[rawResolveIndex], "ResolveHelper.resolve",
+                arrayOf(WaitSemaphore(waitSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)), this.fence
+            )
             assertVkSuccess(
                 vkWaitForFences(vkDevice, stack.longs(this.fence), true, -1),
                 "WaitForFences", "resolve eye images"
@@ -346,7 +350,9 @@ class ResolveHelper(
                 pSubmitInfo.pWaitSemaphores(null)
                 pSubmitInfo.pCommandBuffers(stack.pointers(this.screenshotCommandBuffers[rawResolveIndex].address()))
 
-                queueManager.generalQueueFamily.getRandomPriorityQueue().submit(pSubmitInfo, this.fence)
+                queueManager.generalQueueFamily.getRandomPriorityQueue().submit(
+                    this.screenshotCommandBuffers[rawResolveIndex], "ResolveHelper.screenshot", emptyArray(), this.fence
+                )
                 assertVkSuccess(
                     vkWaitForFences(vkDevice, stack.longs(this.fence), true, -1),
                     "WaitForFences", "screenshot"

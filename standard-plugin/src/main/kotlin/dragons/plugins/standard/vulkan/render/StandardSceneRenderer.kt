@@ -16,6 +16,7 @@ import org.joml.Matrix4f
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VkDevice
+import troll.sync.WaitSemaphore
 
 class StandardSceneRenderer internal constructor(
     gameState: StaticGameState,
@@ -42,7 +43,7 @@ class StandardSceneRenderer internal constructor(
 
     init {
         this.sceneCommands = SceneCommands(
-            vkDevice = gameState.graphics.vkDevice,
+            vkDevice = gameState.graphics.troll.vkDevice(),
             queueFamily = gameState.graphics.queueManager.generalQueueFamily,
             basicRenderPass = pluginState.graphics.basicRenderPass,
             basicPipeline = pluginState.graphics.basicGraphicsPipeline,
@@ -153,12 +154,11 @@ class StandardSceneRenderer internal constructor(
         this.transformationMatrixManager.endFrame()
     }
 
-    override fun submit(realm: Realm, waitSemaphores: LongArray, waitStageMasks: IntArray, signalSemaphores: LongArray) {
+    override fun submit(realm: Realm, waitSemaphores: Array<WaitSemaphore>, signalSemaphores: LongArray) {
         val realmSemaphores = this.chunkRenderManager.getWaitSemaphores(realm) + this.entityRenderManager.getWaitSemaphores(realm)
 
-        val combinedWaitSemaphores = waitSemaphores + realmSemaphores.map { it.first }
-        val combinedWaitDstStageMasks = waitStageMasks + realmSemaphores.map { it.second }
-        this.sceneCommands.submit(combinedWaitSemaphores, combinedWaitDstStageMasks, signalSemaphores)
+        val combinedSemaphores = waitSemaphores + realmSemaphores
+        this.sceneCommands.submit(combinedSemaphores, signalSemaphores)
     }
 
     fun destroy(vkDevice: VkDevice) {

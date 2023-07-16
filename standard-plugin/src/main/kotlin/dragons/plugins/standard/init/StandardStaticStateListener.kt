@@ -5,11 +5,11 @@ import dragons.plugin.interfaces.general.StaticStateListener
 import dragons.plugins.standard.state.StandardGraphicsBuffers
 import dragons.plugins.standard.state.StandardGraphicsState
 import dragons.plugins.standard.state.StandardPluginState
-import dragons.vulkan.util.assertVkSuccess
 import kotlinx.coroutines.runBlocking
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.vkCreateFramebuffer
 import org.lwjgl.vulkan.VkFramebufferCreateInfo
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 @Suppress("unused")
 class StandardStaticStateListener: StaticStateListener {
@@ -37,7 +37,7 @@ class StandardStaticStateListener: StaticStateListener {
                 coreGraphics.coreMemory.leftColorImage.fullView!!, coreGraphics.coreMemory.leftDepthImage.fullView!!
             ))
             assertVkSuccess(
-                vkCreateFramebuffer(coreGraphics.vkDevice, ciFramebuffer, null, pFramebuffer),
+                vkCreateFramebuffer(coreGraphics.troll.vkDevice(), ciFramebuffer, null, pFramebuffer),
                 "CreateFramebuffer", "standard plug-in: basic left eye"
             )
             val leftFramebuffer = pFramebuffer[0]
@@ -46,7 +46,7 @@ class StandardStaticStateListener: StaticStateListener {
                 coreGraphics.coreMemory.rightColorImage.fullView!!, coreGraphics.coreMemory.rightDepthImage.fullView!!
             ))
             assertVkSuccess(
-                vkCreateFramebuffer(coreGraphics.vkDevice, ciFramebuffer, null, pFramebuffer),
+                vkCreateFramebuffer(coreGraphics.troll.vkDevice(), ciFramebuffer, null, pFramebuffer),
                 "CreateFramebuffer", "standard plug-in: basic right eye"
             )
             val rightFramebuffer = pFramebuffer[0]

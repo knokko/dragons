@@ -7,13 +7,13 @@ import dragons.geometry.Distance
 import dragons.vr.controls.DragonControls
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.queue.QueueManager
-import dragons.vulkan.util.assertVkSuccess
 import org.joml.Vector2f
 import org.lwjgl.PointerBuffer
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
 import org.slf4j.Logger
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 interface VrManager {
     fun getVulkanInstanceExtensions(availableExtensions: Set<String>): Set<String>

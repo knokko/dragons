@@ -5,7 +5,6 @@ import dragons.vulkan.memory.claim.Placed
 import dragons.vulkan.memory.claim.PlacedQueueFamilyClaims
 import dragons.vulkan.memory.claim.QueueFamilyClaims
 import dragons.vulkan.queue.QueueFamily
-import dragons.vulkan.util.assertVkSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
@@ -15,6 +14,7 @@ import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkMappedMemoryRange
 import org.slf4j.LoggerFactory.getLogger
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 /**
  * The placements into the shared staging buffer for *a single* queue family.

@@ -6,11 +6,11 @@ import dragons.vulkan.memory.claim.ImageMemoryClaim
 import dragons.vulkan.memory.claim.QueueFamilyClaims
 import dragons.vulkan.queue.QueueFamily
 import dragons.vulkan.queue.QueueManager
-import dragons.vulkan.util.assertVkSuccess
 import dragons.vulkan.util.collectionToBuffer
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 internal class FamilyCommands(
     private val commandPool: Long,
@@ -87,13 +87,9 @@ internal class FamilyCommands(
                 vkEndCommandBuffer(initialTransitionBuffer), "EndCommandBuffer",
                 "Scope $description: initial image transition"
             )
-
-            val siTransitions = VkSubmitInfo.calloc(1, stack)
-            val siTransition = siTransitions[0]
-            siTransition.sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
-            siTransition.pCommandBuffers(stack.pointers(initialTransitionBuffer))
-
-            ownQueueFamily.getRandomBackgroundQueue().submit(siTransitions, fence)
+            ownQueueFamily.getRandomBackgroundQueue().submit(
+                initialTransitionBuffer, "FamilyCommands.initialTransition", emptyArray(), fence
+            )
         }
     }
 
@@ -226,13 +222,9 @@ internal class FamilyCommands(
                 vkEndCommandBuffer(copyBuffer), "EndCommandBuffer",
                 "Scope $description: staging transfer"
             )
-
-            val siCopies = VkSubmitInfo.calloc(1, stack)
-            val siCopy = siCopies[0]
-            siCopy.sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
-            siCopy.pCommandBuffers(stack.pointers(copyBuffer.address()))
-
-            ownQueueFamily.getRandomBackgroundQueue().submit(siCopies, fence)
+            ownQueueFamily.getRandomBackgroundQueue().submit(
+                copyBuffer, "FamilyCommands.performStagingCopy", emptyArray(), fence
+            )
         }
     }
 
@@ -308,13 +300,9 @@ internal class FamilyCommands(
             }
 
             vkEndCommandBuffer(finalTransitionBuffer)
-
-            val siTransitions = VkSubmitInfo.calloc(1, stack)
-            val siTransition = siTransitions[0]
-            siTransition.sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
-            siTransition.pCommandBuffers(stack.pointers(finalTransitionBuffer.address()))
-
-            ownQueueFamily.getRandomBackgroundQueue().submit(siTransitions, fence)
+            ownQueueFamily.getRandomBackgroundQueue().submit(
+                finalTransitionBuffer, "FamilyCommands.acquireOwnership", emptyArray(), fence
+            )
         }
     }
 

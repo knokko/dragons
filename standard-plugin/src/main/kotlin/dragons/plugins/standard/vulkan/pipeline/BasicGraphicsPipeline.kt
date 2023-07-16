@@ -1,12 +1,12 @@
 package dragons.plugins.standard.vulkan.pipeline
 
 import dragons.vulkan.RenderImageInfo
-import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.LoggerFactory.getLogger
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 class BasicGraphicsPipeline(
     val handle: Long,
@@ -40,7 +40,7 @@ fun createBasicGraphicsPipeline(
         logger.info("Creating basic graphics pipeline...")
         assertVkSuccess(
             vkCreateGraphicsPipelines(vkDevice, VK_NULL_HANDLE, ciPipelines, null, pPipelines),
-            "CreateGraphicsPipelines"
+            "CreateGraphicsPipelines", "StandardPluginBasicGraphicsPipeline"
         )
         logger.info("Created basic graphics pipeline")
 

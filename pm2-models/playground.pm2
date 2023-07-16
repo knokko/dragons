@@ -118,7 +118,7 @@ for (0 <= currentFlower < 70) {
 	matrix thisMatrix = dynamic Matrix <float startX, float startY> {
 		Matrix thisMatrix;
 		Random rng;
-		translate(thisMatrix, startX, startY + 1.0 * rng.nextFloat);
+		translate(thisMatrix, startX, startY + 0.03 * rng.nextFloat);
 		thisMatrix
 	};
 	produceFlower(0.0, 0.0, thisMatrix, stemLength, stemRadius, stemColor, flowerRadius, flowerColor, leafColor);

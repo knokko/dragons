@@ -10,6 +10,7 @@ import dragons.vulkan.memory.scope.MemoryScope
 import dragons.world.chunk.ChunkLocation
 import dragons.world.realm.Realm
 import org.lwjgl.vulkan.VkDevice
+import troll.sync.WaitSemaphore
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
@@ -63,8 +64,8 @@ internal class ChunkRenderManager(
         }
     }
 
-    fun getWaitSemaphores(realm: Realm): Collection<Pair<Long, Int>> {
-        val waitSemaphores = ArrayList<Pair<Long, Int>>()
+    fun getWaitSemaphores(realm: Realm): Collection<WaitSemaphore> {
+        val waitSemaphores = ArrayList<WaitSemaphore>()
 
         for (location in this.chosenChunks!!) {
             val chunk = realm.getChunk(location)

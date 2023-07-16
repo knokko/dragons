@@ -1,15 +1,17 @@
 package dragons.vulkan.queue
 
+import troll.queue.TrollQueue
+
 class QueueFamily(
     val index: Int,
-    val priorityQueues: List<DeviceQueue>,
-    val backgroundQueues: List<DeviceQueue>
+    val priorityQueues: List<TrollQueue>,
+    val backgroundQueues: List<TrollQueue>
 ) {
     fun getFirstPriorityQueue() = priorityQueues[0]
 
     fun getFirstPriorityQueueIndex() = 0
 
-    fun getRandomBackgroundQueue(): DeviceQueue {
+    fun getRandomBackgroundQueue(): TrollQueue {
         return if (backgroundQueues.isEmpty()) {
             getRandomPriorityQueue()
         } else {
@@ -17,7 +19,7 @@ class QueueFamily(
         }
     }
 
-    fun getRandomPriorityQueue(): DeviceQueue {
+    fun getRandomPriorityQueue(): TrollQueue {
         return priorityQueues.random()
     }
 

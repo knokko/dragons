@@ -2,11 +2,11 @@ package dragons.plugins.standard.vulkan.pipeline
 
 import dragons.plugins.standard.vulkan.vertex.BasicVertex
 import dragons.util.mallocBundledResource
-import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil.memFree
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 fun createBasicShaders(vkDevice: VkDevice, stack: MemoryStack): VkPipelineShaderStageCreateInfo.Buffer {
     val specializationData = stack.calloc(4)

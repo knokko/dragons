@@ -6,6 +6,7 @@ import dragons.geometry.Position
 import dragons.world.entity.Entity
 import dragons.world.entity.EntityProperties
 import org.lwjgl.vulkan.VkDevice
+import troll.sync.WaitSemaphore
 import java.util.*
 import kotlin.reflect.KClass
 
@@ -18,7 +19,7 @@ interface EntityRendererFactory<T: EntityProperties>: PluginInterface {
 interface EntityRenderer {
     fun render(renderer: StandardSceneRenderer, entity: Entity, cameraPosition: Position)
 
-    fun getWaitSemaphores(entity: Entity): Collection<Pair<Long, Int>> = Collections.emptyList()
+    fun getWaitSemaphores(entity: Entity): Collection<WaitSemaphore> = Collections.emptyList()
 
     fun destroy(vkDevice: VkDevice) {}
 }

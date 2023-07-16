@@ -13,10 +13,11 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.LoggerFactory.getLogger
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 import kotlin.jvm.Throws
 
 @Throws(StartupException::class)
-fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkInstance {
+internal fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): InitInstanceResult {
     try {
         val logger = getLogger("Vulkan")
         val pluginPairs = pluginManager.getImplementations(VulkanInstanceActor::class)
@@ -201,14 +202,14 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
                 ))
             }
             assertVkSuccess(
-                instanceCreationResult, "CreateInstance"
+                instanceCreationResult, "CreateInstance", null
             )
             logger.info("Created instance")
 
             val pVulkanVersion = stack.callocInt(1)
             assertVkSuccess(
                 vkEnumerateInstanceVersion(pVulkanVersion),
-                "EnumerateInstanceVersion"
+                "EnumerateInstanceVersion", null
             )
             val vulkanVersion = pVulkanVersion[0]
             if (vulkanVersion < VK_MAKE_VERSION(1, 2, 0)) {
@@ -231,9 +232,14 @@ fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManager): VkIn
                 listenerPair.first.afterVulkanInstanceCreation(listenerPair.second, creationAgent)
             }
 
-            vkInstance
+            InitInstanceResult(vkInstance, extensionsToEnable)
         }
     } catch(failure: VulkanFailureException) {
         throw VulkanStartupException(failure)
     }
 }
+
+internal class InitInstanceResult(
+    val vkInstance: VkInstance,
+    val enabledExtensions: Set<String>
+)

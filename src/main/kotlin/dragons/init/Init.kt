@@ -30,6 +30,9 @@ import org.lwjgl.system.Platform
 import org.slf4j.Logger
 import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory.getLogger
+import troll.instance.TrollInstance
+import troll.queue.QueueFamilies
+import troll.queue.QueueFamily
 import java.io.File
 import java.io.InputStream
 import java.lang.Thread.sleep
@@ -113,14 +116,15 @@ fun main(args: Array<String>) {
         logger.info("Start with shutting down the game")
         staticGameState.vrManager.destroy()
         val staticGraphics = staticGameState.graphics
-        staticGraphics.memoryScope.destroy(staticGraphics.vkDevice)
+        staticGraphics.memoryScope.destroy(staticGraphics.troll.vkDevice())
 
+        // TODO Maybe destroy troll instead?
         destroyVulkanDevice(
-            staticGraphics.vkInstance, staticGraphics.vkPhysicalDevice, staticGraphics.vkDevice,
-            staticGraphics.vmaAllocator, staticGraphics.graviksInstance,
+            staticGraphics.troll.vkInstance(), staticGraphics.troll.vkPhysicalDevice(), staticGraphics.troll.vkDevice(),
+            staticGraphics.troll.vmaAllocator(), staticGraphics.graviksInstance,
             staticGameState.pluginManager,
         )
-        destroyVulkanInstance(staticGraphics.vkInstance, staticGameState.pluginManager)
+        destroyVulkanInstance(staticGraphics.troll.vkInstance(), staticGameState.pluginManager)
         staticGameState.pluginManager.getImplementations(ExitListener::class).forEach {
                 listenerPair -> listenerPair.first.onExit(listenerPair.second)
         }
@@ -238,9 +242,9 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
             initVulkanInstance(pluginManager, vrManager)
         }
 
-        val vulkanInstance = vulkanInstanceJob.await()
+        val initInstanceResult = vulkanInstanceJob.await()
         val vkPhysicalDeviceJob = async {
-            choosePhysicalDevice(vulkanInstance, pluginManager, vrManager)
+            choosePhysicalDevice(initInstanceResult.vkInstance, pluginManager, vrManager)
         }
 
         val vulkanPhysicalDevice = vkPhysicalDeviceJob.await()
@@ -249,7 +253,7 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
 
         val vkDeviceJob = async {
             createLogicalDevice(
-                vulkanInstance, vulkanPhysicalDevice, pluginManager, vrManager, prepareScope
+                initInstanceResult.vkInstance, vulkanPhysicalDevice, pluginManager, vrManager, prepareScope
             )
         }
 
@@ -260,7 +264,7 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
         val enabledDeviceExtensions = initDeviceResult.enabledExtensions
 
         val vmaJob = async {
-            initVma(vulkanInstance, vulkanPhysicalDevice, vulkanDevice, enabledDeviceExtensions)
+            initVma(initInstanceResult.vkInstance, vulkanPhysicalDevice, vulkanDevice, enabledDeviceExtensions)
         }
 
         val memoryInfo = memoryInfoJob.await()
@@ -272,15 +276,33 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
             )
         }
 
-        val vmaAllocator = vmaJob.await()
-        val graviksJob = async {
-            GraviksInstance(
-                vulkanInstance, vulkanPhysicalDevice, vulkanDevice,
-                vmaAllocator = vmaAllocator, queueFamilyIndex = queueManager.generalQueueFamily.index,
-                queueSubmit = { submitInfo, fence ->
-                    queueManager.generalQueueFamily.getRandomPriorityQueue().submitWithResult(submitInfo, fence)
-                }
+        val queueFamilyMap = mutableMapOf<dragons.vulkan.queue.QueueFamily, QueueFamily>()
+        for (queueFamily in setOf(
+            initDeviceResult.queueManager.generalQueueFamily,
+            initDeviceResult.queueManager.getComputeQueueFamily(),
+            initDeviceResult.queueManager.getTransferQueueFamily()
+        )) {
+            queueFamilyMap[queueFamily] = QueueFamily(
+                queueFamily.index, queueFamily.priorityQueues + queueFamily.backgroundQueues
             )
+        }
+
+        val queueFamilies = QueueFamilies(
+            queueFamilyMap[initDeviceResult.queueManager.generalQueueFamily],
+            queueFamilyMap[initDeviceResult.queueManager.getComputeQueueFamily()],
+            queueFamilyMap[initDeviceResult.queueManager.getTransferQueueFamily()],
+            null
+        )
+
+        val vmaAllocator = vmaJob.await()
+        val troll = TrollInstance(
+            0L, null, null,
+            initInstanceResult.vkInstance, vulkanPhysicalDevice, vulkanDevice,
+            initInstanceResult.enabledExtensions, enabledDeviceExtensions,
+            queueFamilies, vmaAllocator
+        )
+        val graviksJob = async {
+            GraviksInstance(troll)
         }
 
         val (staticMemoryScope, coreStaticMemory) = staticMemoryJob.await()
@@ -288,12 +310,9 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
 
         val staticGameState = StaticGameState(
             graphics = StaticGraphicsState(
-                vulkanInstance,
-                vulkanPhysicalDevice,
-                memoryInfo,
-                vulkanDevice,
+                troll,
                 queueManager,
-                vmaAllocator,
+                memoryInfo,
                 renderImageInfo,
                 staticMemoryScope,
                 coreStaticMemory,

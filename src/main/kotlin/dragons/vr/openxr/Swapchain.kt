@@ -3,12 +3,12 @@ package dragons.vr.openxr
 import dragons.init.trouble.SimpleStartupException
 import dragons.state.StaticGraphicsState
 import dragons.vulkan.memory.VulkanImage
-import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.openxr.*
 import org.lwjgl.openxr.XR10.*
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkImageViewCreateInfo
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 import kotlin.math.min
 
 internal fun determineOpenXrSwapchainSize(
@@ -163,7 +163,7 @@ internal fun createOpenXrSwapchains(
 
                 ciImageView.image(vulkanImage.handle)
                 assertVkSuccess(
-                    vkCreateImageView(graphicsState.vkDevice, ciImageView, null, pImageView),
+                    vkCreateImageView(graphicsState.troll.vkDevice(), ciImageView, null, pImageView),
                     "CreateImageView", "OpenXR swapchain image"
                 )
                 vulkanImage.fullView = pImageView[0]

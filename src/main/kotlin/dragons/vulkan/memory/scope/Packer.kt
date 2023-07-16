@@ -7,7 +7,6 @@ import dragons.vulkan.memory.claim.ImageMemoryClaim
 import dragons.vulkan.memory.claim.groupMemoryClaims
 import dragons.vulkan.memory.claim.shareMemoryClaims
 import dragons.vulkan.queue.QueueManager
-import dragons.vulkan.util.assertVkSuccess
 import kotlinx.coroutines.CoroutineScope
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memByteBuffer
@@ -15,6 +14,7 @@ import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkImageCreateInfo
 import org.slf4j.LoggerFactory.getLogger
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 suspend fun packMemoryClaims(
     vkDevice: VkDevice, queueManager: QueueManager, memoryInfo: MemoryInfo, scope: CoroutineScope,

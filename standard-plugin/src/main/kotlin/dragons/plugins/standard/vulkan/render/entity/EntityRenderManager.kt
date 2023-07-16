@@ -7,6 +7,7 @@ import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.world.entity.EntityProperties
 import dragons.world.realm.Realm
 import org.lwjgl.vulkan.VkDevice
+import troll.sync.WaitSemaphore
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.reflect.KClass
@@ -50,8 +51,8 @@ class EntityRenderManager(
         }
     }
 
-    fun getWaitSemaphores(realm: Realm): Collection<Pair<Long, Int>> {
-        val waitSemaphores = ArrayList<Pair<Long, Int>>()
+    fun getWaitSemaphores(realm: Realm): Collection<WaitSemaphore> {
+        val waitSemaphores = ArrayList<WaitSemaphore>()
 
         for (id in chosenEntities!!) {
             val entry = loadedEntities[id]!!

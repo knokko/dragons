@@ -70,6 +70,7 @@ dependencies {
     implementation project(':fixie')
     implementation project(':graviks2d')
     implementation project(':profiler')
+    implementation project(':troll-engine')
     runtimeOnly 'ch.qos.logback:logback-classic:1.2.3'
     runtimeOnly 'ch.qos.logback:logback-core:1.2.3'
 
@@ -96,6 +97,7 @@ project(':standard-plugin') {
         compileOnly project(':fixie')
         compileOnly project(':graviks2d')
         compileOnly project(':profiler')
+        compileOnly project(':troll-engine')
         implementation project(':gruviks')
 
         testImplementation project(':')
@@ -220,6 +222,7 @@ project(':gruviks-glfw') {
 project(':debug-plugin') {
     dependencies {
         compileOnly project(':')
+        compileOnly project(':troll-engine')
     }
 }
 

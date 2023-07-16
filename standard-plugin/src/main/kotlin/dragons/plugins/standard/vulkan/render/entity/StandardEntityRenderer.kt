@@ -7,13 +7,13 @@ import dragons.plugins.standard.vulkan.render.TransformationMatrixManager
 import dragons.plugins.standard.vulkan.vertex.BasicVertex
 import dragons.state.StaticGraphicsState
 import dragons.vulkan.memory.VulkanBufferRange
-import dragons.vulkan.util.assertVkSuccess
 import org.joml.Matrix4f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.*
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.KHRDrawIndirectCount.vkCmdDrawIndexedIndirectCountKHR
 import org.lwjgl.vulkan.VK10.*
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 import java.nio.ByteBuffer
 import java.nio.IntBuffer
 
@@ -59,7 +59,7 @@ internal class StandardEntityRenderer(
             )
         }
 
-        this.dynamicDescriptorPool = createBasicDynamicDescriptorPool(graphicsState.vkDevice, 1)
+        this.dynamicDescriptorPool = createBasicDynamicDescriptorPool(graphicsState.troll.vkDevice(), 1)
 
         stackPush().use { stack ->
             val aiDescriptorSet = VkDescriptorSetAllocateInfo.calloc(stack)
@@ -69,7 +69,7 @@ internal class StandardEntityRenderer(
 
             val pDescriptorSet = stack.callocLong(1)
             assertVkSuccess(
-                vkAllocateDescriptorSets(graphicsState.vkDevice, aiDescriptorSet, pDescriptorSet),
+                vkAllocateDescriptorSets(graphicsState.troll.vkDevice(), aiDescriptorSet, pDescriptorSet),
                 "AllocateDescriptorSets", "dynamic entity renderer"
             )
             this.dynamicDescriptorSet = pDescriptorSet[0]
@@ -202,7 +202,7 @@ internal class StandardEntityRenderer(
                 )
 
                 updateBasicDynamicDescriptorSet(
-                    this.graphicsState.vkDevice, this.dynamicDescriptorSet,
+                    this.graphicsState.troll.vkDevice(), this.dynamicDescriptorSet,
                     this.imageTracker.getCurrentlyUsedColorImages(),
                     this.imageTracker.getCurrentlyUsedHeightImages()
                 )
@@ -277,7 +277,7 @@ internal class StandardEntityRenderer(
     fun destroy() {
         this.meshTracker.destroy()
         this.imageTracker.destroy()
-        vkDestroyDescriptorPool(this.graphicsState.vkDevice, this.dynamicDescriptorPool, null)
+        vkDestroyDescriptorPool(this.graphicsState.troll.vkDevice(), this.dynamicDescriptorPool, null)
     }
 }
 

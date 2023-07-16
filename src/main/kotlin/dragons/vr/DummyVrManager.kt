@@ -70,7 +70,7 @@ class DummyVrManager(
     }
 
     override fun setGraphicsState(graphicsState: StaticGraphicsState) {
-        this.vkDevice = graphicsState.vkDevice
+        this.vkDevice = graphicsState.troll.vkDevice()
         this.queueManager = graphicsState.queueManager
 
         // Note: the resolve images should be finished by now, so this shouldn't block for long

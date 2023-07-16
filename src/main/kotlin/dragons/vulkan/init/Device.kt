@@ -9,10 +9,8 @@ import dragons.plugin.interfaces.vulkan.VulkanDeviceCreationListener
 import dragons.plugin.interfaces.vulkan.VulkanDeviceRater
 import dragons.vr.VrManager
 import dragons.vulkan.RenderImageInfo
-import dragons.vulkan.queue.DeviceQueue
 import dragons.vulkan.queue.QueueFamily
 import dragons.vulkan.queue.QueueManager
-import dragons.vulkan.util.assertVkSuccess
 import dragons.vulkan.util.combineNextChains
 import dragons.vulkan.util.encodeStrings
 import dragons.vulkan.util.extensionBufferToSet
@@ -24,6 +22,8 @@ import org.lwjgl.system.MemoryUtil.memPutInt
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.LoggerFactory.getLogger
+import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.queue.TrollQueue
 import java.lang.reflect.Modifier
 import java.nio.ByteBuffer
 import java.nio.FloatBuffer
@@ -251,7 +251,7 @@ internal fun createLogicalDevice(
 
         logger.info("Creating logical device...")
         val pDevice = stack.callocPointer(1)
-        assertVkSuccess(vrManager.createVulkanLogicalDevice(physicalDevice, ciDevice, pDevice), "CreateDevice")
+        assertVkSuccess(vrManager.createVulkanLogicalDevice(physicalDevice, ciDevice, pDevice), "CreateDevice", null)
         val device = VkDevice(pDevice[0], physicalDevice, ciDevice)
         logger.info("Created logical device")
 
@@ -259,12 +259,12 @@ internal fun createLogicalDevice(
             val priorityQueues = (0 until info.numPriorityQueues).map { queueIndex ->
                 val pQueue = stack.callocPointer(1)
                 vkGetDeviceQueue(device, info.index, queueIndex, pQueue)
-                DeviceQueue(VkQueue(pQueue[0], device))
+                TrollQueue(VkQueue(pQueue[0], device))
             }
             val backgroundQueues = (0 until info.numBackgroundQueues).map { partialQueueIndex ->
                 val pQueue = stack.callocPointer(1)
                 vkGetDeviceQueue(device, info.index, partialQueueIndex + info.numPriorityQueues, pQueue)
-                DeviceQueue(VkQueue(pQueue[0], device))
+                TrollQueue(VkQueue(pQueue[0], device))
             }
             return QueueFamily(priorityQueues = priorityQueues, backgroundQueues = backgroundQueues, index = info.index)
         }

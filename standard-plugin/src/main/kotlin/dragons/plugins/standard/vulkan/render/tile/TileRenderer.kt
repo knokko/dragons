@@ -6,6 +6,7 @@ import dragons.geometry.Position
 import dragons.world.tile.SmallTile
 import dragons.world.tile.TileProperties
 import org.lwjgl.vulkan.VkDevice
+import troll.sync.WaitSemaphore
 import java.util.*
 import kotlin.reflect.KClass
 
@@ -42,7 +43,7 @@ interface TileRendererClaims {
 interface TileRenderer {
     fun render(renderer: StandardSceneRenderer, tile: SmallTile, cameraPosition: Position)
 
-    fun getWaitSemaphores(tile: SmallTile): Collection<Pair<Long, Int>> = Collections.emptyList()
+    fun getWaitSemaphores(tile: SmallTile): Collection<WaitSemaphore> = Collections.emptyList()
 
     fun destroy(vkDevice: VkDevice) {}
 }

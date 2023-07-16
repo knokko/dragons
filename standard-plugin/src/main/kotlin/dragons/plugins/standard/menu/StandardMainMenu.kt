@@ -12,7 +12,6 @@ import dragons.geometry.Position
 import dragons.geometry.Vector
 import dragons.util.PerformanceStatistics
 import dragons.util.printVector
-import dragons.vulkan.util.assertVkSuccess
 import org.joml.Math.cos
 import org.joml.Math.sin
 import org.joml.Matrix4f
@@ -21,6 +20,7 @@ import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 import kotlin.math.atan2
 
 @Suppress("unused")
@@ -45,7 +45,7 @@ class StandardMainMenu: MainMenuManager {
 
                 val pSemaphore = stack.callocLong(1)
                 assertVkSuccess(
-                    vkCreateSemaphore(gameState.graphics.vkDevice, ciSemaphore, null, pSemaphore),
+                    vkCreateSemaphore(gameState.graphics.troll.vkDevice(), ciSemaphore, null, pSemaphore),
                     "CreateSemaphore", "standard plug-in: $description"
                 )
                 pSemaphore[0]
@@ -152,7 +152,7 @@ class StandardMainMenu: MainMenuManager {
 
                 sceneRenderer.render(realm, averageEyePosition, eyeMatrices.leftEyeMatrix, eyeMatrices.rightEyeMatrix)
                 gameState.vrManager.markFirstFrameQueueSubmit()
-                sceneRenderer.submit(realm, longArrayOf(), intArrayOf(), longArrayOf(renderFinishedSemaphore))
+                sceneRenderer.submit(realm, emptyArray(), longArrayOf(renderFinishedSemaphore))
                 gameState.vrManager.resolveAndSubmitFrames(
                     renderFinishedSemaphore, numIterationsLeft == 1
                 )
@@ -169,9 +169,9 @@ class StandardMainMenu: MainMenuManager {
             }
         }
 
-        sceneRenderer.destroy(gameState.graphics.vkDevice)
+        sceneRenderer.destroy(gameState.graphics.troll.vkDevice())
 
-        vkDestroySemaphore(gameState.graphics.vkDevice, renderFinishedSemaphore, null)
-        vkDestroySemaphore(gameState.graphics.vkDevice, debugPanelSemaphore, null)
+        vkDestroySemaphore(gameState.graphics.troll.vkDevice(), renderFinishedSemaphore, null)
+        vkDestroySemaphore(gameState.graphics.troll.vkDevice(), debugPanelSemaphore, null)
     }
 }

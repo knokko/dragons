@@ -113,7 +113,7 @@ internal class EntityImageTracker(
                 for (image in trackedImages.heightImages) {
                     this.availableHeightImages.add(image.descriptorIndex)
                 }
-                trackedImages.destroy(graphicsState.vkDevice, graphicsState.vmaAllocator)
+                trackedImages.destroy(graphicsState.troll.vkDevice(), graphicsState.troll.vmaAllocator())
                 true
             } else {
                 false
@@ -127,7 +127,7 @@ internal class EntityImageTracker(
 
     fun destroy() {
         for (images in this.imageMap.values) {
-            images.destroy(graphicsState.vkDevice, graphicsState.vmaAllocator)
+            images.destroy(graphicsState.troll.vkDevice(), graphicsState.troll.vmaAllocator())
         }
     }
 }

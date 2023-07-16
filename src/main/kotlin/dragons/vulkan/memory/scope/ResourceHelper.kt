@@ -9,7 +9,6 @@ import dragons.vulkan.memory.claim.ImageMemoryClaim
 import dragons.vulkan.memory.claim.QueueFamilyClaims
 import dragons.vulkan.queue.QueueFamily
 import dragons.vulkan.queue.QueueManager
-import dragons.vulkan.util.assertVkSuccess
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.EXTFragmentDensityMap.VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT
@@ -17,6 +16,7 @@ import org.lwjgl.vulkan.KHRFragmentShadingRate.VK_IMAGE_USAGE_FRAGMENT_SHADING_R
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
+import troll.exceptions.VulkanFailureException.assertVkSuccess
 import java.nio.IntBuffer
 import java.nio.LongBuffer
 
