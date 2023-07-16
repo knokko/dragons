@@ -2,13 +2,16 @@ package dsl.pm2.renderer
 
 import dsl.pm2.interpreter.Pm2RuntimeError
 import dsl.pm2.interpreter.program.Pm2MatrixProcessor
-import dsl.pm2.renderer.pipeline.Pm2PipelineInfo
 import org.joml.Matrix3x2f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.util.vma.Vma.*
-import org.lwjgl.util.vma.VmaAllocationCreateInfo
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
+import troll.buffer.VmaBuffer
+import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.images.VmaImage
+import troll.instance.TrollInstance
+import troll.sync.ResourceUsage
 import kotlin.jvm.Throws
 
 /**
@@ -18,19 +21,15 @@ import kotlin.jvm.Throws
 internal const val MATRIX_SIZE = 48
 
 class Pm2Scene internal constructor(
-    private val vkDevice: VkDevice,
+    private val troll: TrollInstance,
     vkDescriptorSetLayout: Long,
-    private val vmaAllocator: Long,
-    private val queueFamilyIndex: Int,
     private val backgroundRed: Int,
     private val backgroundGreen: Int,
     private val backgroundBlue: Int,
     private val width: Int,
     private val height: Int,
 ) {
-    private val colorImage: Long
-    private val colorImageAllocation: Long
-    private val colorImageView: Long
+    private val colorImage: VmaImage
     private val framebuffer: Long
 
     private val renderPass: Long
@@ -40,66 +39,25 @@ class Pm2Scene internal constructor(
 
     private val descriptorPool: Long
     private val descriptorSet: Long
-    private var matrixBufferAllocation = 0L
-    private var matrixBuffer = 0L
+    private var matrixBuffer: VmaBuffer? = null
     private var matrixBufferCount = 0
 
     init {
+
+        val imageFormat = VK_FORMAT_R8G8B8A8_SRGB
+        val imageSamples = VK_SAMPLE_COUNT_1_BIT
         stackPush().use { stack ->
-            val ciImage = VkImageCreateInfo.calloc(stack)
-            ciImage.`sType$Default`()
-            ciImage.flags(0)
-            ciImage.imageType(VK_IMAGE_TYPE_2D)
-            ciImage.format(VK_FORMAT_R8G8B8A8_SRGB)
-            ciImage.extent().set(width, height, 1)
-            ciImage.mipLevels(1)
-            ciImage.arrayLayers(1)
-            ciImage.samples(VK_SAMPLE_COUNT_1_BIT)
-            ciImage.tiling(VK_IMAGE_TILING_OPTIMAL)
-            ciImage.usage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT or VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-            ciImage.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-            ciImage.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-
-            val ciAllocation = VmaAllocationCreateInfo.calloc(stack)
-            ciAllocation.usage(VMA_MEMORY_USAGE_AUTO)
-
-            val pImage = stack.callocLong(1)
-            val pAllocation = stack.callocPointer(1)
-
-            checkReturnValue(vmaCreateImage(
-                vmaAllocator, ciImage, ciAllocation, pImage, pAllocation, null
-            ), "VmaCreateImage")
-
-            colorImage = pImage[0]
-            colorImageAllocation = pAllocation[0]
-
-            val ciImageView = VkImageViewCreateInfo.calloc(stack)
-            ciImageView.`sType$Default`()
-            ciImageView.flags(0)
-            ciImageView.image(colorImage)
-            ciImageView.viewType(VK_IMAGE_VIEW_TYPE_2D)
-            ciImageView.format(ciImage.format())
-            ciImageView.components().set(
-                VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-                VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY
+            this.colorImage = troll.images.createSimple(
+                stack, width, height, imageFormat, imageSamples,
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT or VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT, "Pm2SceneColorImage"
             )
-            ciImageView.subresourceRange {
-                it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                it.baseMipLevel(0)
-                it.levelCount(1)
-                it.baseArrayLayer(0)
-                it.layerCount(1)
-            }
-
-            val pImageView = stack.callocLong(1)
-            checkReturnValue(vkCreateImageView(vkDevice, ciImageView, null, pImageView), "CreateImageView")
-            colorImageView = pImageView[0]
 
             val attachments = VkAttachmentDescription.calloc(1, stack)
             val colorAttachment = attachments[0]
             colorAttachment.flags(0)
-            colorAttachment.format(ciImage.format())
-            colorAttachment.samples(ciImage.samples())
+            colorAttachment.format(imageFormat)
+            colorAttachment.samples(imageSamples)
             colorAttachment.loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
             colorAttachment.storeOp(VK_ATTACHMENT_STORE_OP_STORE)
             colorAttachment.stencilLoadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE)
@@ -140,49 +98,20 @@ class Pm2Scene internal constructor(
             ciRenderPass.pDependencies(dependencies)
 
             val pRenderPass = stack.callocLong(1)
-            checkReturnValue(vkCreateRenderPass(vkDevice, ciRenderPass, null, pRenderPass), "CreateRenderPass")
+            assertVkSuccess(vkCreateRenderPass(
+                troll.vkDevice(), ciRenderPass, null, pRenderPass
+            ), "CreateRenderPass", "Pm2RenderPass")
             renderPass = pRenderPass[0]
+            troll.debug.name(stack, renderPass, VK_OBJECT_TYPE_RENDER_PASS, "Pm2RenderPass")
 
-            val ciFramebuffer = VkFramebufferCreateInfo.calloc(stack)
-            ciFramebuffer.`sType$Default`()
-            ciFramebuffer.flags(0)
-            ciFramebuffer.renderPass(renderPass)
-            ciFramebuffer.attachmentCount(1)
-            ciFramebuffer.pAttachments(stack.longs(colorImageView))
-            ciFramebuffer.width(width)
-            ciFramebuffer.height(height)
-            ciFramebuffer.layers(1)
-
-            val pFramebuffer = stack.callocLong(1)
-            checkReturnValue(vkCreateFramebuffer(vkDevice, ciFramebuffer, null, pFramebuffer), "CreateFramebuffer")
-            framebuffer = pFramebuffer[0]
-
-            val ciCommandPool = VkCommandPoolCreateInfo.calloc(stack)
-            ciCommandPool.`sType$Default`()
-            ciCommandPool.flags(0)
-            ciCommandPool.queueFamilyIndex(queueFamilyIndex)
-
-            val pCommandPool = stack.callocLong(1)
-            checkReturnValue(vkCreateCommandPool(vkDevice, ciCommandPool, null, pCommandPool), "CreateCommandPool")
-            commandPool = pCommandPool[0]
-
-            val aiCommandBuffer = VkCommandBufferAllocateInfo.calloc(stack)
-            aiCommandBuffer.`sType$Default`()
-            aiCommandBuffer.commandPool(commandPool)
-            aiCommandBuffer.level(VK_COMMAND_BUFFER_LEVEL_PRIMARY)
-            aiCommandBuffer.commandBufferCount(1)
-
-            val pCommandBuffer = stack.callocPointer(1)
-            checkReturnValue(vkAllocateCommandBuffers(vkDevice, aiCommandBuffer, pCommandBuffer), "AllocateCommandBuffers")
-            commandBuffer = VkCommandBuffer(pCommandBuffer[0], vkDevice)
-
-            val ciFence = VkFenceCreateInfo.calloc(stack)
-            ciFence.`sType$Default`()
-            ciFence.flags(VK_FENCE_CREATE_SIGNALED_BIT)
-
-            val pFence = stack.callocLong(1)
-            checkReturnValue(vkCreateFence(vkDevice, ciFence, null, pFence), "CreateFence")
-            fence = pFence[0]
+            framebuffer = troll.images.createFramebuffer(
+                stack, renderPass, width, height, "Pm2Framebuffer", colorImage.vkImageView
+            )
+            commandPool = troll.commands.createPool(
+                0, troll.queueFamilies().graphics.index, "Pm2DrawSceneCommandPool"
+            )
+            commandBuffer = troll.commands.createPrimaryBuffers(commandPool, 1, "Pm2DrawSceneCommandBuffer")[0]
+            fence = troll.sync.createFences(true, 1, "Pm2DrawSceneFence")[0]
 
             val descriptorPoolSizes = VkDescriptorPoolSize.calloc(1, stack)
             descriptorPoolSizes.type(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
@@ -195,62 +124,34 @@ class Pm2Scene internal constructor(
             ciDescriptorPool.pPoolSizes(descriptorPoolSizes)
 
             val pDescriptorPool = stack.callocLong(1)
-            checkReturnValue(vkCreateDescriptorPool(
-                    vkDevice, ciDescriptorPool, null, pDescriptorPool
-            ), "CreateDescriptorPool")
+            assertVkSuccess(vkCreateDescriptorPool(
+                    troll.vkDevice(), ciDescriptorPool, null, pDescriptorPool
+            ), "CreateDescriptorPool", "Pm2DrawSceneDescriptorPool")
             descriptorPool = pDescriptorPool[0]
-
-            val aiDescriptorSet = VkDescriptorSetAllocateInfo.calloc(stack)
-            aiDescriptorSet.`sType$Default`()
-            aiDescriptorSet.descriptorPool(descriptorPool)
-            aiDescriptorSet.pSetLayouts(stack.longs(vkDescriptorSetLayout))
-
-            val pDescriptorSet = stack.callocLong(1)
-            checkReturnValue(vkAllocateDescriptorSets(
-                    vkDevice, aiDescriptorSet, pDescriptorSet
-            ), "AllocateDescriptorSets")
-            descriptorSet = pDescriptorSet[0]
+            descriptorSet = troll.descriptors.allocate(
+                stack, 1, descriptorPool, "Pm2DrawSceneDescriptorSet", vkDescriptorSetLayout
+            )[0]
         }
     }
 
     private fun ensureMatrixBuffer(numMatrices: Int) {
         if (numMatrices > matrixBufferCount) {
-            if (matrixBufferAllocation != 0L) {
-                vmaDestroyBuffer(vmaAllocator, matrixBuffer, matrixBufferAllocation)
+            if (matrixBuffer != null) {
+                vmaDestroyBuffer(troll.vmaAllocator(), matrixBuffer!!.vkBuffer, matrixBuffer!!.vmaAllocation)
             }
 
+            val matrixBufferSize = MATRIX_SIZE.toLong() * numMatrices
+            // Not all hardware supports uniform buffers larger than 16KB
+            if (matrixBufferSize > 16_000L) throw Pm2RuntimeError("Too many dynamic matrices: $numMatrices")
+            // TODO Optionally use storage buffers instead
+
+            matrixBuffer = troll.buffers.create(
+                matrixBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT or VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                "Pm2MatrixDeviceBuffer"
+            )
+            matrixBufferCount = numMatrices
+
             stackPush().use { stack ->
-                val ciBuffer = VkBufferCreateInfo.calloc(stack)
-                ciBuffer.`sType$Default`()
-                ciBuffer.flags(0)
-                ciBuffer.size(MATRIX_SIZE.toLong() * numMatrices)
-                ciBuffer.usage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT or VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-                ciBuffer.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-
-                // Not all hardware supports uniform buffers larger than 16KB
-                if (ciBuffer.size() > 16_000L) throw Pm2RuntimeError("Too many dynamic matrices: $numMatrices")
-
-                // TODO Optionally use storage buffers instead
-
-                val ciAllocation = VmaAllocationCreateInfo.calloc(stack)
-                ciAllocation.usage(VMA_MEMORY_USAGE_AUTO)
-
-                val pBuffer = stack.callocLong(1)
-                val pAllocation = stack.callocPointer(1)
-
-                checkReturnValue(vmaCreateBuffer(
-                        vmaAllocator, ciBuffer, ciAllocation, pBuffer, pAllocation, null
-                ), "VmaCreateBuffer")
-
-                matrixBufferAllocation = pAllocation[0]
-                matrixBuffer = pBuffer[0]
-                matrixBufferCount = numMatrices
-
-                val descriptorBufferWrites = VkDescriptorBufferInfo.calloc(1, stack)
-                descriptorBufferWrites.buffer(matrixBuffer)
-                descriptorBufferWrites.offset(0)
-                descriptorBufferWrites.range(MATRIX_SIZE.toLong() * matrixBufferCount)
-
                 val descriptorWrites = VkWriteDescriptorSet.calloc(1, stack)
                 descriptorWrites.`sType$Default`()
                 descriptorWrites.dstSet(descriptorSet)
@@ -258,17 +159,24 @@ class Pm2Scene internal constructor(
                 descriptorWrites.dstArrayElement(0)
                 descriptorWrites.descriptorCount(1)
                 descriptorWrites.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-                descriptorWrites.pBufferInfo(descriptorBufferWrites)
+                descriptorWrites.pBufferInfo(troll.descriptors.bufferInfo(stack, matrixBuffer))
 
-                vkUpdateDescriptorSets(vkDevice, descriptorWrites, null)
+                vkUpdateDescriptorSets(troll.vkDevice(), descriptorWrites, null)
             }
+        }
+    }
+
+    fun awaitLastDraw() {
+        stackPush().use { stack ->
+            assertVkSuccess(vkWaitForFences(
+                troll.vkDevice(), stack.longs(fence), true, 10_000_000_000L
+            ), "WaitForFences", "Pm2Scene.awaitLastDraw")
         }
     }
 
     @Throws(Pm2RuntimeError::class)
     fun drawAndCopy(
-        instance: Pm2Instance, meshes: List<Pm2Mesh>, cameraMatrix: Matrix3x2f,
-        signalSemaphore: Long?, submit: (VkSubmitInfo.Buffer, fence: Long) -> Int,
+        instance: Pm2Instance, meshes: List<Pm2Mesh>, cameraMatrix: Matrix3x2f, signalSemaphore: Long?,
         destImage: Long, oldLayout: Int, srcAccessMask: Int, srcStageMask: Int,
         newLayout: Int, dstAccessMask: Int, dstStageMask: Int,
         offsetX: Int, offsetY: Int, blitSizeX: Int, blitSizeY: Int
@@ -301,18 +209,12 @@ class Pm2Scene internal constructor(
         }
 
         stackPush().use { stack ->
-            checkReturnValue(
-                vkWaitForFences(vkDevice, stack.longs(fence), true, 10_000_000_000L), "WaitForFences"
-            )
-            checkReturnValue(vkResetFences(vkDevice, stack.longs(fence)), "ResetFences")
-            checkReturnValue(vkResetCommandPool(vkDevice, commandPool, 0), "ResetCommandPool")
+            troll.sync.waitAndReset(stack, fence, 10_000_000_000L)
+            assertVkSuccess(vkResetCommandPool(
+                troll.vkDevice(), commandPool, 0
+            ), "ResetCommandPool", "Pm2SceneDrawCommandPool")
 
-            val biCommands = VkCommandBufferBeginInfo.calloc(stack)
-            biCommands.`sType$Default`()
-            biCommands.flags(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
-            biCommands.pInheritanceInfo(null)
-
-            checkReturnValue(vkBeginCommandBuffer(commandBuffer, biCommands), "BeginCommandBuffer")
+            troll.commands.begin(commandBuffer, stack, "Pm2SceneDrawCommands")
 
             var matrixIndex = 0
             val meshesWithMatrixIndices = mutableListOf<Pair<Pm2Mesh, Int>>()
@@ -332,21 +234,12 @@ class Pm2Scene internal constructor(
                     matrixIndex += 1
                 }
             }
-            vkCmdUpdateBuffer(commandBuffer, matrixBuffer, 0, hostMatrixBuffer)
+            vkCmdUpdateBuffer(commandBuffer, matrixBuffer!!.vkBuffer, 0, hostMatrixBuffer)
 
-            val bufferBarrier = VkBufferMemoryBarrier.calloc(1, stack)
-            bufferBarrier.`sType$Default`()
-            bufferBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
-            bufferBarrier.dstAccessMask(VK_ACCESS_SHADER_READ_BIT)
-            bufferBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-            bufferBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-            bufferBarrier.buffer(matrixBuffer)
-            bufferBarrier.offset(0)
-            bufferBarrier.size(VK_WHOLE_SIZE)
-
-            vkCmdPipelineBarrier(
-                    commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0,
-                    null, bufferBarrier, null
+            troll.commands.bufferBarrier(
+                stack, commandBuffer, matrixBuffer!!.vkBuffer, 0, matrixBuffer!!.size,
+                ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
+                ResourceUsage(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT)
             )
 
             val clearValues = VkClearValue.calloc(1, stack)
@@ -365,118 +258,65 @@ class Pm2Scene internal constructor(
             biRenderPass.pClearValues(clearValues)
 
             vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
-
-            val viewport = VkViewport.calloc(1, stack)
-            viewport[0].set(0f, 0f, width.toFloat(), height.toFloat(), 0f, 1f)
-            vkCmdSetViewport(commandBuffer, 0, viewport)
-
-            val scissor = VkRect2D.calloc(1, stack)
-            scissor.extent().set(width, height)
-
-            vkCmdSetScissor(commandBuffer, 0, scissor)
+            troll.commands.dynamicViewportAndScissor(stack, commandBuffer, width, height)
 
             instance.recordDraw(commandBuffer, pipelineInfo, descriptorSet, meshesWithMatrixIndices, cameraMatrix)
 
             vkCmdEndRenderPass(commandBuffer)
 
             if (oldLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-                val imageBarriers = VkImageMemoryBarrier.calloc(1, stack)
-                val barrier = imageBarriers[0]
-                barrier.`sType$Default`()
-                barrier.srcAccessMask(srcAccessMask)
-                barrier.dstAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
-                barrier.oldLayout(oldLayout)
-                barrier.newLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-                barrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                barrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                barrier.image(destImage)
-                barrier.subresourceRange {
-                    it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                    it.baseMipLevel(0)
-                    it.levelCount(1)
-                    it.baseArrayLayer(0)
-                    it.layerCount(1)
-                }
-
-                vkCmdPipelineBarrier(
-                    commandBuffer, srcStageMask, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-                    null, null, imageBarriers
+                troll.commands.transitionLayout(
+                    stack, commandBuffer, destImage, oldLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    ResourceUsage(srcAccessMask, srcStageMask),
+                    ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
                 )
             }
 
             val blitRegion = VkImageBlit.calloc(1, stack)
-            blitRegion.srcSubresource {
-                it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                it.mipLevel(0)
-                it.baseArrayLayer(0)
-                it.layerCount(1)
-            }
+            troll.images.subresourceLayers(stack, blitRegion.srcSubresource(), VK_IMAGE_ASPECT_COLOR_BIT)
             blitRegion.srcOffsets(0).set(0, 0, 0)
             blitRegion.srcOffsets(1).set(width, height, 1)
-            blitRegion.dstSubresource {
-                it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                it.mipLevel(0)
-                it.baseArrayLayer(0)
-                it.layerCount(1)
-            }
+            troll.images.subresourceLayers(stack, blitRegion.dstSubresource(), VK_IMAGE_ASPECT_COLOR_BIT)
             blitRegion.dstOffsets(0).set(offsetX, offsetY, 0)
             blitRegion.dstOffsets(1).set(blitSizeX, blitSizeY, 1)
 
             vkCmdBlitImage(
-                commandBuffer, colorImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                commandBuffer, colorImage.vkImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, blitRegion, VK_FILTER_LINEAR
             )
 
             if (newLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-                val imageBarriers = VkImageMemoryBarrier.calloc(1, stack)
-                val barrier = imageBarriers[0]
-                barrier.`sType$Default`()
-                barrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
-                barrier.dstAccessMask(dstAccessMask)
-                barrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-                barrier.newLayout(newLayout)
-                barrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                barrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                barrier.image(destImage)
-                barrier.subresourceRange {
-                    it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                    it.baseMipLevel(0)
-                    it.levelCount(1)
-                    it.baseArrayLayer(0)
-                    it.layerCount(1)
-                }
-
-                vkCmdPipelineBarrier(
-                    commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, 0,
-                    null, null, imageBarriers
+                troll.commands.transitionLayout(
+                    stack, commandBuffer, destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, newLayout,
+                    ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
+                    ResourceUsage(dstAccessMask, dstStageMask)
                 )
             }
 
-            checkReturnValue(vkEndCommandBuffer(commandBuffer), "EndCommandBuffer")
+            assertVkSuccess(vkEndCommandBuffer(commandBuffer), "EndCommandBuffer", "Pm2SceneDrawAndCopy")
 
-            val pSubmit = VkSubmitInfo.calloc(1, stack)
-            pSubmit.`sType$Default`()
-            pSubmit.waitSemaphoreCount(0)
-            pSubmit.pCommandBuffers(stack.pointers(commandBuffer.address()))
-            if (signalSemaphore != null) pSubmit.pSignalSemaphores(stack.longs(signalSemaphore))
-
-            checkReturnValue(submit(pSubmit, fence), "QueueSubmit")
+            val signalSemaphores = if (signalSemaphore != null) longArrayOf(signalSemaphore) else LongArray(0)
+            instance.troll.queueFamilies().graphics.queues.random().submit(
+                commandBuffer, "Pm2Scene", emptyArray(), fence, *signalSemaphores
+            )
         }
     }
 
     fun destroy() {
         stackPush().use { stack ->
-            checkReturnValue(vkWaitForFences(vkDevice, stack.longs(fence), true, 10_000_000_000L), "WaitForFences")
+            assertVkSuccess(vkWaitForFences(
+                troll.vkDevice(), stack.longs(fence), true, 10_000_000_000L
+            ), "WaitForFences", "Pm2SceneDestroy")
         }
-        vkDestroyFence(vkDevice, fence, null)
-        vkDestroyCommandPool(vkDevice, commandPool, null)
-        vkDestroyRenderPass(vkDevice, renderPass, null)
-        vkDestroyFramebuffer(vkDevice, framebuffer, null)
-        vkDestroyImageView(vkDevice, colorImageView, null)
-        vmaDestroyImage(vmaAllocator, colorImage, colorImageAllocation)
+        vkDestroyFence(troll.vkDevice(), fence, null)
+        vkDestroyCommandPool(troll.vkDevice(), commandPool, null)
+        vkDestroyRenderPass(troll.vkDevice(), renderPass, null)
+        vkDestroyFramebuffer(troll.vkDevice(), framebuffer, null)
+        vkDestroyImageView(troll.vkDevice(), colorImage.vkImageView, null)
+        vmaDestroyImage(troll.vmaAllocator(), colorImage.vkImage, colorImage.vmaAllocation)
         if (matrixBufferCount > 0) {
-            vmaDestroyBuffer(vmaAllocator, matrixBuffer, matrixBufferAllocation)
+            vmaDestroyBuffer(troll.vmaAllocator(), matrixBuffer!!.vkBuffer, matrixBuffer!!.vmaAllocation)
         }
-        vkDestroyDescriptorPool(vkDevice, descriptorPool, null)
+        vkDestroyDescriptorPool(troll.vkDevice(), descriptorPool, null)
     }
 }

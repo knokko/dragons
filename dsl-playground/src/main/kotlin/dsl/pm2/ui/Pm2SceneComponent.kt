@@ -10,6 +10,7 @@ import gruviks.feedback.RenderFeedback
 import gruviks.feedback.RequestKeyboardFocusFeedback
 import org.joml.Matrix3x2f
 import org.lwjgl.vulkan.VK10.VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+import troll.sync.WaitSemaphore
 import kotlin.math.absoluteValue
 
 class Pm2SceneComponent(

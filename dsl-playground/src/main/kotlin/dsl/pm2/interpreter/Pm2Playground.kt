@@ -3,7 +3,6 @@ package dsl.pm2.interpreter
 import dsl.pm2.interpreter.program.Pm2Program
 import dsl.pm2.renderer.Pm2Instance
 import dsl.pm2.renderer.Pm2Scene
-import dsl.pm2.renderer.checkReturnValue
 import dsl.pm2.ui.Pm2SceneComponent
 import graviks.glfw.GraviksWindow
 import graviks2d.context.GraviksContext
@@ -16,11 +15,8 @@ import gruviks.space.RectRegion
 import gruviks.space.SpaceLayout
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.util.vma.Vma.*
-import org.lwjgl.util.vma.VmaAllocationCreateInfo
 import org.lwjgl.vulkan.VK10.*
-import org.lwjgl.vulkan.VkImageCreateInfo
-import org.lwjgl.vulkan.VkImageViewCreateInfo
-import org.lwjgl.vulkan.VkSemaphoreCreateInfo
+import troll.images.VmaImage
 import java.io.File
 import java.io.IOException
 import java.lang.System.currentTimeMillis
@@ -43,7 +39,7 @@ fun main() {
     ), emptyList())}
 
     val graviksWindow = GraviksWindow(
-        800, 800, "DSL Playground", true, "Gruviks Tester",
+        800, 800, true, "DSL playground",
         VK_MAKE_VERSION(0, 1, 0), true
     ) { instance, width, height ->
         GraviksContext(instance, width, height)
@@ -52,88 +48,24 @@ fun main() {
     val width = 500
     val height = 500
 
-    val sceneImage: Long
-    val sceneImageView: Long
-    val sceneImageAllocation: Long
+    val sceneImage: VmaImage
     val sceneSemaphore: Long
     stackPush().use { stack ->
-        val ciImage = VkImageCreateInfo.calloc(stack)
-        ciImage.`sType$Default`()
-        ciImage.flags(0)
-        ciImage.imageType(VK_IMAGE_TYPE_2D)
-        ciImage.format(VK_FORMAT_R8G8B8A8_SRGB)
-        ciImage.extent().set(width, height, 1)
-        ciImage.mipLevels(1)
-        ciImage.arrayLayers(1)
-        ciImage.samples(VK_SAMPLE_COUNT_1_BIT)
-        ciImage.tiling(VK_IMAGE_TILING_OPTIMAL)
-        ciImage.usage(VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT)
-        ciImage.sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-        ciImage.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-
-        val ciAllocation = VmaAllocationCreateInfo.calloc(stack)
-        ciAllocation.usage(VMA_MEMORY_USAGE_AUTO)
-
-        val pImage = stack.callocLong(1)
-        val pAllocation = stack.callocPointer(1)
-
-        checkReturnValue(vmaCreateImage(
-            graviksWindow.graviksInstance.vmaAllocator, ciImage, ciAllocation, pImage, pAllocation, null
-        ), "VmaCreateImage")
-
-        sceneImage = pImage[0]
-        sceneImageAllocation = pAllocation[0]
-
-        val ciView = VkImageViewCreateInfo.calloc(stack)
-        ciView.`sType$Default`()
-        ciView.flags(0)
-        ciView.image(sceneImage)
-        ciView.viewType(VK_IMAGE_VIEW_TYPE_2D)
-        ciView.format(ciImage.format())
-        ciView.components().set(
-            VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-            VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY
+        sceneImage = graviksWindow.troll.images.createSimple(
+            stack, width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_SAMPLE_COUNT_1_BIT,
+            VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_IMAGE_ASPECT_COLOR_BIT, "Pm2SceneIntermediateImage"
         )
-        ciView.subresourceRange {
-            it.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-            it.baseMipLevel(0)
-            it.levelCount(1)
-            it.baseArrayLayer(0)
-            it.layerCount(1)
-        }
-
-        val pView = stack.callocLong(1)
-        checkReturnValue(vkCreateImageView(
-            graviksWindow.graviksInstance.device, ciView, null, pView
-        ), "CreateImageView")
-        sceneImageView = pView[0]
-
-        val ciSemaphore = VkSemaphoreCreateInfo.calloc(stack)
-        ciSemaphore.`sType$Default`()
-        ciSemaphore.flags(0)
-
-        val pSemaphore = stack.callocLong(1)
-        checkReturnValue(vkCreateSemaphore(
-            graviksWindow.graviksInstance.device, ciSemaphore, null, pSemaphore
-        ), "CreateSemaphore")
-
-        sceneSemaphore = pSemaphore[0]
+        sceneSemaphore = graviksWindow.troll.sync.createSemaphores("Pm2SceneIntermediateSemaphore", 1)[0]
     }
 
-    val pm2Instance = Pm2Instance(
-        graviksWindow.graviksInstance.device,
-        graviksWindow.graviksInstance.vmaAllocator,
-        graviksWindow.graviksInstance.queueFamilyIndex
-    )
+    val pm2Instance = Pm2Instance(graviksWindow.troll)
 
     var currentMesh = pm2Instance.allocations.allocateMesh(initialModel)
 
-    // TODO Create some method for this
     val pm2Scene = Pm2Scene(
-        graviksWindow.graviksInstance.device,
+        graviksWindow.troll,
         pm2Instance.descriptorSetLayout,
-        graviksWindow.graviksInstance.vmaAllocator,
-        graviksWindow.graviksInstance.queueFamilyIndex,
         20, 200, 250,
         width, height
     )
@@ -147,8 +79,9 @@ fun main() {
     val sceneComponent = Pm2SceneComponent(currentMesh) { mesh, cameraMatrix ->
         try {
             pm2Scene.drawAndCopy(
-                    pm2Instance, listOf(mesh), cameraMatrix, sceneSemaphore, graviksWindow.graviksInstance::synchronizedQueueSubmit,
-                    destImage = sceneImage, oldLayout = oldSceneLayout, srcAccessMask = sceneAccessMask, srcStageMask = sceneStageMask,
+                    pm2Instance, listOf(mesh), cameraMatrix, sceneSemaphore,
+                    destImage = sceneImage.vkImage, oldLayout = oldSceneLayout,
+                    srcAccessMask = sceneAccessMask, srcStageMask = sceneStageMask,
                     newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
                     dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                     offsetX = 0, offsetY = 0, blitSizeX = width, blitSizeY = height
@@ -156,7 +89,7 @@ fun main() {
             oldSceneLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             sceneAccessMask = VK_ACCESS_SHADER_READ_BIT
             sceneStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-            Triple(sceneImage, sceneImageView, sceneSemaphore)
+            Triple(sceneImage.vkImage, sceneImage.vkImageView, sceneSemaphore)
         } catch (runtimeError: Pm2RuntimeError) {
             errorComponent.setText(runtimeError.message!!)
             null
@@ -191,6 +124,7 @@ fun main() {
 
             println("Compilation took ${time1 - startTime} ms; Running took ${time2 - time1} ms; Creating mesh took ${endTime - time2} ms")
 
+            pm2Scene.awaitLastDraw()
             pm2Instance.allocations.destroyMesh(currentMesh)
             currentMesh = newMesh
             sceneComponent.setMesh(currentMesh)
@@ -214,8 +148,8 @@ fun main() {
         pm2Scene.destroy()
         pm2Instance.destroy()
 
-        vkDestroySemaphore(graviksWindow.graviksInstance.device, sceneSemaphore, null)
-        vkDestroyImageView(graviksWindow.graviksInstance.device, sceneImageView, null)
-        vmaDestroyImage(graviksWindow.graviksInstance.vmaAllocator, sceneImage, sceneImageAllocation)
+        vkDestroySemaphore(graviksWindow.troll.vkDevice(), sceneSemaphore, null)
+        vkDestroyImageView(graviksWindow.troll.vkDevice(), sceneImage.vkImageView, null)
+        vmaDestroyImage(graviksWindow.troll.vmaAllocator(), sceneImage.vkImage, sceneImage.vmaAllocation)
     }
 }

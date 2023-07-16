@@ -229,6 +229,7 @@ project(':dsl-playground') {
         implementation project(':graviks-glfw')
         implementation project(':gruviks')
         implementation project(':gruviks-glfw')
+        implementation project(':troll-engine')
         implementation 'org.antlr:antlr4:4.11.1'
         implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
     }
