@@ -530,6 +530,11 @@ class GraviksContext(
 
     override fun getAspectRatio() = this.width.toFloat() / this.height.toFloat()
 
+    fun awaitCompletion() {
+        handlePendingCommand()
+        hardFlush(true)
+    }
+
     fun copyColorImageTo(
         destImage: Long?, destBuffer: Long?, destImageFormat: Int?,
         signalSemaphore: Long? = null, submissionMarker: CompletableDeferred<Unit>? = null,

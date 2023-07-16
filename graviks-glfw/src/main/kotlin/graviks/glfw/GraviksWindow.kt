@@ -120,7 +120,12 @@ class GraviksWindow(
         val swapchainImage = troll.swapchains.acquireNextImage(VK_PRESENT_MODE_FIFO_KHR) ?: return
 
         if (currentGraviksContext == null || currentGraviksContext!!.width != swapchainImage.width || currentGraviksContext!!.height != swapchainImage.height) {
-            if (currentGraviksContext != null) currentGraviksContext!!.destroy()
+            if (currentGraviksContext != null) {
+                // Awaiting completion ensures that all wait semaphores of the context are awaited, which is needed
+                // to avoid double semaphore signal operations 'downstream'
+                currentGraviksContext!!.awaitCompletion()
+                currentGraviksContext!!.destroy()
+            }
             currentGraviksContext = createContext(graviksInstance, swapchainImage.width, swapchainImage.height)
         }
         val graviksContext = currentGraviksContext!!
