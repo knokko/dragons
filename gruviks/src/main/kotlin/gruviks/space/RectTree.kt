@@ -1,6 +1,8 @@
 package gruviks.space
 
 import java.lang.Integer.max
+import java.util.*
+import kotlin.collections.ArrayList
 
 class RectTree<T>(
     val maxNodeSize: Int = 47
@@ -21,6 +23,10 @@ class RectTree<T>(
         if (maxNodeSize <= 2) throw IllegalArgumentException("maxNodeSize ($maxNodeSize) must be larger than 2")
         if (maxNodeSize % 2 == 0) throw IllegalArgumentException("maxNodeSize ($maxNodeSize) must be odd")
     }
+
+    override fun toString() = if (childNodes.isEmpty()) {
+        "Leafs(size=$size)"
+    } else "Node(size=$size, depth=$depth, #children=${childNodes.size})"
 
     private fun determineChildNodeIndex(region: RectRegion): Int {
         val indexX = if (region.boundX <= splitX) 0 else if (region.minX > splitX) 2 else 1
@@ -177,22 +183,36 @@ class RectTree<T>(
         }
     }
 
-    // TODO Add delete method
+    @Throws(IllegalArgumentException::class)
+    fun remove(element: T, region: RectRegion) {
+        enumerateBetween(region, true) { path, leaf ->
+            if (leaf.second == element) {
+                val parent = path.last()
+                parent.leaves.remove(leaf)
 
-    fun findBetween(region: RectRegion): List<Pair<RectRegion, T>> {
-        val result = mutableListOf<Pair<RectRegion, T>>()
+                for (node in path) node.size -= 1
+            }
+        }
+    }
 
-        val relevantNodes = ArrayList<RectTree<T>>(1000)
+    private inline fun enumerateBetween(region: RectRegion, maintainPath: Boolean, process: (path: List<RectTree<T>>, leaf: Pair<RectRegion, T>) -> Unit) {
+        val relevantNodes = LinkedList<RectTree<T>?>()
         relevantNodes.add(this)
 
+        val currentPath = ArrayList<RectTree<T>>(depth)
+
         while (relevantNodes.isNotEmpty()) {
-            val nextNode = relevantNodes.removeLast()
+            val nextNode = if (maintainPath) relevantNodes.removeFirst() else relevantNodes.removeLast()
+            if (nextNode == null) {
+                if (maintainPath) currentPath.removeLast()
+                continue
+            }
+
+            if (maintainPath) currentPath.add(nextNode)
             if (nextNode.childNodes.isEmpty()) {
-                for (leaf in nextNode.leaves) {
-                    if (leaf.first.overlaps(region)) {
-                        result.add(leaf)
-                    }
-                }
+                val leavesToProcess = nextNode.leaves.filter { it.first.overlaps(region) }
+                for (leaf in leavesToProcess) process(currentPath, leaf)
+                if (maintainPath) currentPath.removeLast()
             } else {
                 if (region.minX < nextNode.splitX) {
                     if (region.minY < nextNode.splitY) relevantNodes.add(nextNode.childNodes[0])
@@ -209,8 +229,16 @@ class RectTree<T>(
                     relevantNodes.add(nextNode.childNodes[5])
                     if (region.boundY > nextNode.splitY) relevantNodes.add(nextNode.childNodes[8])
                 }
+
+                if (maintainPath) relevantNodes.add(null)
             }
         }
+    }
+
+    fun findBetween(region: RectRegion): List<Pair<RectRegion, T>> {
+        val result = mutableListOf<Pair<RectRegion, T>>()
+
+        enumerateBetween(region, false) { _, leaf -> result.add(leaf) }
 
         return result
     }

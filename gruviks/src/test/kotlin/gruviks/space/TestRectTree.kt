@@ -39,6 +39,10 @@ class TestRectTree {
         assertEquals(1, tree.findBetween(RectRegion.percentage(30, 50, 200, 60)).size)
         assertEquals(1, tree.findBetween(RectRegion.percentage(30, 80, 50, 150)).size)
         assertEquals(4, tree.findBetween(RectRegion.percentage(0, 0, 100, 100)).size)
+
+        tree.remove("test2", RectRegion.percentage(50, 0, 100, 50))
+        assertEquals(3, tree.size)
+        assertEquals(0, tree.findBetween(RectRegion.percentage(50, 0, 100, 50)).size)
     }
 
     @Test
@@ -52,7 +56,7 @@ class TestRectTree {
     fun randomBattleTest() {
         class NaiveRectTree<T> {
 
-            private val entries = mutableListOf<Pair<RectRegion, T>>()
+            val entries = mutableListOf<Pair<RectRegion, T>>()
 
             val size: Int
                 get() = entries.size
@@ -93,6 +97,16 @@ class TestRectTree {
 
         assertTrue(naiveTree.size > 1000)
         println("final size is ${complexTree.size} and final depth is ${complexTree.depth}")
+
+        var expectedSize = naiveTree.size
+        for ((region, element) in naiveTree.entries) {
+            assertEquals(listOf(region), complexTree.findBetween(region).map { it.first })
+            complexTree.remove(element, region)
+            assertEquals(0, complexTree.findBetween(region).size)
+            expectedSize -= 1
+            assertEquals(expectedSize, complexTree.size)
+        }
+        assertEquals(0, complexTree.size)
     }
 
     @Test
