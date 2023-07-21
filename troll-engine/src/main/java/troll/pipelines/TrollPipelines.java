@@ -179,6 +179,18 @@ public class TrollPipelines {
         ciPipeline.pDepthStencilState(ciDepthStencil);
     }
 
+    public void simpleDepthStencil(MemoryStack stack, VkGraphicsPipelineCreateInfo ciPipeline, int compareOp) {
+        var ciDepthStencil = VkPipelineDepthStencilStateCreateInfo.calloc(stack);
+        ciDepthStencil.sType$Default();
+        ciDepthStencil.depthTestEnable(true);
+        ciDepthStencil.depthWriteEnable(true);
+        ciDepthStencil.depthCompareOp(compareOp);
+        ciDepthStencil.depthBoundsTestEnable(false);
+        ciDepthStencil.stencilTestEnable(false);
+
+        ciPipeline.pDepthStencilState(ciDepthStencil);
+    }
+
     public void noColorBlending(MemoryStack stack, VkGraphicsPipelineCreateInfo ciPipeline, int attachmentCount) {
         var pAttachments = VkPipelineColorBlendAttachmentState.calloc(attachmentCount, stack);
         for (int index = 0; index < attachmentCount; index++) {
