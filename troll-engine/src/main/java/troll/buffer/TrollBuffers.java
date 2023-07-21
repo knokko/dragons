@@ -5,9 +5,6 @@ import org.lwjgl.util.vma.VmaAllocationInfo;
 import org.lwjgl.vulkan.VkBufferCreateInfo;
 import troll.instance.TrollInstance;
 
-import java.nio.ByteBuffer;
-import java.util.function.Consumer;
-
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.util.vma.Vma.*;
 import static org.lwjgl.util.vma.Vma.VMA_ALLOCATION_CREATE_MAPPED_BIT;
