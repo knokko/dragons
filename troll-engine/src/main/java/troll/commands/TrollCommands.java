@@ -171,9 +171,23 @@ public class TrollCommands {
         );
     }
 
-    public void transitionLayout(
+    public void transitionColorLayout(
             MemoryStack stack, VkCommandBuffer commandBuffer, long vkImage, int oldLayout, int newLayout,
             ResourceUsage oldUsage, ResourceUsage newUsage
+    ) {
+        transitionLayout(stack, commandBuffer, vkImage, oldLayout, newLayout, oldUsage, newUsage, VK_IMAGE_ASPECT_COLOR_BIT);
+    }
+
+    public void transitionDepthLayout(
+            MemoryStack stack, VkCommandBuffer commandBuffer, long vkImage, int oldLayout, int newLayout,
+            ResourceUsage oldUsage, ResourceUsage newUsage
+    ) {
+        transitionLayout(stack, commandBuffer, vkImage, oldLayout, newLayout, oldUsage, newUsage, VK_IMAGE_ASPECT_DEPTH_BIT);
+    }
+
+    public void transitionLayout(
+            MemoryStack stack, VkCommandBuffer commandBuffer, long vkImage, int oldLayout, int newLayout,
+            ResourceUsage oldUsage, ResourceUsage newUsage, int aspectMask
     ) {
         var pImageBarrier = VkImageMemoryBarrier.calloc(1, stack);
         pImageBarrier.sType$Default();
@@ -184,7 +198,7 @@ public class TrollCommands {
         pImageBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
         pImageBarrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
         pImageBarrier.image(vkImage);
-        instance.images.subresourceRange(stack, pImageBarrier.subresourceRange(), VK_IMAGE_ASPECT_COLOR_BIT);
+        instance.images.subresourceRange(stack, pImageBarrier.subresourceRange(), aspectMask);
 
         vkCmdPipelineBarrier(
                 commandBuffer, oldUsage != null ? oldUsage.stageMask() : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
