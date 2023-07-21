@@ -121,6 +121,13 @@ public class TrollImages {
     public long simpleSampler(
             MemoryStack stack, int magMinFilter, int mipMapMode, int addressMode, String name
     ) {
+        return createSampler(stack, magMinFilter, mipMapMode, addressMode, 0f, 0f, true, name);
+    }
+
+    public long createSampler(
+            MemoryStack stack, int magMinFilter, int mipMapMode, int addressMode,
+            float minLod, float maxLod, boolean normalized, String name
+    ) {
         var ciSampler = VkSamplerCreateInfo.calloc(stack);
         ciSampler.sType$Default();
         ciSampler.magFilter(magMinFilter);
@@ -133,10 +140,10 @@ public class TrollImages {
         ciSampler.anisotropyEnable(false);
         ciSampler.compareEnable(false);
         ciSampler.compareOp(VK_COMPARE_OP_ALWAYS);
-        ciSampler.minLod(0f);
-        ciSampler.maxLod(0f);
+        ciSampler.minLod(minLod);
+        ciSampler.maxLod(maxLod);
         ciSampler.borderColor(VK_BORDER_COLOR_INT_OPAQUE_BLACK);
-        ciSampler.unnormalizedCoordinates(false);
+        ciSampler.unnormalizedCoordinates(!normalized);
 
         var pSampler = stack.callocLong(1);
         assertVkSuccess(vkCreateSampler(
@@ -146,5 +153,18 @@ public class TrollImages {
         long sampler = pSampler.get(0);
         instance.debug.name(stack, sampler, VK_OBJECT_TYPE_SAMPLER, name);
         return sampler;
+    }
+
+    public int chooseDepthStencilFormat(MemoryStack stack, int... preferredFormats) {
+        var formatProps = VkFormatProperties.calloc(stack);
+        for (int candidateFormat : preferredFormats) {
+            vkGetPhysicalDeviceFormatProperties(instance.vkPhysicalDevice(), candidateFormat, formatProps);
+
+            if ((formatProps.optimalTilingFeatures() & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0) {
+                return candidateFormat;
+            }
+        }
+
+        throw new IllegalArgumentException("None of the preferred formats supports depth-stencil operations");
     }
 }
