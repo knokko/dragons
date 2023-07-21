@@ -205,7 +205,7 @@ public class SimpleRingApproximation {
                 instance.commands.dynamicViewportAndScissor(stack, commandBuffer, swapchainImage.width(), swapchainImage.height());
                 vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-                int numTriangles = 3_000_000;
+                int numTriangles = 30_000_000;
                 var pushConstants = stack.calloc(20);
                 pushConstants.putFloat(0, 0.6f);
                 pushConstants.putFloat(4, 0.8f);
