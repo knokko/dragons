@@ -265,7 +265,7 @@ class Pm2Scene internal constructor(
             vkCmdEndRenderPass(commandBuffer)
 
             if (oldLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-                troll.commands.transitionLayout(
+                troll.commands.transitionColorLayout(
                     stack, commandBuffer, destImage, oldLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     ResourceUsage(srcAccessMask, srcStageMask),
                     ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
@@ -286,7 +286,7 @@ class Pm2Scene internal constructor(
             )
 
             if (newLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-                troll.commands.transitionLayout(
+                troll.commands.transitionColorLayout(
                     stack, commandBuffer, destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, newLayout,
                     ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
                     ResourceUsage(dstAccessMask, dstStageMask)

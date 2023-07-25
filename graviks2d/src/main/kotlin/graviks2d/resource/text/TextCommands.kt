@@ -53,7 +53,7 @@ internal fun rasterizeTextAtlas(
             }
             vkCmdEndRenderPass(commandBuffer)
 
-            troll.commands.transitionLayout(
+            troll.commands.transitionColorLayout(
                 stack, commandBuffer, textCache.textOddAtlas.vkImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 ResourceUsage(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),

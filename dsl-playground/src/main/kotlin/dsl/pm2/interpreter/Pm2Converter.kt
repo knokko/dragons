@@ -62,7 +62,7 @@ class Pm2Converter : ProcModel2BaseListener() {
         for (index in 1 until identifiers.size step 2) {
             val transferTypeName = identifiers[index].text
             val transferVariableName = identifiers[index + 1].text
-            val transferVariableType = types.getType(transferTypeName) ?: throw Pm2CompileError("Unknown type $transferTypeName")
+            val transferVariableType = types.getType(transferTypeName)
             instructions.add(Pm2Instruction(
                     Pm2InstructionType.TransferVariable, lineNumber = ctx.start.line,
                     name = transferVariableName, variableType = transferVariableType

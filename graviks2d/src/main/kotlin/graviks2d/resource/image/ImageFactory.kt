@@ -62,14 +62,14 @@ internal fun createImagePair(
         )
         val commandBuffer = instance.troll.commands.createPrimaryBuffers(commandPool, 1, "$name-transfer")[0]
         instance.troll.commands.begin(commandBuffer, stack, "$name-transfer")
-        instance.troll.commands.transitionLayout(
+        instance.troll.commands.transitionColorLayout(
             stack, commandBuffer, image.vkImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             null, ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
         )
         instance.troll.commands.copyBufferToImage(
             commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, image.vkImage, width, height, stagingBuffer.buffer.vkBuffer
         )
-        instance.troll.commands.transitionLayout(
+        instance.troll.commands.transitionColorLayout(
             stack, commandBuffer, image.vkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),

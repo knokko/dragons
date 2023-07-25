@@ -99,7 +99,7 @@ internal class ContextCommands(
 
             resetBeginCommandBuffer(stack)
 
-            context.instance.troll.commands.transitionLayout(
+            context.instance.troll.commands.transitionColorLayout(
                 stack, commandBuffer, context.targetImages.colorImage.vkImage,
                 VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, null,
                 ResourceUsage(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
@@ -127,7 +127,7 @@ internal class ContextCommands(
             }
 
             val troll = context.instance.troll
-            troll.commands.transitionLayout(
+            troll.commands.transitionColorLayout(
                 stack, commandBuffer, context.targetImages.colorImage.vkImage,
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 ResourceUsage(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
@@ -149,7 +149,7 @@ internal class ContextCommands(
                 checkPresent(imageDstStageMask, "imageDstStageMask")
 
                 if (originalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-                    troll.commands.transitionLayout(
+                    troll.commands.transitionColorLayout(
                         stack, commandBuffer, destImage, originalImageLayout!!, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         ResourceUsage(imageSrcAccessMask!!, imageSrcStageMask!!),
                         ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
@@ -170,7 +170,7 @@ internal class ContextCommands(
                 }
 
                 if (finalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-                    troll.commands.transitionLayout(
+                    troll.commands.transitionColorLayout(
                         stack, commandBuffer, destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, finalImageLayout!!,
                         ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
                         ResourceUsage(imageDstAccessMask!!, imageDstStageMask!!)
@@ -185,7 +185,7 @@ internal class ContextCommands(
                 )
             }
 
-            troll.commands.transitionLayout(
+            troll.commands.transitionColorLayout(
                 stack, commandBuffer, context.targetImages.colorImage.vkImage,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                 ResourceUsage(VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
