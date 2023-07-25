@@ -24,6 +24,7 @@ import static org.lwjgl.vulkan.KHRSurface.vkGetPhysicalDeviceSurfaceSupportKHR;
 import static org.lwjgl.vulkan.VK10.*;
 import static org.lwjgl.vulkan.VK11.vkGetPhysicalDeviceFeatures2;
 import static troll.exceptions.VulkanFailureException.assertVkSuccess;
+import static troll.exceptions.VulkanFailureException.assertVmaSuccess;
 
 class TrollDeviceBuilder {
 
@@ -234,9 +235,9 @@ class TrollDeviceBuilder {
 
             var pAllocator = stack.callocPointer(1);
 
-            assertVkSuccess(vmaCreateAllocator(
+            assertVmaSuccess(vmaCreateAllocator(
                     ciAllocator, pAllocator
-            ), "VmaCreateAllocator", "TrollDeviceBuilder");
+            ), "CreateAllocator", "TrollDeviceBuilder");
             vmaAllocator = pAllocator.get(0);
         }
 

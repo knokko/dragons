@@ -2,7 +2,6 @@ package dragons.plugins.standard.vulkan.render.entity
 
 import dragons.state.StaticGraphicsState
 import dragons.vulkan.memory.VulkanImage
-import dragons.vulkan.util.assertVmaSuccess
 import graviks2d.util.Color
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.memByteBuffer
@@ -12,6 +11,7 @@ import org.lwjgl.util.vma.VmaAllocationInfo
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
 import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.exceptions.VulkanFailureException.assertVmaSuccess
 import java.nio.ByteBuffer
 import javax.imageio.ImageIO
 

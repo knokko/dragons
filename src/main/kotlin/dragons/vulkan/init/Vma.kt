@@ -1,6 +1,5 @@
 package dragons.vulkan.init
 
-import dragons.vulkan.util.assertVmaSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.util.vma.VmaAllocatorCreateInfo
@@ -13,6 +12,7 @@ import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkInstance
 import org.lwjgl.vulkan.VkPhysicalDevice
 import org.slf4j.LoggerFactory.getLogger
+import troll.exceptions.VulkanFailureException.assertVmaSuccess
 
 internal fun initVma(
     vkInstance: VkInstance, vkPhysicalDevice: VkPhysicalDevice, vkDevice: VkDevice,
@@ -47,7 +47,7 @@ internal fun initVma(
 
         val pAllocator = stack.callocPointer(1)
         logger.info("Creating VMA allocator...")
-        assertVmaSuccess(vmaCreateAllocator(ciAllocator, pAllocator), "CreateAllocator")
+        assertVmaSuccess(vmaCreateAllocator(ciAllocator, pAllocator), "CreateAllocator", null)
         logger.info("Created VMA allocator")
         pAllocator[0]
     }

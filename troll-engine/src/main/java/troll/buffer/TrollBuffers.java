@@ -10,6 +10,7 @@ import static org.lwjgl.util.vma.Vma.*;
 import static org.lwjgl.util.vma.Vma.VMA_ALLOCATION_CREATE_MAPPED_BIT;
 import static org.lwjgl.vulkan.VK10.*;
 import static troll.exceptions.VulkanFailureException.assertVkSuccess;
+import static troll.exceptions.VulkanFailureException.assertVmaSuccess;
 
 public class TrollBuffers {
 
@@ -34,9 +35,9 @@ public class TrollBuffers {
             var pBuffer = stack.callocLong(1);
             var pAllocation = stack.callocPointer(1);
 
-            assertVkSuccess(vmaCreateBuffer(
+            assertVmaSuccess(vmaCreateBuffer(
                     instance.vmaAllocator(), ciBuffer, ciAllocation, pBuffer, pAllocation, null
-            ), "VmaCreateBuffer", name);
+            ), "CreateBuffer", name);
             instance.debug.name(stack, pBuffer.get(0), VK_OBJECT_TYPE_BUFFER, name);
             return new VmaBuffer(pBuffer.get(0), pAllocation.get(0), size);
         }
@@ -61,9 +62,9 @@ public class TrollBuffers {
             var pAllocation = stack.callocPointer(1);
             var pInfo = VmaAllocationInfo.calloc(stack);
 
-            assertVkSuccess(vmaCreateBuffer(
+            assertVmaSuccess(vmaCreateBuffer(
                     instance.vmaAllocator(), ciBuffer, ciAllocation, pBuffer, pAllocation, pInfo
-            ), "VmaCreateBuffer", name);
+            ), "CreateBuffer", name);
             instance.debug.name(stack, pBuffer.get(0), VK_OBJECT_TYPE_BUFFER, name);
             return new MappedVmaBuffer(new VmaBuffer(pBuffer.get(0), pAllocation.get(0), size), pInfo.pMappedData());
         }

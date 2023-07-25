@@ -9,6 +9,7 @@ import static org.lwjgl.util.vma.Vma.VMA_MEMORY_USAGE_AUTO;
 import static org.lwjgl.util.vma.Vma.vmaCreateImage;
 import static org.lwjgl.vulkan.VK10.*;
 import static troll.exceptions.VulkanFailureException.assertVkSuccess;
+import static troll.exceptions.VulkanFailureException.assertVmaSuccess;
 
 public class TrollImages {
 
@@ -66,9 +67,9 @@ public class TrollImages {
 
         var pImage = stack.callocLong(1);
         var pAllocation = stack.callocPointer(1);
-        assertVkSuccess(vmaCreateImage(
+        assertVmaSuccess(vmaCreateImage(
                 instance.vmaAllocator(), ciImage, ciAllocation, pImage, pAllocation, null
-        ), "VmaCreateImage", name);
+        ), "CreateImage", name);
         long image = pImage.get(0);
         long allocation = pAllocation.get(0);
         instance.debug.name(stack, image, VK_OBJECT_TYPE_IMAGE, name);

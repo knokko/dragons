@@ -17,6 +17,13 @@ public class VulkanFailureException extends RuntimeException {
         throw new VulkanFailureException(functionName, result, context);
     }
 
+    public static void assertVmaSuccess(int result, String functionName, String context) {
+        if (result == VK_SUCCESS) return;
+
+        if (!functionName.startsWith("vma")) functionName = "vma" + functionName;
+        throw new VulkanFailureException(functionName, result, context);
+    }
+
     static String generateMessage(String functionName, int result, String context) {
 
         // First try the constants starting with VK_ERROR_
