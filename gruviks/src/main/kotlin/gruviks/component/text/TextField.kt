@@ -65,7 +65,7 @@ class TextField(
             agent.giveFeedback(RenderFeedback())
         } else if (event is UpdateEvent) {
             val currentTime = currentTimeMillis()
-            if (currentTime - lastCaretTime > 500) {
+            if (agent.hasKeyboardFocus() && currentTime - lastCaretTime > 500) {
                 lastCaretTime = currentTime
                 showCaret = !showCaret
                 agent.giveFeedback(RenderFeedback())
