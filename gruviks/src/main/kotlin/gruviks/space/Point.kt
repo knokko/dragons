@@ -6,6 +6,8 @@ class Point(
 ) {
     override fun toString() = "Point($x, $y)"
 
+    override fun equals(other: Any?) = other is Point && this.x == other.x && this.y == other.y
+
     fun toRectRegion() = RectRegion(x, y, x + Coordinate.SMALLEST_POSITIVE_VALUE, y + Coordinate.SMALLEST_POSITIVE_VALUE)
 
     companion object {

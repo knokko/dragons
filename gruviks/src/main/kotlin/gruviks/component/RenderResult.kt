@@ -22,6 +22,7 @@ class RenderResult(
      */
     val propagateMissedCursorEvents: Boolean
 ) {
+    override fun toString() = "RenderResult(drawnRegion=$drawnRegion, recent=$recentDrawnRegion, propagate=$propagateMissedCursorEvents)"
 }
 
 abstract class DrawnRegion(
@@ -117,6 +118,11 @@ class TransformedDrawnRegion(
                 transformBack(it.maxY, refMinY, refMaxY)
         ) })
     }
+
+    override fun toString() = "TransformedRegion(region=$region, ref=($refMinX, $refMinY, $refMaxX, $refMaxY)"
+
+    override fun equals(other: Any?) = other is TransformedDrawnRegion && region == other.region &&
+            refMinX == other.refMinX && refMinY == other.refMinY && refMaxX == other.refMaxX && refMaxY == other.refMaxY
 }
 
 class CompositeDrawnRegion(
@@ -132,4 +138,6 @@ class CompositeDrawnRegion(
     override fun pushRectangles(destination: MutableCollection<RectangularDrawnRegion>) {
         for (region in regions) region.pushRectangles(destination)
     }
+
+    override fun toString() = "Composite($regions)"
 }
