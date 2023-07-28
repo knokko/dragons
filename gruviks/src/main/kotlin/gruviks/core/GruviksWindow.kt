@@ -50,6 +50,9 @@ class GruviksWindow(
     }
 
     fun setRootComponent(newComponent: Component) {
+        if (this::rootAgent.isInitialized && this.rootAgent.isSubscribed(RemoveEvent::class)) {
+            this.rootComponent.processEvent(RemoveEvent())
+        }
         this.rootComponent = newComponent
         this.rootAgent = ComponentAgent(cursorTracker, this::processFeedback) { this.keyboardFocusState == KeyboardFocusState.Focus }
         this.didRequestRender = true

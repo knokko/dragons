@@ -163,6 +163,7 @@ fun createAndControlGruviksWindow(
 
         sleep(1)
     }
+    gruviksWindow.fireEvent(RawRemoveEvent())
 
     vkDeviceWaitIdle(graviksWindow.troll.vkDevice())
     destroyFunction()

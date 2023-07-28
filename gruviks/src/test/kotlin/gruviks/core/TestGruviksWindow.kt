@@ -14,10 +14,7 @@ import gruviks.component.fill.SimpleColorFillComponent
 import gruviks.component.text.TextButton
 import gruviks.component.text.TextButtonStyle
 import gruviks.event.*
-import gruviks.event.raw.CLICK_DURATION_THRESHOLD
-import gruviks.event.raw.RawCursorMoveEvent
-import gruviks.event.raw.RawCursorPressEvent
-import gruviks.event.raw.RawCursorReleaseEvent
+import gruviks.event.raw.*
 import gruviks.feedback.ExitFeedback
 import gruviks.feedback.ReplaceMeFeedback
 import gruviks.util.DummyGraviksTarget
@@ -34,14 +31,36 @@ class TestGruviksWindow {
 
     @Test
     fun testSetRootComponent() {
-        val window = GruviksWindow(SimpleColorFillComponent(Color.rgbInt(1, 2, 3)))
+        var wasRemoved = false
+        class OriginalRootComponent : Component() {
+            override fun subscribeToEvents() {
+                agent.subscribe(RemoveEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                assertTrue(event is RemoveEvent)
+                assertFalse(wasRemoved)
+                wasRemoved = true
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean): RenderResult {
+                return RenderResult(
+                        drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f),
+                        propagateMissedCursorEvents = true
+                )
+            }
+        }
+
+        val window = GruviksWindow(OriginalRootComponent())
 
         var pressedButton: Int? = null
 
         val nextComponent = TextButton("test", null, textButtonStyle) { event, _ ->
             pressedButton = event.button
         }
+        assertFalse(wasRemoved)
         window.setRootComponent(nextComponent)
+        assertTrue(wasRemoved)
 
         // window.setRootComponent should initialize the component agent, so attempting to initialize it again
         // should throw an IllegalStateException
@@ -54,6 +73,8 @@ class TestGruviksWindow {
         window.fireEvent(RawCursorPressEvent(cursor, 6))
         window.fireEvent(RawCursorReleaseEvent(cursor, 6))
         assertEquals(6, pressedButton)
+
+        window.fireEvent(RawRemoveEvent())
     }
 
     @Test
@@ -241,5 +262,39 @@ class TestGruviksWindow {
         window.render(DummyGraviksTarget(), true, null)
         assertTrue(renderedSecondComponent)
         assertTrue(receivedCursorEnter)
+    }
+
+    @Test
+    fun testRemoveEventSubscribed() {
+        var wasRemoved = false
+        class TestRemoveComponent : Component() {
+            override fun subscribeToEvents() {
+                agent.subscribe(RemoveEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                assertFalse(wasRemoved)
+                assertTrue(event is RemoveEvent)
+                wasRemoved = true
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean): RenderResult {
+                throw UnsupportedOperationException()
+            }
+
+        }
+        val window = GruviksWindow(TestRemoveComponent())
+        assertFalse(wasRemoved)
+        window.fireEvent(RawRemoveEvent())
+        assertTrue(wasRemoved)
+    }
+
+    @Test
+    fun testRemoveEventNotSubscribed() {
+        val window = GruviksWindow(SimpleColorFillComponent(Color.rgbInt(5, 6, 7)))
+        window.fireEvent(RawRemoveEvent())
+
+        // We tested that the window did NOT send a RemoveEvent to the SimpleColorFillComponent
+        // If it did, the SimpleColorFillComponent would have thrown an exception
     }
 }

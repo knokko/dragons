@@ -87,6 +87,10 @@ class RawEventAdapter {
             result.add(UpdateEvent())
         }
 
+        if (event is RawRemoveEvent) {
+            result.add(RemoveEvent())
+        }
+
         return result
     }
 

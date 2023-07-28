@@ -21,3 +21,5 @@ class EventPosition(val x: Float, val y: Float) {
 
     override fun hashCode() = x.hashCode() + 31 * y.hashCode()
 }
+
+class RemoveEvent : Event()

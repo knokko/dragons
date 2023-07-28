@@ -8,6 +8,7 @@ import gruviks.component.*
 import gruviks.component.agent.ComponentAgent
 import gruviks.component.agent.CursorTracker
 import gruviks.component.agent.TrackedCursor
+import gruviks.component.menu.controller.SimpleFlatController
 import gruviks.event.*
 import gruviks.feedback.*
 import gruviks.space.*
@@ -26,9 +27,15 @@ class SimpleFlatMenu(
     private var aspectRatio = 1f
 
     private val componentTree = RectTree<ComponentNode>()
+    private val componentMap = mutableMapOf<UUID, ComponentNode>()
     private val componentsToAdd = mutableListOf<Pair<Component, RectRegion>>()
+    private val componentsToRemove = LinkedList<UUID>()
+
+    private val recentlyRemovedRegions = mutableListOf<RectRegion>()
 
     private val updateComponents = mutableSetOf<ComponentNode>()
+
+    private val controllers = mutableSetOf<SimpleFlatController>()
 
     private var cameraPosition = Point.percentage(0, 0)
     private var lastVisibleRegion: RectRegion? = null
@@ -39,6 +46,18 @@ class SimpleFlatMenu(
     private var keyboardFocusNode: ComponentNode? = null
 
     private fun updateComponentTree(giveRenderFeedback: Boolean) {
+        while (componentsToRemove.isNotEmpty()) {
+            val id = componentsToRemove.removeFirst()
+            val node = componentMap.remove(id) ?: continue
+            componentTree.remove(node, node.region)
+            if (node.agent.isSubscribed(UpdateEvent::class)) {
+                if (!updateComponents.remove(node)) throw IllegalStateException("Failed to delete component")
+            }
+            if (node.agent.isSubscribed(RemoveEvent::class)) {
+                node.component.processEvent(RemoveEvent())
+            }
+            if (node.agent.lastRenderResult != null) recentlyRemovedRegions.add(node.region)
+        }
         while (componentsToAdd.isNotEmpty()) {
             val (component, region) = componentsToAdd.removeLast()
             val childCursorTracker = NodeCursorTracker(agent.cursorTracker, region, this::getVisibleRegion)
@@ -48,7 +67,7 @@ class SimpleFlatMenu(
                 focusNode != null && focusNode.component == component && agent.hasKeyboardFocus()
             }
             childCursorTracker.getLastRenderResult = { childAgent.lastRenderResult }
-            val node = ComponentNode(component, childAgent, childFeedback)
+            val node = ComponentNode(component, childAgent, region, childFeedback)
             component.initAgent(childAgent)
             component.subscribeToEvents()
             childAgent.forbidFutureSubscriptions()
@@ -58,6 +77,7 @@ class SimpleFlatMenu(
             }
 
             componentTree.insert(node, region)
+            componentMap[node.component.id] = node
             if (giveRenderFeedback) agent.giveFeedback(RenderFeedback())
         }
     }
@@ -115,12 +135,24 @@ class SimpleFlatMenu(
         updateComponentTree(false)
     }
 
-    fun addComponent(component: Component, region: RectRegion) {
+    fun addComponent(component: Component, region: RectRegion): UUID {
         componentsToAdd.add(Pair(component, region))
+        if (didInitAgent()) agent.giveFeedback(RenderFeedback())
+        return component.id
+    }
+
+    fun removeComponent(id: UUID) {
+        componentsToRemove.add(id)
         if (didInitAgent()) agent.giveFeedback(RenderFeedback())
     }
 
+    fun addController(controller: SimpleFlatController) {
+        controller.init(this)
+        controllers.add(controller)
+    }
+
     override fun processEvent(event: Event) {
+        for (controller in controllers) controller.processEvent(event)
         updateComponentTree(true)
 
         val visitedNodes = mutableSetOf<ComponentNode>()
@@ -251,6 +283,12 @@ class SimpleFlatMenu(
                 node.component.processEvent(event)
                 visitedNodes.add(node)
             }
+        } else if (event is RemoveEvent) {
+            for (node in componentMap.values) {
+                if (node.agent.isSubscribed(RemoveEvent::class)) {
+                    node.component.processEvent(RemoveEvent())
+                }
+            }
         } else {
             throw UnsupportedOperationException("Unknown event $event")
         }
@@ -292,6 +330,11 @@ class SimpleFlatMenu(
             }
         }
 
+        for (region in recentlyRemovedRegions) {
+            val transformed = oldVisibleRegion.transformBack(region)
+            result.add(BackgroundRegion(transformed.minX, transformed.minY, transformed.maxX, transformed.maxY))
+        }
+
         return result.filter { it.minX < 1f && it.minY < 1f && it.maxX > 0f && it.maxY > 0f }.map {
             BackgroundRegion(max(0f, it.minX), max(0f, it.minY), min(1f, it.maxX), min(1f, it.maxY))
         }
@@ -315,6 +358,18 @@ class SimpleFlatMenu(
 
         val visibleRegion = getVisibleRegion()
         val visibleComponents = componentTree.findBetween(visibleRegion)
+
+        if (!shouldDrawBackground && backgroundColor.alpha > 0) {
+            for (region in recentlyRemovedRegions) {
+                val transformedRegion = visibleRegion.transformBack(region)
+                target.fillRect(
+                        transformedRegion.minX, transformedRegion.minY,
+                        transformedRegion.maxX, transformedRegion.maxY, backgroundColor
+                )
+                recentDrawnRegions.add(transformedRegion)
+            }
+        }
+        recentlyRemovedRegions.clear()
 
         for ((region, node) in visibleComponents) {
             val transformedRegion = visibleRegion.transformBack(region)
@@ -447,9 +502,12 @@ class SimpleFlatMenu(
 private class ComponentNode(
     val component: Component,
     val agent: ComponentAgent,
+    val region: RectRegion,
     val feedback: MutableList<Feedback>
 ) {
     var didRequestRender = true
+
+    override fun toString() = "Node(component=$component at $region)"
 }
 
 private class NodeCursorTracker(

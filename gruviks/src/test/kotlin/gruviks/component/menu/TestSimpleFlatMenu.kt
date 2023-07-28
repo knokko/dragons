@@ -5,6 +5,7 @@ import graviks2d.target.GraviksTarget
 import graviks2d.util.Color
 import gruviks.component.*
 import gruviks.component.agent.*
+import gruviks.component.fill.SimpleColorFillComponent
 import gruviks.component.test.ColorShuffleComponent
 import gruviks.event.*
 import gruviks.feedback.*
@@ -1131,5 +1132,217 @@ class TestSimpleFlatMenu {
 
         menu.processEvent(UpdateEvent())
         assertTrue(updateComponent.receivedUpdate)
+    }
+
+    @Test
+    fun testPropagateRemoveEvent() {
+
+        var wasRemoved = false
+        class RemoveListener : Component() {
+            override fun subscribeToEvents() {
+                agent.subscribe(RemoveEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                assertTrue(event is RemoveEvent)
+                wasRemoved = true
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean): RenderResult {
+                throw UnsupportedOperationException()
+            }
+        }
+
+        val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.BLACK)
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK) { false })
+        menu.subscribeToEvents()
+        menu.addComponent(RemoveListener(), RectRegion.percentage(10, 20, 30, 40))
+        menu.addComponent(SimpleColorFillComponent(Color.BLUE), RectRegion.percentage(50, 60, 70, 80))
+
+        menu.processEvent(RemoveEvent())
+        assertTrue(wasRemoved)
+    }
+
+    @Test
+    fun testRemoveComponent() {
+        var removeCounter = 0
+
+        class TestComponent(
+                val shouldListenRemove: Boolean,
+                val onClick: () -> Unit,
+                val onRender: () -> Unit
+        ) : Component() {
+            override fun subscribeToEvents() {
+                agent.subscribe(CursorClickEvent::class)
+                if (shouldListenRemove) agent.subscribe(RemoveEvent::class)
+            }
+
+            override fun processEvent(event: Event) {
+                if (event is CursorClickEvent) onClick()
+                else if (shouldListenRemove && event is RemoveEvent) removeCounter += 1
+                else throw UnsupportedOperationException("Event is $event")
+            }
+
+            override fun render(target: GraviksTarget, force: Boolean): RenderResult {
+                target.fillRect(0f, 0f, 1f, 1f, Color.GREEN)
+                onRender()
+                return RenderResult(
+                        drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f),
+                        propagateMissedCursorEvents = false
+                )
+            }
+
+        }
+
+        var clickCounter1 = 0
+        var renderCounter1 = 0
+        var clickCounter2 = 0
+        var renderCounter2 = 0
+        val target = DummyGraviksTarget()
+
+        val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.RED)
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK) { false })
+        menu.subscribeToEvents()
+
+        val component1 = menu.addComponent(
+                TestComponent(true, { clickCounter1 += 1 }, { renderCounter1 += 1 }),
+                RectRegion.percentage(10, 20, 30, 40)
+        )
+        val component2 = menu.addComponent(
+                TestComponent(false, { clickCounter2 += 1 }, { renderCounter2 += 1 }),
+                RectRegion.percentage(50, 50, 70, 90)
+        )
+        assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
+        val renderResult1 = menu.render(target, true)
+        assertEquals(1, renderCounter1)
+        assertEquals(1, renderCounter2)
+        assertEquals(3, target.fillRectCounter)
+
+        val entireRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f)
+        assertEquals(entireRegion, renderResult1.drawnRegion)
+        assertEquals(entireRegion, renderResult1.recentDrawnRegion)
+
+        assertEquals(0, clickCounter1)
+        menu.processEvent(CursorClickEvent(Cursor(0), EventPosition(0.25f, 0.25f), 0))
+        assertEquals(1, clickCounter1)
+
+        assertEquals(0, removeCounter)
+        menu.removeComponent(component1)
+        menu.processEvent(UpdateEvent())
+        assertEquals(1, removeCounter)
+
+        menu.processEvent(CursorClickEvent(Cursor(0), EventPosition(0.25f, 0.25f), 0))
+        assertEquals(1, clickCounter1)
+        assertEquals(0, clickCounter2)
+        menu.processEvent(CursorClickEvent(Cursor(0), EventPosition(0.6f, 0.6f), 0))
+        assertEquals(1, clickCounter2)
+
+        assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
+        val renderResult2 = menu.render(target, false)
+        assertEquals(1, renderCounter1)
+        assertEquals(1, renderCounter2)
+
+        // 3 for the previous render + 1 fillRect to overwrite component1 with the background color
+        assertEquals(4, target.fillRectCounter)
+
+        assertEquals(entireRegion, renderResult2.drawnRegion)
+        assertEquals(RectangularDrawnRegion(0.1f, 0.2f, 0.3f, 0.4f), renderResult2.recentDrawnRegion)
+
+        println("renderResult1 is $renderResult1")
+        println("renderResult2 is $renderResult2")
+
+        menu.removeComponent(component2)
+        assertEquals(1, removeCounter)
+        menu.processEvent(CursorClickEvent(Cursor(0), EventPosition(0.6f, 0.6f), 0))
+        assertEquals(1, clickCounter2)
+
+        assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
+        val renderResult3 = menu.render(target, false)
+        assertEquals(1, renderCounter2)
+        assertEquals(5, target.fillRectCounter) // It should have overwritten component2
+        assertEquals(entireRegion, renderResult3.drawnRegion)
+        assertEquals(RectangularDrawnRegion(0.5f, 0.5f, 0.7f, 0.9f), renderResult3.recentDrawnRegion)
+
+        assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
+        val renderResult4 = menu.render(target, false)
+        assertEquals(5, target.fillRectCounter)
+        assertEquals(entireRegion, renderResult4.drawnRegion)
+        assertNull(renderResult4.recentDrawnRegion)
+    }
+
+    @Test
+    fun testRemoveComponentFromTranslucentMenu() {
+        val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.rgbaInt(200, 0, 0, 100))
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK) { false })
+        menu.subscribeToEvents()
+
+        val target = DummyGraviksTarget()
+        val entireRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f)
+        val componentRegion = RectangularDrawnRegion(0.5f, 0.5f, 1f, 1f)
+
+        val component = menu.addComponent(
+                SimpleColorFillComponent(Color.GREEN),
+                RectRegion.percentage(50, 50, 100, 100)
+        )
+        assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
+        val renderResult1 = menu.render(target, false)
+        assertEquals(2, target.fillRectCounter)
+        assertEquals(entireRegion, renderResult1.drawnRegion)
+        assertEquals(entireRegion, renderResult1.recentDrawnRegion)
+
+        menu.removeComponent(component)
+
+        val redrawRegions2 = menu.regionsToRedrawBeforeNextRender()
+        assertEquals(1, redrawRegions2.size)
+        assertEquals(BackgroundRegion(0.5f, 0.5f, 1f, 1f), redrawRegions2.iterator().next())
+        val renderResult2 = menu.render(target, false)
+        assertEquals(3, target.fillRectCounter)
+        assertEquals(entireRegion, renderResult2.drawnRegion)
+        assertEquals(componentRegion, renderResult2.recentDrawnRegion)
+
+        assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
+        val renderResult3 = menu.render(target, false)
+        assertEquals(3, target.fillRectCounter)
+        assertEquals(entireRegion, renderResult3.drawnRegion)
+        assertNull(renderResult3.recentDrawnRegion)
+    }
+
+    @Test
+    fun testRemoveComponentFromTransparentMenu() {
+        val menu = SimpleFlatMenu(SpaceLayout.Simple, Color.TRANSPARENT)
+        menu.initAgent(ComponentAgent(DummyCursorTracker(), DUMMY_FEEDBACK) { false })
+        menu.subscribeToEvents()
+
+        val target = DummyGraviksTarget()
+        val transformedRegion = TransformedDrawnRegion(
+                region = RectangularDrawnRegion(0f, 0f, 1f, 1f),
+                0.5f, 0.5f, 1f, 1f
+        )
+
+        val component = menu.addComponent(
+                SimpleColorFillComponent(Color.GREEN),
+                RectRegion.percentage(50, 50, 100, 100)
+        )
+        assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
+        val renderResult1 = menu.render(target, false)
+        assertEquals(1, target.fillRectCounter)
+        assertEquals(transformedRegion, renderResult1.drawnRegion)
+        assertEquals(transformedRegion, renderResult1.recentDrawnRegion)
+
+        menu.removeComponent(component)
+
+        val redrawRegions2 = menu.regionsToRedrawBeforeNextRender()
+        assertEquals(1, redrawRegions2.size)
+        assertEquals(BackgroundRegion(0.5f, 0.5f, 1f, 1f), redrawRegions2.iterator().next())
+        val renderResult2 = menu.render(target, false)
+        assertEquals(1, target.fillRectCounter)
+        assertNull(renderResult2.drawnRegion)
+        assertNull(renderResult2.recentDrawnRegion)
+
+        assertTrue(menu.regionsToRedrawBeforeNextRender().isEmpty())
+        val renderResult3 = menu.render(target, false)
+        assertEquals(1, target.fillRectCounter)
+        assertNull(renderResult2.drawnRegion)
+        assertNull(renderResult3.recentDrawnRegion)
     }
 }
