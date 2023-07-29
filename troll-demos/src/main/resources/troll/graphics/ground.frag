@@ -18,7 +18,7 @@ void main() {
     float kd = 0.7;
     vec3 toLight = normalize(vec3(1.0, 10.0, 0.0));
     vec3 toCamera = normalize(-worldPosition);
-    if (sqrt(dot(worldPosition, worldPosition)) < 30 && remainderX != remainderZ) ka += 0.2;
+    if (sqrt(worldPosition.x * worldPosition.x + worldPosition.z * worldPosition.z) < 30 && remainderX != remainderZ) ka += 0.2;
     vec3 terrainColor = vec3(0.4, 0.1, 0.0);
 
     vec3 outputColor = ka * terrainColor + kd * dot(toLight, normal) * terrainColor;
