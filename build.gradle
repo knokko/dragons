@@ -137,6 +137,7 @@ project(':troll-engine') {
 project(':troll-demos') {
     dependencies {
         implementation project(':troll-engine')
+        implementation project(':profiler')
         implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
         implementation "org.lwjgl:lwjgl"
         implementation "org.lwjgl:lwjgl-vma"
