@@ -2,12 +2,13 @@ package troll.demos;
 
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
-import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
+import profiler.performance.PerformanceProfiler;
+import profiler.performance.PerformanceStorage;
 import troll.builder.TrollBuilder;
 import troll.builder.TrollSwapchainBuilder;
-import troll.builder.instance.ValidationFeatures;
+import troll.cull.FrustumCuller;
 import troll.images.VmaImage;
 import troll.instance.TrollInstance;
 import troll.pipelines.ShaderInfo;
@@ -15,11 +16,13 @@ import troll.swapchain.SwapchainResourceManager;
 import troll.sync.ResourceUsage;
 import troll.sync.WaitSemaphore;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 
 import static java.lang.Math.*;
@@ -55,7 +58,8 @@ public class TerrainPlayground {
 
     private static int minHeight = Integer.MAX_VALUE;
     private static int maxHeight = Integer.MIN_VALUE;
-    private static ShortBuffer hostHeightBuffer;
+    private static HeightLookup coarseHeightLookup;
+    private static HeightLookup fineHeightLookup;
 
     private static long createRenderPass(MemoryStack stack, TrollInstance troll, int depthFormat) {
         var attachments = VkAttachmentDescription.calloc(2, stack);
@@ -213,7 +217,7 @@ public class TerrainPlayground {
             int gridSize = (int) sqrt(numValues);
             if (gridSize * gridSize != numValues) throw new RuntimeException(numValues + " is not a square");
 
-            hostHeightBuffer = ByteBuffer.wrap(content).order(ByteOrder.BIG_ENDIAN).asShortBuffer();
+            ShortBuffer hostHeightBuffer = ByteBuffer.wrap(content).order(ByteOrder.BIG_ENDIAN).asShortBuffer();
 
             var image = troll.images.createSimple(
                     stack, gridSize, gridSize, VK_FORMAT_R16_SINT, VK_SAMPLE_COUNT_1_BIT,
@@ -240,6 +244,8 @@ public class TerrainPlayground {
                 } else stagingHostBuffer.put(previousValue);
             }
             System.out.println("lowest is " + minHeight + " and highest is " + maxHeight);
+            coarseHeightLookup = new HeightLookup(80, HEIGHT_IMAGE_NUM_PIXELS, hostHeightBuffer);
+            fineHeightLookup = new HeightLookup(400, HEIGHT_IMAGE_NUM_PIXELS, hostHeightBuffer);
 
             troll.commands.begin(commandBuffer, stack, "CopyHeightImage");
             troll.commands.transitionColorLayout(
@@ -275,10 +281,12 @@ public class TerrainPlayground {
     }
 
     public static void main(String[] args) throws InterruptedException {
+        var profiler = new PerformanceProfiler(new PerformanceStorage(), 1, name -> true);
+        profiler.start();
         var troll = new TrollBuilder(
                 VK_API_VERSION_1_2, "TerrainPlayground", VK_MAKE_VERSION(0, 1, 0)
         )
-                .validation(new ValidationFeatures(true, true, false, true, true))
+                //.validation(new ValidationFeatures(true, true, false, true, true))
                 .window(0L, 1000, 800, new TrollSwapchainBuilder(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT))
                 .build();
 
@@ -504,14 +512,16 @@ public class TerrainPlayground {
                 float fieldOfView = 45f;
                 float aspectRatio = (float) swapchainImage.width() / (float) swapchainImage.height();
 
+                float nearPlane = 0.1f;
+                float farPlane = 50_000f;
                 var cameraMatrix = new Matrix4f()
                         .scale(1f, -1f, 1f)
                         .perspective(
                             (float) toRadians(fieldOfView), aspectRatio,
-                            0.1f, 50_000f, true
+                                nearPlane, farPlane, true
                         )
                         .rotateX((float) toRadians(-camera.pitch))
-                        .rotateY((float) toRadians(-camera.yaw))
+                        .rotateY((float) toRadians(camera.yaw))
                         ;
                 cameraMatrix.getToAddress(uniformBuffer.hostAddress());
 
@@ -519,140 +529,33 @@ public class TerrainPlayground {
                 float cameraU = 2f * camera.x / HEIGHT_IMAGE_SIZE + 0.5f;
                 float cameraV = 2f * camera.z / HEIGHT_IMAGE_SIZE + 0.5f;
                 partitionTerrainSpace(cameraU, cameraV, 0.0001f, 0.2f, 8, fragmentsToRender);
-//                while (fragmentsToRender.size() > 4) fragmentsToRender.remove(fragmentsToRender.size() - 1);
-//                fragmentsToRender.remove(0);
-//                fragmentsToRender.remove(0);
-//                fragmentsToRender.remove(0);
 
-                var frustumCullMatrix = new Matrix4f()
-                        .perspective(
-                                (float) toRadians(fieldOfView), aspectRatio,
-                                0.1f, 50_000f, true
-                        )
-                        .rotateX((float) toRadians(-camera.pitch))
-                        .rotateY((float) toRadians(-camera.yaw))
-                        ;
+                var frustumCuller = new FrustumCuller(
+                        new Vector3f(), camera.yaw, camera.pitch, aspectRatio, fieldOfView, nearPlane, farPlane
+                );
 
                 float heightScale = 1f;
 
                 var pushConstants = stack.calloc(36);
                 int quadCount = 0;
                 int fragmentCount = 0;
-                int yawQuadCount = 0;
-                int xQuadCount = 0;
-                int pitchQuadCount = 0;
-                int zQuadCount = 0;
                 for (var fragment : fragmentsToRender) {
 
-                    float minScreenX = Float.POSITIVE_INFINITY;
-                    float maxScreenX = Float.NEGATIVE_INFINITY;
-                    float minScreenY = Float.POSITIVE_INFINITY;
-                    float maxScreenY = Float.NEGATIVE_INFINITY;
-                    float minZ = Float.POSITIVE_INFINITY;
-                    float maxZ = Float.NEGATIVE_INFINITY;
-                    float minYawDifference = Float.POSITIVE_INFINITY;
-                    float maxYawDifference = Float.NEGATIVE_INFINITY;
-                    float minYaw = Float.POSITIVE_INFINITY;
-                    float maxYaw = Float.NEGATIVE_INFINITY;
-                    boolean anyProperY = false;
+                    float minX = (fragment.minU - cameraU) * HEIGHT_IMAGE_SIZE;
+                    float minZ = (fragment.minV - cameraV) * HEIGHT_IMAGE_SIZE;
+                    float maxX = (fragment.maxU - cameraU) * HEIGHT_IMAGE_SIZE;
+                    float maxZ = (fragment.maxV - cameraV) * HEIGHT_IMAGE_SIZE;
+                    float threshold = 0.05f;
+                    float fragmentSize = max(fragment.maxU - fragment.minU, fragment.maxV - fragment.minV);
+                    var heightLookup = fragmentSize > threshold ? coarseHeightLookup : fineHeightLookup;
+                    short[] heightBounds = heightLookup.getHeights(fragment.minU, fragment.minV, fragment.maxU, fragment.maxV);
 
-                    float[][] uvs = {
-                            {fragment.minU, fragment.minV},
-                            {fragment.maxU, fragment.minV},
-                            {fragment.maxU, fragment.maxV},
-                            {fragment.minU, fragment.maxV}
-                    };
-                    //float dy = HEIGHT_IMAGE_SIZE * 0.3f * (abs(fragment.maxU - fragment.minU) + abs(fragment.maxV - fragment.minV));
-                    for (float[] uv : uvs) {
-                        float dx = (uv[0] - cameraU) * HEIGHT_IMAGE_SIZE;
-                        float dz = (uv[1] - cameraV) * HEIGHT_IMAGE_SIZE;
-                        float yaw = (float) toDegrees(atan2(dx, -dz));
-                        minYaw = min(minYaw, yaw);
-                        maxYaw = max(maxYaw, yaw);
+                    var aabb = new FrustumCuller.AABB(minX, heightBounds[0] - camera.y, minZ, maxX, heightBounds[1] - camera.y, maxZ);
+                    if (frustumCuller.shouldCullAABB(aabb)) continue;
 
-
-                        int minHeight = Integer.MAX_VALUE;
-                        int maxHeight = Integer.MIN_VALUE;
-                        for (int heightOffsetX = -1; heightOffsetX <= 1; heightOffsetX++) {
-                            for (int heightOffsetZ = -1; heightOffsetZ <= 1; heightOffsetZ++) {
-                                int heightIndexX = (int) (heightOffsetX + HEIGHT_IMAGE_NUM_PIXELS * uv[0]);
-                                if (heightIndexX < 0) heightIndexX = 0;
-                                if (heightIndexX >= HEIGHT_IMAGE_NUM_PIXELS) heightIndexX = HEIGHT_IMAGE_NUM_PIXELS - 1;
-
-                                int heightIndexZ = (int) (heightOffsetZ + HEIGHT_IMAGE_NUM_PIXELS * uv[1]);
-                                if (heightIndexZ < 0) heightIndexZ = 0;
-                                if (heightIndexZ >= HEIGHT_IMAGE_NUM_PIXELS) heightIndexZ = HEIGHT_IMAGE_NUM_PIXELS - 1;
-                                int heightIndex = heightIndexX + HEIGHT_IMAGE_NUM_PIXELS * heightIndexZ;
-                                int height = hostHeightBuffer.get(heightIndex);
-                                minHeight = min(minHeight, height);
-                                maxHeight = max(maxHeight, height);
-                            }
-                        }
-
-                        var rawLowScreen = frustumCullMatrix.transform(dx, minHeight - camera.y, dz, 1f, new Vector4f());
-                        var lowScreen = new Vector3f(rawLowScreen.x / rawLowScreen.w, rawLowScreen.y / rawLowScreen.w, rawLowScreen.z / rawLowScreen.w);
-                        var rawHighScreen = frustumCullMatrix.transform(dx, maxHeight - camera.y, dz, 1f, new Vector4f());
-                        var highScreen = new Vector3f(rawHighScreen.x / rawHighScreen.w, rawHighScreen.y / rawHighScreen.w, rawHighScreen.z / rawHighScreen.w);
-
-                        minScreenX = min(minScreenX, min(lowScreen.x, highScreen.x));
-                        maxScreenX = max(maxScreenX, max(lowScreen.x, highScreen.x));
-                        if (highScreen.y > lowScreen.y) {
-                            anyProperY = true;
-                        }
-                        minScreenY = min(minScreenY, min(lowScreen.y, highScreen.y));
-                        maxScreenY = max(maxScreenY, max(lowScreen.y, highScreen.y));
-
-                        float angleDifference = camera.yaw + yaw;
-                        minYawDifference = min(minYawDifference, angleDifference);
-                        maxYawDifference = max(maxYawDifference, angleDifference);
-
-                        minZ = min(minZ, min(lowScreen.z, highScreen.z));
-                        maxZ = max(maxZ, max(lowScreen.z, highScreen.z));
-                    }
-
-                    if (minYawDifference > 180) {
-                        minYawDifference -= 360;
-                        maxYawDifference -= 360;
-                    }
-
-                    //System.out.printf("minPitch is %.1f and maxPitch is %.1f and camera pitch is %.1f\n", minPitch + camera.pitch, maxPitch + camera.pitch, camera.pitch);
-                    //if (maxScreenX < -1 || minScreenX > 1 || maxScreenY < -1 || minScreenY > 1 || minZ > 1) continue;
-                    //System.out.printf("minYawDifference is %.1f and maxYawDifference is %.1f and minYaw is %.1f and maxYaw is %.1f\n", minYawDifference, maxYawDifference, minYaw, maxYaw);
-                    if (maxYaw - minYaw < 200f) {
-                        if (maxScreenX < -1f || minScreenX > 1f) {
-                            xQuadCount += fragment.numColumns() * fragment.numRows();
-                            continue;
-                        }
-
-                        float yawThreshold = 1.25f * fieldOfView / aspectRatio / (float) abs(cos(toRadians(camera.pitch)));
-                        if ((maxYawDifference < -yawThreshold || minYawDifference > yawThreshold)) {
-                            yawQuadCount += fragment.numColumns() * fragment.numRows();
-                            continue;
-                        }
-
-                        //System.out.printf("minScreenY is %.2f and maxScreenY is %.2f and pitch is %.1f\n", minScreenY, maxScreenY, camera.pitch);
-                        if (maxScreenY < -1f || minScreenY > 1f || !anyProperY) {
-                            pitchQuadCount += fragment.numColumns() * fragment.numRows();
-                            continue;
-                        }
-
-                        //System.out.printf("minScreenX is %.2f and maxScreenX is %.2f and yaw is %.1f and minZ is %.3f and yaws are (%.1f, %.1f)\n", minScreenX, maxScreenX, camera.yaw, minZ, minYawDifference, maxYawDifference);
-
-                    }
-
-                    if (minZ > 1f) {
-                        zQuadCount += fragment.numColumns() * fragment.numRows();
-                        continue;
-                    }
-
-
-                    //System.out.println("maxZ is " + maxZ + " and minZ is " + minZ + " and yaw is " + camera.yaw);
-                    //System.out.printf("minScreenX is %.2f and maxScreenX is %.2f and yaw is %.1f\n", minScreenX, maxScreenX, camera.yaw);
-                    //System.out.printf("minScreenY is %.2f and maxScreenY is %.2f\n", minScreenY, maxScreenY);
-
-                    pushConstants.putFloat(0, (fragment.minU - cameraU) * HEIGHT_IMAGE_SIZE);
+                    pushConstants.putFloat(0, minX);
                     pushConstants.putFloat(4, 0f - camera.y);
-                    pushConstants.putFloat(8, (fragment.minV - cameraV) * HEIGHT_IMAGE_SIZE);
+                    pushConstants.putFloat(8, minZ);
                     pushConstants.putFloat(12, fragment.quadSize);
                     pushConstants.putFloat(16, fragment.minU);
                     pushConstants.putFloat(20, fragment.minV);
@@ -667,8 +570,8 @@ public class TerrainPlayground {
                     fragmentCount += 1;
                 }
                 vkCmdEndRenderPass(commandBuffer);
-                if (Math.random() < 0.01) {
-                    System.out.println("Drew " + quadCount + " quads in " + fragmentCount + " fragments; yaw culled " + yawQuadCount + " and pitch culled " + pitchQuadCount + " and x culled " + xQuadCount + " and z culled " + zQuadCount);
+                if (Math.random() < 0.002) {
+                    System.out.println("Drew " + quadCount + " quads in " + fragmentCount + " fragment with camera yaw " + camera.yaw);
                 }
 
                 assertVkSuccess(vkEndCommandBuffer(commandBuffer), "EndCommandBuffer", "TerrainDraw");
@@ -697,6 +600,8 @@ public class TerrainPlayground {
         vkDestroySampler(troll.vkDevice(), heightSampler, null);
 
         troll.destroy();
+        profiler.stop();
+        profiler.getStorage().dump(new File("terrain-playground-profiling.log"), 5, 0.0);
     }
 
     private record AssociatedSwapchainResources(
@@ -771,6 +676,56 @@ public class TerrainPlayground {
             quadSize *= 2.4f;
             fragmentSize *= 3f;
             exponent += 1;
+        }
+    }
+
+    private static class HeightLookup {
+
+        private final int size;
+
+        private final short[] minHeights, maxHeights;
+
+        HeightLookup(int size, int fullSize, ShortBuffer heights) {
+            this.size = size;
+            this.minHeights = new short[size * size];
+            this.maxHeights = new short[size * size];
+
+            Arrays.fill(minHeights, Short.MAX_VALUE);
+            Arrays.fill(maxHeights, Short.MIN_VALUE);
+
+            for (int u = 0; u < fullSize; u++) {
+                int ownU = size * u / fullSize;
+                for (int v = 0; v < fullSize; v++) {
+                    int ownV = size * v / fullSize;
+                    int fullIndex = u + fullSize * v;
+                    int ownIndex = ownU + size * ownV;
+                    minHeights[ownIndex] = (short) min(minHeights[ownIndex], heights.get(fullIndex));
+                    maxHeights[ownIndex] = (short) max(maxHeights[ownIndex], heights.get(fullIndex));
+                }
+            }
+        }
+
+        short[] getHeights(float minU, float minV, float maxU, float maxV) {
+
+            int minIntU = (int) (minU * size) - 1;
+            int minIntV = (int) (minV * size) - 1;
+            int maxIntU = (int) ceil(maxU * size) + 1;
+            int maxIntV = (int) ceil(maxV * size) + 1;
+            if (minIntU < 0) minIntU = 0;
+            if (minIntV < 0) minIntV = 0;
+            if (maxIntU >= size) maxIntU = size - 1;
+            if (maxIntV >= size) maxIntV = size - 1;
+            short minHeight = Short.MAX_VALUE;
+            short maxHeight = Short.MIN_VALUE;
+
+            for (int intU = minIntU; intU <= maxIntU; intU++) {
+                for (int intV = minIntV; intV <= maxIntV; intV++) {
+                    minHeight = (short) min(minHeight, minHeights[intV * size+ intU]);
+                    maxHeight = (short) max(maxHeight, maxHeights[intV & size + intU]);
+                }
+            }
+
+            return new short[] { minHeight, maxHeight };
         }
     }
 }
