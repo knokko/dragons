@@ -16,8 +16,7 @@ import java.util.HashSet;
 
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.vulkan.KHRSurface.*;
-import static org.lwjgl.vulkan.VK10.VK_FORMAT_B8G8R8A8_SRGB;
-import static org.lwjgl.vulkan.VK10.VK_FORMAT_R8G8B8A8_SRGB;
+import static org.lwjgl.vulkan.VK10.*;
 import static troll.exceptions.VulkanFailureException.assertVkSuccess;
 
 public class TrollSwapchainBuilder {
@@ -73,7 +72,7 @@ public class TrollSwapchainBuilder {
 
     final int imageUsage;
     SurfaceFormatPicker surfaceFormatPicker = new SimpleSurfaceFormatPicker(
-            VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB
+            VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB
     );
     CompositeAlphaPicker compositeAlphaPicker = new SimpleCompositeAlphaPicker(
             VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR

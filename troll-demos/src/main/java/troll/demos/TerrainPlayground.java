@@ -8,6 +8,7 @@ import profiler.performance.PerformanceProfiler;
 import profiler.performance.PerformanceStorage;
 import troll.builder.TrollBuilder;
 import troll.builder.TrollSwapchainBuilder;
+import troll.builder.instance.ValidationFeatures;
 import troll.cull.FrustumCuller;
 import troll.images.VmaImage;
 import troll.instance.TrollInstance;
@@ -24,11 +25,13 @@ import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 
 import static java.lang.Math.*;
 import static java.lang.Thread.sleep;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryStack.stackPush;
+import static org.lwjgl.system.MemoryUtil.memByteBuffer;
 import static org.lwjgl.system.MemoryUtil.memShortBuffer;
 import static org.lwjgl.util.vma.Vma.vmaDestroyBuffer;
 import static org.lwjgl.util.vma.Vma.vmaDestroyImage;
@@ -60,6 +63,7 @@ public class TerrainPlayground {
     private static int maxHeight = Integer.MIN_VALUE;
     private static HeightLookup coarseHeightLookup;
     private static HeightLookup fineHeightLookup;
+    private static HeightLookup coarseDeltaHeightLookup;
 
     private static long createRenderPass(MemoryStack stack, TrollInstance troll, int depthFormat) {
         var attachments = VkAttachmentDescription.calloc(2, stack);
@@ -134,7 +138,7 @@ public class TerrainPlayground {
     }
 
     private static long createDescriptorSetLayout(MemoryStack stack, TrollInstance troll) {
-        var bindings = VkDescriptorSetLayoutBinding.calloc(2, stack);
+        var bindings = VkDescriptorSetLayoutBinding.calloc(3, stack);
         var camera = bindings.get(0);
         camera.binding(0);
         camera.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -145,8 +149,14 @@ public class TerrainPlayground {
         heightMap.binding(1);
         heightMap.descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         heightMap.descriptorCount(1);
-        heightMap.stageFlags(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+        heightMap.stageFlags(VK_SHADER_STAGE_VERTEX_BIT);
         heightMap.pImmutableSamplers(null);
+        var normalMap = bindings.get(2);
+        normalMap.binding(2);
+        normalMap.descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        normalMap.descriptorCount(1);
+        normalMap.stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT);
+        normalMap.pImmutableSamplers(null);
 
         return troll.descriptors.createLayout(stack, bindings, "TerrainDescriptorSetLayout");
     }
@@ -154,10 +164,65 @@ public class TerrainPlayground {
     private static long createGroundPipelineLayout(MemoryStack stack, TrollInstance troll, long descriptorSetLayout) {
         var pushConstants = VkPushConstantRange.calloc(1, stack);
         pushConstants.offset(0);
-        pushConstants.size(36);
+        pushConstants.size(28);
         pushConstants.stageFlags(VK_SHADER_STAGE_VERTEX_BIT);
 
         return troll.pipelines.createLayout(stack, pushConstants, "GroundPipelineLayout", descriptorSetLayout);
+    }
+
+    // The grass pipeline layout happens to be identical to the ground pipeline layout
+    private static long createGrassPipelineLayout(MemoryStack stack, TrollInstance troll, long descriptorSetLayout) {
+        var pushConstants = VkPushConstantRange.calloc(1, stack);
+        pushConstants.offset(0);
+        pushConstants.size(28);
+        pushConstants.stageFlags(VK_SHADER_STAGE_VERTEX_BIT);
+
+        return troll.pipelines.createLayout(stack, pushConstants, "GrassPipelineLayout", descriptorSetLayout);
+    }
+
+    private static long createGrassPipeline(MemoryStack stack, TrollInstance troll, long pipelineLayout, long renderPass) {
+        var vertexShader = troll.pipelines.createShaderModule(
+                stack, "troll/graphics/grass.vert.spv", "GrassVertexShader"
+        );
+        var fragmentShader = troll.pipelines.createShaderModule(
+                stack, "troll/graphics/grass.frag.spv", "GrassFragmentShader"
+        );
+
+        var vertexInput = VkPipelineVertexInputStateCreateInfo.calloc(stack);
+        vertexInput.sType$Default();
+        vertexInput.pVertexBindingDescriptions(null);
+        vertexInput.pVertexAttributeDescriptions(null);
+
+        var ciPipelines = VkGraphicsPipelineCreateInfo.calloc(1, stack);
+        var ciGrassPipeline = ciPipelines.get(0);
+        ciGrassPipeline.sType$Default();
+        troll.pipelines.shaderStages(
+                stack, ciGrassPipeline,
+                new ShaderInfo(VK_SHADER_STAGE_VERTEX_BIT, vertexShader, null),
+                new ShaderInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader, null)
+        );
+        ciGrassPipeline.pVertexInputState(vertexInput);
+        troll.pipelines.simpleInputAssembly(stack, ciGrassPipeline);
+        troll.pipelines.dynamicViewports(stack, ciGrassPipeline, 1);
+        troll.pipelines.simpleRasterization(stack, ciGrassPipeline, VK_CULL_MODE_BACK_BIT);
+        troll.pipelines.noMultisampling(stack, ciGrassPipeline);
+        troll.pipelines.simpleDepthStencil(stack, ciGrassPipeline, VK_COMPARE_OP_LESS_OR_EQUAL);
+        troll.pipelines.noColorBlending(stack, ciGrassPipeline, 1);
+        troll.pipelines.dynamicStates(stack, ciGrassPipeline, VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR);
+        ciGrassPipeline.layout(pipelineLayout);
+        ciGrassPipeline.renderPass(renderPass);
+        ciGrassPipeline.subpass(0);
+
+        var pPipeline = stack.callocLong(1);
+        assertVkSuccess(vkCreateGraphicsPipelines(
+                troll.vkDevice(), VK_NULL_HANDLE, ciPipelines, null, pPipeline
+        ), "CreateGraphicsPipelines", "GrassPipeline");
+        long grassPipeline = pPipeline.get(0);
+        troll.debug.name(stack, grassPipeline, VK_OBJECT_TYPE_PIPELINE, "GrassPipeline");
+
+        vkDestroyShaderModule(troll.vkDevice(), vertexShader, null);
+        vkDestroyShaderModule(troll.vkDevice(), fragmentShader, null);
+        return grassPipeline;
     }
 
     private static long createGroundPipeline(MemoryStack stack, TrollInstance troll, long pipelineLayout, long renderPass) {
@@ -205,7 +270,7 @@ public class TerrainPlayground {
         return groundPipeline;
     }
 
-    private static VmaImage createHeightImage(TrollInstance troll) {
+    private static VmaImage[] createHeightImages(TrollInstance troll) {
         try (var stack = stackPush()){
             var input = TerrainPlayground.class.getClassLoader().getResourceAsStream("troll/height/N44E006.hgt");
             assert input != null;
@@ -218,16 +283,27 @@ public class TerrainPlayground {
             if (gridSize * gridSize != numValues) throw new RuntimeException(numValues + " is not a square");
 
             ShortBuffer hostHeightBuffer = ByteBuffer.wrap(content).order(ByteOrder.BIG_ENDIAN).asShortBuffer();
+            ShortBuffer deltaHeightBuffer = ShortBuffer.allocate(hostHeightBuffer.capacity());
 
             var image = troll.images.createSimple(
                     stack, gridSize, gridSize, VK_FORMAT_R16_SINT, VK_SAMPLE_COUNT_1_BIT,
                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, "HeightImage"
             );
 
+            int normalScale = 1;
+            var normalImage = troll.images.createSimple(
+                    stack, normalScale * gridSize, normalScale * gridSize, VK_FORMAT_R8G8B8A8_SNORM, VK_SAMPLE_COUNT_1_BIT,
+                    VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, "DeltaHeightImage"
+            );
+
             var stagingBuffer = troll.buffers.createMapped(
                     content.length, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "HeightImageStagingBuffer"
             );
+            var normalStagingBuffer = troll.buffers.createMapped(
+                    4L * normalImage.width() * normalImage.height(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "DeltaHeightImageStagingBuffer"
+            );
             var stagingHostBuffer = memShortBuffer(stagingBuffer.hostAddress(), numValues);
+            var normalHostBuffer = memByteBuffer(normalStagingBuffer.hostAddress(), (int) normalStagingBuffer.buffer().size());
             var commandPool = troll.commands.createPool(0, troll.queueFamilies().graphics().index(), "HeightImageCopyPool");
             var commandBuffer = troll.commands.createPrimaryBuffers(commandPool, 1, "HeightImageCopyCommands")[0];
             var fence = troll.sync.createFences(false, 1, "WaitHeightImageCopy")[0];
@@ -244,17 +320,90 @@ public class TerrainPlayground {
                 } else stagingHostBuffer.put(previousValue);
             }
             System.out.println("lowest is " + minHeight + " and highest is " + maxHeight);
-            coarseHeightLookup = new HeightLookup(80, HEIGHT_IMAGE_NUM_PIXELS, hostHeightBuffer);
-            fineHeightLookup = new HeightLookup(400, HEIGHT_IMAGE_NUM_PIXELS, hostHeightBuffer);
+            coarseHeightLookup = new HeightLookup(50, HEIGHT_IMAGE_NUM_PIXELS, hostHeightBuffer);
+            fineHeightLookup = new HeightLookup(300, HEIGHT_IMAGE_NUM_PIXELS, hostHeightBuffer);
+
+            var realNormals = new Vector3f[gridSize][gridSize];
+
+            for (int u = 0; u < gridSize; u++) {
+                for (int v = 0; v < gridSize; v++) {
+                    int index = u + v * gridSize;
+                    if (u == gridSize - 1 || v == gridSize - 1) {
+                        realNormals[u][v] = new Vector3f(0f, 1f, 0f);
+                        deltaHeightBuffer.put(index, (short) 0);
+                    } else {
+                        int heightIndex = u + v * gridSize;
+                        int currentHeight = stagingHostBuffer.get(heightIndex);
+                        int du = stagingHostBuffer.get(heightIndex + 1) - currentHeight;
+                        int dv = stagingHostBuffer.get(heightIndex + gridSize) - currentHeight;
+
+                        var vectorX = new Vector3f(30f, du, 0f);
+                        var vectorZ = new Vector3f(0f, dv, 30f);
+                        var normal = vectorZ.cross(vectorX).normalize();
+                        realNormals[u][v] = normal;
+                        deltaHeightBuffer.put(index, (short) max(abs(du), abs(dv)));
+                    }
+                }
+            }
+
+            coarseDeltaHeightLookup = new HeightLookup(600, HEIGHT_IMAGE_NUM_PIXELS, deltaHeightBuffer);
+
+            for (int realU = 0; realU < gridSize; realU++) {
+                int nextU = min(gridSize - 1, realU + 1);
+                for (int realV = 0; realV < gridSize; realV++) {
+                    int nextV = min(gridSize - 1, realV + 1);
+                    Vector3f normal11 = realNormals[realU][realV];
+                    Vector3f normal21 = realNormals[nextU][realV];
+                    Vector3f normal12 = realNormals[realU][nextV];
+                    Vector3f normal22 = realNormals[nextU][nextV];
+
+                    for (int k = 0; k < normalScale - 0; k++) {
+                        int extraU = normalScale * realU + k;
+                        float factorK = (float) k / (float) normalScale;
+                        for (int l = 0; l < normalScale - 0; l++) {
+                            // (0 <= k < normalScale, 1 <= l < normalScale) -> partially weird
+                            // (0 <= k < normalScale, 0 <= l < normalScale) -> fully weird
+                            // (1 <= k < normalScale, 0 <= l < normalScale) -> partially weird
+                            // (1 <= k < normalScale, 1 <= l < normalScale) -> not weird
+                            // (0 <= k < normalScale - 1, 0 <= l < normalScale - 1) -> not weird
+                            // (0 <= k < normalScale, 0 <= l < normalScale - 1) -> not weird
+                            // (0 <= k < normalScale - 1, 0 <= l < normalScale) -> not weird
+                            int extraV = normalScale * realV + l;
+                            float factorL = (float) l / (float) normalScale;
+
+                            Vector3f normal = new Vector3f();
+                            normal.mulAdd((1f - factorK) * (1f - factorL), normal11);
+                            normal.mulAdd(factorK * (1f - factorL), normal21);
+                            normal.mulAdd((1f - factorK) * factorL, normal12);
+                            normal.mulAdd(factorK * factorL, normal22);
+                            normal.normalize();
+
+                            int index = 4 * (extraU + normalImage.width() * extraV);
+                            normalHostBuffer.put(index, (byte) (normal.x * 127));
+                            normalHostBuffer.put(index + 1, (byte) (normal.y * 127));
+                            normalHostBuffer.put(index + 2, (byte) (normal.z * 127));
+                            normalHostBuffer.put(index + 3, (byte) 127);
+                        }
+                    }
+                }
+            }
 
             troll.commands.begin(commandBuffer, stack, "CopyHeightImage");
             troll.commands.transitionColorLayout(
                     stack, commandBuffer, image.vkImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     null, new ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
             );
+            troll.commands.transitionColorLayout(
+                    stack, commandBuffer, normalImage.vkImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    null, new ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
+            );
             troll.commands.copyBufferToImage(
                     commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, image.vkImage(),
                     gridSize, gridSize, stagingBuffer.buffer().vkBuffer()
+            );
+            troll.commands.copyBufferToImage(
+                    commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, normalImage.vkImage(),
+                    normalImage.width(), normalImage.height(), normalStagingBuffer.buffer().vkBuffer()
             );
             troll.commands.transitionColorLayout(
                     stack, commandBuffer, image.vkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -262,19 +411,26 @@ public class TerrainPlayground {
                     new ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
                     new ResourceUsage(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT)
             );
+            troll.commands.transitionColorLayout(
+                    stack, commandBuffer, normalImage.vkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    new ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
+                    new ResourceUsage(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
+            );
             assertVkSuccess(vkEndCommandBuffer(commandBuffer), "EndCommandBuffer", "CopyHeightImage");
 
             troll.queueFamilies().graphics().queues().get(0).submit(
                     commandBuffer, "CopyHeightImage", new WaitSemaphore[0], fence
             );
             assertVkSuccess(vkWaitForFences(
-                    troll.vkDevice(), stack.longs(fence), true, 100_000_000
+                    troll.vkDevice(), stack.longs(fence), true, 1000_000_000
             ), "WaitForFences", "CopyHeightImage");
 
             vkDestroyFence(troll.vkDevice(), fence, null);
             vkDestroyCommandPool(troll.vkDevice(), commandPool, null);
             vmaDestroyBuffer(troll.vmaAllocator(), stagingBuffer.buffer().vkBuffer(), stagingBuffer.buffer().vmaAllocation());
-            return image;
+            vmaDestroyBuffer(troll.vmaAllocator(), normalStagingBuffer.buffer().vkBuffer(), normalStagingBuffer.buffer().vmaAllocation());
+            return new VmaImage[] { image, normalImage };
         } catch (IOException shouldNotHappen) {
             throw new RuntimeException(shouldNotHappen);
         }
@@ -290,18 +446,23 @@ public class TerrainPlayground {
                 .window(0L, 1000, 800, new TrollSwapchainBuilder(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT))
                 .build();
 
-        var heightImage = createHeightImage(troll);
+        var heightImages = createHeightImages(troll);
+        var heightImage = heightImages[0];
+        var normalImage = heightImages[1];
         var uniformBuffer = troll.buffers.createMapped(
                 64, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, "UniformBuffer"
         );
         long renderPass;
         long descriptorSetLayout;
-        long pipelineLayout;
+        long groundPipelineLayout;
+        long grassPipelineLayout;
         long groundPipeline;
+        long grassPipeline;
         long descriptorPool;
         long descriptorSet;
         int depthFormat;
         long heightSampler;
+        long normalSampler;
         try (var stack = stackPush()) {
             depthFormat = troll.images.chooseDepthStencilFormat(
                     stack, VK_FORMAT_X8_D24_UNORM_PACK32, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT
@@ -309,16 +470,21 @@ public class TerrainPlayground {
             renderPass = createRenderPass(stack, troll, depthFormat);
 
             descriptorSetLayout = createDescriptorSetLayout(stack, troll);
-            pipelineLayout = createGroundPipelineLayout(stack, troll, descriptorSetLayout);
-            groundPipeline = createGroundPipeline(stack, troll, pipelineLayout, renderPass);
+            groundPipelineLayout = createGroundPipelineLayout(stack, troll, descriptorSetLayout);
+            grassPipelineLayout = createGrassPipelineLayout(stack, troll, descriptorSetLayout);
+            groundPipeline = createGroundPipeline(stack, troll, groundPipelineLayout, renderPass);
+            grassPipeline = createGrassPipeline(stack, troll, grassPipelineLayout, renderPass);
 
-            var poolSizes = VkDescriptorPoolSize.calloc(2, stack);
+            var poolSizes = VkDescriptorPoolSize.calloc(3, stack);
             var uniformPoolSize = poolSizes.get(0);
             uniformPoolSize.type(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
             uniformPoolSize.descriptorCount(1);
             var heightMapPoolSize = poolSizes.get(1);
             heightMapPoolSize.type(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
             heightMapPoolSize.descriptorCount(1);
+            var normalMapPoolSize = poolSizes.get(2);
+            normalMapPoolSize.type(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+            normalMapPoolSize.descriptorCount(2);
 
             var ciDescriptorPool = VkDescriptorPoolCreateInfo.calloc(stack);
             ciDescriptorPool.sType$Default();
@@ -338,13 +504,20 @@ public class TerrainPlayground {
                     stack, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST,
                     VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 0f, 0f, false, "HeightSampler"
             );
+            normalSampler = troll.images.simpleSampler(
+                    stack, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, "NormalSampler"
+            );
 
             var heightMapInfo = VkDescriptorImageInfo.calloc(1, stack);
             heightMapInfo.sampler(heightSampler);
             heightMapInfo.imageView(heightImage.vkImageView());
             heightMapInfo.imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            var normalMapInfo = VkDescriptorImageInfo.calloc(1, stack);
+            normalMapInfo.sampler(normalSampler);
+            normalMapInfo.imageView(normalImage.vkImageView());
+            normalMapInfo.imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-            var descriptorWrites = VkWriteDescriptorSet.calloc(2, stack);
+            var descriptorWrites = VkWriteDescriptorSet.calloc(3, stack);
             var uniformWrite = descriptorWrites.get(0);
             uniformWrite.sType$Default();
             uniformWrite.dstSet(descriptorSet);
@@ -361,6 +534,14 @@ public class TerrainPlayground {
             heightMapWrite.descriptorCount(1);
             heightMapWrite.descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
             heightMapWrite.pImageInfo(heightMapInfo);
+            var normalMapWrite = descriptorWrites.get(2);
+            normalMapWrite.sType$Default();
+            normalMapWrite.dstSet(descriptorSet);
+            normalMapWrite.dstBinding(2);
+            normalMapWrite.dstArrayElement(0);
+            normalMapWrite.descriptorCount(1);
+            normalMapWrite.descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+            normalMapWrite.pImageInfo(normalMapInfo);
 
             vkUpdateDescriptorSets(troll.vkDevice(), descriptorWrites, null);
         }
@@ -444,7 +625,7 @@ public class TerrainPlayground {
             if (!Double.isNaN(cameraController.oldX) && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
                 double dx = x - cameraController.oldX;
                 double dy = y - cameraController.oldY;
-                camera.yaw -= 0.5 * dx;
+                camera.yaw += 0.5 * dx;
                 camera.pitch -= 0.2 * dy;
                 if (camera.pitch < -90) camera.pitch = -90;
                 if (camera.pitch > 90) camera.pitch = 90;
@@ -501,14 +682,6 @@ public class TerrainPlayground {
                 biRenderPass.clearValueCount(2);
                 biRenderPass.pClearValues(clearValues);
 
-                vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE);
-                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, groundPipeline);
-                troll.commands.dynamicViewportAndScissor(stack, commandBuffer, swapchainImage.width(), swapchainImage.height());
-                vkCmdBindDescriptorSets(
-                        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
-                        0, stack.longs(descriptorSet), null
-                );
-
                 float fieldOfView = 45f;
                 float aspectRatio = (float) swapchainImage.width() / (float) swapchainImage.height();
 
@@ -517,7 +690,7 @@ public class TerrainPlayground {
                 var cameraMatrix = new Matrix4f()
                         .scale(1f, -1f, 1f)
                         .perspective(
-                            (float) toRadians(fieldOfView), aspectRatio,
+                                (float) toRadians(fieldOfView), aspectRatio,
                                 nearPlane, farPlane, true
                         )
                         .rotateX((float) toRadians(-camera.pitch))
@@ -525,53 +698,111 @@ public class TerrainPlayground {
                         ;
                 cameraMatrix.getToAddress(uniformBuffer.hostAddress());
 
-                var fragmentsToRender = new ArrayList<TerrainFragment>();
-                float cameraU = 2f * camera.x / HEIGHT_IMAGE_SIZE + 0.5f;
-                float cameraV = 2f * camera.z / HEIGHT_IMAGE_SIZE + 0.5f;
-                partitionTerrainSpace(cameraU, cameraV, 0.0001f, 0.2f, 8, fragmentsToRender);
-
                 var frustumCuller = new FrustumCuller(
                         new Vector3f(), camera.yaw, camera.pitch, aspectRatio, fieldOfView, nearPlane, farPlane
                 );
 
-                float heightScale = 1f;
-
-                var pushConstants = stack.calloc(36);
-                int quadCount = 0;
-                int fragmentCount = 0;
-                for (var fragment : fragmentsToRender) {
-
-                    float minX = (fragment.minU - cameraU) * HEIGHT_IMAGE_SIZE;
-                    float minZ = (fragment.minV - cameraV) * HEIGHT_IMAGE_SIZE;
-                    float maxX = (fragment.maxU - cameraU) * HEIGHT_IMAGE_SIZE;
-                    float maxZ = (fragment.maxV - cameraV) * HEIGHT_IMAGE_SIZE;
-                    float threshold = 0.05f;
+                var fragmentsToRender = new ArrayList<TerrainFragment>();
+                float cameraU = 2f * camera.x / HEIGHT_IMAGE_SIZE + 0.5f;
+                float cameraV = 2f * camera.z / HEIGHT_IMAGE_SIZE + 0.5f;
+                //partitionTerrainSpace(cameraU, cameraV, 0.0001f, 0.5f, 1, fragmentsToRender);
+                partitionTerrainSpaceNew(cameraU, cameraV, 0.0001f, 1.0f, 15, fragmentsToRender);
+                fragmentsToRender.removeIf(fragment -> {
+                    float minX = fragment.minX(cameraU);
+                    float minZ = fragment.minZ(cameraV);
+                    float maxX = fragment.maxX(cameraU);
+                    float maxZ = fragment.maxZ(cameraV);
+                    float threshold = 0.001f;
                     float fragmentSize = max(fragment.maxU - fragment.minU, fragment.maxV - fragment.minV);
                     var heightLookup = fragmentSize > threshold ? coarseHeightLookup : fineHeightLookup;
                     short[] heightBounds = heightLookup.getHeights(fragment.minU, fragment.minV, fragment.maxU, fragment.maxV);
 
                     var aabb = new FrustumCuller.AABB(minX, heightBounds[0] - camera.y, minZ, maxX, heightBounds[1] - camera.y, maxZ);
-                    if (frustumCuller.shouldCullAABB(aabb)) continue;
+                    return frustumCuller.shouldCullAABB(aabb);
+                });
 
-                    pushConstants.putFloat(0, minX);
+                vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE);
+                troll.commands.dynamicViewportAndScissor(stack, commandBuffer, swapchainImage.width(), swapchainImage.height());
+                int vertexCount = 0;
+                int drawCount = 0;
+
+                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, groundPipeline);
+                vkCmdBindDescriptorSets(
+                        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, groundPipelineLayout,
+                        0, stack.longs(descriptorSet), null
+                );
+                var pushConstants = stack.calloc(28);
+
+                var divisorMap = new HashMap<Integer, Integer>();
+                int index = 0;
+                fragmentLoop:
+                for (var fragment : fragmentsToRender) {
+                    index += 1;
+                    //short maxDelta = coarseDeltaHeightLookup.getHeights(fragment.minU, fragment.minV, fragment.maxU, fragment.maxV)[1];
+                    int divisor = 1;
+//                    if (maxDelta > 50) divisor = 2;
+//                    if (maxDelta > 60) divisor = 3;
+//                    if (maxDelta > 70) divisor = 4;
+//                    if (maxDelta > 100) divisor = 5;
+//                    if (maxDelta > 125) divisor = 6;
+//                    if (maxDelta > 150) divisor = 7;
+                    divisorMap.put(divisor, divisorMap.getOrDefault(divisor, 0) + 1);
+                    //System.out.println("maxDelta is " + maxDelta);
+                    pushConstants.putFloat(0, fragment.minX(cameraU));
                     pushConstants.putFloat(4, 0f - camera.y);
-                    pushConstants.putFloat(8, minZ);
-                    pushConstants.putFloat(12, fragment.quadSize);
+                    pushConstants.putFloat(8, fragment.minZ(cameraV));
+                    pushConstants.putFloat(12, fragment.quadSize / divisor);
                     pushConstants.putFloat(16, fragment.minU);
                     pushConstants.putFloat(20, fragment.minV);
-                    pushConstants.putFloat(24, heightScale);
-                    pushConstants.putFloat(28, HEIGHT_IMAGE_SIZE);
-                    pushConstants.putInt(32, fragment.numColumns());
+                    pushConstants.putInt(24, fragment.numColumns() * divisor);
 
-                    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
-                    int numQuads = fragment.numRows() * fragment.numColumns();
+                    for (int key = 0; key < 10; key++) {
+                        if (glfwGetKey(troll.glfwWindow(), GLFW_KEY_0 + key) == GLFW_PRESS && divisor == key) continue fragmentLoop;
+                    }
+                    vkCmdPushConstants(commandBuffer, groundPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
+                    int numQuads = fragment.numRows() * fragment.numColumns() * divisor * divisor;
                     vkCmdDraw(commandBuffer, 6 * numQuads, 1, 0, 0);
-                    quadCount += numQuads;
-                    fragmentCount += 1;
+                    vertexCount += 6 * numQuads;
+                    drawCount += 1;
                 }
+
+                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipeline);
+                vkCmdBindDescriptorSets(
+                        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout,
+                        0, stack.longs(descriptorSet), null
+                );
+                pushConstants = stack.calloc(28);
+
+                int grassModelSize = 12; // Currently 12 vertices, TODO make it larger
+
+                for (var fragment : fragmentsToRender) {
+                    float minX = fragment.minX(cameraU);
+                    float minZ = fragment.minZ(cameraV);
+                    float maxX = fragment.maxX(cameraU);
+                    float maxZ = fragment.maxZ(cameraV);
+
+                    float distanceEstimation = (float) sqrt(min(min(minX * minX + minZ * minZ, minX * minX + maxZ * maxZ), min(maxX * maxX + minZ * minZ, maxX * maxX + maxZ * maxZ)));
+                    if (distanceEstimation < 30) {
+                        pushConstants.putFloat(0, minX);
+                        pushConstants.putFloat(4, 0f - camera.y);
+                        pushConstants.putFloat(8, minZ);
+                        pushConstants.putFloat(12, (fragment.maxU - fragment.minU) * HEIGHT_IMAGE_SIZE);
+                        pushConstants.putFloat(16, fragment.minU);
+                        pushConstants.putFloat(20, fragment.minV);
+                        pushConstants.putInt(24, 100);
+
+                        int numGrassModels = 12000; // TODO Make this depend on the distance from the camera
+
+                        vkCmdPushConstants(commandBuffer, grassPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
+                        vkCmdDraw(commandBuffer, numGrassModels * grassModelSize, 1, 0, 0);
+                        vertexCount += numGrassModels * grassModelSize;
+                        drawCount += 1;
+                    }
+                }
+
                 vkCmdEndRenderPass(commandBuffer);
                 if (Math.random() < 0.002) {
-                    System.out.println("Drew " + quadCount + " quads in " + fragmentCount + " fragment with camera yaw " + camera.yaw);
+                    System.out.println("Drew " + vertexCount + " vertices with " + drawCount + " draw calls and divisors " + divisorMap);
                 }
 
                 assertVkSuccess(vkEndCommandBuffer(commandBuffer), "EndCommandBuffer", "TerrainDraw");
@@ -591,13 +822,18 @@ public class TerrainPlayground {
 
         vkDestroyDescriptorPool(troll.vkDevice(), descriptorPool, null);
         vkDestroyPipeline(troll.vkDevice(), groundPipeline, null);
-        vkDestroyPipelineLayout(troll.vkDevice(), pipelineLayout, null);
+        vkDestroyPipeline(troll.vkDevice(), grassPipeline, null);
+        vkDestroyPipelineLayout(troll.vkDevice(), groundPipelineLayout, null);
+        vkDestroyPipelineLayout(troll.vkDevice(), grassPipelineLayout, null);
         vkDestroyDescriptorSetLayout(troll.vkDevice(), descriptorSetLayout, null);
         vkDestroyRenderPass(troll.vkDevice(), renderPass, null);
         vmaDestroyBuffer(troll.vmaAllocator(), uniformBuffer.buffer().vkBuffer(), uniformBuffer.buffer().vmaAllocation());
         vkDestroyImageView(troll.vkDevice(), heightImage.vkImageView(), null);
         vmaDestroyImage(troll.vmaAllocator(), heightImage.vkImage(), heightImage.vmaAllocation());
+        vkDestroyImageView(troll.vkDevice(), normalImage.vkImageView(), null);
+        vmaDestroyImage(troll.vmaAllocator(), normalImage.vkImage(), normalImage.vmaAllocation());
         vkDestroySampler(troll.vkDevice(), heightSampler, null);
+        vkDestroySampler(troll.vkDevice(), normalSampler, null);
 
         troll.destroy();
         profiler.stop();
@@ -624,6 +860,22 @@ public class TerrainPlayground {
         int numRows() {
             return (int) ceil((maxV - minV) * HEIGHT_IMAGE_SIZE / quadSize);
         }
+
+        float minX(float cameraU) {
+            return (minU - cameraU) * HEIGHT_IMAGE_SIZE;
+        }
+
+        float minZ(float cameraV) {
+            return (minV - cameraV) * HEIGHT_IMAGE_SIZE;
+        }
+
+        float maxX(float cameraU) {
+            return (maxU - cameraU) * HEIGHT_IMAGE_SIZE;
+        }
+
+        float maxZ(float cameraV) {
+            return (maxV - cameraV) * HEIGHT_IMAGE_SIZE;
+        }
     }
 
     private static void addPartitionFragment(
@@ -639,18 +891,27 @@ public class TerrainPlayground {
         fragments.add(new TerrainFragment(max(minU, 0f), max(minV, 0f), min(maxU, 1f), min(maxV, 1f), quadSize));
     }
 
+    private static void addPartitionFragmentNew(
+            float cameraU, float cameraV, int dx, int dy,
+            float fragmentSize, float quadSize, Collection<TerrainFragment> fragments, int exponent
+    ) {
+        float offset = exponent == 0 ? -0.5f : 0f;
+        float minU = cameraU + (dx + offset) * fragmentSize;
+        float minV = cameraV + (dy + offset) * fragmentSize;
+        float maxU = minU + fragmentSize;
+        float maxV = minV + fragmentSize;
+        if (maxU <= 0f || maxV <= 0f || minU >= 1f || minV >= 1f) return;
+
+        fragments.add(new TerrainFragment(max(minU, 0f), max(minV, 0f), min(maxU, 1f), min(maxV, 1f), quadSize));
+    }
+
     private static void partitionTerrainSpace(
             float cameraU, float cameraV, float initialFragmentSize, float initialQuadSize, int maxExponent,
             Collection<TerrainFragment> fragments
     ) {
+        initialQuadSize *= 1f;
         float fragmentSize = initialFragmentSize;
         float quadSize = initialQuadSize;
-        //float cameraGridSize = 1000f * fragmentSize / HEIGHT_IMAGE_SIZE;
-        //float cameraGridSize = quadSize / (HEIGHT_IMAGE_SIZE - 0) * (float) pow(2.4, 6);
-        float cameraGridSize = 0.01f;
-
-        cameraU = cameraGridSize * round(cameraU / cameraGridSize);
-        cameraV = cameraGridSize * round(cameraV / cameraGridSize);
 
         for (int dx = -1; dx <= 0; dx++) {
             for (int dy = -1; dy <= 0; dy++) {
@@ -665,7 +926,7 @@ public class TerrainPlayground {
                 int dx = -rowSize;
                 int dy = -rowSize;
 
-                float rowQuadSize = 0.5f * rowSize == 2 ? 1.5f * quadSize : 3f * quadSize;
+                float rowQuadSize = rowSize == 2 ? 1.5f * quadSize : 3f * quadSize;
 
                 for (; dx < rowSize - 1; dx++) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments);
                 for (; dy < rowSize - 1; dy++) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments);
@@ -675,6 +936,54 @@ public class TerrainPlayground {
 
             quadSize *= 2.4f;
             fragmentSize *= 3f;
+            exponent += 1;
+        }
+    }
+
+    private static void partitionTerrainSpaceNew(
+            float cameraU, float cameraV, float initialFragmentSize, float initialQuadSize, int maxExponent,
+            Collection<TerrainFragment> fragments
+    ) {
+        float fragmentSize = initialFragmentSize;
+        float quadSize = initialQuadSize;
+
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, 0);
+            }
+        }
+
+        int exponent = 1;
+        while (exponent <= maxExponent) {
+
+            quadSize *= 1.25f;
+            fragmentSize *= 1.5f;
+
+            int[] rowSizes = { 3, 4, 5, 6 };
+            if (exponent == 1) rowSizes = new int[] { 2, 3 };
+            if (exponent == 3) rowSizes = new int[] { 5, 6 };
+            if (exponent >= 4) rowSizes = new int[] { 5, 6, 7 };
+//            if (exponent == 5) rowSizes = new int[] { 5, 6, 7 };
+//            if (exponent == 6) rowSizes = new int[] { 5, 6, 7 };
+//            if (exponent == 7) rowSizes = new int[] { 5, 6, 7 };
+//            if (exponent == 8) rowSizes = new int[] { 5, 6, 7 };
+//            if (exponent == 9) rowSizes = new int[] { 5, 6, 7 };
+//            if (exponent == 10) rowSizes = new int[] { 5, 6, 7 };
+//            if (exponent == 11) rowSizes = new int[] { 5, 6, 7 };
+
+            for (int rowSize : rowSizes) {
+                int dx = -rowSize;
+                int dy = -rowSize;
+
+                //float rowQuadSize = rowSize == rowSizes[0] ? 1.1f * quadSize : 1.3f * quadSize;
+                float rowQuadSize = quadSize;
+
+                for (; dx < rowSize - 1; dx++) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments, exponent);
+                for (; dy < rowSize - 1; dy++) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments, exponent);
+                for (; dx > -rowSize; dx--) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments, exponent);
+                for (; dy > -rowSize; dy--) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments, exponent);
+            }
+
             exponent += 1;
         }
     }
