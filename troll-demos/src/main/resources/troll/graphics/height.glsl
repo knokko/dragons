@@ -1,6 +1,6 @@
 #include "bezier.glsl"
 
-vec3 computeHeightAndDeltaXZ(vec2 realOffset, vec2 textureOffset, isampler2D heightMap, bool simplify) {
+float computeHeight(vec2 realOffset, vec2 textureOffset, isampler2D heightMap) {
     vec2 textureCoordinates = textureOffset + realOffset / 108030.0;
 
     int u2 = int(textureCoordinates.x * 3601);
@@ -46,33 +46,5 @@ vec3 computeHeightAndDeltaXZ(vec2 realOffset, vec2 textureOffset, isampler2D hei
     float heightU3 = applyBezier(vt, height31, height32, height33, height34);
     float heightU4 = applyBezier(vt, height41, height42, height43, height44);
 
-    float heightV1 = applyBezier(ut, height11, height21, height31, height41);
-    float heightV2 = applyBezier(ut, height12, height22, height32, height42);
-    float heightV3 = applyBezier(ut, height13, height23, height33, height43);
-    float heightV4 = applyBezier(ut, height14, height24, height34, height44);
-
-    float heightU = applyBezier(ut, heightU1, heightU2, heightU3, heightU4);
-    // don't bother computing heightV because it's identical to heightU (aside from FP rounding errors)
-
-    float deltaX = applyDeltaBezier(ut, heightU1, heightU2, heightU3, heightU4);
-    float deltaZ = applyDeltaBezier(vt, heightV1, heightV2, heightV3, heightV4);
-    deltaX /= 30.0;
-    deltaZ /= 30.0;
-
-    if (simplify) {
-        //heightU = (1.0 - ut) * ((1.0 - vt) * height22 + vt * height23) + ut * ((1.0 - vt) * height32 + vt * height33);
-//        deltaX = (1.0 - vt) * (height32 - height22) + vt * (height33 - height23);
-//        deltaX /= 90.0;
-//        deltaZ = (1.0 - ut) * (height23 - height22) + ut * (height33 - height32);
-//        deltaZ /= 90.0;j
-        deltaX = (heightU2 - heightU1) / 30.0;
-        deltaZ = (heightV2 - heightV1) / 30.0;
-//        float stepSize = 0.001;
-//        deltaZ = applyBezier(vt + stepSize, heightV1, heightV2, heightV3, heightV4) - applyBezier(vt - stepSize, heightV1, heightV2, heightV3, heightV4);
-//        deltaZ /= 30 * 2 * stepSize;
-//        deltaX = applyBezier(ut + stepSize, heightU1, heightU2, heightU3, heightU4) - applyBezier(ut - stepSize, heightU1, heightU2, heightU3, heightU4);
-//        deltaX /= 30 * 2 * stepSize;
-    }
-
-    return vec3(deltaX, heightU, deltaZ);
+    return applyBezier(ut, heightU1, heightU2, heightU3, heightU4);
 }

@@ -152,7 +152,7 @@ project(':troll-demos') {
     }
     shadowJar {
         manifest {
-            attributes ('Main-Class': 'troll.demos.SimplePipelinePlayground')
+            attributes ('Main-Class': 'troll.demos.TerrainPlayground')
         }
     }
 }

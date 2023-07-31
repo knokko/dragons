@@ -290,9 +290,8 @@ public class TerrainPlayground {
                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, "HeightImage"
             );
 
-            int normalScale = 1;
             var normalImage = troll.images.createSimple(
-                    stack, normalScale * gridSize, normalScale * gridSize, VK_FORMAT_R8G8B8A8_SNORM, VK_SAMPLE_COUNT_1_BIT,
+                    stack, gridSize, gridSize, VK_FORMAT_R8G8B8A8_SNORM, VK_SAMPLE_COUNT_1_BIT,
                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, "DeltaHeightImage"
             );
 
@@ -319,17 +318,16 @@ public class TerrainPlayground {
                     if (counter == numValues / 2) System.out.println("middle value is " + value);
                 } else stagingHostBuffer.put(previousValue);
             }
-            System.out.println("lowest is " + minHeight + " and highest is " + maxHeight);
             coarseHeightLookup = new HeightLookup(50, HEIGHT_IMAGE_NUM_PIXELS, hostHeightBuffer);
             fineHeightLookup = new HeightLookup(300, HEIGHT_IMAGE_NUM_PIXELS, hostHeightBuffer);
 
-            var realNormals = new Vector3f[gridSize][gridSize];
-
-            for (int u = 0; u < gridSize; u++) {
-                for (int v = 0; v < gridSize; v++) {
+            for (int v = 0; v < gridSize; v++) {
+                for (int u = 0; u < gridSize; u++) {
                     int index = u + v * gridSize;
                     if (u == gridSize - 1 || v == gridSize - 1) {
-                        realNormals[u][v] = new Vector3f(0f, 1f, 0f);
+                        normalHostBuffer.put(4 * index, (byte) 0);
+                        normalHostBuffer.put(4 * index + 1, (byte) 127);
+                        normalHostBuffer.put(4 * index + 2, (byte) 0);
                         deltaHeightBuffer.put(index, (short) 0);
                     } else {
                         int heightIndex = u + v * gridSize;
@@ -340,53 +338,15 @@ public class TerrainPlayground {
                         var vectorX = new Vector3f(30f, du, 0f);
                         var vectorZ = new Vector3f(0f, dv, 30f);
                         var normal = vectorZ.cross(vectorX).normalize();
-                        realNormals[u][v] = normal;
+                        normalHostBuffer.put(4 * index, (byte) (127 * normal.x));
+                        normalHostBuffer.put(4 * index + 1, (byte) (127 * normal.y));
+                        normalHostBuffer.put(4 * index + 2, (byte) (127 * normal.z));
                         deltaHeightBuffer.put(index, (short) max(abs(du), abs(dv)));
                     }
                 }
             }
 
             coarseDeltaHeightLookup = new HeightLookup(600, HEIGHT_IMAGE_NUM_PIXELS, deltaHeightBuffer);
-
-            for (int realU = 0; realU < gridSize; realU++) {
-                int nextU = min(gridSize - 1, realU + 1);
-                for (int realV = 0; realV < gridSize; realV++) {
-                    int nextV = min(gridSize - 1, realV + 1);
-                    Vector3f normal11 = realNormals[realU][realV];
-                    Vector3f normal21 = realNormals[nextU][realV];
-                    Vector3f normal12 = realNormals[realU][nextV];
-                    Vector3f normal22 = realNormals[nextU][nextV];
-
-                    for (int k = 0; k < normalScale - 0; k++) {
-                        int extraU = normalScale * realU + k;
-                        float factorK = (float) k / (float) normalScale;
-                        for (int l = 0; l < normalScale - 0; l++) {
-                            // (0 <= k < normalScale, 1 <= l < normalScale) -> partially weird
-                            // (0 <= k < normalScale, 0 <= l < normalScale) -> fully weird
-                            // (1 <= k < normalScale, 0 <= l < normalScale) -> partially weird
-                            // (1 <= k < normalScale, 1 <= l < normalScale) -> not weird
-                            // (0 <= k < normalScale - 1, 0 <= l < normalScale - 1) -> not weird
-                            // (0 <= k < normalScale, 0 <= l < normalScale - 1) -> not weird
-                            // (0 <= k < normalScale - 1, 0 <= l < normalScale) -> not weird
-                            int extraV = normalScale * realV + l;
-                            float factorL = (float) l / (float) normalScale;
-
-                            Vector3f normal = new Vector3f();
-                            normal.mulAdd((1f - factorK) * (1f - factorL), normal11);
-                            normal.mulAdd(factorK * (1f - factorL), normal21);
-                            normal.mulAdd((1f - factorK) * factorL, normal12);
-                            normal.mulAdd(factorK * factorL, normal22);
-                            normal.normalize();
-
-                            int index = 4 * (extraU + normalImage.width() * extraV);
-                            normalHostBuffer.put(index, (byte) (normal.x * 127));
-                            normalHostBuffer.put(index + 1, (byte) (normal.y * 127));
-                            normalHostBuffer.put(index + 2, (byte) (normal.z * 127));
-                            normalHostBuffer.put(index + 3, (byte) 127);
-                        }
-                    }
-                }
-            }
 
             troll.commands.begin(commandBuffer, stack, "CopyHeightImage");
             troll.commands.transitionColorLayout(
@@ -705,8 +665,7 @@ public class TerrainPlayground {
                 var fragmentsToRender = new ArrayList<TerrainFragment>();
                 float cameraU = 2f * camera.x / HEIGHT_IMAGE_SIZE + 0.5f;
                 float cameraV = 2f * camera.z / HEIGHT_IMAGE_SIZE + 0.5f;
-                //partitionTerrainSpace(cameraU, cameraV, 0.0001f, 0.5f, 1, fragmentsToRender);
-                partitionTerrainSpaceNew(cameraU, cameraV, 0.0001f, 1.5f, 15, fragmentsToRender);
+                partitionTerrainSpace(cameraU, cameraV, 0.0001f, 1.5f, 15, fragmentsToRender);
                 fragmentsToRender.removeIf(fragment -> {
                     float minX = fragment.minX(cameraU);
                     float minZ = fragment.minZ(cameraV);
@@ -717,10 +676,6 @@ public class TerrainPlayground {
                     float fragmentSize = max(fragment.maxU - fragment.minU, fragment.maxV - fragment.minV);
                     var heightLookup = fragmentSize > threshold ? coarseHeightLookup : fineHeightLookup;
                     short[] heightBounds = heightLookup.getHeights(fragment.minU, fragment.minV, fragment.maxU, fragment.maxV);
-                    //short[] heightBounds = { 400, 4500 };
-                    if (minX < 0f && maxX > 0f && minZ < 0f && maxZ > 0f && Math.random() < 0.05) {
-                        //System.out.printf("camera position is (%.1f, %.1f, %.1f) and height bounds are [%d, %d] and maxDelta is %d\n", camera.x, camera.y, camera.z, heightBounds[0], heightBounds[1], maxDelta);
-                    }
 
                     var aabb = new FrustumCuller.AABB(minX, heightBounds[0] - camera.y, minZ, maxX, heightBounds[1] - camera.y, maxZ);
                     return frustumCuller.shouldCullAABB(aabb);
@@ -739,24 +694,14 @@ public class TerrainPlayground {
                 var pushConstants = stack.calloc(28);
 
                 var divisorMap = new HashMap<Integer, Integer>();
-                int index = 0;
-                fragmentLoop:
                 for (var fragment : fragmentsToRender) {
-                    index += 1;
                     short maxDelta = coarseDeltaHeightLookup.getHeights(fragment.minU, fragment.minV, fragment.maxU, fragment.maxV)[1];
                     int divisor = 1;
                     if (maxDelta > 80) divisor = 2;
                     if (maxDelta > 110) divisor = 3;
                     if (maxDelta > 150) divisor = 4;
-//                    if (maxDelta > 70) divisor = 4;
-//                    if (maxDelta > 100) divisor = 5;
-//                    if (maxDelta > 125) divisor = 6;
-//                    if (maxDelta > 150) divisor = 7;
                     divisorMap.put(divisor, divisorMap.getOrDefault(divisor, 0) + 1);
-                    for (int key = 0; key < 10; key++) {
-                        if (glfwGetKey(troll.glfwWindow(), GLFW_KEY_0 + key) == GLFW_PRESS && divisor == key) continue fragmentLoop;
-                    }
-                    //System.out.println("maxDelta is " + maxDelta);
+
                     pushConstants.putFloat(0, fragment.minX(cameraU));
                     pushConstants.putFloat(4, 0f - camera.y);
                     pushConstants.putFloat(8, fragment.minZ(cameraV));
@@ -886,19 +831,6 @@ public class TerrainPlayground {
 
     private static void addPartitionFragment(
             float cameraU, float cameraV, int dx, int dy,
-            float fragmentSize, float quadSize, Collection<TerrainFragment> fragments
-    ) {
-        float minU = cameraU + dx * fragmentSize;
-        float minV = cameraV + dy * fragmentSize;
-        float maxU = minU + fragmentSize;
-        float maxV = minV + fragmentSize;
-        if (maxU <= 0f || maxV <= 0f || minU >= 1f || minV >= 1f) return;
-
-        fragments.add(new TerrainFragment(max(minU, 0f), max(minV, 0f), min(maxU, 1f), min(maxV, 1f), quadSize));
-    }
-
-    private static void addPartitionFragmentNew(
-            float cameraU, float cameraV, int dx, int dy,
             float fragmentSize, float quadSize, Collection<TerrainFragment> fragments, int exponent
     ) {
         float offset = exponent == 0 ? -0.5f : 0f;
@@ -915,47 +847,12 @@ public class TerrainPlayground {
             float cameraU, float cameraV, float initialFragmentSize, float initialQuadSize, int maxExponent,
             Collection<TerrainFragment> fragments
     ) {
-        initialQuadSize *= 1f;
-        float fragmentSize = initialFragmentSize;
-        float quadSize = initialQuadSize;
-
-        for (int dx = -1; dx <= 0; dx++) {
-            for (int dy = -1; dy <= 0; dy++) {
-                addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments);
-            }
-        }
-
-        int exponent = 1;
-        while (exponent <= maxExponent) {
-
-            for (int rowSize : new int[] { 2, 3 }) {
-                int dx = -rowSize;
-                int dy = -rowSize;
-
-                float rowQuadSize = rowSize == 2 ? 1.5f * quadSize : 3f * quadSize;
-
-                for (; dx < rowSize - 1; dx++) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments);
-                for (; dy < rowSize - 1; dy++) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments);
-                for (; dx > -rowSize; dx--) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments);
-                for (; dy > -rowSize; dy--) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments);
-            }
-
-            quadSize *= 2.4f;
-            fragmentSize *= 3f;
-            exponent += 1;
-        }
-    }
-
-    private static void partitionTerrainSpaceNew(
-            float cameraU, float cameraV, float initialFragmentSize, float initialQuadSize, int maxExponent,
-            Collection<TerrainFragment> fragments
-    ) {
         float fragmentSize = initialFragmentSize;
         float quadSize = initialQuadSize;
 
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
-                addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, 0);
+                addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, 0);
             }
         }
 
@@ -974,10 +871,10 @@ public class TerrainPlayground {
                 int dx = -rowSize;
                 int dy = -rowSize;
 
-                for (; dx < rowSize - 1; dx++) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
-                for (; dy < rowSize - 1; dy++) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
-                for (; dx > -rowSize; dx--) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
-                for (; dy > -rowSize; dy--) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
+                for (; dx < rowSize - 1; dx++) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
+                for (; dy < rowSize - 1; dy++) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
+                for (; dx > -rowSize; dx--) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
+                for (; dy > -rowSize; dy--) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
             }
 
             double minU = fragments.stream().mapToDouble(fragment -> fragment.minU).min().getAsDouble();
@@ -1007,10 +904,10 @@ public class TerrainPlayground {
             Arrays.fill(minHeights, Short.MAX_VALUE);
             Arrays.fill(maxHeights, Short.MIN_VALUE);
 
-            for (int u = 0; u < fullSize; u++) {
-                int ownU = size * u / fullSize;
-                for (int v = 0; v < fullSize; v++) {
-                    int ownV = size * v / fullSize;
+            for (int v = 0; v < fullSize; v++) {
+                int ownV = size * v / fullSize;
+                for (int u = 0; u < fullSize; u++) {
+                    int ownU = size * u / fullSize;
                     int fullIndex = u + fullSize * v;
                     int ownIndex = ownU + size * ownV;
                     minHeights[ownIndex] = (short) min(minHeights[ownIndex], heights.get(fullIndex));

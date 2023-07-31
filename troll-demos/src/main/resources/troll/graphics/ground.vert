@@ -1,7 +1,6 @@
 #version 450
 
 layout(location = 0) out vec3 passPosition;
-//layout(location = 1) out vec3 deltaHeight;
 layout(location = 1) out vec2 textureCoordinates;
 
 layout(push_constant) uniform PushConstants {
@@ -34,14 +33,13 @@ void main() {
     float realZ = pushConstants.base.z + realOffsetZ;
     float horizontalDistance = sqrt(realX * realX + realZ * realZ);
 
-    vec3 heightAndDelta = computeHeightAndDeltaXZ(
-        vec2(realOffsetX, realOffsetZ), pushConstants.textureOffset, heightMap, horizontalDistance > 500000000.0
+    float height = computeHeight(
+        vec2(realOffsetX, realOffsetZ), pushConstants.textureOffset, heightMap
     );
-    vec3 worldPosition = pushConstants.base + vec3(realOffsetX, heightAndDelta.y, realOffsetZ);
+    vec3 worldPosition = pushConstants.base + vec3(realOffsetX, height, realOffsetZ);
 
     passPosition = worldPosition;
     gl_Position = camera.matrix * vec4(worldPosition, 1.0);
 
-    //deltaHeight = vec3(heightAndDelta.x, 0.0, heightAndDelta.z);
     textureCoordinates = pushConstants.textureOffset + vec2(realOffsetX, realOffsetZ) / 108030.0;
 }
