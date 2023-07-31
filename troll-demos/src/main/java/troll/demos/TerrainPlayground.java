@@ -706,16 +706,21 @@ public class TerrainPlayground {
                 float cameraU = 2f * camera.x / HEIGHT_IMAGE_SIZE + 0.5f;
                 float cameraV = 2f * camera.z / HEIGHT_IMAGE_SIZE + 0.5f;
                 //partitionTerrainSpace(cameraU, cameraV, 0.0001f, 0.5f, 1, fragmentsToRender);
-                partitionTerrainSpaceNew(cameraU, cameraV, 0.0001f, 1.0f, 15, fragmentsToRender);
+                partitionTerrainSpaceNew(cameraU, cameraV, 0.0001f, 1.5f, 15, fragmentsToRender);
                 fragmentsToRender.removeIf(fragment -> {
                     float minX = fragment.minX(cameraU);
                     float minZ = fragment.minZ(cameraV);
                     float maxX = fragment.maxX(cameraU);
                     float maxZ = fragment.maxZ(cameraV);
+
                     float threshold = 0.001f;
                     float fragmentSize = max(fragment.maxU - fragment.minU, fragment.maxV - fragment.minV);
                     var heightLookup = fragmentSize > threshold ? coarseHeightLookup : fineHeightLookup;
                     short[] heightBounds = heightLookup.getHeights(fragment.minU, fragment.minV, fragment.maxU, fragment.maxV);
+                    //short[] heightBounds = { 400, 4500 };
+                    if (minX < 0f && maxX > 0f && minZ < 0f && maxZ > 0f && Math.random() < 0.05) {
+                        //System.out.printf("camera position is (%.1f, %.1f, %.1f) and height bounds are [%d, %d] and maxDelta is %d\n", camera.x, camera.y, camera.z, heightBounds[0], heightBounds[1], maxDelta);
+                    }
 
                     var aabb = new FrustumCuller.AABB(minX, heightBounds[0] - camera.y, minZ, maxX, heightBounds[1] - camera.y, maxZ);
                     return frustumCuller.shouldCullAABB(aabb);
@@ -738,15 +743,19 @@ public class TerrainPlayground {
                 fragmentLoop:
                 for (var fragment : fragmentsToRender) {
                     index += 1;
-                    //short maxDelta = coarseDeltaHeightLookup.getHeights(fragment.minU, fragment.minV, fragment.maxU, fragment.maxV)[1];
+                    short maxDelta = coarseDeltaHeightLookup.getHeights(fragment.minU, fragment.minV, fragment.maxU, fragment.maxV)[1];
                     int divisor = 1;
-//                    if (maxDelta > 50) divisor = 2;
-//                    if (maxDelta > 60) divisor = 3;
+                    if (maxDelta > 80) divisor = 2;
+                    if (maxDelta > 110) divisor = 3;
+                    if (maxDelta > 150) divisor = 4;
 //                    if (maxDelta > 70) divisor = 4;
 //                    if (maxDelta > 100) divisor = 5;
 //                    if (maxDelta > 125) divisor = 6;
 //                    if (maxDelta > 150) divisor = 7;
                     divisorMap.put(divisor, divisorMap.getOrDefault(divisor, 0) + 1);
+                    for (int key = 0; key < 10; key++) {
+                        if (glfwGetKey(troll.glfwWindow(), GLFW_KEY_0 + key) == GLFW_PRESS && divisor == key) continue fragmentLoop;
+                    }
                     //System.out.println("maxDelta is " + maxDelta);
                     pushConstants.putFloat(0, fragment.minX(cameraU));
                     pushConstants.putFloat(4, 0f - camera.y);
@@ -756,9 +765,6 @@ public class TerrainPlayground {
                     pushConstants.putFloat(20, fragment.minV);
                     pushConstants.putInt(24, fragment.numColumns() * divisor);
 
-                    for (int key = 0; key < 10; key++) {
-                        if (glfwGetKey(troll.glfwWindow(), GLFW_KEY_0 + key) == GLFW_PRESS && divisor == key) continue fragmentLoop;
-                    }
                     vkCmdPushConstants(commandBuffer, groundPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
                     int numQuads = fragment.numRows() * fragment.numColumns() * divisor * divisor;
                     vkCmdDraw(commandBuffer, 6 * numQuads, 1, 0, 0);
@@ -794,7 +800,7 @@ public class TerrainPlayground {
                         int numGrassModels = 12000; // TODO Make this depend on the distance from the camera
 
                         vkCmdPushConstants(commandBuffer, grassPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
-                        vkCmdDraw(commandBuffer, numGrassModels * grassModelSize, 1, 0, 0);
+                        //vkCmdDraw(commandBuffer, numGrassModels * grassModelSize, 1, 0, 0);
                         vertexCount += numGrassModels * grassModelSize;
                         drawCount += 1;
                     }
@@ -955,33 +961,32 @@ public class TerrainPlayground {
 
         int exponent = 1;
         while (exponent <= maxExponent) {
+            double oldMinU = fragments.stream().mapToDouble(fragment -> fragment.minU).min().getAsDouble();
 
-            quadSize *= 1.25f;
+            quadSize *= 1.3f;
             fragmentSize *= 1.5f;
 
             int[] rowSizes = { 3, 4, 5, 6 };
             if (exponent == 1) rowSizes = new int[] { 2, 3 };
-            if (exponent == 3) rowSizes = new int[] { 5, 6 };
-            if (exponent >= 4) rowSizes = new int[] { 5, 6, 7 };
-//            if (exponent == 5) rowSizes = new int[] { 5, 6, 7 };
-//            if (exponent == 6) rowSizes = new int[] { 5, 6, 7 };
-//            if (exponent == 7) rowSizes = new int[] { 5, 6, 7 };
-//            if (exponent == 8) rowSizes = new int[] { 5, 6, 7 };
-//            if (exponent == 9) rowSizes = new int[] { 5, 6, 7 };
-//            if (exponent == 10) rowSizes = new int[] { 5, 6, 7 };
-//            if (exponent == 11) rowSizes = new int[] { 5, 6, 7 };
+            if (exponent >= 3) rowSizes = new int[] { 5, 6 };
 
             for (int rowSize : rowSizes) {
                 int dx = -rowSize;
                 int dy = -rowSize;
 
-                //float rowQuadSize = rowSize == rowSizes[0] ? 1.1f * quadSize : 1.3f * quadSize;
-                float rowQuadSize = quadSize;
+                for (; dx < rowSize - 1; dx++) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
+                for (; dy < rowSize - 1; dy++) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
+                for (; dx > -rowSize; dx--) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
+                for (; dy > -rowSize; dy--) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
+            }
 
-                for (; dx < rowSize - 1; dx++) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments, exponent);
-                for (; dy < rowSize - 1; dy++) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments, exponent);
-                for (; dx > -rowSize; dx--) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments, exponent);
-                for (; dy > -rowSize; dy--) addPartitionFragmentNew(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments, exponent);
+            double minU = fragments.stream().mapToDouble(fragment -> fragment.minU).min().getAsDouble();
+            double testU = minU + fragmentSize * rowSizes.length;
+            double error = testU - oldMinU;
+
+            if (abs(error) > 0.00001) {
+                System.out.printf("%d: fragmentSize = %.5f and minU = %.5f and testU = %.5f -> error = %.5f\n", exponent, fragmentSize, minU, testU, error);
+                throw new Error("Too large! abort");
             }
 
             exponent += 1;
@@ -1029,8 +1034,8 @@ public class TerrainPlayground {
 
             for (int intU = minIntU; intU <= maxIntU; intU++) {
                 for (int intV = minIntV; intV <= maxIntV; intV++) {
-                    minHeight = (short) min(minHeight, minHeights[intV * size+ intU]);
-                    maxHeight = (short) max(maxHeight, maxHeights[intV & size + intU]);
+                    minHeight = (short) min(minHeight, minHeights[intV * size + intU]);
+                    maxHeight = (short) max(maxHeight, maxHeights[intV * size + intU]);
                 }
             }
 
