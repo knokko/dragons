@@ -135,6 +135,8 @@ class SimpleFlatMenu(
         updateComponentTree(false)
     }
 
+    internal fun getComponentIDs() = this.componentMap.keys.toSet()
+
     fun addComponent(component: Component, region: RectRegion): UUID {
         componentsToAdd.add(Pair(component, region))
         if (didInitAgent()) agent.giveFeedback(RenderFeedback())
