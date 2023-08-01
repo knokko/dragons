@@ -607,32 +607,31 @@ public class TerrainPlayground {
                         ;
                 cameraMatrix.getToAddress(uniformBuffer.hostAddress());
 
-                var fragmentsToRender = new ArrayList<TerrainFragment>();
-                float cameraU = 2f * camera.x / HEIGHT_IMAGE_SIZE + 0.5f;
-                float cameraV = 2f * camera.z / HEIGHT_IMAGE_SIZE + 0.5f;
-                partitionTerrainSpace(cameraU, cameraV, 0.0001f, 0.2f, 8, fragmentsToRender);
-
                 var frustumCuller = new FrustumCuller(
                         new Vector3f(), camera.yaw, camera.pitch, aspectRatio, fieldOfView, nearPlane, farPlane
                 );
-
-                float heightScale = 1f;
+                var fragmentsToRender = new ArrayList<TerrainFragment>();
+                float cameraU = 2f * camera.x / HEIGHT_IMAGE_SIZE + 0.5f;
+                float cameraV = 2f * camera.z / HEIGHT_IMAGE_SIZE + 0.5f;
+                partitionTerrainSpace(cameraU, cameraV, 0.0001f, 1.5f, 15, fragmentsToRender);
 
                 int quadCount = 0;
                 int fragmentCount = 0;
-                for (var fragment : fragmentsToRender) {
-
+                fragmentsToRender.removeIf(fragment -> {
                     float minX = (fragment.minU - cameraU) * HEIGHT_IMAGE_SIZE;
                     float minZ = (fragment.minV - cameraV) * HEIGHT_IMAGE_SIZE;
                     float maxX = (fragment.maxU - cameraU) * HEIGHT_IMAGE_SIZE;
                     float maxZ = (fragment.maxV - cameraV) * HEIGHT_IMAGE_SIZE;
                     float threshold = 0.05f;
+
                     float fragmentSize = max(fragment.maxU - fragment.minU, fragment.maxV - fragment.minV);
                     var heightLookup = fragmentSize > threshold ? coarseHeightLookup : fineHeightLookup;
                     short[] heightBounds = heightLookup.getHeights(fragment.minU, fragment.minV, fragment.maxU, fragment.maxV);
 
                     var aabb = new FrustumCuller.AABB(minX, heightBounds[0] - camera.y, minZ, maxX, heightBounds[1] - camera.y, maxZ);
-                    if (frustumCuller.shouldCullAABB(aabb)) continue;
+                    return frustumCuller.shouldCullAABB(aabb);
+                });
+
                 var pushConstants = stack.calloc(28);
 
                 var divisorMap = new HashMap<Integer, Integer>();
@@ -652,7 +651,7 @@ public class TerrainPlayground {
                     pushConstants.putFloat(20, fragment.minV);
                     pushConstants.putInt(24, fragment.numColumns() * divisor);
 
-                    vkCmdPushConstants(commandBuffer, groundPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
+                    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
                     int numQuads = fragment.numRows() * fragment.numColumns() * divisor * divisor;
                     vkCmdDraw(commandBuffer, 6 * numQuads, 1, 0, 0);
                     quadCount += numQuads;
@@ -736,10 +735,11 @@ public class TerrainPlayground {
 
     private static void addPartitionFragment(
             float cameraU, float cameraV, int dx, int dy,
-            float fragmentSize, float quadSize, Collection<TerrainFragment> fragments
+            float fragmentSize, float quadSize, Collection<TerrainFragment> fragments, int exponent
     ) {
-        float minU = cameraU + dx * fragmentSize;
-        float minV = cameraV + dy * fragmentSize;
+        float offset = exponent == 0 ? -0.5f : 0f;
+        float minU = cameraU + (dx + offset) * fragmentSize;
+        float minV = cameraV + (dy + offset) * fragmentSize;
         float maxU = minU + fragmentSize;
         float maxV = minV + fragmentSize;
         if (maxU <= 0f || maxV <= 0f || minU >= 1f || minV >= 1f) return;
@@ -753,36 +753,43 @@ public class TerrainPlayground {
     ) {
         float fragmentSize = initialFragmentSize;
         float quadSize = initialQuadSize;
-        //float cameraGridSize = 1000f * fragmentSize / HEIGHT_IMAGE_SIZE;
-        //float cameraGridSize = quadSize / (HEIGHT_IMAGE_SIZE - 0) * (float) pow(2.4, 6);
-        float cameraGridSize = 0.01f;
 
-        cameraU = cameraGridSize * round(cameraU / cameraGridSize);
-        cameraV = cameraGridSize * round(cameraV / cameraGridSize);
-
-        for (int dx = -1; dx <= 0; dx++) {
-            for (int dy = -1; dy <= 0; dy++) {
-                addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, 0);
             }
         }
 
         int exponent = 1;
         while (exponent <= maxExponent) {
+            double oldMinU = fragments.stream().mapToDouble(fragment -> fragment.minU).min().getAsDouble();
 
-            for (int rowSize : new int[] { 2, 3 }) {
+            quadSize *= 1.3f;
+            fragmentSize *= 1.5f;
+
+            int[] rowSizes = { 3, 4, 5, 6 };
+            if (exponent == 1) rowSizes = new int[] { 2, 3 };
+            if (exponent >= 3) rowSizes = new int[] { 5, 6 };
+
+            for (int rowSize : rowSizes) {
                 int dx = -rowSize;
                 int dy = -rowSize;
 
-                float rowQuadSize = 0.5f * rowSize == 2 ? 1.5f * quadSize : 3f * quadSize;
-
-                for (; dx < rowSize - 1; dx++) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments);
-                for (; dy < rowSize - 1; dy++) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments);
-                for (; dx > -rowSize; dx--) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments);
-                for (; dy > -rowSize; dy--) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, rowQuadSize, fragments);
+                for (; dx < rowSize - 1; dx++) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
+                for (; dy < rowSize - 1; dy++) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
+                for (; dx > -rowSize; dx--) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
+                for (; dy > -rowSize; dy--) addPartitionFragment(cameraU, cameraV, dx, dy, fragmentSize, quadSize, fragments, exponent);
             }
 
-            quadSize *= 2.4f;
-            fragmentSize *= 3f;
+            double minU = fragments.stream().mapToDouble(fragment -> fragment.minU).min().getAsDouble();
+            double testU = minU + fragmentSize * rowSizes.length;
+            double error = testU - oldMinU;
+
+            if (abs(error) > 0.00001) {
+                System.out.printf("%d: fragmentSize = %.5f and minU = %.5f and testU = %.5f -> error = %.5f\n", exponent, fragmentSize, minU, testU, error);
+                throw new Error("Too large! abort");
+            }
+
             exponent += 1;
         }
     }
