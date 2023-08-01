@@ -24,6 +24,7 @@ import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 
 import static java.lang.Math.*;
 import static java.lang.Thread.sleep;
@@ -61,6 +62,7 @@ public class TerrainPlayground {
     private static int maxHeight = Integer.MIN_VALUE;
     private static HeightLookup coarseHeightLookup;
     private static HeightLookup fineHeightLookup;
+    private static HeightLookup coarseDeltaHeightLookup;
 
     private static long createRenderPass(MemoryStack stack, TrollInstance troll, int depthFormat) {
         var attachments = VkAttachmentDescription.calloc(2, stack);
@@ -225,6 +227,7 @@ public class TerrainPlayground {
             if (gridSize * gridSize != numValues) throw new RuntimeException(numValues + " is not a square");
 
             ShortBuffer hostHeightBuffer = ByteBuffer.wrap(content).order(ByteOrder.BIG_ENDIAN).asShortBuffer();
+            ShortBuffer deltaHeightBuffer = ShortBuffer.allocate(hostHeightBuffer.capacity());
 
             var image = troll.images.createSimple(
                     stack, gridSize, gridSize, VK_FORMAT_R16_SINT, VK_SAMPLE_COUNT_1_BIT,
@@ -270,6 +273,7 @@ public class TerrainPlayground {
                         normalHostBuffer.put(4 * index, (byte) 0);
                         normalHostBuffer.put(4 * index + 1, (byte) 127);
                         normalHostBuffer.put(4 * index + 2, (byte) 0);
+                        deltaHeightBuffer.put(index, (short) 0);
                     } else {
                         int heightIndex = u + v * gridSize;
                         int currentHeight = stagingHostBuffer.get(heightIndex);
@@ -282,9 +286,12 @@ public class TerrainPlayground {
                         normalHostBuffer.put(4 * index, (byte) (127 * normal.x));
                         normalHostBuffer.put(4 * index + 1, (byte) (127 * normal.y));
                         normalHostBuffer.put(4 * index + 2, (byte) (127 * normal.z));
+                        deltaHeightBuffer.put(index, (short) max(abs(du), abs(dv)));
                     }
                 }
             }
+
+            coarseDeltaHeightLookup = new HeightLookup(600, HEIGHT_IMAGE_NUM_PIXELS, deltaHeightBuffer);
 
             troll.commands.begin(commandBuffer, stack, "CopyHeightImage");
             troll.commands.transitionColorLayout(
@@ -628,16 +635,25 @@ public class TerrainPlayground {
                     if (frustumCuller.shouldCullAABB(aabb)) continue;
                 var pushConstants = stack.calloc(28);
 
-                    pushConstants.putFloat(0, minX);
+                var divisorMap = new HashMap<Integer, Integer>();
+                for (var fragment : fragmentsToRender) {
+                    short maxDelta = coarseDeltaHeightLookup.getHeights(fragment.minU, fragment.minV, fragment.maxU, fragment.maxV)[1];
+                    int divisor = 1;
+                    if (maxDelta > 80) divisor = 2;
+                    if (maxDelta > 110) divisor = 3;
+                    if (maxDelta > 150) divisor = 4;
+                    divisorMap.put(divisor, divisorMap.getOrDefault(divisor, 0) + 1);
+
+                    pushConstants.putFloat(0, fragment.minX(cameraU));
                     pushConstants.putFloat(4, 0f - camera.y);
-                    pushConstants.putFloat(8, minZ);
-                    pushConstants.putFloat(12, fragment.quadSize);
+                    pushConstants.putFloat(8, fragment.minZ(cameraV));
+                    pushConstants.putFloat(12, fragment.quadSize / divisor);
                     pushConstants.putFloat(16, fragment.minU);
                     pushConstants.putFloat(20, fragment.minV);
                     pushConstants.putInt(24, fragment.numColumns() * divisor);
 
-                    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
-                    int numQuads = fragment.numRows() * fragment.numColumns();
+                    vkCmdPushConstants(commandBuffer, groundPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
+                    int numQuads = fragment.numRows() * fragment.numColumns() * divisor * divisor;
                     vkCmdDraw(commandBuffer, 6 * numQuads, 1, 0, 0);
                     quadCount += numQuads;
                     fragmentCount += 1;
@@ -699,6 +715,22 @@ public class TerrainPlayground {
 
         int numRows() {
             return (int) ceil((maxV - minV) * HEIGHT_IMAGE_SIZE / quadSize);
+        }
+
+        float minX(float cameraU) {
+            return (minU - cameraU) * HEIGHT_IMAGE_SIZE;
+        }
+
+        float minZ(float cameraV) {
+            return (minV - cameraV) * HEIGHT_IMAGE_SIZE;
+        }
+
+        float maxX(float cameraU) {
+            return (maxU - cameraU) * HEIGHT_IMAGE_SIZE;
+        }
+
+        float maxZ(float cameraV) {
+            return (maxV - cameraV) * HEIGHT_IMAGE_SIZE;
         }
     }
 
