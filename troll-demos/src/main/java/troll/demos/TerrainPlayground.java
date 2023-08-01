@@ -29,6 +29,7 @@ import static java.lang.Math.*;
 import static java.lang.Thread.sleep;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryStack.stackPush;
+import static org.lwjgl.system.MemoryUtil.memByteBuffer;
 import static org.lwjgl.system.MemoryUtil.memShortBuffer;
 import static org.lwjgl.util.vma.Vma.vmaDestroyBuffer;
 import static org.lwjgl.util.vma.Vma.vmaDestroyImage;
@@ -134,7 +135,7 @@ public class TerrainPlayground {
     }
 
     private static long createDescriptorSetLayout(MemoryStack stack, TrollInstance troll) {
-        var bindings = VkDescriptorSetLayoutBinding.calloc(2, stack);
+        var bindings = VkDescriptorSetLayoutBinding.calloc(3, stack);
         var camera = bindings.get(0);
         camera.binding(0);
         camera.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -145,8 +146,14 @@ public class TerrainPlayground {
         heightMap.binding(1);
         heightMap.descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         heightMap.descriptorCount(1);
-        heightMap.stageFlags(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+        heightMap.stageFlags(VK_SHADER_STAGE_VERTEX_BIT);
         heightMap.pImmutableSamplers(null);
+        var normalMap = bindings.get(2);
+        normalMap.binding(2);
+        normalMap.descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        normalMap.descriptorCount(1);
+        normalMap.stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT);
+        normalMap.pImmutableSamplers(null);
 
         return troll.descriptors.createLayout(stack, bindings, "TerrainDescriptorSetLayout");
     }
@@ -154,7 +161,7 @@ public class TerrainPlayground {
     private static long createGroundPipelineLayout(MemoryStack stack, TrollInstance troll, long descriptorSetLayout) {
         var pushConstants = VkPushConstantRange.calloc(1, stack);
         pushConstants.offset(0);
-        pushConstants.size(36);
+        pushConstants.size(28);
         pushConstants.stageFlags(VK_SHADER_STAGE_VERTEX_BIT);
 
         return troll.pipelines.createLayout(stack, pushConstants, "GroundPipelineLayout", descriptorSetLayout);
@@ -205,7 +212,7 @@ public class TerrainPlayground {
         return groundPipeline;
     }
 
-    private static VmaImage createHeightImage(TrollInstance troll) {
+    private static VmaImage[] createHeightImages(TrollInstance troll) {
         try (var stack = stackPush()){
             var input = TerrainPlayground.class.getClassLoader().getResourceAsStream("troll/height/N44E006.hgt");
             assert input != null;
@@ -224,10 +231,19 @@ public class TerrainPlayground {
                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, "HeightImage"
             );
 
+            var normalImage = troll.images.createSimple(
+                    stack, gridSize, gridSize, VK_FORMAT_R8G8B8A8_SNORM, VK_SAMPLE_COUNT_1_BIT,
+                    VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, "DeltaHeightImage"
+            );
+
             var stagingBuffer = troll.buffers.createMapped(
                     content.length, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "HeightImageStagingBuffer"
             );
+            var normalStagingBuffer = troll.buffers.createMapped(
+                    4L * normalImage.width() * normalImage.height(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "DeltaHeightImageStagingBuffer"
+            );
             var stagingHostBuffer = memShortBuffer(stagingBuffer.hostAddress(), numValues);
+            var normalHostBuffer = memByteBuffer(normalStagingBuffer.hostAddress(), (int) normalStagingBuffer.buffer().size());
             var commandPool = troll.commands.createPool(0, troll.queueFamilies().graphics().index(), "HeightImageCopyPool");
             var commandBuffer = troll.commands.createPrimaryBuffers(commandPool, 1, "HeightImageCopyCommands")[0];
             var fence = troll.sync.createFences(false, 1, "WaitHeightImageCopy")[0];
@@ -247,20 +263,57 @@ public class TerrainPlayground {
             coarseHeightLookup = new HeightLookup(80, HEIGHT_IMAGE_NUM_PIXELS, hostHeightBuffer);
             fineHeightLookup = new HeightLookup(400, HEIGHT_IMAGE_NUM_PIXELS, hostHeightBuffer);
 
+            for (int v = 0; v < gridSize; v++) {
+                for (int u = 0; u < gridSize; u++) {
+                    int index = u + v * gridSize;
+                    if (u == gridSize - 1 || v == gridSize - 1) {
+                        normalHostBuffer.put(4 * index, (byte) 0);
+                        normalHostBuffer.put(4 * index + 1, (byte) 127);
+                        normalHostBuffer.put(4 * index + 2, (byte) 0);
+                    } else {
+                        int heightIndex = u + v * gridSize;
+                        int currentHeight = stagingHostBuffer.get(heightIndex);
+                        int du = stagingHostBuffer.get(heightIndex + 1) - currentHeight;
+                        int dv = stagingHostBuffer.get(heightIndex + gridSize) - currentHeight;
+
+                        var vectorX = new Vector3f(30f, du, 0f);
+                        var vectorZ = new Vector3f(0f, dv, 30f);
+                        var normal = vectorZ.cross(vectorX).normalize();
+                        normalHostBuffer.put(4 * index, (byte) (127 * normal.x));
+                        normalHostBuffer.put(4 * index + 1, (byte) (127 * normal.y));
+                        normalHostBuffer.put(4 * index + 2, (byte) (127 * normal.z));
+                    }
+                }
+            }
+
             troll.commands.begin(commandBuffer, stack, "CopyHeightImage");
             troll.commands.transitionColorLayout(
                     stack, commandBuffer, image.vkImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    null, new ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
+            );
+            troll.commands.transitionColorLayout(
+                    stack, commandBuffer, normalImage.vkImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     null, new ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
             );
             troll.commands.copyBufferToImage(
                     commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, image.vkImage(),
                     gridSize, gridSize, stagingBuffer.buffer().vkBuffer()
             );
+            troll.commands.copyBufferToImage(
+                    commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, normalImage.vkImage(),
+                    normalImage.width(), normalImage.height(), normalStagingBuffer.buffer().vkBuffer()
+            );
             troll.commands.transitionColorLayout(
                     stack, commandBuffer, image.vkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                     new ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
                     new ResourceUsage(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT)
+            );
+            troll.commands.transitionColorLayout(
+                    stack, commandBuffer, normalImage.vkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    new ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
+                    new ResourceUsage(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
             );
             assertVkSuccess(vkEndCommandBuffer(commandBuffer), "EndCommandBuffer", "CopyHeightImage");
 
@@ -274,7 +327,8 @@ public class TerrainPlayground {
             vkDestroyFence(troll.vkDevice(), fence, null);
             vkDestroyCommandPool(troll.vkDevice(), commandPool, null);
             vmaDestroyBuffer(troll.vmaAllocator(), stagingBuffer.buffer().vkBuffer(), stagingBuffer.buffer().vmaAllocation());
-            return image;
+            vmaDestroyBuffer(troll.vmaAllocator(), normalStagingBuffer.buffer().vkBuffer(), normalStagingBuffer.buffer().vmaAllocation());
+            return new VmaImage[] { image, normalImage };
         } catch (IOException shouldNotHappen) {
             throw new RuntimeException(shouldNotHappen);
         }
@@ -290,7 +344,9 @@ public class TerrainPlayground {
                 .window(0L, 1000, 800, new TrollSwapchainBuilder(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT))
                 .build();
 
-        var heightImage = createHeightImage(troll);
+        var heightImages = createHeightImages(troll);
+        var heightImage = heightImages[0];
+        var normalImage = heightImages[1];
         var uniformBuffer = troll.buffers.createMapped(
                 64, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, "UniformBuffer"
         );
@@ -302,6 +358,7 @@ public class TerrainPlayground {
         long descriptorSet;
         int depthFormat;
         long heightSampler;
+        long normalSampler;
         try (var stack = stackPush()) {
             depthFormat = troll.images.chooseDepthStencilFormat(
                     stack, VK_FORMAT_X8_D24_UNORM_PACK32, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT
@@ -312,13 +369,16 @@ public class TerrainPlayground {
             pipelineLayout = createGroundPipelineLayout(stack, troll, descriptorSetLayout);
             groundPipeline = createGroundPipeline(stack, troll, pipelineLayout, renderPass);
 
-            var poolSizes = VkDescriptorPoolSize.calloc(2, stack);
+            var poolSizes = VkDescriptorPoolSize.calloc(3, stack);
             var uniformPoolSize = poolSizes.get(0);
             uniformPoolSize.type(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
             uniformPoolSize.descriptorCount(1);
             var heightMapPoolSize = poolSizes.get(1);
             heightMapPoolSize.type(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
             heightMapPoolSize.descriptorCount(1);
+            var normalMapPoolSize = poolSizes.get(2);
+            normalMapPoolSize.type(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+            normalMapPoolSize.descriptorCount(2);
 
             var ciDescriptorPool = VkDescriptorPoolCreateInfo.calloc(stack);
             ciDescriptorPool.sType$Default();
@@ -338,13 +398,20 @@ public class TerrainPlayground {
                     stack, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST,
                     VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 0f, 0f, false, "HeightSampler"
             );
+            normalSampler = troll.images.simpleSampler(
+                    stack, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, "NormalSampler"
+            );
 
             var heightMapInfo = VkDescriptorImageInfo.calloc(1, stack);
             heightMapInfo.sampler(heightSampler);
             heightMapInfo.imageView(heightImage.vkImageView());
             heightMapInfo.imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            var normalMapInfo = VkDescriptorImageInfo.calloc(1, stack);
+            normalMapInfo.sampler(normalSampler);
+            normalMapInfo.imageView(normalImage.vkImageView());
+            normalMapInfo.imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-            var descriptorWrites = VkWriteDescriptorSet.calloc(2, stack);
+            var descriptorWrites = VkWriteDescriptorSet.calloc(3, stack);
             var uniformWrite = descriptorWrites.get(0);
             uniformWrite.sType$Default();
             uniformWrite.dstSet(descriptorSet);
@@ -361,6 +428,14 @@ public class TerrainPlayground {
             heightMapWrite.descriptorCount(1);
             heightMapWrite.descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
             heightMapWrite.pImageInfo(heightMapInfo);
+            var normalMapWrite = descriptorWrites.get(2);
+            normalMapWrite.sType$Default();
+            normalMapWrite.dstSet(descriptorSet);
+            normalMapWrite.dstBinding(2);
+            normalMapWrite.dstArrayElement(0);
+            normalMapWrite.descriptorCount(1);
+            normalMapWrite.descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+            normalMapWrite.pImageInfo(normalMapInfo);
 
             vkUpdateDescriptorSets(troll.vkDevice(), descriptorWrites, null);
         }
@@ -536,7 +611,6 @@ public class TerrainPlayground {
 
                 float heightScale = 1f;
 
-                var pushConstants = stack.calloc(36);
                 int quadCount = 0;
                 int fragmentCount = 0;
                 for (var fragment : fragmentsToRender) {
@@ -552,6 +626,7 @@ public class TerrainPlayground {
 
                     var aabb = new FrustumCuller.AABB(minX, heightBounds[0] - camera.y, minZ, maxX, heightBounds[1] - camera.y, maxZ);
                     if (frustumCuller.shouldCullAABB(aabb)) continue;
+                var pushConstants = stack.calloc(28);
 
                     pushConstants.putFloat(0, minX);
                     pushConstants.putFloat(4, 0f - camera.y);
@@ -559,9 +634,7 @@ public class TerrainPlayground {
                     pushConstants.putFloat(12, fragment.quadSize);
                     pushConstants.putFloat(16, fragment.minU);
                     pushConstants.putFloat(20, fragment.minV);
-                    pushConstants.putFloat(24, heightScale);
-                    pushConstants.putFloat(28, HEIGHT_IMAGE_SIZE);
-                    pushConstants.putInt(32, fragment.numColumns());
+                    pushConstants.putInt(24, fragment.numColumns() * divisor);
 
                     vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
                     int numQuads = fragment.numRows() * fragment.numColumns();
@@ -597,7 +670,10 @@ public class TerrainPlayground {
         vmaDestroyBuffer(troll.vmaAllocator(), uniformBuffer.buffer().vkBuffer(), uniformBuffer.buffer().vmaAllocation());
         vkDestroyImageView(troll.vkDevice(), heightImage.vkImageView(), null);
         vmaDestroyImage(troll.vmaAllocator(), heightImage.vkImage(), heightImage.vmaAllocation());
+        vkDestroyImageView(troll.vkDevice(), normalImage.vkImageView(), null);
+        vmaDestroyImage(troll.vmaAllocator(), normalImage.vkImage(), normalImage.vmaAllocation());
         vkDestroySampler(troll.vkDevice(), heightSampler, null);
+        vkDestroySampler(troll.vkDevice(), normalSampler, null);
 
         troll.destroy();
         profiler.stop();
