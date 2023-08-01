@@ -526,7 +526,7 @@ public class TerrainPlayground {
             if (!Double.isNaN(cameraController.oldX) && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
                 double dx = x - cameraController.oldX;
                 double dy = y - cameraController.oldY;
-                camera.yaw -= 0.5 * dx;
+                camera.yaw += 0.5 * dx;
                 camera.pitch -= 0.2 * dy;
                 if (camera.pitch < -90) camera.pitch = -90;
                 if (camera.pitch > 90) camera.pitch = 90;
@@ -599,7 +599,7 @@ public class TerrainPlayground {
                 var cameraMatrix = new Matrix4f()
                         .scale(1f, -1f, 1f)
                         .perspective(
-                            (float) toRadians(fieldOfView), aspectRatio,
+                                (float) toRadians(fieldOfView), aspectRatio,
                                 nearPlane, farPlane, true
                         )
                         .rotateX((float) toRadians(-camera.pitch))
@@ -801,10 +801,10 @@ public class TerrainPlayground {
             Arrays.fill(minHeights, Short.MAX_VALUE);
             Arrays.fill(maxHeights, Short.MIN_VALUE);
 
-            for (int u = 0; u < fullSize; u++) {
-                int ownU = size * u / fullSize;
-                for (int v = 0; v < fullSize; v++) {
-                    int ownV = size * v / fullSize;
+            for (int v = 0; v < fullSize; v++) {
+                int ownV = size * v / fullSize;
+                for (int u = 0; u < fullSize; u++) {
+                    int ownU = size * u / fullSize;
                     int fullIndex = u + fullSize * v;
                     int ownIndex = ownU + size * ownV;
                     minHeights[ownIndex] = (short) min(minHeights[ownIndex], heights.get(fullIndex));
