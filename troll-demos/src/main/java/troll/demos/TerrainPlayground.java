@@ -169,6 +169,61 @@ public class TerrainPlayground {
         return troll.pipelines.createLayout(stack, pushConstants, "GroundPipelineLayout", descriptorSetLayout);
     }
 
+    // The grass pipeline layout happens to be identical to the ground pipeline layout
+    private static long createGrassPipelineLayout(MemoryStack stack, TrollInstance troll, long descriptorSetLayout) {
+        var pushConstants = VkPushConstantRange.calloc(1, stack);
+        pushConstants.offset(0);
+        pushConstants.size(28);
+        pushConstants.stageFlags(VK_SHADER_STAGE_VERTEX_BIT);
+
+        return troll.pipelines.createLayout(stack, pushConstants, "GrassPipelineLayout", descriptorSetLayout);
+    }
+
+    private static long createGrassPipeline(MemoryStack stack, TrollInstance troll, long pipelineLayout, long renderPass) {
+        var vertexShader = troll.pipelines.createShaderModule(
+                stack, "troll/graphics/grass.vert.spv", "GrassVertexShader"
+        );
+        var fragmentShader = troll.pipelines.createShaderModule(
+                stack, "troll/graphics/grass.frag.spv", "GrassFragmentShader"
+        );
+
+        var vertexInput = VkPipelineVertexInputStateCreateInfo.calloc(stack);
+        vertexInput.sType$Default();
+        vertexInput.pVertexBindingDescriptions(null);
+        vertexInput.pVertexAttributeDescriptions(null);
+
+        var ciPipelines = VkGraphicsPipelineCreateInfo.calloc(1, stack);
+        var ciGrassPipeline = ciPipelines.get(0);
+        ciGrassPipeline.sType$Default();
+        troll.pipelines.shaderStages(
+                stack, ciGrassPipeline,
+                new ShaderInfo(VK_SHADER_STAGE_VERTEX_BIT, vertexShader, null),
+                new ShaderInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader, null)
+        );
+        ciGrassPipeline.pVertexInputState(vertexInput);
+        troll.pipelines.simpleInputAssembly(stack, ciGrassPipeline);
+        troll.pipelines.dynamicViewports(stack, ciGrassPipeline, 1);
+        troll.pipelines.simpleRasterization(stack, ciGrassPipeline, VK_CULL_MODE_BACK_BIT);
+        troll.pipelines.noMultisampling(stack, ciGrassPipeline);
+        troll.pipelines.simpleDepthStencil(stack, ciGrassPipeline, VK_COMPARE_OP_LESS_OR_EQUAL);
+        troll.pipelines.noColorBlending(stack, ciGrassPipeline, 1);
+        troll.pipelines.dynamicStates(stack, ciGrassPipeline, VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR);
+        ciGrassPipeline.layout(pipelineLayout);
+        ciGrassPipeline.renderPass(renderPass);
+        ciGrassPipeline.subpass(0);
+
+        var pPipeline = stack.callocLong(1);
+        assertVkSuccess(vkCreateGraphicsPipelines(
+                troll.vkDevice(), VK_NULL_HANDLE, ciPipelines, null, pPipeline
+        ), "CreateGraphicsPipelines", "GrassPipeline");
+        long grassPipeline = pPipeline.get(0);
+        troll.debug.name(stack, grassPipeline, VK_OBJECT_TYPE_PIPELINE, "GrassPipeline");
+
+        vkDestroyShaderModule(troll.vkDevice(), vertexShader, null);
+        vkDestroyShaderModule(troll.vkDevice(), fragmentShader, null);
+        return grassPipeline;
+    }
+
     private static long createGroundPipeline(MemoryStack stack, TrollInstance troll, long pipelineLayout, long renderPass) {
         var vertexShader = troll.pipelines.createShaderModule(
                 stack, "troll/graphics/ground.vert.spv", "GroundVertexShader"
@@ -359,8 +414,10 @@ public class TerrainPlayground {
         );
         long renderPass;
         long descriptorSetLayout;
-        long pipelineLayout;
+        long groundPipelineLayout;
+        long grassPipelineLayout;
         long groundPipeline;
+        long grassPipeline;
         long descriptorPool;
         long descriptorSet;
         int depthFormat;
@@ -373,8 +430,10 @@ public class TerrainPlayground {
             renderPass = createRenderPass(stack, troll, depthFormat);
 
             descriptorSetLayout = createDescriptorSetLayout(stack, troll);
-            pipelineLayout = createGroundPipelineLayout(stack, troll, descriptorSetLayout);
-            groundPipeline = createGroundPipeline(stack, troll, pipelineLayout, renderPass);
+            groundPipelineLayout = createGroundPipelineLayout(stack, troll, descriptorSetLayout);
+            grassPipelineLayout = createGrassPipelineLayout(stack, troll, descriptorSetLayout);
+            groundPipeline = createGroundPipeline(stack, troll, groundPipelineLayout, renderPass);
+            grassPipeline = createGrassPipeline(stack, troll, grassPipelineLayout, renderPass);
 
             var poolSizes = VkDescriptorPoolSize.calloc(3, stack);
             var uniformPoolSize = poolSizes.get(0);
@@ -583,14 +642,6 @@ public class TerrainPlayground {
                 biRenderPass.clearValueCount(2);
                 biRenderPass.pClearValues(clearValues);
 
-                vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE);
-                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, groundPipeline);
-                troll.commands.dynamicViewportAndScissor(stack, commandBuffer, swapchainImage.width(), swapchainImage.height());
-                vkCmdBindDescriptorSets(
-                        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
-                        0, stack.longs(descriptorSet), null
-                );
-
                 float fieldOfView = 45f;
                 float aspectRatio = (float) swapchainImage.width() / (float) swapchainImage.height();
 
@@ -610,20 +661,18 @@ public class TerrainPlayground {
                 var frustumCuller = new FrustumCuller(
                         new Vector3f(), camera.yaw, camera.pitch, aspectRatio, fieldOfView, nearPlane, farPlane
                 );
+
                 var fragmentsToRender = new ArrayList<TerrainFragment>();
                 float cameraU = 2f * camera.x / HEIGHT_IMAGE_SIZE + 0.5f;
                 float cameraV = 2f * camera.z / HEIGHT_IMAGE_SIZE + 0.5f;
                 partitionTerrainSpace(cameraU, cameraV, 0.0001f, 1.5f, 15, fragmentsToRender);
-
-                int quadCount = 0;
-                int fragmentCount = 0;
                 fragmentsToRender.removeIf(fragment -> {
-                    float minX = (fragment.minU - cameraU) * HEIGHT_IMAGE_SIZE;
-                    float minZ = (fragment.minV - cameraV) * HEIGHT_IMAGE_SIZE;
-                    float maxX = (fragment.maxU - cameraU) * HEIGHT_IMAGE_SIZE;
-                    float maxZ = (fragment.maxV - cameraV) * HEIGHT_IMAGE_SIZE;
-                    float threshold = 0.05f;
+                    float minX = fragment.minX(cameraU);
+                    float minZ = fragment.minZ(cameraV);
+                    float maxX = fragment.maxX(cameraU);
+                    float maxZ = fragment.maxZ(cameraV);
 
+                    float threshold = 0.001f;
                     float fragmentSize = max(fragment.maxU - fragment.minU, fragment.maxV - fragment.minV);
                     var heightLookup = fragmentSize > threshold ? coarseHeightLookup : fineHeightLookup;
                     short[] heightBounds = heightLookup.getHeights(fragment.minU, fragment.minV, fragment.maxU, fragment.maxV);
@@ -632,6 +681,16 @@ public class TerrainPlayground {
                     return frustumCuller.shouldCullAABB(aabb);
                 });
 
+                vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE);
+                troll.commands.dynamicViewportAndScissor(stack, commandBuffer, swapchainImage.width(), swapchainImage.height());
+                int vertexCount = 0;
+                int drawCount = 0;
+
+                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, groundPipeline);
+                vkCmdBindDescriptorSets(
+                        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, groundPipelineLayout,
+                        0, stack.longs(descriptorSet), null
+                );
                 var pushConstants = stack.calloc(28);
 
                 var divisorMap = new HashMap<Integer, Integer>();
@@ -651,15 +710,50 @@ public class TerrainPlayground {
                     pushConstants.putFloat(20, fragment.minV);
                     pushConstants.putInt(24, fragment.numColumns() * divisor);
 
-                    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
+                    vkCmdPushConstants(commandBuffer, groundPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
                     int numQuads = fragment.numRows() * fragment.numColumns() * divisor * divisor;
                     vkCmdDraw(commandBuffer, 6 * numQuads, 1, 0, 0);
-                    quadCount += numQuads;
-                    fragmentCount += 1;
+                    vertexCount += 6 * numQuads;
+                    drawCount += 1;
                 }
+
+                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipeline);
+                vkCmdBindDescriptorSets(
+                        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout,
+                        0, stack.longs(descriptorSet), null
+                );
+                pushConstants = stack.calloc(28);
+
+                int grassModelSize = 12; // Currently 12 vertices, TODO make it larger
+
+                for (var fragment : fragmentsToRender) {
+                    float minX = fragment.minX(cameraU);
+                    float minZ = fragment.minZ(cameraV);
+                    float maxX = fragment.maxX(cameraU);
+                    float maxZ = fragment.maxZ(cameraV);
+
+                    float distanceEstimation = (float) sqrt(min(min(minX * minX + minZ * minZ, minX * minX + maxZ * maxZ), min(maxX * maxX + minZ * minZ, maxX * maxX + maxZ * maxZ)));
+                    if (distanceEstimation < 30) {
+                        pushConstants.putFloat(0, minX);
+                        pushConstants.putFloat(4, 0f - camera.y);
+                        pushConstants.putFloat(8, minZ);
+                        pushConstants.putFloat(12, (fragment.maxU - fragment.minU) * HEIGHT_IMAGE_SIZE);
+                        pushConstants.putFloat(16, fragment.minU);
+                        pushConstants.putFloat(20, fragment.minV);
+                        pushConstants.putInt(24, 100);
+
+                        int numGrassModels = 12000; // TODO Make this depend on the distance from the camera
+
+                        vkCmdPushConstants(commandBuffer, grassPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants);
+                        //vkCmdDraw(commandBuffer, numGrassModels * grassModelSize, 1, 0, 0);
+                        vertexCount += numGrassModels * grassModelSize;
+                        drawCount += 1;
+                    }
+                }
+
                 vkCmdEndRenderPass(commandBuffer);
                 if (Math.random() < 0.002) {
-                    System.out.println("Drew " + quadCount + " quads in " + fragmentCount + " fragment with camera yaw " + camera.yaw);
+                    System.out.println("Drew " + vertexCount + " vertices with " + drawCount + " draw calls and divisors " + divisorMap);
                 }
 
                 assertVkSuccess(vkEndCommandBuffer(commandBuffer), "EndCommandBuffer", "TerrainDraw");
@@ -679,7 +773,9 @@ public class TerrainPlayground {
 
         vkDestroyDescriptorPool(troll.vkDevice(), descriptorPool, null);
         vkDestroyPipeline(troll.vkDevice(), groundPipeline, null);
-        vkDestroyPipelineLayout(troll.vkDevice(), pipelineLayout, null);
+        vkDestroyPipeline(troll.vkDevice(), grassPipeline, null);
+        vkDestroyPipelineLayout(troll.vkDevice(), groundPipelineLayout, null);
+        vkDestroyPipelineLayout(troll.vkDevice(), grassPipelineLayout, null);
         vkDestroyDescriptorSetLayout(troll.vkDevice(), descriptorSetLayout, null);
         vkDestroyRenderPass(troll.vkDevice(), renderPass, null);
         vmaDestroyBuffer(troll.vmaAllocator(), uniformBuffer.buffer().vkBuffer(), uniformBuffer.buffer().vmaAllocation());
