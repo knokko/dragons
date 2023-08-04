@@ -51,12 +51,11 @@ private val rowButtonStyle = TextButtonStyle(
         verticalAlignment = VerticalComponentAlignment.Middle
 )
 
-private class Element(
-        val name: String,
-        val count: Int
-)
+
 
 private fun createMenu(): Component {
+    class Element(val name: String, val count: Int)
+
     val elements = mutableListOf(
             Element("Hello, world", 2),
             Element("Test trolls", 6),

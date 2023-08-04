@@ -27,6 +27,8 @@ value class Color private constructor(val rawValue: Int) {
     val alphaF: Float
     get() = alpha.toFloat() / 255f
 
+    override fun toString() = if (alpha == 255) "rgb($red, $green, $blue)" else "rgba($red, $green, $blue, $alpha)"
+
     companion object {
 
         val WHITE = rgbInt(255, 255, 255)
