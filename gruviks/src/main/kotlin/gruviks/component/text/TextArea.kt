@@ -275,6 +275,8 @@ class TextArea(
                     CharacterPosition(
                         minX = originalPosition.minX - scrollOffsetX, minY = (originalPosition.minY - minY) / lineHeight,
                         maxX = originalPosition.maxX - scrollOffsetX, maxY = (originalPosition.maxY - minY) / lineHeight,
+                        croppedMinX = originalPosition.croppedMinX - scrollOffsetX,
+                        croppedMaxX = originalPosition.croppedMaxX - scrollOffsetX,
                         isLeftToRight = originalPosition.isLeftToRight
                     )
                 }

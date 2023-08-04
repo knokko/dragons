@@ -54,7 +54,7 @@ class TextButton(
         val (textMinX, textMaxX) = if (textPositions.isEmpty()) {
             Pair(reservedLeftSpace, reservedLeftSpace + cornerRadiusX - reservedRightSpace)
         } else {
-            Pair(textPositions.minOf { it.minX }, textPositions.maxOf { it.maxX })
+            Pair(textPositions.minOf { it.croppedMinX }, textPositions.maxOf { it.croppedMaxX })
         }
 
         val borderColor = if (isHovering) { style.hoverBorderColor } else { style.baseBorderColor }

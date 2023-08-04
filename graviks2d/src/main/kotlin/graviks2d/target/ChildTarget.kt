@@ -112,7 +112,10 @@ class ChildTarget(
             )
             for (childArea in childResult) {
                 transformBack(childArea.minX, childArea.minY, childArea.maxX, childArea.maxY) { bMinX, bMinY, bMaxX, bMaxY ->
-                    result.add(CharacterPosition(bMinX, bMinY, bMaxX, bMaxY, childArea.isLeftToRight))
+                    transformBack(childArea.croppedMinX, childArea.minY, childArea.croppedMaxX, childArea.maxY)
+                    { bCroppedMinX, _, bCroppedMaxX, _ ->
+                        result.add(CharacterPosition(bMinX, bMinY, bMaxX, bMaxY, childArea.isLeftToRight, bCroppedMinX, bCroppedMaxX))
+                    }
                 }
             }
         }
