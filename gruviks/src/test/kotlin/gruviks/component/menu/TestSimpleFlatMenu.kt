@@ -463,10 +463,10 @@ class TestSimpleFlatMenu {
         // When we shift the camera, the background should be redrawn, and the components should be drawn
         // at their new relative position
         val shiftedScissor1 = GraviksScissor(
-            scissor1.minX - 0.4f, scissor1.minY - 0.2f, scissor1.maxX - 0.4f, scissor1.maxY - 0.2f
+            0f, scissor1.minY - 0.2f, scissor1.maxX - 0.4f, scissor1.maxY - 0.2f
         )
         val shiftedScissor2 = GraviksScissor(
-            scissor2.minX - 0.4f, scissor2.minY - 0.2f, scissor2.maxX - 0.4f, scissor2.maxY - 0.2f
+            0f, 0f, scissor2.maxX - 0.4f, scissor2.maxY - 0.2f
         )
         menu.shiftCamera(Coordinate.percentage(40), Coordinate.percentage(20))
         checkRenderResult(menu.render(target, false), ::checkEntireDrawnRegion)
@@ -641,10 +641,10 @@ class TestSimpleFlatMenu {
 
         // When we shift the camera, the components should be drawn at their new position
         val shiftedScissor1 = GraviksScissor(
-            scissor1.minX - 0.4f, scissor1.minY - 0.2f, scissor1.maxX - 0.4f, scissor1.maxY - 0.2f
+            0f, scissor1.minY - 0.2f, scissor1.maxX - 0.4f, scissor1.maxY - 0.2f
         )
         val shiftedScissor2 = GraviksScissor(
-            scissor2.minX - 0.4f, scissor2.minY - 0.2f, scissor2.maxX - 0.4f, scissor2.maxY - 0.2f
+            0f, 0f, scissor2.maxX - 0.4f, scissor2.maxY - 0.2f
         )
         menu.shiftCamera(Coordinate.percentage(40), Coordinate.percentage(20))
         checkNewRenderResult(menu.render(target, false), true)
@@ -1247,9 +1247,6 @@ class TestSimpleFlatMenu {
 
         assertEquals(entireRegion, renderResult2.drawnRegion)
         assertEquals(RectangularDrawnRegion(0.1f, 0.2f, 0.3f, 0.4f), renderResult2.recentDrawnRegion)
-
-        println("renderResult1 is $renderResult1")
-        println("renderResult2 is $renderResult2")
 
         menu.removeComponent(component2)
         assertEquals(1, removeCounter)

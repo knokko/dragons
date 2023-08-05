@@ -379,7 +379,8 @@ class SimpleFlatMenu(
                 val childTarget = ChildTarget(
                     target, transformedRegion.minX, transformedRegion.minY, transformedRegion.maxX, transformedRegion.maxY
                 )
-                val oldScissor = childTarget.setScissor(GraviksScissor(0f, 0f, 1f, 1f))
+                val newScissor = childTarget.getScissor().combine(GraviksScissor(0f, 0f, 1f, 1f))
+                val oldScissor = childTarget.setScissor(newScissor)
 
                 if (!shouldDrawBackground && backgroundColor.alpha > 0) {
                     for (backgroundRegion in node.component.regionsToRedrawBeforeNextRender()) {
