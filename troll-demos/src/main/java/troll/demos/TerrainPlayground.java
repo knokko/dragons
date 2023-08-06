@@ -230,12 +230,12 @@ public class TerrainPlayground {
             ShortBuffer deltaHeightBuffer = ShortBuffer.allocate(hostHeightBuffer.capacity());
 
             var image = troll.images.createSimple(
-                    stack, gridSize, gridSize, VK_FORMAT_R16_SINT, VK_SAMPLE_COUNT_1_BIT,
+                    stack, gridSize, gridSize, VK_FORMAT_R16_SINT,
                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, "HeightImage"
             );
 
             var normalImage = troll.images.createSimple(
-                    stack, gridSize, gridSize, VK_FORMAT_R8G8B8A8_SNORM, VK_SAMPLE_COUNT_1_BIT,
+                    stack, gridSize, gridSize, VK_FORMAT_R8G8B8A8_SNORM,
                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, "DeltaHeightImage"
             );
 
@@ -460,14 +460,14 @@ public class TerrainPlayground {
         long frameCounter = 0;
         var swapchainResources = new SwapchainResourceManager<>(swapchainImage -> {
             try (var stack = stackPush()) {
-                long imageView = troll.images.createView(
+                long imageView = troll.images.createSimpleView(
                         stack, swapchainImage.vkImage(), troll.swapchainSettings.surfaceFormat().format(),
                         VK_IMAGE_ASPECT_COLOR_BIT, "SwapchainView" + swapchainImage.imageIndex()
                 );
 
                 var depthImage = troll.images.createSimple(
                         stack, swapchainImage.width(), swapchainImage.height(), depthFormat,
-                        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT, "Depth"
+                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT, "Depth"
                 );
 
                 long framebuffer = troll.images.createFramebuffer(

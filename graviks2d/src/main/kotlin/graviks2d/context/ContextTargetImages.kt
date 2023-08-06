@@ -18,7 +18,7 @@ internal class ContextTargetImages(
         val troll = context.instance.troll
         stackPush().use { stack ->
             this.colorImage = troll.images.createSimple(
-                stack, context.width, context.height, TARGET_COLOR_FORMAT, VK_SAMPLE_COUNT_1_BIT,
+                stack, context.width, context.height, TARGET_COLOR_FORMAT,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT or VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT, "GraviksTarget"
             )

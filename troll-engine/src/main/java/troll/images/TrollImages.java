@@ -39,23 +39,25 @@ public class TrollImages {
     }
 
     public VmaImage createSimple(
-            MemoryStack stack, int width, int height,
-            int format, int samples, int usage, int aspectMask, String name
+            MemoryStack stack, int width, int height, int format, int usage, int aspectMask, String name
     ) {
-        return createSimple(stack, width, height, format, samples, usage, aspectMask, true, name);
+        return create(
+                stack, width, height, format, usage, aspectMask,
+                VK_SAMPLE_COUNT_1_BIT, 1, 1, true, name
+        );
     }
 
-    public VmaImage createSimple(
-            MemoryStack stack, int width, int height,
-            int format, int samples, int usage, int aspectMask, boolean createView, String name
+    public VmaImage create(
+            MemoryStack stack, int width, int height, int format, int usage, int aspectMask,
+            int samples, int mipLevels, int arrayLayers, boolean createView, String name
     ) {
         var ciImage = VkImageCreateInfo.calloc(stack);
         ciImage.sType$Default();
         ciImage.imageType(VK_IMAGE_TYPE_2D);
         ciImage.format(format);
         ciImage.extent().set(width, height, 1);
-        ciImage.mipLevels(1);
-        ciImage.arrayLayers(1);
+        ciImage.mipLevels(mipLevels);
+        ciImage.arrayLayers(arrayLayers);
         ciImage.samples(samples);
         ciImage.tiling(VK_IMAGE_TILING_OPTIMAL);
         ciImage.usage(usage);
@@ -74,11 +76,18 @@ public class TrollImages {
         long allocation = pAllocation.get(0);
         instance.debug.name(stack, image, VK_OBJECT_TYPE_IMAGE, name);
 
-        long view = createView ? createView(stack, image, format, aspectMask, name) : 0L;
+        long view = createView ? createView(stack, image, format, aspectMask, mipLevels, arrayLayers, name) : 0L;
         return new VmaImage(image, view, allocation, width, height);
     }
 
-    public long createView(MemoryStack stack, long image, int format, int aspectMask, String name) {
+    public long createSimpleView(MemoryStack stack, long image, int format, int aspectMask, String name) {
+        return createView(stack, image, format, aspectMask, 1, 1, name);
+    }
+
+    public long createView(
+            MemoryStack stack, long image, int format, int aspectMask,
+            int mipLevels, int arrayLayers, String name
+    ) {
         var ciImageView = VkImageViewCreateInfo.calloc(stack);
         ciImageView.sType$Default();
         ciImageView.image(image);
@@ -89,6 +98,8 @@ public class TrollImages {
                 VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY
         );
         instance.images.subresourceRange(stack, ciImageView.subresourceRange(), aspectMask);
+        ciImageView.subresourceRange().levelCount(mipLevels);
+        ciImageView.subresourceRange().layerCount(arrayLayers);
 
         var pImageView = stack.callocLong(1);
         assertVkSuccess(vkCreateImageView(

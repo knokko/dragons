@@ -45,10 +45,9 @@ class Pm2Scene internal constructor(
     init {
 
         val imageFormat = VK_FORMAT_R8G8B8A8_SRGB
-        val imageSamples = VK_SAMPLE_COUNT_1_BIT
         stackPush().use { stack ->
             this.colorImage = troll.images.createSimple(
-                stack, width, height, imageFormat, imageSamples,
+                stack, width, height, imageFormat,
                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT or VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT, "Pm2SceneColorImage"
             )
@@ -57,7 +56,7 @@ class Pm2Scene internal constructor(
             val colorAttachment = attachments[0]
             colorAttachment.flags(0)
             colorAttachment.format(imageFormat)
-            colorAttachment.samples(imageSamples)
+            colorAttachment.samples(VK_SAMPLE_COUNT_1_BIT)
             colorAttachment.loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
             colorAttachment.storeOp(VK_ATTACHMENT_STORE_OP_STORE)
             colorAttachment.stencilLoadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE)

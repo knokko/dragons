@@ -74,12 +74,12 @@ internal class TextShapeCache(
         val troll = context.instance.troll
         stackPush().use { stack ->
             this.textCountAtlas = troll.images.createSimple(
-                stack, this.width, this.height, TEXT_COLOR_FORMAT, VK_SAMPLE_COUNT_1_BIT,
+                stack, this.width, this.height, TEXT_COLOR_FORMAT,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT or VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT, "GraviksTextCountAtlas"
             )
             this.textOddAtlas = troll.images.createSimple(
-                stack, this.width, this.height, TEXT_COLOR_FORMAT, VK_SAMPLE_COUNT_1_BIT,
+                stack, this.width, this.height, TEXT_COLOR_FORMAT,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT, "GraviksTextOddAtlas"
             )

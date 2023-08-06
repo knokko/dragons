@@ -622,10 +622,11 @@ class TestContext {
         )
 
         stackPush().use { stack ->
-            val destImage = troll.images.createSimple(
-                stack, graviks.width, graviks.height, VK_FORMAT_B8G8R8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
+            val destImage = troll.images.create(
+                stack, graviks.width, graviks.height, VK_FORMAT_B8G8R8A8_UNORM,
                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT or VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                VK_IMAGE_ASPECT_COLOR_BIT, false, "TestDestImage"
+                VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT, 1, 1,
+                false, "TestDestImage"
             )
 
             graviks.copyColorImageTo(

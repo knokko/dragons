@@ -139,7 +139,7 @@ public class SimpleRingApproximation {
         long frameCounter = 0;
         var swapchainResources = new SwapchainResourceManager<>(swapchainImage -> {
             try (var stack = stackPush()) {
-                long imageView = instance.images.createView(
+                long imageView = instance.images.createSimpleView(
                         stack, swapchainImage.vkImage(), instance.swapchainSettings.surfaceFormat().format(),
                         VK_IMAGE_ASPECT_COLOR_BIT, "SwapchainView" + swapchainImage.imageIndex()
                 );

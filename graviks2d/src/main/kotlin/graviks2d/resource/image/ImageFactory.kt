@@ -44,7 +44,7 @@ internal fun createImagePair(
             ?: throw IllegalArgumentException("Can't decode image at path $pathDescription")
 
         val image = instance.troll.images.createSimple(
-            stack, width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
+            stack, width, height, VK_FORMAT_R8G8B8A8_UNORM,
             VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
             VK_IMAGE_ASPECT_COLOR_BIT, name
         )

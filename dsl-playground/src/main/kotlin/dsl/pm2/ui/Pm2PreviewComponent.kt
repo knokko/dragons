@@ -53,7 +53,7 @@ class Pm2PreviewComponent(
         )
         stackPush().use { stack ->
             sceneImage = pm2Instance.troll.images.createSimple(
-                stack, width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_SAMPLE_COUNT_1_BIT,
+                stack, width, height, VK_FORMAT_R8G8B8A8_SRGB,
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT, "Pm2PreviewImage"
             )
