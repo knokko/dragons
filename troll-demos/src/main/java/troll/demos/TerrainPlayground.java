@@ -613,7 +613,7 @@ public class TerrainPlayground {
                 var fragmentsToRender = new ArrayList<TerrainFragment>();
                 float cameraU = 2f * camera.x / HEIGHT_IMAGE_SIZE + 0.5f;
                 float cameraV = 2f * camera.z / HEIGHT_IMAGE_SIZE + 0.5f;
-                partitionTerrainSpace(cameraU, cameraV, 0.0001f, 1.5f, 15, fragmentsToRender);
+                partitionTerrainSpace(cameraU, cameraV, 0.0002f, 1.5f, 13, fragmentsToRender);
 
                 int quadCount = 0;
                 int fragmentCount = 0;
@@ -742,9 +742,21 @@ public class TerrainPlayground {
         float minV = cameraV + (dy + offset) * fragmentSize;
         float maxU = minU + fragmentSize;
         float maxV = minV + fragmentSize;
+
+        // The margin prevents terrain holes that would spawn due to FP rounding errors
+        float margin = 0.02f * fragmentSize;
+        minU -= margin;
+        minV -= margin;
+        maxU += margin;
+        maxV += margin;
+
         if (maxU <= 0f || maxV <= 0f || minU >= 1f || minV >= 1f) return;
 
         fragments.add(new TerrainFragment(max(minU, 0f), max(minV, 0f), min(maxU, 1f), min(maxV, 1f), quadSize));
+    }
+
+    private static float multipleOf(float value, float factor) {
+        return factor * (int) (value / factor);
     }
 
     private static void partitionTerrainSpace(
@@ -753,6 +765,10 @@ public class TerrainPlayground {
     ) {
         float fragmentSize = initialFragmentSize;
         float quadSize = initialQuadSize;
+
+        float cameraGranularity = 3f * fragmentSize;
+        cameraU = multipleOf(cameraU, cameraGranularity);
+        cameraV = multipleOf(cameraV, cameraGranularity);
 
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
@@ -764,7 +780,7 @@ public class TerrainPlayground {
         while (exponent <= maxExponent) {
             double oldMinU = fragments.stream().mapToDouble(fragment -> fragment.minU).min().getAsDouble();
 
-            quadSize *= 1.3f;
+            quadSize *= 1.45f;
             fragmentSize *= 1.5f;
 
             int[] rowSizes = { 3, 4, 5, 6 };
@@ -785,7 +801,7 @@ public class TerrainPlayground {
             double testU = minU + fragmentSize * rowSizes.length;
             double error = testU - oldMinU;
 
-            if (abs(error) > 0.00001) {
+            if (abs(error) > 0.03f * fragmentSize && minU > 0) {
                 System.out.printf("%d: fragmentSize = %.5f and minU = %.5f and testU = %.5f -> error = %.5f\n", exponent, fragmentSize, minU, testU, error);
                 throw new Error("Too large! abort");
             }
