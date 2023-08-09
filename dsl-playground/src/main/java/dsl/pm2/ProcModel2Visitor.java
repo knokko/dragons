@@ -35,6 +35,12 @@ public interface ProcModel2Visitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitParameterDeclaration(ProcModel2Parser.ParameterDeclarationContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#parameterAssignment}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitParameterAssignment(ProcModel2Parser.ParameterAssignmentContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link ProcModel2Parser#dynamicDeclaration}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

@@ -8,7 +8,8 @@ import org.joml.Math.*
 import kotlin.jvm.Throws
 
 internal class Pm2VertexProcessor(
-        program: Pm2Program
+        private val program: Pm2Program,
+        private val staticParameterValues: Map<String, Pm2Value>
 ): Pm2BaseProcessor(program.instructions) {
 
     private val dynamicBlocks = program.dynamicBlocks
@@ -20,13 +21,27 @@ internal class Pm2VertexProcessor(
 
     @Throws(Pm2RuntimeError::class)
     fun execute(): Pm2Model {
+        initializeStaticParameters()
         executeInstructions()
+        variables.popScope() // Pop static parameter values
 
         if (vertices.isEmpty()) throw Pm2RuntimeError("Not a single triangle was produced")
         if (valueStack.isNotEmpty()) throw IllegalStateException("Value stack should be empty")
         if (variables.hasScope()) throw IllegalStateException("All scopes should have been popped")
 
         return Pm2Model(vertices.map { it.toVertex() }, dynamicMatrices)
+    }
+
+    private fun initializeStaticParameters() {
+        variables.pushScope()
+        for ((key, value) in staticParameterValues) {
+            val type = program.staticParameters[key] ?: throw Pm2RuntimeError("Unknown static parameter $key")
+            if (!type.acceptValue(value)) throw IllegalArgumentException("Type $type doesn't accept static parameter $key: $value")
+            variables.defineVariable(type, key, value.copy())
+        }
+        for (key in program.staticParameters.keys) {
+            if (!staticParameterValues.containsKey(key)) throw Pm2RuntimeError("No value given for static parameter $key")
+        }
     }
 
     override fun executeInstruction(instruction: Pm2Instruction) {

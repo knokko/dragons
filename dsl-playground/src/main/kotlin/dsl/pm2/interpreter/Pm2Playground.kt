@@ -27,7 +27,7 @@ fun main() {
         "Insert source code here"
     }
     val initialModel = try {
-        Pm2Program.compile(initialProgramCode).run()
+        Pm2Program.compile(initialProgramCode).run(emptyMap())
     } catch (compileError: Pm2CompileError) { null }
 
     val graviksWindow = GraviksWindow(
@@ -65,7 +65,7 @@ fun main() {
             val startTime = currentTimeMillis()
             val newProgram = Pm2Program.compile(codeArea.getText())
             val time1 = currentTimeMillis()
-            val newModel = newProgram.run()
+            val newModel = newProgram.run(emptyMap())
             val time2 = currentTimeMillis()
 
             println("Compilation took ${time1 - startTime} ms and running took ${time2 - time1} ms")

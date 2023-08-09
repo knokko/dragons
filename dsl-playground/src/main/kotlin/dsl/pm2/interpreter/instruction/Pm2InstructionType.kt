@@ -20,6 +20,7 @@ enum class Pm2InstructionType {
     DeclareVariable,
     ReassignVariable,
     SetProperty,
+    AssignParameter,
 
     Jump,
     InvokeBuiltinFunction,

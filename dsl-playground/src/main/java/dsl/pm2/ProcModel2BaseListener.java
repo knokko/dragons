@@ -65,6 +65,18 @@ public class ProcModel2BaseListener implements ProcModel2Listener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterParameterAssignment(ProcModel2Parser.ParameterAssignmentContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitParameterAssignment(ProcModel2Parser.ParameterAssignmentContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterDynamicDeclaration(ProcModel2Parser.DynamicDeclarationContext ctx) { }
 	/**
 	 * {@inheritDoc}

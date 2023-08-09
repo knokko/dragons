@@ -9,11 +9,14 @@ outerStatement :
 innerStatement :
     variableDeclaration |
     variableReassignment |
+    parameterAssignment |
     functionDeclaration |
     functionInvocation ';' |
     forLoop;
 
 parameterDeclaration : PARAMETER_TYPE 'parameter' IDENTIFIER IDENTIFIER ';';
+
+parameterAssignment : PARAMETER_TYPE 'parameter' IDENTIFIER '=' expression ';';
 
 dynamicDeclaration: 'dynamic' IDENTIFIER ('<' (IDENTIFIER IDENTIFIER ',')* IDENTIFIER IDENTIFIER '>')? '{' innerStatement* expression '}';
 

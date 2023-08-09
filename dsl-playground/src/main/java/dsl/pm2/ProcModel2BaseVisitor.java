@@ -46,6 +46,13 @@ public class ProcModel2BaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
+	@Override public T visitParameterAssignment(ProcModel2Parser.ParameterAssignmentContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
 	@Override public T visitDynamicDeclaration(ProcModel2Parser.DynamicDeclarationContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}

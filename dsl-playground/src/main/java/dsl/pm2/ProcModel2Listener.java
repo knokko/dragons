@@ -48,6 +48,16 @@ public interface ProcModel2Listener extends ParseTreeListener {
 	 */
 	void exitParameterDeclaration(ProcModel2Parser.ParameterDeclarationContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#parameterAssignment}.
+	 * @param ctx the parse tree
+	 */
+	void enterParameterAssignment(ProcModel2Parser.ParameterAssignmentContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#parameterAssignment}.
+	 * @param ctx the parse tree
+	 */
+	void exitParameterAssignment(ProcModel2Parser.ParameterAssignmentContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link ProcModel2Parser#dynamicDeclaration}.
 	 * @param ctx the parse tree
 	 */

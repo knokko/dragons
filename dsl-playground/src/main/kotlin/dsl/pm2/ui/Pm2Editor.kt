@@ -2,6 +2,7 @@ package dsl.pm2.ui
 
 import dsl.pm2.interpreter.*
 import dsl.pm2.interpreter.program.Pm2Program
+import dsl.pm2.interpreter.value.Pm2Value
 import dsl.pm2.renderer.Pm2Instance
 import graviks.glfw.GraviksWindow
 import graviks2d.context.GraviksContext
@@ -40,18 +41,41 @@ val textAreaStyle = squareTextAreaStyle(
 )
 
 private class OpenFile(
-    val file: File,
+    val modelFile: File,
+    val parametersFile: File?,
     val textArea: TextArea,
     private val createPreview: () -> Pm2PreviewComponent
 ) {
     val preview = lazy { createPreview() }
 
-    fun updatePreview(errorComponent: TextComponent) {
+    fun updatePreview(errorComponent: TextComponent, openFiles: List<OpenFile>) {
+        val modelContent = if (parametersFile == null) textArea.getText() else try {
+            val openFile = openFiles.find { it.parametersFile == null && it.modelFile == this.modelFile }
+            openFile?.textArea?.getText() ?: Files.readString(modelFile.toPath())
+        } catch (failed: Throwable) {
+            errorComponent.setText("Failed to open model file: " + failed.message)
+            return
+        }
+
+        val parameters = mutableMapOf<String, Pm2Value>()
+        if (parametersFile != null) {
+            try {
+                Pm2Program.compile(textArea.getText()).collectStaticParameters(parameters)
+            } catch (compileError: Pm2CompileError) {
+                errorComponent.setText(compileError.message ?: "Failed to compile parameters")
+                compileError.printStackTrace()
+                return
+            } catch (runtimeError: Pm2RuntimeError) {
+                errorComponent.setText(runtimeError.message ?: "Failed to run parameters")
+                return
+            }
+        }
+
         try {
             val startTime = System.currentTimeMillis()
-            val newProgram = Pm2Program.compile(textArea.getText())
+            val newProgram = Pm2Program.compile(modelContent)
             val time1 = System.currentTimeMillis()
-            val newModel = newProgram.run()
+            val newModel = newProgram.run(parameters)
             val time2 = System.currentTimeMillis()
 
             println("Compilation took ${time1 - startTime} ms and running took ${time2 - time1} ms")
@@ -66,6 +90,7 @@ private class OpenFile(
 
     fun save(handleErrors: Boolean): Boolean {
         val content = textArea.getText()
+        val file = parametersFile ?: modelFile
         return try {
             Files.writeString(file.toPath(), content)
             true
@@ -87,26 +112,76 @@ private class OpenFile(
             switchComponent: SwitchComponent, errorComponent: TextComponent, updateController: () -> Unit,
             pm2Instance: Pm2Instance
         ) {
-            var openFile = openFiles.find { it.file == file }
+            val modelFile: File
+            val parametersFile: File?
+            if (file.name.endsWith(".pm2")) {
+                modelFile = file
+                parametersFile = null
+            } else if (file.name.endsWith(".sp2")) {
+                val currentDirectory = file.parentFile
+                if (currentDirectory == null) {
+                    errorComponent.setText("Can't find directory containing this file")
+                    return
+                }
+
+                val parentDirectory = currentDirectory.parentFile
+                if (parentDirectory == null) {
+                    errorComponent.setText("Can't find parent directory of this file")
+                    return
+                }
+
+                modelFile = File("$parentDirectory/${currentDirectory.name}.pm2")
+                parametersFile = file
+            } else {
+                errorComponent.setText("Unexpected file type: $file")
+                return
+            }
+
+            var openFile = openFiles.find { it.modelFile == modelFile && it.parametersFile == parametersFile }
             if (openFile != null) openFiles.remove(openFile)
             if (openFile == null) {
-                val content: String
+                val modelContent: String
+                val parameterContent: String?
                 try {
-                    content = Files.readString(file.toPath())
+                    modelContent = Files.readString(modelFile.toPath())
+                    parameterContent = if (parametersFile != null) Files.readString(parametersFile.toPath())
+                    else null
                 } catch (failedToOpen: Throwable) {
+                    errorComponent.setText(failedToOpen.message ?: "Failed to open file")
                     failedToOpen.printStackTrace()
                     return
                 }
 
+                val initialParameters = mutableMapOf<String, Pm2Value>()
+                if (parameterContent != null) {
+                    try {
+                        val parameterProgram = Pm2Program.compile(parameterContent)
+                        parameterProgram.collectStaticParameters(initialParameters)
+                    } catch (compileError: Pm2CompileError) {
+                        compileError.printStackTrace()
+                        errorComponent.setText(compileError.message ?: "Parameter compile error")
+                        return
+                    } catch (runtimeError: Pm2RuntimeError) {
+                        errorComponent.setText(runtimeError.message ?: "Parameter runtime error")
+                        return
+                    }
+                }
+
                 val initialModel = try {
-                    Pm2Program.compile(content).run()
-                } catch (compileError: Pm2CompileError) { null }
+                    Pm2Program.compile(modelContent).run(initialParameters)
+                } catch (compileError: Pm2CompileError) {
+                    compileError.printStackTrace()
+                    null
+                } catch (runtimeError: Pm2RuntimeError) {
+                    null
+                }
 
                 val width = 1600
                 val height = 900 // TODO Maybe stop hardcoding this?
 
+                val textArea = TextArea(parameterContent ?: modelContent, textAreaStyle, null)
                 val createPreview = { Pm2PreviewComponent(pm2Instance, initialModel, width, height, errorComponent::setText) }
-                openFile = OpenFile(file, TextArea(content, textAreaStyle, null), createPreview)
+                openFile = OpenFile(modelFile, parametersFile, textArea, createPreview)
             }
 
             openFiles.add(0, openFile)
@@ -147,6 +222,7 @@ private val fileButtonStyle = TextButtonStyle(
 
 private val directoryIcon = ImageReference.classLoaderPath("dsl/pm2/ui/directory.png", false)
 private val fileIcon = ImageReference.classLoaderPath("dsl/pm2/ui/file.png", false)
+private val parameterIcon = fileIcon // TODO Create separate icon
 
 fun createPm2Editor(troll: TrollInstance): Component {
     val pm2Instance = Pm2Instance(troll)
@@ -167,7 +243,8 @@ fun createPm2Editor(troll: TrollInstance): Component {
             componentPosition.x + Coordinate.percentage(480), Coordinate.percentage(100)
         )
 
-        val simpleFileName = element.file.name.substring(0 until element.file.name.length - 4)
+        val fileName = (element.parametersFile ?: element.modelFile).name
+        val simpleFileName = fileName.substring(0 until fileName.length - 4)
         components.add(Pair(TextButton(simpleFileName, null, tabStyle) { event, _ ->
             if (event.button == 0) {
                 content.setComponent(element.textArea)
@@ -181,7 +258,7 @@ fun createPm2Editor(troll: TrollInstance): Component {
                 } else errorComponent.setText("Saving failed due to an IOException")
             } else if (event.button == 2) {
                 content.setComponent(element.preview.value)
-                element.updatePreview(errorComponent)
+                element.updatePreview(errorComponent, openFiles)
             }
         }, region))
 
@@ -213,21 +290,22 @@ fun createPm2Editor(troll: TrollInstance): Component {
                         if (node.children == null) {
                             val directories = files.filter { it.isDirectory }
                             val modelFiles = files.filter { !it.isDirectory && it.name.endsWith(".pm2") }
-                            node.children = (directories + modelFiles).map {
+                            val parameterFiles = files.filter { !it.isDirectory && it.name.endsWith(".sp2") }
+                            node.children = (directories + modelFiles + parameterFiles).map {
                                 TreeViewController.Node(it, null)
                             }.toMutableList()
                         } else node.children = null
                         refreshController()
                     }
                 }, region))
-            } else if (node.element.name.endsWith(".pm2")){
-                components.add(Pair(TextButton(
-                    node.element.name.substring(0, node.element.name.length - 4),
-                    fileIcon, fileButtonStyle) { _, _ ->
-                        OpenFile.open(
-                            node.element, openFiles, content, errorComponent,
-                            fileTabsController::refresh, pm2Instance
-                        )
+            } else if (node.element.name.endsWith(".pm2") || node.element.name.endsWith(".sp2")) {
+                val icon = if (node.element.name.endsWith(".pm2")) fileIcon else parameterIcon
+                val simpleName = node.element.name.substring(0, node.element.name.length - 4)
+                components.add(Pair(TextButton(simpleName, icon, fileButtonStyle) { _, _ ->
+                    OpenFile.open(
+                        node.element, openFiles, content, errorComponent,
+                        fileTabsController::refresh, pm2Instance
+                    )
                 }, region))
             }
 

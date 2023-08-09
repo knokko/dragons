@@ -16,6 +16,7 @@ class Pm2Converter : ProcModel2BaseListener() {
     private var instructions = baseInstructions
     private val dynamicDeclarations = mutableListOf<MutableList<Pm2Instruction>>()
     private var isInsideDynamicDeclaration = false
+    private val staticParameters = mutableMapOf<String, Pm2Type>()
     private val types = Pm2Types()
     private val functions = Pm2Functions()
 
@@ -46,7 +47,7 @@ class Pm2Converter : ProcModel2BaseListener() {
     override fun exitStart(ctx: ProcModel2Parser.StartContext?) {
         types.popScope()
         functions.popScope()
-        program = Pm2Program(instructions, dynamicDeclarations)
+        program = Pm2Program(instructions.toList(), dynamicDeclarations.map { it.toList() }, staticParameters.toMap())
     }
 
     override fun enterDynamicDeclaration(ctx: ProcModel2Parser.DynamicDeclarationContext?) {
@@ -162,12 +163,29 @@ class Pm2Converter : ProcModel2BaseListener() {
         )
     }
 
-    override fun enterParameterDeclaration(ctx: ProcModel2Parser.ParameterDeclarationContext?) {
-        TODO("Not yet implemented")
+    override fun exitParameterDeclaration(ctx: ProcModel2Parser.ParameterDeclarationContext?) {
+        if (ctx!!.PARAMETER_TYPE().text == "static") {
+            val typeName = ctx.IDENTIFIER(0).text
+            val type = types.getType(typeName)
+            val name = ctx.IDENTIFIER(1).text
+            if (staticParameters.containsKey(name)) throw Pm2CompileError("Duplicate static parameter $name")
+            staticParameters[name] = type
+        } else if (ctx.PARAMETER_TYPE().text == "dynamic") {
+            TODO("Not yet implemented")
+        } else {
+            throw Pm2CompileError("Unknown parameter type " + ctx.PARAMETER_TYPE().text)
+        }
     }
 
-    override fun exitParameterDeclaration(ctx: ProcModel2Parser.ParameterDeclarationContext?) {
-        TODO("Not yet implemented")
+    override fun exitParameterAssignment(ctx: ProcModel2Parser.ParameterAssignmentContext?) {
+        if (ctx!!.PARAMETER_TYPE().text != "static") throw Pm2CompileError("Can only assign static parameters")
+
+        val parameterName = ctx!!.IDENTIFIER().text
+        instructions.add(Pm2Instruction(
+                Pm2InstructionType.AssignParameter,
+                lineNumber = ctx.start.line,
+                name = parameterName
+        ))
     }
 
     override fun enterFunctionInvocation(ctx: ProcModel2Parser.FunctionInvocationContext?) {

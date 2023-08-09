@@ -21,6 +21,7 @@ class Pm2Instruction(
      * this is the name of the variable.
      * - When *type* is `PushProperty` or `SetProperty`, this is the name of the property.
      * - When *type* is `InvokeBuiltinFunction`, this is the name of the function
+     * - When *type* is `AssignParameter`, this is the name of the parameter
      * - For all other instructions, this must be null.
      */
     val name: String? = null
@@ -39,7 +40,7 @@ class Pm2Instruction(
         if ((type == Pm2InstructionType.PushVariable || type == Pm2InstructionType.DeclareVariable
                     || type == Pm2InstructionType.ReassignVariable || type == Pm2InstructionType.PushProperty
                     || type == Pm2InstructionType.SetProperty || type == Pm2InstructionType.InvokeBuiltinFunction
-                    || type == Pm2InstructionType.TransferVariable
+                    || type == Pm2InstructionType.TransferVariable || type == Pm2InstructionType.AssignParameter
                 )) {
             if (name == null) throw IllegalArgumentException("Type $type must have a name")
         } else if (name != null) throw IllegalArgumentException("Type $type must not have a name")
