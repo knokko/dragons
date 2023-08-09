@@ -192,7 +192,7 @@ public class TrollCommands {
         var pImageBarrier = VkImageMemoryBarrier.calloc(1, stack);
         pImageBarrier.sType$Default();
         pImageBarrier.srcAccessMask(oldUsage != null ? oldUsage.accessMask() : 0);
-        pImageBarrier.dstAccessMask(newUsage.accessMask());
+        pImageBarrier.dstAccessMask(newUsage != null ? newUsage.accessMask() : 0);
         pImageBarrier.oldLayout(oldLayout);
         pImageBarrier.newLayout(newLayout);
         pImageBarrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
@@ -202,7 +202,8 @@ public class TrollCommands {
 
         vkCmdPipelineBarrier(
                 commandBuffer, oldUsage != null ? oldUsage.stageMask() : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                newUsage.stageMask(), 0, null, null, pImageBarrier
+                newUsage != null ? newUsage.stageMask() : VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                0, null, null, pImageBarrier
         );
     }
 

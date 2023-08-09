@@ -27,37 +27,42 @@ internal fun rasterizeTextAtlas(
             biRenderPass.clearValueCount(1)
             biRenderPass.pClearValues(clearValues)
 
-            vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
-            vkCmdBindPipeline(
-                commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                textCache.context.instance.textPipelines.countPipeline
-            )
-            troll.commands.dynamicViewportAndScissor(stack, commandBuffer, textCache.width, textCache.height)
             if (textCache.currentVertexIndex > 0) {
+                vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
+                troll.commands.dynamicViewportAndScissor(stack, commandBuffer, textCache.width, textCache.height)
+                vkCmdBindPipeline(
+                        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        textCache.context.instance.textPipelines.countPipeline
+                )
                 vkCmdBindVertexBuffers(commandBuffer, 0, stack.longs(textCache.countVertexBuffer.buffer.vkBuffer), stack.longs(0))
                 vkCmdDraw(commandBuffer, textCache.currentVertexIndex, 1, 0, 0)
-            }
-            vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE)
-            vkCmdBindPipeline(
-                commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                textCache.context.instance.textPipelines.oddPipeline
-            )
-            vkCmdBindDescriptorSets(
-                commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                textCache.context.instance.textPipelines.oddPipelineLayout,
-                0, stack.longs(textCache.descriptorSet), null
-            )
-            if (textCache.currentVertexIndex > 0) {
+                vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE)
+                vkCmdBindPipeline(
+                        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        textCache.context.instance.textPipelines.oddPipeline
+                )
+                vkCmdBindDescriptorSets(
+                        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        textCache.context.instance.textPipelines.oddPipelineLayout,
+                        0, stack.longs(textCache.descriptorSet), null
+                )
                 vkCmdBindVertexBuffers(commandBuffer, 0, stack.longs(textCache.oddVertexBuffer.vkBuffer), stack.longs(0))
                 vkCmdDraw(commandBuffer, 6, 1, 0, 0)
+                vkCmdEndRenderPass(commandBuffer)
             }
-            vkCmdEndRenderPass(commandBuffer)
+
+            var oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            var oldUsage: ResourceUsage? = ResourceUsage(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+
+            if (isFirstDraw && textCache.currentVertexIndex == 0) {
+                oldLayout = VK_IMAGE_LAYOUT_UNDEFINED
+                oldUsage = null
+            }
 
             troll.commands.transitionColorLayout(
-                stack, commandBuffer, textCache.textOddAtlas.vkImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                ResourceUsage(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-                ResourceUsage(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
+                    stack, commandBuffer, textCache.textOddAtlas.vkImage, oldLayout,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    oldUsage, ResourceUsage(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
             )
         }
     }

@@ -4,9 +4,10 @@ import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
 import troll.exceptions.VulkanFailureException.assertVkSuccess
+import troll.instance.TrollInstance
 
 internal fun createTextRenderPass(
-    vkDevice: VkDevice, stack: MemoryStack
+    troll: TrollInstance, stack: MemoryStack
 ): Long {
 
     val attachments = VkAttachmentDescription.calloc(2, stack)
@@ -75,8 +76,9 @@ internal fun createTextRenderPass(
 
     val pRenderPass = stack.callocLong(1)
     assertVkSuccess(
-        vkCreateRenderPass(vkDevice, ciRenderPass, null, pRenderPass),
+        vkCreateRenderPass(troll.vkDevice(), ciRenderPass, null, pRenderPass),
         "vkCreateRenderPass", "GraviksTextRenderPass"
     )
+    troll.debug.name(stack, pRenderPass[0], VK_OBJECT_TYPE_RENDER_PASS, "GraviksTextRenderPass")
     return pRenderPass[0]
 }

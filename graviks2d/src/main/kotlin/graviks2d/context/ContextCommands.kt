@@ -114,11 +114,9 @@ internal class ContextCommands(
     fun copyColorImageTo(
         destImage: Long?, destBuffer: Long?, destImageFormat: Int?,
         signalSemaphore: Long?, submissionMarker: CompletableDeferred<Unit>?,
-        originalImageLayout: Int?, imageSrcAccessMask: Int?, imageSrcStageMask: Int?,
-        finalImageLayout: Int?, imageDstAccessMask: Int?, imageDstStageMask: Int?,
-        shouldAwaitCompletion: Boolean
+        originalImageLayout: Int?, imageSrcUsage: ResourceUsage?, imageDstUsage: ResourceUsage?,
+        finalImageLayout: Int?, shouldAwaitCompletion: Boolean
     ) {
-
         stackPush().use { stack ->
             if (hasPendingSubmission) throw IllegalStateException("Still has pending submission")
 
@@ -142,17 +140,12 @@ internal class ContextCommands(
                 }
 
                 checkPresent(originalImageLayout, "originalImageLayout")
-                checkPresent(imageSrcAccessMask, "imageSrcAccessMask")
-                checkPresent(imageSrcStageMask, "imageSrcStageMask")
                 checkPresent(finalImageLayout, "finalImageLayout")
-                checkPresent(imageDstAccessMask, "imageDstAccessMask")
-                checkPresent(imageDstStageMask, "imageDstStageMask")
 
                 if (originalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
                     troll.commands.transitionColorLayout(
                         stack, commandBuffer, destImage, originalImageLayout!!, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                        ResourceUsage(imageSrcAccessMask!!, imageSrcStageMask!!),
-                        ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
+                            imageSrcUsage, ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
                     )
                 }
 
@@ -172,8 +165,7 @@ internal class ContextCommands(
                 if (finalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
                     troll.commands.transitionColorLayout(
                         stack, commandBuffer, destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, finalImageLayout!!,
-                        ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
-                        ResourceUsage(imageDstAccessMask!!, imageDstStageMask!!)
+                        ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT), imageDstUsage
                     )
                 }
             }

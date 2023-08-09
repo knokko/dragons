@@ -22,6 +22,7 @@ import troll.builder.instance.ValidationFeatures
 import troll.builder.swapchain.SimpleSurfaceFormatPicker
 import troll.exceptions.VulkanFailureException.assertVkSuccess
 import troll.instance.TrollInstance
+import troll.sync.ResourceUsage
 import troll.sync.WaitSemaphore
 import java.lang.System.nanoTime
 
@@ -139,10 +140,9 @@ class GraviksWindow(
                 destImage = swapchainImage.vkImage, destImageFormat = troll.swapchainSettings.surfaceFormat.format,
                 destBuffer = null, signalSemaphore = swapchainImage.presentSemaphore,
                 originalImageLayout = VK_IMAGE_LAYOUT_UNDEFINED, finalImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                imageSrcAccessMask = 0, imageSrcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                imageSrcUsage = ResourceUsage(0, VK_PIPELINE_STAGE_TRANSFER_BIT),
                 // There is no need to give proper destinations masks since vkQueuePresentKHR takes care of that
-                imageDstAccessMask = 0, imageDstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                shouldAwaitCompletion = false
+                imageDstUsage = null, shouldAwaitCompletion = false
             )
 
             val incrementalPresentAddress = if (hasIncrementalPresent && fillPresentRegions != null) {

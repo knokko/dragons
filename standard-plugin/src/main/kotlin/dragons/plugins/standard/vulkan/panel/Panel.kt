@@ -5,6 +5,7 @@ import graviks2d.context.GraviksContext
 import graviks2d.core.GraviksInstance
 import kotlinx.coroutines.CompletableDeferred
 import org.lwjgl.vulkan.VK10.*
+import troll.sync.ResourceUsage
 import java.util.concurrent.ArrayBlockingQueue
 
 class Panel(
@@ -51,8 +52,8 @@ class Panel(
                 destImage = this.image.handle, destBuffer = null, destImageFormat = VK_FORMAT_R8G8B8A8_UNORM,
                 originalImageLayout = this.imageLayout,
                 finalImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                imageSrcAccessMask = VK_ACCESS_SHADER_READ_BIT, imageSrcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                imageDstAccessMask = VK_ACCESS_SHADER_READ_BIT, imageDstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                imageSrcUsage = ResourceUsage(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT),
+                imageDstUsage = ResourceUsage(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT),
                 signalSemaphore = signalSemaphore, submissionMarker = submissionMarker, shouldAwaitCompletion = false
             )
             this.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL

@@ -18,6 +18,7 @@ import graviks2d.util.Color
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.lwjgl.system.MemoryStack.stackPush
+import troll.sync.ResourceUsage
 import troll.sync.WaitSemaphore
 import java.lang.Integer.min
 import kotlin.IllegalStateException
@@ -539,8 +540,7 @@ class GraviksContext(
         destImage: Long?, destBuffer: Long?, destImageFormat: Int?,
         signalSemaphore: Long? = null, submissionMarker: CompletableDeferred<Unit>? = null,
         originalImageLayout: Int? = null, finalImageLayout: Int? = null,
-        imageSrcAccessMask: Int? = null, imageSrcStageMask: Int? = null,
-        imageDstAccessMask: Int? = null, imageDstStageMask: Int? = null,
+        imageSrcUsage: ResourceUsage? = null, imageDstUsage: ResourceUsage? = null,
         shouldAwaitCompletion: Boolean
     ) {
         handlePendingCommand()
@@ -549,8 +549,7 @@ class GraviksContext(
             destImage = destImage, destBuffer = destBuffer, destImageFormat = destImageFormat,
             signalSemaphore = signalSemaphore, submissionMarker = submissionMarker,
             originalImageLayout = originalImageLayout, finalImageLayout = finalImageLayout,
-            imageSrcAccessMask = imageSrcAccessMask, imageSrcStageMask = imageSrcStageMask,
-            imageDstAccessMask = imageDstAccessMask, imageDstStageMask = imageDstStageMask,
+            imageSrcUsage = imageSrcUsage, imageDstUsage = imageDstUsage,
             shouldAwaitCompletion = shouldAwaitCompletion
         )
         hasPendingCommand = !shouldAwaitCompletion

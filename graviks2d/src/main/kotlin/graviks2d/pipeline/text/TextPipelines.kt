@@ -34,7 +34,7 @@ internal class TextPipeline(
             this.countPipelineLayout = troll.pipelines.createLayout(stack, null, "GraviksTextCount")
             this.oddDescriptorSetLayout = troll.descriptors.createLayout(stack, oddLayoutBindings, "GraviksTextOdd")
             this.oddPipelineLayout = troll.pipelines.createLayout(stack, null ,"GraviksTextOdd", oddDescriptorSetLayout)
-            val renderPass = createTextRenderPass(troll.vkDevice(), stack)
+            val renderPass = createTextRenderPass(troll, stack)
             this.vkRenderPass = renderPass
 
             val textCountVertexShader = troll.pipelines.createShaderModule(

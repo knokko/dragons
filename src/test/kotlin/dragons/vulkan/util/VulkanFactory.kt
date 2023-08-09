@@ -30,7 +30,7 @@ fun getDummyVulkanPhysicalDevice(vkInstance: VkInstance): VkPhysicalDevice {
         val pDeviceCount = stack.ints(1)
 
         val pDevice = stack.callocPointer(1)
-        assertVkSuccess(vkEnumeratePhysicalDevices(vkInstance, pDeviceCount, pDevice), "EnumeratePhysicalDevices", "dummy")
+        assertVkSuccess(vkEnumeratePhysicalDevices(vkInstance, pDeviceCount, pDevice), "EnumeratePhysicalDevices", "dummy", VK_INCOMPLETE)
 
         VkPhysicalDevice(pDevice[0], vkInstance)
     }
