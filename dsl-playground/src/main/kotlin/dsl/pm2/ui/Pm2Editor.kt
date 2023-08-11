@@ -32,11 +32,13 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 
+private val backgroundColor = Color.rgbInt(30, 0, 90)
+
 val textAreaStyle = squareTextAreaStyle(
-    defaultTextStyle = TextStyle(fillColor = Color.BLACK, font = null),
-    defaultBackgroundColor = Color.WHITE,
-    focusTextStyle = TextStyle(fillColor = Color.rgbInt(50, 50, 50), font = null),
-    focusBackgroundColor = Color.rgbInt(200, 200, 200),
+    defaultTextStyle = TextStyle(fillColor = Color.WHITE.scale(0.8f), font = null),
+    defaultBackgroundColor = backgroundColor,
+    focusTextStyle = TextStyle(fillColor = Color.WHITE, font = null),
+    focusBackgroundColor = backgroundColor.scale(1.1f),
     lineHeight = 0.05f, placeholderStyle = null
 )
 
@@ -204,13 +206,13 @@ private class SaveOnQuitController(
 }
 
 private val tabStyle = TextButtonStyle.textAndBorder(
-    baseColor = Color.rgbInt(0, 0, 50),
-    hoverColor = Color.rgbInt(0, 0, 80),
+    baseColor = Color.WHITE.scale(0.8f),
+    hoverColor = Color.WHITE,
     font = null
 )
 
 private val fileButtonStyle = TextButtonStyle(
-    baseTextStyle = TextStyle(fillColor = Color.rgbInt(200, 200, 200), font = null),
+    baseTextStyle = TextStyle(fillColor = Color.WHITE.scale(0.8f), font = null),
     baseBackgroundColor = Color.TRANSPARENT,
     baseBorderColor = Color.TRANSPARENT,
     hoverTextStyle = TextStyle(fillColor = Color.WHITE, font = null),
@@ -222,19 +224,19 @@ private val fileButtonStyle = TextButtonStyle(
 
 private val directoryIcon = ImageReference.classLoaderPath("dsl/pm2/ui/directory.png", false)
 private val fileIcon = ImageReference.classLoaderPath("dsl/pm2/ui/file.png", false)
-private val parameterIcon = fileIcon // TODO Create separate icon
+private val parametersIcon = ImageReference.classLoaderPath("dsl/pm2/ui/parameters.png", false)
 
 fun createPm2Editor(troll: TrollInstance): Component {
     val pm2Instance = Pm2Instance(troll)
-    val rootMenu = SimpleFlatMenu(SpaceLayout.Simple, Color.rgbInt(150, 150, 200))
+    val rootMenu = SimpleFlatMenu(SpaceLayout.Simple, backgroundColor.scale(1.2f))
 
     val openFiles = mutableListOf<OpenFile>()
     val fileTree = TreeViewController.Node(File("pm2-models"), null)
 
     val errorComponent = TextComponent("", TextStyle(fillColor = Color.RED, font = null))
-    val contentBackground = SimpleColorFillComponent(Color.rgbInt(120, 120, 180))
+    val contentBackground = SimpleColorFillComponent(backgroundColor)
     val content = SwitchComponent(contentBackground)
-    val upperBar = SimpleFlatMenu(SpaceLayout.GrowRight, Color.rgbInt(140, 140, 190))
+    val upperBar = SimpleFlatMenu(SpaceLayout.GrowRight, backgroundColor.scale(1.3f))
 
     val fileTabsController = SimpleListViewController(openFiles) { element, _, position, components, refreshController ->
         val componentPosition = position ?: Point.percentage(0, 0)
@@ -264,7 +266,7 @@ fun createPm2Editor(troll: TrollInstance): Component {
 
         Point(region.boundX, Coordinate.percentage(0))
     }
-    val fileTabs = SimpleFlatMenu(SpaceLayout.GrowRight, Color.rgbInt(160, 160, 220))
+    val fileTabs = SimpleFlatMenu(SpaceLayout.GrowRight, backgroundColor.scale(1.2f))
     fileTabs.addController(fileTabsController)
 
     val fileTreeController = TreeViewController(
@@ -299,7 +301,7 @@ fun createPm2Editor(troll: TrollInstance): Component {
                     }
                 }, region))
             } else if (node.element.name.endsWith(".pm2") || node.element.name.endsWith(".sp2")) {
-                val icon = if (node.element.name.endsWith(".pm2")) fileIcon else parameterIcon
+                val icon = if (node.element.name.endsWith(".pm2")) fileIcon else parametersIcon
                 val simpleName = node.element.name.substring(0, node.element.name.length - 4)
                 components.add(Pair(TextButton(simpleName, icon, fileButtonStyle) { _, _ ->
                     OpenFile.open(
@@ -312,7 +314,7 @@ fun createPm2Editor(troll: TrollInstance): Component {
             Point(region.minX, region.minY)
         }
     )
-    val fileTreeMenu = SimpleFlatMenu(SpaceLayout.GrowDown, Color.rgbInt(150, 150, 200))
+    val fileTreeMenu = SimpleFlatMenu(SpaceLayout.GrowDown, backgroundColor.scale(1.4f))
     fileTreeMenu.addController(fileTreeController)
 
     rootMenu.addComponent(upperBar, RectRegion.percentage(0, 95, 100, 100))

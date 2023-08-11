@@ -1,5 +1,8 @@
 package graviks2d.util
 
+import java.lang.Float.max
+import java.lang.Float.min
+
 @JvmInline
 value class Color private constructor(val rawValue: Int) {
 
@@ -26,6 +29,10 @@ value class Color private constructor(val rawValue: Int) {
 
     val alphaF: Float
     get() = alpha.toFloat() / 255f
+
+    fun scale(factor: Float) = rgbaFloat(
+        clamp(redF * factor), clamp(greenF * factor), clamp(blueF * factor), alphaF
+    )
 
     override fun toString() = if (alpha == 255) "rgb($red, $green, $blue)" else "rgba($red, $green, $blue, $alpha)"
 
@@ -61,5 +68,7 @@ value class Color private constructor(val rawValue: Int) {
         fun rgbInt(red: Int, green: Int, blue: Int) = rgbaInt(red, green, blue, 255)
 
         fun rgbFloat(red: Float, green: Float, blue: Float) = rgbaFloat(red, green, blue, 1f)
+
+        fun clamp(value: Float) = max(0f, min(1f, value))
     }
 }
