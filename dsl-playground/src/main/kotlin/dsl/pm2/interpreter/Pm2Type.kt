@@ -22,6 +22,8 @@ object BuiltinTypes {
 
     val INT = Pm2Type("int", createDefaultValue = { Pm2IntValue(0) }, acceptValue = { value -> value is Pm2IntValue })
 
+    val STRING = Pm2Type("string", createDefaultValue = null, acceptValue = { value -> value is Pm2StringValue })
+
     val POSITION = Pm2Type("position", createDefaultValue = null, acceptValue = { value -> value is Pm2PositionValue })
 
     val COLOR = Pm2Type("color", createDefaultValue = { Pm2ColorValue(0f, 0f, 0f) }, acceptValue = { value -> value is Pm2ColorValue })
@@ -31,6 +33,8 @@ object BuiltinTypes {
     val VERTEX = Pm2Type("Vertex", createDefaultValue = { Pm2VertexValue() }, acceptValue = { value -> value is Pm2VertexValue })
 
     val MATRIX = Pm2Type("Matrix", createDefaultValue = { Pm2MatrixValue(Matrix3x2f()) }, acceptValue = { value -> value is Pm2MatrixValue })
+
+    val MAP = Pm2Type("Map", createDefaultValue = { Pm2MapValue() }, acceptValue = { value -> value is Pm2MapValue })
 
     val RANDOM = Pm2Type("Random", createDefaultValue = { Pm2RandomValue(Random.Default) }, acceptValue = { value -> value is Pm2RandomValue })
 }

@@ -10,7 +10,7 @@ import kotlin.jvm.Throws
 internal abstract class Pm2BaseProcessor(
         private val instructions: List<Pm2Instruction>
 ) {
-    protected val variables = Pm2VariableScope()
+    protected var variables = Pm2VariableScope()
     protected val valueStack = mutableListOf<Pm2Value>()
 
     @Throws(Pm2RuntimeError::class)
@@ -18,13 +18,20 @@ internal abstract class Pm2BaseProcessor(
         variables.pushScope()
 
         var instructionIndex = 0
-        while (instructionIndex < instructions.size) {
+        while (true) {
             val instruction = instructions[instructionIndex]
             instructionIndex += try {
                 if (instruction.type == Pm2InstructionType.Jump) {
                     val jumpOffset = valueStack.removeLast().intValue()
                     val shouldJump = valueStack.removeLast().booleanValue()
                     if (shouldJump) jumpOffset else 1
+                } else if (instruction.type == Pm2InstructionType.ExitProgram) {
+                    val targetInstruction = handleExit()
+                    if (targetInstruction == -1) break
+                    else targetInstruction - instructionIndex
+                } else if (instruction.type == Pm2InstructionType.CreateChildModel) {
+                    val targetInstruction = handleChildModel(instruction, instructionIndex)
+                    targetInstruction - instructionIndex
                 } else {
                     executeInstruction(instruction)
                     1
@@ -37,6 +44,11 @@ internal abstract class Pm2BaseProcessor(
         variables.popScope()
     }
 
+    protected open fun handleExit(): Int = -1
+
+    protected open fun handleChildModel(instruction: Pm2Instruction, currentInstructionIndex: Int): Int
+            = throw Pm2RuntimeError("Child models are only supported by vertex processors")
+
     protected open fun executeInstruction(instruction: Pm2Instruction) {
         when (instruction.type) {
             Pm2InstructionType.PushValue -> valueStack.add(instruction.value?.copy() ?: instruction.variableType!!.createDefaultValue!!.invoke())
@@ -44,6 +56,11 @@ internal abstract class Pm2BaseProcessor(
                     variables.getVariable(instruction.name!!) ?: throw Pm2RuntimeError("Undefined variable ${instruction.name}")
             )
             Pm2InstructionType.PushProperty -> valueStack.add(valueStack.removeLast().getProperty(instruction.name!!))
+            Pm2InstructionType.ReadArrayOrMap -> {
+                val key = valueStack.removeLast()
+                val map = valueStack.removeLast()
+                valueStack.add(map[key])
+            }
 
             Pm2InstructionType.Duplicate -> valueStack.add(valueStack.last())
             Pm2InstructionType.Swap -> {
@@ -66,7 +83,16 @@ internal abstract class Pm2BaseProcessor(
                     instruction.variableType!!, instruction.name!!, valueStack.removeLast()
             )
             Pm2InstructionType.ReassignVariable -> variables.reassignVariable(instruction.name!!, valueStack.removeLast())
-            Pm2InstructionType.SetProperty -> { val newValue = valueStack.removeLast(); valueStack.removeLast().setProperty(instruction.name!!, newValue) }
+            Pm2InstructionType.SetProperty -> {
+                val newValue = valueStack.removeLast()
+                valueStack.removeLast().setProperty(instruction.name!!, newValue)
+            }
+            Pm2InstructionType.UpdateArrayOrMap -> {
+                val value = valueStack.removeLast()
+                val key = valueStack.removeLast()
+                val map = valueStack.removeLast()
+                map[key] = value
+            }
 
             Pm2InstructionType.InvokeBuiltinFunction -> invokeBuiltinFunction(instruction.name!!)
 

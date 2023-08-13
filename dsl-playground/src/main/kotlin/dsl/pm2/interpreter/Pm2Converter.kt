@@ -2,6 +2,7 @@ package dsl.pm2.interpreter
 
 import dsl.pm2.ProcModel2BaseListener
 import dsl.pm2.ProcModel2Parser
+import dsl.pm2.interpreter.importer.Pm2Importer
 import dsl.pm2.interpreter.instruction.Pm2Instruction
 import dsl.pm2.interpreter.instruction.Pm2InstructionType
 import dsl.pm2.interpreter.program.Pm2Program
@@ -9,8 +10,10 @@ import dsl.pm2.interpreter.value.Pm2BooleanValue
 import dsl.pm2.interpreter.value.Pm2IntValue
 import dsl.pm2.interpreter.value.Pm2NoneValue
 import org.antlr.v4.runtime.tree.ErrorNode
+import java.io.File
+import java.io.PrintWriter
 
-class Pm2Converter : ProcModel2BaseListener() {
+internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : ProcModel2BaseListener() {
 
     private val baseInstructions = mutableListOf<Pm2Instruction>()
     private var instructions = baseInstructions
@@ -19,6 +22,7 @@ class Pm2Converter : ProcModel2BaseListener() {
     private val staticParameters = mutableMapOf<String, Pm2Type>()
     private val types = Pm2Types()
     private val functions = Pm2Functions()
+    private val importedModelIDs = mutableMapOf<String, String>()
 
     private val loopIndexStack = mutableListOf<Int>()
     private val functionIndexStack = mutableListOf<Int>()
@@ -34,10 +38,12 @@ class Pm2Converter : ProcModel2BaseListener() {
         types.defineType("void", BuiltinTypes.VOID)
         types.defineType("float", BuiltinTypes.FLOAT)
         types.defineType("int", BuiltinTypes.INT)
+        types.defineType("string", BuiltinTypes.STRING)
         types.defineType("position", BuiltinTypes.POSITION)
         types.defineType("color", BuiltinTypes.COLOR)
         types.defineType("matrix", BuiltinTypes.MATRIX_INDEX)
         types.defineType("Vertex", BuiltinTypes.VERTEX)
+        types.defineType("Map", BuiltinTypes.MAP)
         types.defineType("Random", BuiltinTypes.RANDOM)
         types.defineType("Matrix", BuiltinTypes.MATRIX)
 
@@ -47,7 +53,43 @@ class Pm2Converter : ProcModel2BaseListener() {
     override fun exitStart(ctx: ProcModel2Parser.StartContext?) {
         types.popScope()
         functions.popScope()
+
+        instructions.add(Pm2Instruction(Pm2InstructionType.ExitProgram, lineNumber = ctx!!.stop.line))
+
+        val childProgramTable = mutableMapOf<String, Pair<Int, Map<String, Pm2Type>>>()
+        if (!isChild) {
+            for (childProgram in importer.cache.models.values) {
+                childProgramTable[childProgram.id] = Pair(this.instructions.size, childProgram.program.staticParameters)
+                for (instruction in childProgram.program.instructions) {
+                    if (instruction.type == Pm2InstructionType.CreateDynamicMatrix) {
+                        val indexInstruction = instructions.removeLast()
+                        val oldIndex = indexInstruction.value!!.intValue()
+                        val newIndex = Pm2IntValue(oldIndex + dynamicDeclarations.size)
+                        instructions.add(Pm2Instruction(
+                            Pm2InstructionType.PushValue, value = newIndex, lineNumber = indexInstruction.lineNumber
+                        ))
+                    }
+                    instructions.add(instruction)
+                }
+                this.dynamicDeclarations.addAll(childProgram.program.dynamicBlocks.map { it.toMutableList() })
+            }
+            val instructionDump = PrintWriter(File("instructions.txt"))
+            for ((index, instruction) in instructions.withIndex()) {
+                instructionDump.println(String.format("%d %s", index, instruction))
+            }
+            instructionDump.println("---- DYNAMIC DECLARATIONS ----")
+            for ((blockIndex, instructions) in this.dynamicDeclarations.withIndex()) {
+                for ((index, instruction) in instructions.withIndex()) {
+                    instructionDump.println(String.format("%d %d %s", blockIndex, index, instruction))
+                }
+                instructionDump.println("-----------------------------------------")
+            }
+            instructionDump.flush()
+            instructionDump.close()
+        }
+
         program = Pm2Program(instructions.toList(), dynamicDeclarations.map { it.toList() }, staticParameters.toMap())
+        if (!isChild) program.childProgramTable = childProgramTable
     }
 
     override fun enterDynamicDeclaration(ctx: ProcModel2Parser.DynamicDeclarationContext?) {
@@ -81,6 +123,7 @@ class Pm2Converter : ProcModel2BaseListener() {
 
     override fun exitDynamicDeclaration(ctx: ProcModel2Parser.DynamicDeclarationContext?) {
         if (!isInsideDynamicDeclaration) throw Pm2CompileError("There is no dynamic declaration to exit")
+        instructions.add(Pm2Instruction(Pm2InstructionType.ExitProgram, lineNumber = ctx!!.stop.line))
         isInsideDynamicDeclaration = false
 
         instructions = baseInstructions
@@ -177,17 +220,6 @@ class Pm2Converter : ProcModel2BaseListener() {
         }
     }
 
-    override fun exitParameterAssignment(ctx: ProcModel2Parser.ParameterAssignmentContext?) {
-        if (ctx!!.PARAMETER_TYPE().text != "static") throw Pm2CompileError("Can only assign static parameters")
-
-        val parameterName = ctx!!.IDENTIFIER().text
-        instructions.add(Pm2Instruction(
-                Pm2InstructionType.AssignParameter,
-                lineNumber = ctx.start.line,
-                name = parameterName
-        ))
-    }
-
     override fun enterFunctionInvocation(ctx: ProcModel2Parser.FunctionInvocationContext?) {
         val functionName = ctx!!.IDENTIFIER().text
         val builtinFunction = Pm2BuiltinFunction.MAP[functionName]
@@ -240,6 +272,36 @@ class Pm2Converter : ProcModel2BaseListener() {
         }
     }
 
+    override fun exitImportValue(ctx: ProcModel2Parser.ImportValueContext?) {
+        val isRelative = ctx!!.importPath().relativeImportPrefix() != null
+        val relativePath = "/" + ctx.importPath().relativeImportPath().text
+        val importedValue = importer.importValue(relativePath, isRelative)
+        val typeName = ctx.IDENTIFIER().text
+        val name = ctx.importAlias()?.IDENTIFIER()?.text ?: ctx.importPath().relativeImportPath().IDENTIFIER().last().text
+
+        val variableType = types.getType(typeName)
+
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, value = importedValue, lineNumber = ctx.start.line))
+        instructions.add(Pm2Instruction(
+            Pm2InstructionType.DeclareVariable, variableType = variableType, name = name, lineNumber = ctx.start.line
+        ))
+    }
+
+    override fun exitImportModel(ctx: ProcModel2Parser.ImportModelContext?) {
+        val isRelative = ctx!!.importPath().relativeImportPrefix() != null
+        val relativePath = "/" + ctx.importPath().relativeImportPath().text
+        val name = ctx.importAlias()?.IDENTIFIER()?.text ?: ctx.importPath().relativeImportPath().IDENTIFIER().last().text
+        if (importedModelIDs.containsKey(name)) throw Pm2CompileError("Duplicate import $name")
+
+        importedModelIDs[name] = importer.importModel(relativePath, isRelative)
+    }
+
+    override fun exitChildModel(ctx: ProcModel2Parser.ChildModelContext?) {
+        val modelName = ctx!!.IDENTIFIER().text
+        val modelID = importedModelIDs[modelName] ?: throw Pm2CompileError("Unknown child model $modelName")
+        instructions.add(Pm2Instruction(Pm2InstructionType.CreateChildModel, name = modelID, lineNumber = ctx.start.line))
+    }
+
     override fun exitInnerStatement(ctx: ProcModel2Parser.InnerStatementContext?) {
 
         // In statements like `functionCall(x);`, the result is ignored, and should therefore be deleted from the stack
@@ -283,6 +345,10 @@ class Pm2Converter : ProcModel2BaseListener() {
                 )
             }
         }
+    }
+
+    override fun exitUpdateArrayOrMap(ctx: ProcModel2Parser.UpdateArrayOrMapContext?) {
+        instructions.add(Pm2Instruction(Pm2InstructionType.UpdateArrayOrMap, lineNumber = ctx!!.start.line))
     }
 
     override fun exitVariableReassignment(ctx: ProcModel2Parser.VariableReassignmentContext?) {

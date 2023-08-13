@@ -4,24 +4,26 @@ import dsl.pm2.interpreter.*
 import dsl.pm2.interpreter.instruction.Pm2Instruction
 import dsl.pm2.interpreter.instruction.Pm2InstructionType
 import dsl.pm2.interpreter.value.*
-import org.joml.Math.*
 import kotlin.jvm.Throws
 
 internal class Pm2VertexProcessor(
-        private val program: Pm2Program,
-        private val staticParameterValues: Map<String, Pm2Value>
+    private val program: Pm2Program,
+    rawStaticParameters: Pm2Value
 ): Pm2BaseProcessor(program.instructions) {
 
-    private val dynamicBlocks = program.dynamicBlocks
+    private val programStack = mutableListOf<ProgramEntry>()
 
-    private val vertices = mutableListOf<Pm2VertexValue>()
-    private val dynamicMatrices = mutableListOf<Pm2DynamicMatrix?>(null)
+    private var vertices = mutableListOf<Pm2VertexValue>()
+    private var dynamicMatrices = mutableListOf<Pm2DynamicMatrix?>(null)
 
     private var transferVariables = mutableMapOf<String, Pair<Pm2Type, Pm2Value>>()
 
+    init {
+        initializeStaticParameters(rawStaticParameters, program.staticParameters)
+    }
+
     @Throws(Pm2RuntimeError::class)
     fun execute(): Pm2Model {
-        initializeStaticParameters()
         executeInstructions()
         variables.popScope() // Pop static parameter values
 
@@ -32,15 +34,39 @@ internal class Pm2VertexProcessor(
         return Pm2Model(vertices.map { it.toVertex() }, dynamicMatrices)
     }
 
-    private fun initializeStaticParameters() {
+    private fun initializeStaticParameters(rawStaticParameters: Pm2Value, staticParameters: Map<String, Pm2Type>) {
+        val staticParameterValues = mutableMapOf<String, Pm2Value>()
+        if (staticParameters.isEmpty()) {
+            if (rawStaticParameters is Pm2MapValue) {
+                if (rawStaticParameters.map.isNotEmpty()) {
+                    throw Pm2RuntimeError("No parameters needed, but ${rawStaticParameters.map.size} were specified")
+                }
+            } else if (rawStaticParameters !is Pm2NoneValue) {
+                throw Pm2RuntimeError("No parameters expected, but got $rawStaticParameters")
+            }
+        } else {
+            if (rawStaticParameters !is Pm2MapValue) {
+                throw Pm2RuntimeError("Expected a Map of parameters, but got $rawStaticParameters")
+            }
+            for (key in rawStaticParameters.map.keys) {
+                if (key !is Pm2StringValue) throw Pm2RuntimeError("All static parameter keys should be strings, but found $key")
+                if (!staticParameters.containsKey(key.value)) throw Pm2RuntimeError("Unexpected static parameter $key")
+            }
+
+            for ((key, expectedType) in staticParameters) {
+                val value = rawStaticParameters.map[Pm2StringValue(key)] ?:
+                throw Pm2RuntimeError("Missing static parameter $key")
+                if (!expectedType.acceptValue(value)) {
+                    throw Pm2RuntimeError("Type $expectedType of static parameter $key doesn't accept $value")
+                }
+                staticParameterValues[key] = value
+            }
+        }
+
         variables.pushScope()
         for ((key, value) in staticParameterValues) {
-            val type = program.staticParameters[key] ?: throw Pm2RuntimeError("Unknown static parameter $key")
-            if (!type.acceptValue(value)) throw IllegalArgumentException("Type $type doesn't accept static parameter $key: $value")
+            val type = staticParameters[key] ?: throw Pm2RuntimeError("Unknown static parameter $key")
             variables.defineVariable(type, key, value.copy())
-        }
-        for (key in program.staticParameters.keys) {
-            if (!staticParameterValues.containsKey(key)) throw Pm2RuntimeError("No value given for static parameter $key")
         }
     }
 
@@ -53,10 +79,64 @@ internal class Pm2VertexProcessor(
         }
     }
 
+    override fun handleChildModel(instruction: Pm2Instruction, currentInstructionIndex: Int): Int {
+        val modelID = instruction.name!!
+
+        val staticParameters = valueStack.removeLast()
+        val parentMatrix = valueStack.removeLast().castTo<Pm2MatrixIndexValue>()
+
+        programStack.add(ProgramEntry(
+            currentInstructionIndex + 1, parentMatrix,
+            this.variables, this.vertices, this.dynamicMatrices, this.transferVariables
+        ))
+
+        this.variables = Pm2VariableScope()
+        this.vertices = mutableListOf()
+        this.dynamicMatrices = mutableListOf(null)
+        this.transferVariables = mutableMapOf()
+
+        val (targetLineNumber, staticParameterTypes) = program.childProgramTable[modelID]!!
+        this.initializeStaticParameters(staticParameters, staticParameterTypes)
+
+        return targetLineNumber
+    }
+
+    override fun handleExit(): Int {
+        val entry = programStack.removeLastOrNull() ?: return -1
+
+        for ((index, childMatrix) in this.dynamicMatrices.withIndex()) {
+            if (index == 0) {
+                if (childMatrix != null) throw Pm2RuntimeError("First dynamic matrix must be null")
+            } else {
+                if (childMatrix == null) throw Pm2RuntimeError("Only first dynamic matrix must be null")
+                if (childMatrix.parentIndex == 0) childMatrix.parentIndex = entry.parentMatrix.index
+                else childMatrix.parentIndex += entry.dynamicMatrices.size - 1
+            }
+        }
+
+        for (childVertex in this.vertices.toSet()) {
+            val childMatrixIndex = childVertex.getProperty("matrix").castTo<Pm2MatrixIndexValue>().index
+            if (childMatrixIndex == 0) childVertex.setProperty("matrix", entry.parentMatrix)
+            else childVertex.setProperty("matrix", Pm2MatrixIndexValue(entry.dynamicMatrices.size + childMatrixIndex - 1))
+        }
+
+        this.variables.popScope()
+        if (this.variables.hasScope()) throw Pm2RuntimeError("Unexpected variable scope left")
+
+        this.variables = entry.variables
+        entry.vertices.addAll(this.vertices)
+        this.vertices = entry.vertices
+        entry.dynamicMatrices.addAll(this.dynamicMatrices.subList(1, this.dynamicMatrices.size))
+        this.dynamicMatrices = entry.dynamicMatrices
+        this.transferVariables = entry.transferVariables
+
+        return entry.returnInstructionIndex
+    }
+
     private fun createDynamicMatrix() {
         val dynamicIndex = valueStack.removeLast().intValue()
         val matrixIndex = dynamicMatrices.size
-        dynamicMatrices.add(Pm2DynamicMatrix(dynamicBlocks[dynamicIndex], transferVariables))
+        dynamicMatrices.add(Pm2DynamicMatrix(program.dynamicBlocks[dynamicIndex], transferVariables))
         transferVariables = mutableMapOf()
         valueStack.add(Pm2MatrixIndexValue(matrixIndex))
     }
@@ -81,4 +161,13 @@ internal class Pm2VertexProcessor(
             else -> super.invokeBuiltinFunction(name)
         }
     }
+
+    private class ProgramEntry(
+        val returnInstructionIndex: Int,
+        val parentMatrix: Pm2MatrixIndexValue,
+        val variables: Pm2VariableScope,
+        val vertices: MutableList<Pm2VertexValue>,
+        val dynamicMatrices: MutableList<Pm2DynamicMatrix?>,
+        val transferVariables: MutableMap<String, Pair<Pm2Type, Pm2Value>>
+    )
 }

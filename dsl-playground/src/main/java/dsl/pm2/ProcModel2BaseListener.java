@@ -1,4 +1,4 @@
-// Generated from /home/knokko/programming/kotlin/dragons/dsl-playground/src/main/resources/ProcModel2.g4 by ANTLR 4.12.0
+// Generated from java-escape by ANTLR 4.11.1
 package dsl.pm2;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -53,6 +53,90 @@ public class ProcModel2BaseListener implements ProcModel2Listener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterRelativeImportPrefix(ProcModel2Parser.RelativeImportPrefixContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitRelativeImportPrefix(ProcModel2Parser.RelativeImportPrefixContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterRelativeImportPath(ProcModel2Parser.RelativeImportPathContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitRelativeImportPath(ProcModel2Parser.RelativeImportPathContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterImportPath(ProcModel2Parser.ImportPathContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitImportPath(ProcModel2Parser.ImportPathContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterImportModel(ProcModel2Parser.ImportModelContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitImportModel(ProcModel2Parser.ImportModelContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterImportAlias(ProcModel2Parser.ImportAliasContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitImportAlias(ProcModel2Parser.ImportAliasContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterImportValue(ProcModel2Parser.ImportValueContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitImportValue(ProcModel2Parser.ImportValueContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterChildModel(ProcModel2Parser.ChildModelContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitChildModel(ProcModel2Parser.ChildModelContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterParameterDeclaration(ProcModel2Parser.ParameterDeclarationContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -60,18 +144,6 @@ public class ProcModel2BaseListener implements ProcModel2Listener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitParameterDeclaration(ProcModel2Parser.ParameterDeclarationContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void enterParameterAssignment(ProcModel2Parser.ParameterAssignmentContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void exitParameterAssignment(ProcModel2Parser.ParameterAssignmentContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -144,6 +216,30 @@ public class ProcModel2BaseListener implements ProcModel2Listener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitFunctionInvocation(ProcModel2Parser.FunctionInvocationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterReadArrayOrMap(ProcModel2Parser.ReadArrayOrMapContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitReadArrayOrMap(ProcModel2Parser.ReadArrayOrMapContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterUpdateArrayOrMap(ProcModel2Parser.UpdateArrayOrMapContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitUpdateArrayOrMap(ProcModel2Parser.UpdateArrayOrMapContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

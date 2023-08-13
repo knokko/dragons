@@ -1,4 +1,4 @@
-// Generated from /home/knokko/programming/kotlin/dragons/dsl-playground/src/main/resources/ProcModel2.g4 by ANTLR 4.12.0
+// Generated from java-escape by ANTLR 4.11.1
 package dsl.pm2;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -29,17 +29,53 @@ public interface ProcModel2Visitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitInnerStatement(ProcModel2Parser.InnerStatementContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#relativeImportPrefix}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitRelativeImportPrefix(ProcModel2Parser.RelativeImportPrefixContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#relativeImportPath}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitRelativeImportPath(ProcModel2Parser.RelativeImportPathContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#importPath}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitImportPath(ProcModel2Parser.ImportPathContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#importModel}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitImportModel(ProcModel2Parser.ImportModelContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#importAlias}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitImportAlias(ProcModel2Parser.ImportAliasContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#importValue}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitImportValue(ProcModel2Parser.ImportValueContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#childModel}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitChildModel(ProcModel2Parser.ChildModelContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link ProcModel2Parser#parameterDeclaration}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitParameterDeclaration(ProcModel2Parser.ParameterDeclarationContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link ProcModel2Parser#parameterAssignment}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitParameterAssignment(ProcModel2Parser.ParameterAssignmentContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ProcModel2Parser#dynamicDeclaration}.
 	 * @param ctx the parse tree
@@ -76,6 +112,18 @@ public interface ProcModel2Visitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitFunctionInvocation(ProcModel2Parser.FunctionInvocationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#readArrayOrMap}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitReadArrayOrMap(ProcModel2Parser.ReadArrayOrMapContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#updateArrayOrMap}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitUpdateArrayOrMap(ProcModel2Parser.UpdateArrayOrMapContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ProcModel2Parser#expression}.
 	 * @param ctx the parse tree

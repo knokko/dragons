@@ -1,0 +1,6 @@
+import Map value ./scythe/default as scytheParameters;
+
+Map parameters;
+parameters["scytheParameters"] = scytheParameters;
+
+outputValue(parameters);

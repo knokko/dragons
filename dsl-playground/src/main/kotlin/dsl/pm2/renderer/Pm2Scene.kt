@@ -184,10 +184,13 @@ class Pm2Scene internal constructor(
         ensureMatrixBuffer(requiredNumMatrices)
 
         val meshesWithMatrices = meshes.map { mesh ->
-            val matrices = mesh.matrices.map {
-                if (it != null) {
-                    Pm2MatrixProcessor(it).execute()
-                } else Matrix3x2f()
+            val matrices = ArrayList<Matrix3x2f>(mesh.matrices.size)
+            for (matrix in mesh.matrices) {
+                if (matrix != null) {
+                    val relativeMatrix = Pm2MatrixProcessor(matrix).execute()
+                    val parentMatrix = matrices[matrix.parentIndex]
+                    matrices.add(parentMatrix.mul(relativeMatrix, relativeMatrix))
+                } else matrices.add(Matrix3x2f())
             }
             Pair(mesh, matrices)
         }

@@ -64,4 +64,14 @@ abstract class Pm2Value {
     open operator fun compareTo(right: Pm2Value): Int {
         throw Pm2RuntimeError("No semantics for ${this::class.simpleName} cmp ${right::class.simpleName}")
     }
+
+    @Throws(Pm2RuntimeError::class)
+    open operator fun get(key: Pm2Value): Pm2Value {
+        throw Pm2RuntimeError("No semantics for ${this::class.simpleName}[$key]")
+    }
+
+    @Throws(Pm2RuntimeError::class)
+    open operator fun set(key: Pm2Value, value: Pm2Value) {
+        throw Pm2RuntimeError("No semantics for ${this::class.simpleName}[$key] = $value")
+    }
 }

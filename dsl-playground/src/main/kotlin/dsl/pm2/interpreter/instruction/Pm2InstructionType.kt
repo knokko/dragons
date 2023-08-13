@@ -4,6 +4,7 @@ enum class Pm2InstructionType {
     PushValue,
     PushVariable,
     PushProperty,
+    ReadArrayOrMap,
 
     Divide,
     Multiply,
@@ -20,12 +21,14 @@ enum class Pm2InstructionType {
     DeclareVariable,
     ReassignVariable,
     SetProperty,
-    AssignParameter,
+    UpdateArrayOrMap,
 
     Jump,
     InvokeBuiltinFunction,
     TransferVariable,
     CreateDynamicMatrix,
+    CreateChildModel,
+    ExitProgram,
 
     PushScope,
     PopScope

@@ -1,0 +1,10 @@
+Map parameters;
+parameters["armLength"] = 0.7;
+parameters["armRadius"] = 0.05;
+parameters["armColor"] = rgb(0.4, 0.2, 0.1);
+
+parameters["scytheLength"] = 0.5;
+parameters["scytheWidth"] = 0.08;
+parameters["scytheColor"] = rgb(0.45, 0.4, 0.35);
+
+outputValue(parameters);

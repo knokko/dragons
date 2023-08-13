@@ -1,6 +1,10 @@
 package dsl.pm2.interpreter
 
+import dsl.pm2.interpreter.importer.Pm2DummyImportFunctions
+import dsl.pm2.interpreter.importer.Pm2ImportCache
+import dsl.pm2.interpreter.importer.Pm2Importer
 import dsl.pm2.interpreter.program.Pm2Program
+import dsl.pm2.interpreter.value.Pm2NoneValue
 import dsl.pm2.renderer.Pm2Instance
 import dsl.pm2.ui.Pm2PreviewComponent
 import graviks.glfw.GraviksWindow
@@ -12,6 +16,7 @@ import gruviks.component.text.*
 import gruviks.glfw.createAndControlGruviksWindow
 import gruviks.space.RectRegion
 import gruviks.space.SpaceLayout
+import org.joml.Matrix3x2f
 import org.lwjgl.vulkan.VK10.*
 import java.io.File
 import java.io.IOException
@@ -20,6 +25,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 fun main() {
+    val importer = Pm2Importer(Pm2ImportCache(Pm2DummyImportFunctions()), "")
     val sourceFile = File("pm2-models/playground.pm2").toPath()
     val initialProgramCode: String = try {
         Files.readString(sourceFile)
@@ -27,7 +33,7 @@ fun main() {
         "Insert source code here"
     }
     val initialModel = try {
-        Pm2Program.compile(initialProgramCode).run(emptyMap())
+        Pm2Program.compile(initialProgramCode, importer).run(Pm2NoneValue())
     } catch (compileError: Pm2CompileError) { null }
 
     val graviksWindow = GraviksWindow(
@@ -63,9 +69,9 @@ fun main() {
     )) { _, _ ->
         try {
             val startTime = currentTimeMillis()
-            val newProgram = Pm2Program.compile(codeArea.getText())
+            val newProgram = Pm2Program.compile(codeArea.getText(), importer)
             val time1 = currentTimeMillis()
-            val newModel = newProgram.run(emptyMap())
+            val newModel = newProgram.run(Pm2NoneValue())
             val time2 = currentTimeMillis()
 
             println("Compilation took ${time1 - startTime} ms and running took ${time2 - time1} ms")

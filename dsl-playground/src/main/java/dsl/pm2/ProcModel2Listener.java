@@ -1,4 +1,4 @@
-// Generated from /home/knokko/programming/kotlin/dragons/dsl-playground/src/main/resources/ProcModel2.g4 by ANTLR 4.12.0
+// Generated from java-escape by ANTLR 4.11.1
 package dsl.pm2;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -38,6 +38,76 @@ public interface ProcModel2Listener extends ParseTreeListener {
 	 */
 	void exitInnerStatement(ProcModel2Parser.InnerStatementContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#relativeImportPrefix}.
+	 * @param ctx the parse tree
+	 */
+	void enterRelativeImportPrefix(ProcModel2Parser.RelativeImportPrefixContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#relativeImportPrefix}.
+	 * @param ctx the parse tree
+	 */
+	void exitRelativeImportPrefix(ProcModel2Parser.RelativeImportPrefixContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#relativeImportPath}.
+	 * @param ctx the parse tree
+	 */
+	void enterRelativeImportPath(ProcModel2Parser.RelativeImportPathContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#relativeImportPath}.
+	 * @param ctx the parse tree
+	 */
+	void exitRelativeImportPath(ProcModel2Parser.RelativeImportPathContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#importPath}.
+	 * @param ctx the parse tree
+	 */
+	void enterImportPath(ProcModel2Parser.ImportPathContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#importPath}.
+	 * @param ctx the parse tree
+	 */
+	void exitImportPath(ProcModel2Parser.ImportPathContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#importModel}.
+	 * @param ctx the parse tree
+	 */
+	void enterImportModel(ProcModel2Parser.ImportModelContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#importModel}.
+	 * @param ctx the parse tree
+	 */
+	void exitImportModel(ProcModel2Parser.ImportModelContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#importAlias}.
+	 * @param ctx the parse tree
+	 */
+	void enterImportAlias(ProcModel2Parser.ImportAliasContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#importAlias}.
+	 * @param ctx the parse tree
+	 */
+	void exitImportAlias(ProcModel2Parser.ImportAliasContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#importValue}.
+	 * @param ctx the parse tree
+	 */
+	void enterImportValue(ProcModel2Parser.ImportValueContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#importValue}.
+	 * @param ctx the parse tree
+	 */
+	void exitImportValue(ProcModel2Parser.ImportValueContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#childModel}.
+	 * @param ctx the parse tree
+	 */
+	void enterChildModel(ProcModel2Parser.ChildModelContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#childModel}.
+	 * @param ctx the parse tree
+	 */
+	void exitChildModel(ProcModel2Parser.ChildModelContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link ProcModel2Parser#parameterDeclaration}.
 	 * @param ctx the parse tree
 	 */
@@ -47,16 +117,6 @@ public interface ProcModel2Listener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitParameterDeclaration(ProcModel2Parser.ParameterDeclarationContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link ProcModel2Parser#parameterAssignment}.
-	 * @param ctx the parse tree
-	 */
-	void enterParameterAssignment(ProcModel2Parser.ParameterAssignmentContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link ProcModel2Parser#parameterAssignment}.
-	 * @param ctx the parse tree
-	 */
-	void exitParameterAssignment(ProcModel2Parser.ParameterAssignmentContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ProcModel2Parser#dynamicDeclaration}.
 	 * @param ctx the parse tree
@@ -117,6 +177,26 @@ public interface ProcModel2Listener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitFunctionInvocation(ProcModel2Parser.FunctionInvocationContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#readArrayOrMap}.
+	 * @param ctx the parse tree
+	 */
+	void enterReadArrayOrMap(ProcModel2Parser.ReadArrayOrMapContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#readArrayOrMap}.
+	 * @param ctx the parse tree
+	 */
+	void exitReadArrayOrMap(ProcModel2Parser.ReadArrayOrMapContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#updateArrayOrMap}.
+	 * @param ctx the parse tree
+	 */
+	void enterUpdateArrayOrMap(ProcModel2Parser.UpdateArrayOrMapContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#updateArrayOrMap}.
+	 * @param ctx the parse tree
+	 */
+	void exitUpdateArrayOrMap(ProcModel2Parser.UpdateArrayOrMapContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ProcModel2Parser#expression}.
 	 * @param ctx the parse tree

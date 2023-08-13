@@ -8,4 +8,8 @@ class Pm2BooleanValue(
     override fun booleanValue() = this.value
 
     override fun toString() = "BooleanValue($value)"
+
+    override fun equals(other: Any?) = other is Pm2BooleanValue && this.value == other.value
+
+    override fun hashCode() = if (value) 1 else 0
 }

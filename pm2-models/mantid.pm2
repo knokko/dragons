@@ -1,0 +1,13 @@
+import model mantid/scythe;
+
+static parameter Map scytheParameters;
+
+matrix scytheMatrix = dynamic Matrix {
+	Matrix scytheMatrix;
+	translate(scytheMatrix, 0.0, 0.4);
+	scytheMatrix
+};
+
+matrix defaultMatrix;
+child model scythe(scytheMatrix, scytheParameters);
+child model scythe(defaultMatrix, scytheParameters);

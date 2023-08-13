@@ -27,6 +27,10 @@ class Pm2IntValue(private val value: Int) : Pm2Value() {
         else super.compareTo(right)
     }
 
+    override fun equals(other: Any?) = other is Pm2IntValue && this.value == other.value
+
+    override fun hashCode() = this.value
+
     override fun toString() = "IntValue($value)"
 
     override fun copy() = this

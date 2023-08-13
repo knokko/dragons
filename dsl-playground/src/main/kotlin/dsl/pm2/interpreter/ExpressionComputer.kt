@@ -5,6 +5,7 @@ import dsl.pm2.interpreter.instruction.Pm2Instruction
 import dsl.pm2.interpreter.instruction.Pm2InstructionType
 import dsl.pm2.interpreter.value.Pm2FloatValue
 import dsl.pm2.interpreter.value.Pm2IntValue
+import dsl.pm2.interpreter.value.Pm2StringValue
 import java.lang.Float.parseFloat
 import java.lang.Integer.parseInt
 
@@ -16,9 +17,17 @@ object ExpressionComputer {
         if (ctx.INT_LITERAL() != null) return Pm2Instruction(
             Pm2InstructionType.PushValue, lineNumber = ctx.start.line, value = Pm2IntValue(parseInt(ctx.INT_LITERAL().text))
         )
+        if (ctx.STRING_LITERAL() != null) {
+            val literal = ctx.STRING_LITERAL().text
+            return Pm2Instruction(
+                Pm2InstructionType.PushValue, lineNumber = ctx.start.line,
+                value = Pm2StringValue(literal.substring(1 until literal.length - 1))
+            )
+        }
         if (ctx.variableProperty() != null) return Pm2Instruction(
             Pm2InstructionType.PushProperty, lineNumber = ctx.start.line, name = ctx.variableProperty().IDENTIFIER().text
         )
+        if (ctx.readArrayOrMap() != null) return Pm2Instruction(Pm2InstructionType.ReadArrayOrMap, lineNumber = ctx.start.line)
 
         if (ctx.DIVIDE() != null) return Pm2Instruction(Pm2InstructionType.Divide, lineNumber = ctx.start.line)
         if (ctx.TIMES() != null) return Pm2Instruction(Pm2InstructionType.Multiply, lineNumber = ctx.start.line)

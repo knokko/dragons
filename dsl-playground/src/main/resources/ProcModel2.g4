@@ -4,19 +4,34 @@ start : outerStatement* EOF;
 
 outerStatement :
     parameterDeclaration |
+    importModel |
+    importValue |
     innerStatement;
 
 innerStatement :
     variableDeclaration |
     variableReassignment |
-    parameterAssignment |
     functionDeclaration |
+    childModel |
     functionInvocation ';' |
+    updateArrayOrMap |
     forLoop;
 
-parameterDeclaration : PARAMETER_TYPE 'parameter' IDENTIFIER IDENTIFIER ';';
+relativeImportPrefix: './';
 
-parameterAssignment : PARAMETER_TYPE 'parameter' IDENTIFIER '=' expression ';';
+relativeImportPath: (IDENTIFIER '/')* IDENTIFIER;
+
+importPath: relativeImportPrefix? relativeImportPath;
+
+importModel: 'import' 'model' importPath importAlias? ';';
+
+importAlias: 'as' IDENTIFIER;
+
+importValue: 'import' IDENTIFIER 'value' importPath importAlias? ';';
+
+childModel: 'child' 'model' IDENTIFIER '(' expression ',' expression ')' ';';
+
+parameterDeclaration : PARAMETER_TYPE 'parameter' IDENTIFIER IDENTIFIER ';';
 
 dynamicDeclaration: 'dynamic' IDENTIFIER ('<' (IDENTIFIER IDENTIFIER ',')* IDENTIFIER IDENTIFIER '>')? '{' innerStatement* expression '}';
 
@@ -30,12 +45,18 @@ functionDeclaration : IDENTIFIER IDENTIFIER '(' ((IDENTIFIER IDENTIFIER ',')* ID
 
 functionInvocation : IDENTIFIER '(' ((expression ',')* expression)? ')';
 
+readArrayOrMap: '[' expression ']';
+
+updateArrayOrMap: expression '[' expression ']' '=' expression ';';
+
 expression :
     FLOAT_LITERAL |
     INT_LITERAL |
+    STRING_LITERAL |
     IDENTIFIER |
     functionInvocation |
     expression variableProperty |
+    expression readArrayOrMap |
     '(' expression ')' |
     positionConstructor |
     expression DIVIDE expression |
@@ -72,6 +93,8 @@ PARAMETER_TYPE : 'static' | 'dynamic';
 IDENTIFIER : (('a'..'z')|('A'..'Z')) (('a'..'z')|('A'..'Z')|('0'..'9'))*;
 
 FLOAT_LITERAL : INT_LITERAL '.' ('0'..'9')+;
+
+STRING_LITERAL : '"' .*? '"';
 
 INT_LITERAL : '-'? ('0'..'9')+;
 

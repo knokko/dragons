@@ -1,8 +1,11 @@
 package dsl.pm2.ui
 
 import dsl.pm2.interpreter.*
+import dsl.pm2.interpreter.importer.Pm2FileImportFunctions
+import dsl.pm2.interpreter.importer.Pm2ImportCache
+import dsl.pm2.interpreter.importer.Pm2Importer
 import dsl.pm2.interpreter.program.Pm2Program
-import dsl.pm2.interpreter.value.Pm2Value
+import dsl.pm2.interpreter.value.Pm2NoneValue
 import dsl.pm2.renderer.Pm2Instance
 import graviks.glfw.GraviksWindow
 import graviks2d.context.GraviksContext
@@ -32,15 +35,29 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 
+private val rootDirectory = File("pm2-models")
+
 private val backgroundColor = Color.rgbInt(30, 0, 90)
 
-val textAreaStyle = squareTextAreaStyle(
+private val textAreaStyle = squareTextAreaStyle(
     defaultTextStyle = TextStyle(fillColor = Color.WHITE.scale(0.8f), font = null),
     defaultBackgroundColor = backgroundColor,
     focusTextStyle = TextStyle(fillColor = Color.WHITE, font = null),
     focusBackgroundColor = backgroundColor.scale(1.1f),
     lineHeight = 0.05f, placeholderStyle = null
 )
+
+private fun createImporter(sourceFile: File): Pm2Importer {
+    val rootPath = rootDirectory.absolutePath
+    val sourcePath = sourceFile.absoluteFile.parentFile.absolutePath
+    if (!sourcePath.startsWith(rootPath)) {
+        throw Error("The source $sourcePath is not a descendant from the root $rootPath")
+    }
+
+    var prefix = sourcePath.substring(rootPath.length)
+    if (prefix.startsWith("/") || prefix.startsWith("\\")) prefix = prefix.substring(1)
+    return Pm2Importer(Pm2ImportCache(Pm2FileImportFunctions(rootDirectory)), prefix)
+}
 
 private class OpenFile(
     val modelFile: File,
@@ -59,10 +76,9 @@ private class OpenFile(
             return
         }
 
-        val parameters = mutableMapOf<String, Pm2Value>()
-        if (parametersFile != null) {
+        val parameters = if (parametersFile != null) {
             try {
-                Pm2Program.compile(textArea.getText()).collectStaticParameters(parameters)
+                Pm2Program.compile(textArea.getText(), createImporter(parametersFile)).getResultValue()
             } catch (compileError: Pm2CompileError) {
                 errorComponent.setText(compileError.message ?: "Failed to compile parameters")
                 compileError.printStackTrace()
@@ -71,11 +87,11 @@ private class OpenFile(
                 errorComponent.setText(runtimeError.message ?: "Failed to run parameters")
                 return
             }
-        }
+        } else Pm2NoneValue()
 
         try {
             val startTime = System.currentTimeMillis()
-            val newProgram = Pm2Program.compile(modelContent)
+            val newProgram = Pm2Program.compile(modelContent, createImporter(modelFile))
             val time1 = System.currentTimeMillis()
             val newModel = newProgram.run(parameters)
             val time2 = System.currentTimeMillis()
@@ -119,7 +135,7 @@ private class OpenFile(
             if (file.name.endsWith(".pm2")) {
                 modelFile = file
                 parametersFile = null
-            } else if (file.name.endsWith(".sp2")) {
+            } else if (file.name.endsWith(".pv2")) {
                 val currentDirectory = file.parentFile
                 if (currentDirectory == null) {
                     errorComponent.setText("Can't find directory containing this file")
@@ -154,23 +170,22 @@ private class OpenFile(
                     return
                 }
 
-                val initialParameters = mutableMapOf<String, Pm2Value>()
-                if (parameterContent != null) {
+                val initialParameters = if (parameterContent != null) {
                     try {
-                        val parameterProgram = Pm2Program.compile(parameterContent)
-                        parameterProgram.collectStaticParameters(initialParameters)
+                        val parameterProgram = Pm2Program.compile(parameterContent, createImporter(parametersFile!!))
+                        parameterProgram.getResultValue()
                     } catch (compileError: Pm2CompileError) {
                         compileError.printStackTrace()
                         errorComponent.setText(compileError.message ?: "Parameter compile error")
-                        return
+                        Pm2NoneValue()
                     } catch (runtimeError: Pm2RuntimeError) {
                         errorComponent.setText(runtimeError.message ?: "Parameter runtime error")
-                        return
+                        Pm2NoneValue()
                     }
-                }
+                } else Pm2NoneValue()
 
                 val initialModel = try {
-                    Pm2Program.compile(modelContent).run(initialParameters)
+                    Pm2Program.compile(modelContent, createImporter(modelFile)).run(initialParameters)
                 } catch (compileError: Pm2CompileError) {
                     compileError.printStackTrace()
                     null
@@ -231,7 +246,7 @@ fun createPm2Editor(troll: TrollInstance): Component {
     val rootMenu = SimpleFlatMenu(SpaceLayout.Simple, backgroundColor.scale(1.2f))
 
     val openFiles = mutableListOf<OpenFile>()
-    val fileTree = TreeViewController.Node(File("pm2-models"), null)
+    val fileTree = TreeViewController.Node(rootDirectory, null)
 
     val errorComponent = TextComponent("", TextStyle(fillColor = Color.RED, font = null))
     val contentBackground = SimpleColorFillComponent(backgroundColor)
@@ -292,15 +307,15 @@ fun createPm2Editor(troll: TrollInstance): Component {
                         if (node.children == null) {
                             val directories = files.filter { it.isDirectory }
                             val modelFiles = files.filter { !it.isDirectory && it.name.endsWith(".pm2") }
-                            val parameterFiles = files.filter { !it.isDirectory && it.name.endsWith(".sp2") }
-                            node.children = (directories + modelFiles + parameterFiles).map {
+                            val valueFiles = files.filter { !it.isDirectory && it.name.endsWith(".pv2") }
+                            node.children = (directories + modelFiles + valueFiles).map {
                                 TreeViewController.Node(it, null)
                             }.toMutableList()
                         } else node.children = null
                         refreshController()
                     }
                 }, region))
-            } else if (node.element.name.endsWith(".pm2") || node.element.name.endsWith(".sp2")) {
+            } else if (node.element.name.endsWith(".pm2") || node.element.name.endsWith(".pv2")) {
                 val icon = if (node.element.name.endsWith(".pm2")) fileIcon else parametersIcon
                 val simpleName = node.element.name.substring(0, node.element.name.length - 4)
                 components.add(Pair(TextButton(simpleName, icon, fileButtonStyle) { _, _ ->
