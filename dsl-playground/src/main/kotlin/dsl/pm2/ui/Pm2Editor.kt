@@ -1,8 +1,8 @@
 package dsl.pm2.ui
 
 import dsl.pm2.interpreter.*
-import dsl.pm2.interpreter.importer.Pm2FileImportFunctions
 import dsl.pm2.interpreter.importer.Pm2ImportCache
+import dsl.pm2.interpreter.importer.Pm2ImportFunctions
 import dsl.pm2.interpreter.importer.Pm2Importer
 import dsl.pm2.interpreter.program.Pm2Program
 import dsl.pm2.interpreter.value.Pm2NoneValue
@@ -47,7 +47,23 @@ private val textAreaStyle = squareTextAreaStyle(
     lineHeight = 0.05f, placeholderStyle = null
 )
 
-private fun createImporter(sourceFile: File): Pm2Importer {
+private class Pm2EditorImportFunctions(val openFiles: List<OpenFile>): Pm2ImportFunctions {
+    override fun getSourceCode(path: String): String? {
+        val targetFile = File("$rootDirectory/$path")
+        for (openFile in openFiles) {
+            val actualFile = openFile.parametersFile ?: openFile.modelFile
+            if (targetFile == actualFile) return openFile.textArea.getText()
+        }
+        return try {
+            Files.readString(targetFile.toPath())
+        } catch (ioFailed: IOException) {
+            ioFailed.printStackTrace()
+            null
+        }
+    }
+}
+
+private fun createImporter(sourceFile: File, openFiles: List<OpenFile>): Pm2Importer {
     val rootPath = rootDirectory.absolutePath
     val sourcePath = sourceFile.absoluteFile.parentFile.absolutePath
     if (!sourcePath.startsWith(rootPath)) {
@@ -56,7 +72,7 @@ private fun createImporter(sourceFile: File): Pm2Importer {
 
     var prefix = sourcePath.substring(rootPath.length)
     if (prefix.startsWith("/") || prefix.startsWith("\\")) prefix = prefix.substring(1)
-    return Pm2Importer(Pm2ImportCache(Pm2FileImportFunctions(rootDirectory)), prefix)
+    return Pm2Importer(Pm2ImportCache(Pm2EditorImportFunctions(openFiles)), prefix)
 }
 
 private class OpenFile(
@@ -78,7 +94,7 @@ private class OpenFile(
 
         val parameters = if (parametersFile != null) {
             try {
-                Pm2Program.compile(textArea.getText(), createImporter(parametersFile)).getResultValue()
+                Pm2Program.compile(textArea.getText(), createImporter(parametersFile, openFiles)).getResultValue()
             } catch (compileError: Pm2CompileError) {
                 errorComponent.setText(compileError.message ?: "Failed to compile parameters")
                 compileError.printStackTrace()
@@ -91,7 +107,7 @@ private class OpenFile(
 
         try {
             val startTime = System.currentTimeMillis()
-            val newProgram = Pm2Program.compile(modelContent, createImporter(modelFile))
+            val newProgram = Pm2Program.compile(modelContent, createImporter(modelFile, openFiles))
             val time1 = System.currentTimeMillis()
             val newModel = newProgram.run(parameters)
             val time2 = System.currentTimeMillis()
@@ -172,7 +188,7 @@ private class OpenFile(
 
                 val initialParameters = if (parameterContent != null) {
                     try {
-                        val parameterProgram = Pm2Program.compile(parameterContent, createImporter(parametersFile!!))
+                        val parameterProgram = Pm2Program.compile(parameterContent, createImporter(parametersFile!!, openFiles))
                         parameterProgram.getResultValue()
                     } catch (compileError: Pm2CompileError) {
                         compileError.printStackTrace()
@@ -185,7 +201,7 @@ private class OpenFile(
                 } else Pm2NoneValue()
 
                 val initialModel = try {
-                    Pm2Program.compile(modelContent, createImporter(modelFile)).run(initialParameters)
+                    Pm2Program.compile(modelContent, createImporter(modelFile, openFiles)).run(initialParameters)
                 } catch (compileError: Pm2CompileError) {
                     compileError.printStackTrace()
                     null
