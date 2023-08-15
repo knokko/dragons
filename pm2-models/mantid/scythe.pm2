@@ -38,10 +38,3 @@ scytheR.position = (armRadius + scytheLength, armLength - scytheWidth);
 scytheR.color = scytheColor;
 
 produceTriangle(scytheBL, scytheR, scytheTL);
-
-scytheR.matrix = dynamic Matrix {
-	Matrix scytheMatrix;
-	translate(scytheMatrix, 0.0, -0.5);
-	translate(scytheMatrix, 0.2, 0.0);
-	scytheMatrix
-};

@@ -1,13 +1,24 @@
 import model mantid/scythe;
+import model mantid/belly;
 
 static parameter Map scytheParameters;
+static parameter Map bellyParameters;
 
-matrix scytheMatrix = dynamic Matrix {
+matrix frontScytheMatrix = dynamic Matrix {
 	Matrix scytheMatrix;
-	translate(scytheMatrix, 0.0, 0.4);
+	translate(scytheMatrix, 0.0, 0.1);
+	rotate(scytheMatrix, -10.0);
+	scytheMatrix
+};
+matrix backScytheMatrix = dynamic Matrix {
+	Matrix scytheMatrix;
+	translate(scytheMatrix, 0.0, 0.1);
+	rotate(scytheMatrix, -15.0);
+	scale(scytheMatrix, 0.9, 0.9);
 	scytheMatrix
 };
 
 matrix defaultMatrix;
-child model scythe(scytheMatrix, scytheParameters);
-child model scythe(defaultMatrix, scytheParameters);
+child model scythe(backScytheMatrix, scytheParameters);
+child model belly(defaultMatrix, bellyParameters);
+child model scythe(frontScytheMatrix, scytheParameters);

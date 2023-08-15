@@ -1,6 +1,8 @@
 import Map value ./scythe/default as scytheParameters;
+import Map value ./belly/default as bellyParameters;
 
 Map parameters;
 parameters["scytheParameters"] = scytheParameters;
+parameters["bellyParameters"] = bellyParameters;
 
 outputValue(parameters);

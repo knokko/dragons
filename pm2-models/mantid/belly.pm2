@@ -1,0 +1,32 @@
+static parameter color bellyColor;
+static parameter float bellyRadius;
+static parameter int numBellyParts;
+
+static parameter color eyeColor;
+static parameter float eyeRadius;
+static parameter int numEyeParts;
+
+void produceCircle(float centerX, float centerY, float radius, color color, int numParts) {
+	Vertex center;
+	center.position = (centerX, centerY);
+	center.color = color;
+	
+	for (0 <= part < numParts) {
+		float angle1 = 360.0 * float(part) / float(numParts);
+		float angle2 = 360.0 * float(part + 1) / float(numParts);
+
+		Vertex v1;
+		v1.position = (centerX + radius * cos(angle1), centerY + radius * sin(angle1));
+		v1.color = color;
+
+		Vertex v2;
+		v2.position = (centerX + radius * cos(angle2), centerY + radius * sin(angle2));
+		v2.color = color;
+
+		produceTriangle(center, v2, v1);
+	}
+}
+
+produceCircle(0.0, 0.0, bellyRadius, bellyColor, numBellyParts);
+produceCircle(0.5 * bellyRadius, 0.3 * bellyRadius, eyeRadius, eyeColor, numEyeParts);
+	
