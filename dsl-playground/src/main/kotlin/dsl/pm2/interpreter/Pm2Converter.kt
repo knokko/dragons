@@ -8,6 +8,7 @@ import dsl.pm2.interpreter.instruction.Pm2InstructionType
 import dsl.pm2.interpreter.program.Pm2Program
 import dsl.pm2.interpreter.value.Pm2BooleanValue
 import dsl.pm2.interpreter.value.Pm2IntValue
+import dsl.pm2.interpreter.value.Pm2ListValue
 import dsl.pm2.interpreter.value.Pm2NoneValue
 import org.antlr.v4.runtime.tree.ErrorNode
 import java.io.File
@@ -43,6 +44,7 @@ internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : P
         types.defineType("color", BuiltinTypes.COLOR)
         types.defineType("matrix", BuiltinTypes.MATRIX_INDEX)
         types.defineType("Vertex", BuiltinTypes.VERTEX)
+        types.defineType("List", BuiltinTypes.LIST)
         types.defineType("Map", BuiltinTypes.MAP)
         types.defineType("Random", BuiltinTypes.RANDOM)
         types.defineType("Matrix", BuiltinTypes.MATRIX)
@@ -348,13 +350,25 @@ internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : P
     }
 
     override fun exitUpdateArrayOrMap(ctx: ProcModel2Parser.UpdateArrayOrMapContext?) {
-        instructions.add(Pm2Instruction(Pm2InstructionType.UpdateArrayOrMap, lineNumber = ctx!!.start.line))
+        instructions.add(Pm2Instruction(Pm2InstructionType.UpdateListOrMap, lineNumber = ctx!!.start.line))
     }
 
     override fun exitVariableReassignment(ctx: ProcModel2Parser.VariableReassignmentContext?) {
         val identifiers = ctx!!.variableReassignmentTarget().IDENTIFIER().toMutableList()
         val instructionType = if (identifiers.size == 1) Pm2InstructionType.ReassignVariable else Pm2InstructionType.SetProperty
         instructions.add(Pm2Instruction(instructionType, lineNumber = ctx.start.line, name = identifiers.last().text))
+    }
+
+    override fun enterListDeclaration(ctx: ProcModel2Parser.ListDeclarationContext?) {
+        instructions.add(Pm2Instruction(
+            Pm2InstructionType.PushValue, value = Pm2ListValue(mutableListOf()), lineNumber = ctx!!.start.line
+        ))
+    }
+
+    override fun exitListElement(ctx: ProcModel2Parser.ListElementContext?) {
+        instructions.add(Pm2Instruction(
+            Pm2InstructionType.InvokeBuiltinFunction, name = "add", lineNumber = ctx!!.start.line
+        ))
     }
 
     override fun exitExpression(ctx: ProcModel2Parser.ExpressionContext?) {

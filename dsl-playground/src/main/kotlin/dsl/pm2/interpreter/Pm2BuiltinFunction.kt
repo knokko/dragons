@@ -37,6 +37,7 @@ class Pm2BuiltinFunction(
         val INT = Pm2BuiltinFunction(listOf(BuiltinTypes.FLOAT), BuiltinTypes.INT)
         val SIN = Pm2BuiltinFunction(listOf(BuiltinTypes.FLOAT), BuiltinTypes.FLOAT)
         val COS = Pm2BuiltinFunction(listOf(BuiltinTypes.FLOAT), BuiltinTypes.FLOAT)
+        val ADD_TO_LIST = Pm2BuiltinFunction(listOf(BuiltinTypes.LIST, BuiltinTypes.ANY), BuiltinTypes.LIST)
         val TRANSLATE_MATRIX = Pm2BuiltinFunction(listOf(BuiltinTypes.MATRIX, BuiltinTypes.FLOAT, BuiltinTypes.FLOAT), null)
         val ROTATE_MATRIX = Pm2BuiltinFunction(listOf(BuiltinTypes.MATRIX, BuiltinTypes.FLOAT), null)
         val SCALE_MATRIX = Pm2BuiltinFunction(listOf(BuiltinTypes.MATRIX, BuiltinTypes.FLOAT, BuiltinTypes.FLOAT), null)
@@ -51,6 +52,7 @@ class Pm2BuiltinFunction(
             Pair("float", FLOAT),
             Pair("sin", SIN),
             Pair("cos", COS),
+            Pair("add", ADD_TO_LIST),
             Pair("translate", TRANSLATE_MATRIX),
             Pair("rotate", ROTATE_MATRIX),
             Pair("scale", SCALE_MATRIX)

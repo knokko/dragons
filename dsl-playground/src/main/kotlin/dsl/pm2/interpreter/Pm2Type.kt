@@ -34,6 +34,8 @@ object BuiltinTypes {
 
     val MATRIX = Pm2Type("Matrix", createDefaultValue = { Pm2MatrixValue(Matrix3x2f()) }, acceptValue = { value -> value is Pm2MatrixValue })
 
+    val LIST = Pm2Type("List", createDefaultValue = { Pm2ListValue(mutableListOf()) }, acceptValue = { value -> value is Pm2ListValue })
+
     val MAP = Pm2Type("Map", createDefaultValue = { Pm2MapValue() }, acceptValue = { value -> value is Pm2MapValue })
 
     val RANDOM = Pm2Type("Random", createDefaultValue = { Pm2RandomValue(Random.Default) }, acceptValue = { value -> value is Pm2RandomValue })

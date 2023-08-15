@@ -228,6 +228,26 @@ public interface ProcModel2Listener extends ParseTreeListener {
 	 */
 	void exitPositionConstructor(ProcModel2Parser.PositionConstructorContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#listElement}.
+	 * @param ctx the parse tree
+	 */
+	void enterListElement(ProcModel2Parser.ListElementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#listElement}.
+	 * @param ctx the parse tree
+	 */
+	void exitListElement(ProcModel2Parser.ListElementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#listDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterListDeclaration(ProcModel2Parser.ListDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#listDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitListDeclaration(ProcModel2Parser.ListDeclarationContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link ProcModel2Parser#forLoop}.
 	 * @param ctx the parse tree
 	 */

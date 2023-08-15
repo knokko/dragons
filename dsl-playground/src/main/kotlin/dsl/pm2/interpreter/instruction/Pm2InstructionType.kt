@@ -4,7 +4,7 @@ enum class Pm2InstructionType {
     PushValue,
     PushVariable,
     PushProperty,
-    ReadArrayOrMap,
+    ReadListOrMap,
 
     Divide,
     Multiply,
@@ -21,7 +21,7 @@ enum class Pm2InstructionType {
     DeclareVariable,
     ReassignVariable,
     SetProperty,
-    UpdateArrayOrMap,
+    UpdateListOrMap,
 
     Jump,
     InvokeBuiltinFunction,

@@ -143,6 +143,18 @@ public interface ProcModel2Visitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitPositionConstructor(ProcModel2Parser.PositionConstructorContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#listElement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitListElement(ProcModel2Parser.ListElementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#listDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitListDeclaration(ProcModel2Parser.ListDeclarationContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link ProcModel2Parser#forLoop}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

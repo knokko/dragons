@@ -59,6 +59,7 @@ expression :
     expression readArrayOrMap |
     '(' expression ')' |
     positionConstructor |
+    listDeclaration |
     expression DIVIDE expression |
     expression TIMES expression |
     expression MINUS expression |
@@ -68,6 +69,10 @@ expression :
 variableProperty : '.' IDENTIFIER;
 
 positionConstructor : '(' expression ',' expression ')';
+
+listElement : expression;
+
+listDeclaration : '[' (listElement ',')* listElement? ']';
 
 PLUS : '+';
 MINUS : '-';

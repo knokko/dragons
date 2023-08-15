@@ -56,7 +56,7 @@ internal abstract class Pm2BaseProcessor(
                     variables.getVariable(instruction.name!!) ?: throw Pm2RuntimeError("Undefined variable ${instruction.name}")
             )
             Pm2InstructionType.PushProperty -> valueStack.add(valueStack.removeLast().getProperty(instruction.name!!))
-            Pm2InstructionType.ReadArrayOrMap -> {
+            Pm2InstructionType.ReadListOrMap -> {
                 val key = valueStack.removeLast()
                 val map = valueStack.removeLast()
                 valueStack.add(map[key])
@@ -87,7 +87,7 @@ internal abstract class Pm2BaseProcessor(
                 val newValue = valueStack.removeLast()
                 valueStack.removeLast().setProperty(instruction.name!!, newValue)
             }
-            Pm2InstructionType.UpdateArrayOrMap -> {
+            Pm2InstructionType.UpdateListOrMap -> {
                 val value = valueStack.removeLast()
                 val key = valueStack.removeLast()
                 val map = valueStack.removeLast()
@@ -116,6 +116,10 @@ internal abstract class Pm2BaseProcessor(
             "float" -> Pm2BuiltinFunction.FLOAT.invoke(valueStack) { parameters -> Pm2FloatValue(parameters[0].intValue().toFloat()) }
             "sin" -> Pm2BuiltinFunction.SIN.invoke(valueStack) { parameters -> Pm2FloatValue(sin(toRadians(parameters[0].floatValue()))) }
             "cos" -> Pm2BuiltinFunction.COS.invoke(valueStack) { parameters -> Pm2FloatValue(cos(toRadians(parameters[0].floatValue()))) }
+            "add" -> Pm2BuiltinFunction.ADD_TO_LIST.invoke(valueStack) { parameters ->
+                parameters[0].castTo<Pm2ListValue>().elements.add(parameters[1])
+                parameters[0]
+            }
             "translate" -> Pm2BuiltinFunction.TRANSLATE_MATRIX.invoke(valueStack) { parameters ->
                 parameters[0].castTo<Pm2MatrixValue>().matrix.translate(parameters[1].floatValue(), parameters[2].floatValue())
                 null

@@ -13,6 +13,7 @@ class Pm2IntValue(private val value: Int) : Pm2Value() {
     override fun times(right: Pm2Value) = when(right) {
         is Pm2IntValue -> Pm2IntValue(this.value * right.value)
         is Pm2FloatValue -> Pm2FloatValue(this.value * right.floatValue())
+        is Pm2ListValue -> right.times(this)
         else -> super.times(right)
     }
 

@@ -27,7 +27,7 @@ object ExpressionComputer {
         if (ctx.variableProperty() != null) return Pm2Instruction(
             Pm2InstructionType.PushProperty, lineNumber = ctx.start.line, name = ctx.variableProperty().IDENTIFIER().text
         )
-        if (ctx.readArrayOrMap() != null) return Pm2Instruction(Pm2InstructionType.ReadArrayOrMap, lineNumber = ctx.start.line)
+        if (ctx.readArrayOrMap() != null) return Pm2Instruction(Pm2InstructionType.ReadListOrMap, lineNumber = ctx.start.line)
 
         if (ctx.DIVIDE() != null) return Pm2Instruction(Pm2InstructionType.Divide, lineNumber = ctx.start.line)
         if (ctx.TIMES() != null) return Pm2Instruction(Pm2InstructionType.Multiply, lineNumber = ctx.start.line)
