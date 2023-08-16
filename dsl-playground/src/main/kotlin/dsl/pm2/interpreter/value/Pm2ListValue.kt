@@ -6,7 +6,7 @@ class Pm2ListValue(val elements: MutableList<Pm2Value>): Pm2Value() {
 
     override fun toString() = "Pm2ListValue($elements)"
 
-    override fun copy() = Pm2ListValue(elements.toMutableList())
+    override fun copy() = Pm2ListValue(elements.map { it.copy() }.toMutableList())
 
     override fun getProperty(propertyName: String): Pm2Value {
         if (propertyName == "size") return Pm2IntValue(elements.size)

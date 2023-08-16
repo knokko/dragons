@@ -101,6 +101,18 @@ public class ProcModel2BaseListener implements ProcModel2Listener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterImportTriangles(ProcModel2Parser.ImportTrianglesContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitImportTriangles(ProcModel2Parser.ImportTrianglesContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterImportAlias(ProcModel2Parser.ImportAliasContext ctx) { }
 	/**
 	 * {@inheritDoc}

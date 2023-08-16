@@ -67,6 +67,13 @@ public class ProcModel2BaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
+	@Override public T visitImportTriangles(ProcModel2Parser.ImportTrianglesContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
 	@Override public T visitImportAlias(ProcModel2Parser.ImportAliasContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}

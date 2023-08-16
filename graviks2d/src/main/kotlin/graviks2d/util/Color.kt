@@ -45,6 +45,8 @@ value class Color private constructor(val rawValue: Int) {
         val BLUE = rgbInt(0, 0, 255)
         val TRANSPARENT = rgbaInt(0, 0, 0, 0)
 
+        fun raw(rawValue: Int) = Color(rawValue)
+
         fun rgbaInt(red: Int, green: Int, blue: Int, alpha: Int): Color {
             fun rangeCheck(value: Int, description: String) {
                 if (value < 0) throw IllegalArgumentException("$description ($value) can't be negative")

@@ -1,6 +1,7 @@
 package dsl.pm2.interpreter.value
 
 import dsl.pm2.interpreter.Pm2RuntimeError
+import graviks2d.util.Color
 
 class Pm2ColorValue(private val red: Float, private val green: Float, private val blue: Float) : Pm2Value() {
 
@@ -9,6 +10,8 @@ class Pm2ColorValue(private val red: Float, private val green: Float, private va
         if (green < 0f || green > 1f) throw Pm2RuntimeError("Green ($green) must be in range [0, 1]")
         if (blue < 0f || blue > 1f) throw Pm2RuntimeError("Blue ($blue) must be in range [0, 1]")
     }
+
+    constructor(color: Color) : this(color.redF, color.greenF, color.blueF)
 
     override fun setProperty(propertyName: String, newValue: Pm2Value) {
         throw Pm2RuntimeError("Colors are immutable")

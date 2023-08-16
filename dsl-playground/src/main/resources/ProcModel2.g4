@@ -6,6 +6,7 @@ outerStatement :
     parameterDeclaration |
     importModel |
     importValue |
+    importTriangles |
     innerStatement;
 
 innerStatement :
@@ -24,6 +25,8 @@ relativeImportPath: (IDENTIFIER '/')* IDENTIFIER;
 importPath: relativeImportPrefix? relativeImportPath;
 
 importModel: 'import' 'model' importPath importAlias? ';';
+
+importTriangles: 'import' IDENTIFIER importPath importAlias? ';';
 
 importAlias: 'as' IDENTIFIER;
 

@@ -4,6 +4,8 @@ import dsl.pm2.interpreter.Pm2CompileError
 import dsl.pm2.interpreter.Pm2RuntimeError
 import dsl.pm2.interpreter.program.Pm2Program
 import dsl.pm2.interpreter.value.Pm2Value
+import dsl.pm2.interpreter.value.Pm2VertexValue
+import dsl.pm2.parser.parseShape
 
 class Pm2Importer(internal val cache: Pm2ImportCache, private val prefix: String) {
 
@@ -46,5 +48,19 @@ class Pm2Importer(internal val cache: Pm2ImportCache, private val prefix: String
         childProgram.program = Pm2Program.compile(sourceCode, childImporter, true)
 
         return childProgram.id
+    }
+
+    @Throws(Pm2CompileError::class)
+    fun importTriangles(path: String, isRelative: Boolean): Pair<Set<Pm2VertexValue>, List<Pm2VertexValue>> {
+        val fullPath = (if (isRelative) prefix + path else path) + ".tri2"
+        val cachedTriangles = cache.triangles[fullPath]
+        if (cachedTriangles != null) return cachedTriangles
+
+        val input = cache.importFunctions.getBinaryInput(fullPath) ?: throw Pm2CompileError("Can't import $fullPath")
+        val importedTriangles = parseShape(input)
+        input.close()
+
+        cache.triangles[fullPath] = importedTriangles
+        return importedTriangles
     }
 }

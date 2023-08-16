@@ -1,24 +1,61 @@
 import model mantid/scythe;
 import model mantid/belly;
+import model mantid/leg;
 
 static parameter Map scytheParameters;
 static parameter Map bellyParameters;
+static parameter Map legParameters;
 
-matrix frontScytheMatrix = dynamic Matrix {
+matrix rightScytheMatrix = dynamic Matrix {
 	Matrix scytheMatrix;
-	translate(scytheMatrix, 0.0, 0.1);
+	translate(scytheMatrix, 0.1, 0.3);
 	rotate(scytheMatrix, -10.0);
 	scytheMatrix
 };
-matrix backScytheMatrix = dynamic Matrix {
+matrix leftScytheMatrix = dynamic Matrix {
 	Matrix scytheMatrix;
-	translate(scytheMatrix, 0.0, 0.1);
+	translate(scytheMatrix, 0.1, 0.3);
 	rotate(scytheMatrix, -15.0);
 	scale(scytheMatrix, 0.9, 0.9);
 	scytheMatrix
 };
 
+matrix leftBackLegMatrix = dynamic Matrix {
+	Matrix legMatrix;
+	translate(legMatrix, -0.3, 0.0);
+	scale(legMatrix, -0.8, 0.8);
+	rotate(legMatrix, 10.0);
+	legMatrix
+};
+
+matrix leftFrontLegMatrix = dynamic Matrix {
+	Matrix legMatrix;
+	translate(legMatrix, -0.2, 0.0);
+	scale(legMatrix, 0.95, 0.95);
+	rotate(legMatrix, 35.0);
+	legMatrix
+};
+
+matrix rightBackLegMatrix = dynamic Matrix {
+	Matrix legMatrix;
+	translate(legMatrix, -0.3, 0.0);
+	scale(legMatrix, -1.0, 1.0);
+	rotate(legMatrix, 25.0);
+	legMatrix
+};
+
+matrix rightFrontLegMatrix = dynamic Matrix {
+	Matrix legMatrix;
+	translate(legMatrix, -0.2, 0.0);
+	rotate(legMatrix, 25.0);
+	legMatrix
+};
+
 matrix defaultMatrix;
-child model scythe(backScytheMatrix, scytheParameters);
+child model scythe(leftScytheMatrix, scytheParameters);
 child model belly(defaultMatrix, bellyParameters);
-child model scythe(frontScytheMatrix, scytheParameters);
+child model scythe(rightScytheMatrix, scytheParameters);
+child model leg(leftBackLegMatrix, legParameters);
+child model leg(leftFrontLegMatrix, legParameters);
+child model leg(rightBackLegMatrix, legParameters);
+child model leg(rightFrontLegMatrix, legParameters);

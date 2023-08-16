@@ -298,6 +298,33 @@ internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : P
         importedModelIDs[name] = importer.importModel(relativePath, isRelative)
     }
 
+    override fun exitImportTriangles(ctx: ProcModel2Parser.ImportTrianglesContext?) {
+        val isRelative = ctx!!.importPath().relativeImportPrefix() != null
+        val relativePath = "/" + ctx.importPath().relativeImportPath().text
+        val importedTriangles = importer.importTriangles(relativePath, isRelative)
+
+        val importedValue = when (ctx.IDENTIFIER().text) {
+            "triangles" -> importedTriangles.second
+            "vertices" -> importedTriangles.first
+            else -> throw Pm2CompileError("Expected to import 'triangles' or 'vertices', but got ${ctx.IDENTIFIER().text}")
+        }
+
+        val name = ctx.importAlias()?.IDENTIFIER()?.text ?: ctx.importPath().relativeImportPath().IDENTIFIER().last().text
+
+        // TODO Use a Set instead of a List for the vertices, when Set support is added
+        instructions.add(Pm2Instruction(
+            Pm2InstructionType.PushValue,
+            value = Pm2ListValue(importedValue.toMutableList()),
+            lineNumber = ctx.start.line
+        ))
+        instructions.add(Pm2Instruction(
+            Pm2InstructionType.DeclareVariable,
+            variableType = BuiltinTypes.LIST,
+            name = name,
+            lineNumber = ctx.stop.line
+        ))
+    }
+
     override fun exitChildModel(ctx: ProcModel2Parser.ChildModelContext?) {
         val modelName = ctx!!.IDENTIFIER().text
         val modelID = importedModelIDs[modelName] ?: throw Pm2CompileError("Unknown child model $modelName")

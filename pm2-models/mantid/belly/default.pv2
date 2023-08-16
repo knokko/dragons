@@ -1,9 +1,7 @@
 Map parameters;
-parameters["bellyRadius"] = 0.25;
 parameters["bellyColor"] = rgb(0.4, 0.2, 0.1);
-parameters["numBellyParts"] = 20;
 
-parameters["eyeRadius"] = 0.03;
+parameters["eyeRadius"] = 0.05;
 parameters["eyeColor"] = rgb(0.0, 0.0, 0.0);
 parameters["numEyeParts"] = 10;
 

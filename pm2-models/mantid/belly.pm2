@@ -1,6 +1,5 @@
+import triangles ./belly;
 static parameter color bellyColor;
-static parameter float bellyRadius;
-static parameter int numBellyParts;
 
 static parameter color eyeColor;
 static parameter float eyeRadius;
@@ -27,6 +26,14 @@ void produceCircle(float centerX, float centerY, float radius, color color, int 
 	}
 }
 
-produceCircle(0.0, 0.0, bellyRadius, bellyColor, numBellyParts);
-produceCircle(0.5 * bellyRadius, 0.3 * bellyRadius, eyeRadius, eyeColor, numEyeParts);
-	
+for (0 <= index < belly.size) {
+	Vertex bellyVertex = belly[index];
+	bellyVertex.color = bellyColor;
+}
+
+for (0 <= triangleIndex < belly.size / 3) {
+	int index = 3 * triangleIndex;
+	produceTriangle(belly[index], belly[index + 1], belly[index + 2]);
+}
+
+produceCircle(0.4, 0.15, eyeRadius, eyeColor, numEyeParts);

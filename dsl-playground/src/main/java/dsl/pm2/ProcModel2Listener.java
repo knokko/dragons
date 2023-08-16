@@ -78,6 +78,16 @@ public interface ProcModel2Listener extends ParseTreeListener {
 	 */
 	void exitImportModel(ProcModel2Parser.ImportModelContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#importTriangles}.
+	 * @param ctx the parse tree
+	 */
+	void enterImportTriangles(ProcModel2Parser.ImportTrianglesContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#importTriangles}.
+	 * @param ctx the parse tree
+	 */
+	void exitImportTriangles(ProcModel2Parser.ImportTrianglesContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link ProcModel2Parser#importAlias}.
 	 * @param ctx the parse tree
 	 */

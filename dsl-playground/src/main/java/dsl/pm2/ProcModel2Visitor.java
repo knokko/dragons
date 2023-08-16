@@ -53,6 +53,12 @@ public interface ProcModel2Visitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitImportModel(ProcModel2Parser.ImportModelContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#importTriangles}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitImportTriangles(ProcModel2Parser.ImportTrianglesContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link ProcModel2Parser#importAlias}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

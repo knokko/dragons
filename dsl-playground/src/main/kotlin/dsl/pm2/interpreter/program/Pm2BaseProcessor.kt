@@ -51,7 +51,9 @@ internal abstract class Pm2BaseProcessor(
 
     protected open fun executeInstruction(instruction: Pm2Instruction) {
         when (instruction.type) {
-            Pm2InstructionType.PushValue -> valueStack.add(instruction.value?.copy() ?: instruction.variableType!!.createDefaultValue!!.invoke())
+            Pm2InstructionType.PushValue -> valueStack.add(
+                instruction.value?.copy() ?: instruction.variableType!!.createDefaultValue!!.invoke()
+            )
             Pm2InstructionType.PushVariable -> valueStack.add(
                     variables.getVariable(instruction.name!!) ?: throw Pm2RuntimeError("Undefined variable ${instruction.name}")
             )
