@@ -364,14 +364,20 @@ class TestContext {
         val backgroundColor = Color.WHITE
         val graviks = GraviksContext(this.graviksInstance, 300, 600, initialBackgroundColor = backgroundColor)
 
-        val style = TextStyle(
+        val simpleStyle = TextStyle(
             fillColor = Color.rgbInt(0, 0, 150),
             font = null
         )
 
+        val complexStyle = TextStyle(
+                fillColor = Color.RED,
+                fillColorFunction = { index -> Color.rgbInt(0, 50 + 50 * index, 0) },
+                font = null
+        )
+
         withTestImage(graviks, true) { update, hostImage ->
             // Test that drawing an empty string won't crash and has no effect
-            assertTrue(graviks.drawString(0.1f, 0.2f, 0.3f, 0.4f, "", style).isEmpty())
+            assertTrue(graviks.drawString(0.1f, 0.2f, 0.3f, 0.4f, "", simpleStyle).isEmpty())
             update()
             for (x in 0 until hostImage.width) {
                 for (y in 0 until hostImage.height) {
@@ -379,7 +385,7 @@ class TestContext {
                 }
             }
 
-            val characterPositions = graviks.drawString(0.1f, 0.1f, 0.9f, 0.4f, "T E", style)
+            val characterPositions = graviks.drawString(0.1f, 0.1f, 0.9f, 0.4f, "T E", simpleStyle)
             assertEquals(3, characterPositions.size)
             for (position in characterPositions) {
                 assertTrue(position.maxX - position.minX > 0.1f)
@@ -396,37 +402,37 @@ class TestContext {
             }
             update()
 
-            fun countSplittedOccurrences(x: Int): Int {
+            fun countSplittedOccurrences(x: Int, textColor: Color): Int {
                 var counter = 0
                 var wasTextColor = false
                 for (y in 0 until graviks.height) {
-                    val isTextColor = hostImage.getPixel(x, y) == style.fillColor
+                    val isTextColor = hostImage.getPixel(x, y) == textColor
                     if (isTextColor && !wasTextColor) counter += 1
                     wasTextColor = isTextColor
                 }
                 return counter
             }
 
-            fun countAllOccurrences(x: Int): Int {
-                return (0 until graviks.height).count { y -> hostImage.getPixel(x, y) == style.fillColor }
+            fun countAllOccurrences(x: Int, textColor: Color): Int {
+                return (0 until graviks.height).count { y -> hostImage.getPixel(x, y) == textColor }
             }
 
-            val tBarLeftIndex = (0 until graviks.width).indexOfFirst { x -> countAllOccurrences(x) > 50 }
-            val tBarRightIndex = (0 until graviks.width).indexOfFirst { x -> x > tBarLeftIndex && countAllOccurrences(x) < 50 } - 1
-            assertEquals(2, countSplittedOccurrences(tBarLeftIndex - 2))
-            assertEquals(2, countSplittedOccurrences(tBarRightIndex + 2))
-            assertEquals(1, countSplittedOccurrences(tBarLeftIndex - 25))
-            assertEquals(1, countSplittedOccurrences(tBarRightIndex + 25))
+            var tBarLeftIndex = (0 until graviks.width).indexOfFirst { x -> countAllOccurrences(x, simpleStyle.fillColor) > 50 }
+            var tBarRightIndex = (0 until graviks.width).indexOfFirst { x -> x > tBarLeftIndex && countAllOccurrences(x, simpleStyle.fillColor) < 50 } - 1
+            assertEquals(2, countSplittedOccurrences(tBarLeftIndex - 2, simpleStyle.fillColor))
+            assertEquals(2, countSplittedOccurrences(tBarRightIndex + 2, simpleStyle.fillColor))
+            assertEquals(1, countSplittedOccurrences(tBarLeftIndex - 25, simpleStyle.fillColor))
+            assertEquals(1, countSplittedOccurrences(tBarRightIndex + 25, simpleStyle.fillColor))
             assertTrue(tBarLeftIndex < tBarRightIndex)
             assertTrue(tBarLeftIndex > characterPositions[0].minX * graviks.width)
             assertTrue(tBarRightIndex < characterPositions[0].maxX * graviks.height)
 
-            val eBarRightIndex = (0 until graviks.width).indexOfLast { x -> countAllOccurrences(x) > 50 }
-            val eBarLeftIndex = (0 until eBarRightIndex).indexOfLast { x -> countAllOccurrences(x) < 50 } + 1
-            assertEquals(0, countSplittedOccurrences(eBarLeftIndex - 20))
-            assertEquals(2, countSplittedOccurrences(eBarLeftIndex - 2))
-            assertEquals(3, countSplittedOccurrences(eBarRightIndex + 2))
-            assertEquals(3, countSplittedOccurrences(eBarRightIndex + 20))
+            var eBarRightIndex = (0 until graviks.width).indexOfLast { x -> countAllOccurrences(x, simpleStyle.fillColor) > 50 }
+            var eBarLeftIndex = (0 until eBarRightIndex).indexOfLast { x -> countAllOccurrences(x, simpleStyle.fillColor) < 50 } + 1
+            assertEquals(0, countSplittedOccurrences(eBarLeftIndex - 20, simpleStyle.fillColor))
+            assertEquals(2, countSplittedOccurrences(eBarLeftIndex - 2, simpleStyle.fillColor))
+            assertEquals(3, countSplittedOccurrences(eBarRightIndex + 2, simpleStyle.fillColor))
+            assertEquals(3, countSplittedOccurrences(eBarRightIndex + 20, simpleStyle.fillColor))
             assertTrue(eBarLeftIndex < eBarRightIndex)
             assertTrue(eBarRightIndex > characterPositions[2].minX * graviks.width)
             assertTrue(eBarRightIndex < characterPositions[2].maxX * graviks.width)
@@ -436,6 +442,34 @@ class TestContext {
                     assertColorEquals(backgroundColor, hostImage.getPixel(x, y))
                 }
             }
+
+            // Test drawing the complex style
+            graviks.fillRect(0f, 0f, 1f, 1f, backgroundColor)
+            graviks.drawString(0.1f, 0.1f, 0.9f, 0.4f, "T E", complexStyle)
+            update()
+
+            val fillColorT = Color.rgbInt(0, 50, 0)
+            val fillColorE = Color.rgbInt(0, 150, 0)
+
+            tBarLeftIndex = (0 until graviks.width).indexOfFirst { x -> countAllOccurrences(x, fillColorT) > 50 }
+            tBarRightIndex = (0 until graviks.width).indexOfFirst { x -> x > tBarLeftIndex && countAllOccurrences(x, fillColorT) < 50 } - 1
+            assertEquals(2, countSplittedOccurrences(tBarLeftIndex - 2, fillColorT))
+            assertEquals(2, countSplittedOccurrences(tBarRightIndex + 2, fillColorT))
+            assertEquals(1, countSplittedOccurrences(tBarLeftIndex - 25, fillColorT))
+            assertEquals(1, countSplittedOccurrences(tBarRightIndex + 25, fillColorT))
+            assertTrue(tBarLeftIndex < tBarRightIndex)
+            assertTrue(tBarLeftIndex > characterPositions[0].minX * graviks.width)
+            assertTrue(tBarRightIndex < characterPositions[0].maxX * graviks.height)
+
+            eBarRightIndex = (0 until graviks.width).indexOfLast { x -> countAllOccurrences(x, fillColorE) > 50 }
+            eBarLeftIndex = (0 until eBarRightIndex).indexOfLast { x -> countAllOccurrences(x, fillColorE) < 50 } + 1
+            assertEquals(0, countSplittedOccurrences(eBarLeftIndex - 20, fillColorE))
+            assertEquals(2, countSplittedOccurrences(eBarLeftIndex - 2, fillColorE))
+            assertEquals(3, countSplittedOccurrences(eBarRightIndex + 2, fillColorE))
+            assertEquals(3, countSplittedOccurrences(eBarRightIndex + 20, fillColorE))
+            assertTrue(eBarLeftIndex < eBarRightIndex)
+            assertTrue(eBarRightIndex > characterPositions[2].minX * graviks.width)
+            assertTrue(eBarRightIndex < characterPositions[2].maxX * graviks.width)
         }
 
         graviks.destroy()

@@ -498,8 +498,8 @@ class GraviksContext(
                                 this.put(startOperationIndex, OP_CODE_DRAW_TEXT)
                                 this.put(startOperationIndex + 1, encodeFloat(texX))
                                 this.put(startOperationIndex + 2, encodeFloat(texY))
-                                this.put(startOperationIndex + 3, style.fillColor.rawValue)
-                                this.put(startOperationIndex + 4, style.strokeColor.rawValue)
+                                this.put(startOperationIndex + 3, style.getFillColor(placedChar.originalIndex).rawValue)
+                                this.put(startOperationIndex + 4, style.getStrokeColor(placedChar.originalIndex).rawValue)
                                 this.put(startOperationIndex + 5, encodeFloat(strokeDeltaX))
                                 this.put(startOperationIndex + 6, encodeFloat(strokeDeltaY))
                             }
