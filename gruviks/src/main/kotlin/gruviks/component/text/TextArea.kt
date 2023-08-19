@@ -33,16 +33,6 @@ class TextArea(
     private var scrollOffsetX = 0f
     private var scrollOffsetY = 0f
 
-    init {
-        val textStyles = arrayOf(style.defaultTextStyle, style.focusTextStyle) +
-                if (style.placeholderTextStyle != null) arrayOf(style.placeholderTextStyle) else arrayOf()
-        for (textStyle in textStyles) {
-            if (textStyle.overflowPolicy != TextOverflowPolicy.DiscardEnd) {
-                throw IllegalArgumentException("All overflow policies must be DiscardEnd")
-            }
-        }
-    }
-
     override fun subscribeToEvents() {
         agent.subscribe(KeyboardFocusAcquiredEvent::class)
         agent.subscribe(KeyboardFocusLostEvent::class)
@@ -232,12 +222,22 @@ class TextArea(
         val drawBackgroundFunction = if (agent.hasKeyboardFocus()) style.drawFocusBackground else style.drawDefaultBackground
         val (textRegion, lineHeight) = drawBackgroundFunction(target)
         val drawPlaceholder = !agent.hasKeyboardFocus() && placeholder != null && getText().isEmpty()
-        val textStyle = if (agent.hasKeyboardFocus()) style.focusTextStyle else if (drawPlaceholder) style.placeholderTextStyle!! else style.defaultTextStyle
+
         lastLineHeight = lineHeight
 
         var maxY = textRegion.maxY + scrollOffsetY
 
-        val textToDraw = if (drawPlaceholder) splitLines(placeholder!!).map { TextInput(it, this::giveRenderFeedback) }.withIndex() else lineInputs.withIndex()
+        val textToDraw = if (drawPlaceholder) splitLines(placeholder!!).map {
+            TextInput(it, this::giveRenderFeedback)
+        }.withIndex() else lineInputs.withIndex()
+
+        val allLines = textToDraw.map { it.value.getText() }
+
+        val indirectTextStyleFunction = if (agent.hasKeyboardFocus()) style.focusTextStyle
+        else if (drawPlaceholder) style.placeholderTextStyle!!
+        else style.defaultTextStyle
+
+        val textStyleFunction = indirectTextStyleFunction(allLines)
 
         // The lines that are almost visible should also be 'drawn' to ensure that the character placements are known
         val marginY = 3f * lineHeight
@@ -248,6 +248,11 @@ class TextArea(
             val minY = maxY - lineHeight
 
             if (minY < 1f + marginY) {
+                val textStyle = textStyleFunction(lineIndex)
+                if (textStyle.overflowPolicy != TextOverflowPolicy.DiscardEnd) {
+                    throw IllegalArgumentException("Overflow policy must be DiscardEnd, ubt is ${textStyle.overflowPolicy}")
+                }
+
                 val suggestLeftToRight = leftToRightTracker[lineIndex]
                 val isRightToLeft = run {
                     val dryResult = target.drawString(

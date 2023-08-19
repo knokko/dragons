@@ -36,18 +36,11 @@ internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : P
 
     override fun enterStart(ctx: ProcModel2Parser.StartContext?) {
         types.pushScope()
-        types.defineType("void", BuiltinTypes.VOID)
-        types.defineType("float", BuiltinTypes.FLOAT)
-        types.defineType("int", BuiltinTypes.INT)
-        types.defineType("string", BuiltinTypes.STRING)
-        types.defineType("position", BuiltinTypes.POSITION)
-        types.defineType("color", BuiltinTypes.COLOR)
-        types.defineType("matrix", BuiltinTypes.MATRIX_INDEX)
-        types.defineType("Vertex", BuiltinTypes.VERTEX)
-        types.defineType("List", BuiltinTypes.LIST)
-        types.defineType("Map", BuiltinTypes.MAP)
-        types.defineType("Random", BuiltinTypes.RANDOM)
-        types.defineType("Matrix", BuiltinTypes.MATRIX)
+
+        for (type in BuiltinTypes.ALL_TYPES) {
+            // I'm planning to get rid of ANY in the future
+            if (type != BuiltinTypes.ANY) types.defineType(type.name, type)
+        }
 
         functions.pushScope()
     }

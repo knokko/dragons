@@ -39,4 +39,6 @@ object BuiltinTypes {
     val MAP = Pm2Type("Map", createDefaultValue = { Pm2MapValue() }, acceptValue = { value -> value is Pm2MapValue })
 
     val RANDOM = Pm2Type("Random", createDefaultValue = { Pm2RandomValue(Random.Default) }, acceptValue = { value -> value is Pm2RandomValue })
+
+    val ALL_TYPES = listOf(VOID, ANY, FLOAT, INT, STRING, POSITION, COLOR, MATRIX_INDEX, VERTEX, MATRIX, LIST, MAP, RANDOM)
 }

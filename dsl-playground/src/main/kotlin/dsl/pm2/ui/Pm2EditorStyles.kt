@@ -5,17 +5,11 @@ import graviks2d.util.Color
 import gruviks.component.HorizontalComponentAlignment
 import gruviks.component.VerticalComponentAlignment
 import gruviks.component.text.TextButtonStyle
-import gruviks.component.text.squareTextAreaStyle
 
 internal val backgroundColor = Color.rgbInt(30, 0, 90)
 
-internal val textAreaStyle = squareTextAreaStyle(
-    defaultTextStyle = TextStyle(fillColor = Color.WHITE.scale(0.8f), font = null),
-    defaultBackgroundColor = backgroundColor,
-    focusTextStyle = TextStyle(fillColor = Color.WHITE, font = null),
-    focusBackgroundColor = backgroundColor.scale(1.1f),
-    lineHeight = 0.05f, placeholderStyle = null
-)
+private val colorTheme = Pm2ColorTheme.TEST
+internal val textAreaStyle = pm2SyntaxTextAreaStyle(colorTheme, 0.05f)
 
 internal val tabStyle = TextButtonStyle.textAndBorder(
     baseColor = Color.WHITE.scale(0.8f),

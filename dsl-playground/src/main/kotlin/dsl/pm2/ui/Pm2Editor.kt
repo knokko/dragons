@@ -22,6 +22,8 @@ import gruviks.space.Point
 import gruviks.space.RectRegion
 import gruviks.space.SpaceLayout
 import org.lwjgl.vulkan.VK10.*
+import profiler.performance.PerformanceProfiler
+import profiler.performance.PerformanceStorage
 import troll.instance.TrollInstance
 import java.io.File
 
@@ -158,10 +160,14 @@ fun createPm2Editor(troll: TrollInstance): Component {
 }
 
 fun main() {
+    val profiler = PerformanceProfiler(PerformanceStorage(), 1)
+    profiler.start()
     val graviksWindow = GraviksWindow(
         1600, 900, true,
         "Pm2Editor", VK_MAKE_VERSION(0, 1, 0), true
     ) { instance, width, height -> GraviksContext(instance, width, height) }
 
     createAndControlGruviksWindow(graviksWindow, createPm2Editor(graviksWindow.troll))
+    profiler.stop()
+    profiler.storage.dump(File("dsl-profiler.log"))
 }
