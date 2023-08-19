@@ -20,8 +20,9 @@ import kotlinx.coroutines.runBlocking
 import org.lwjgl.system.MemoryStack.stackPush
 import troll.sync.ResourceUsage
 import troll.sync.WaitSemaphore
-import java.lang.Integer.min
 import kotlin.IllegalStateException
+import kotlin.math.min
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 class GraviksContext(
@@ -331,6 +332,34 @@ class GraviksContext(
         }
     }
 
+    override fun drawRect(x1: Float, y1: Float, x2: Float, y2: Float, lineWidth: Float, color: Color) {
+        val xLeft = min(x1, x2) - lineWidth * 0.5f
+        val yBottom = min(y1, y2) - lineWidth * 0.5f
+        val xRight = max(x1, x2) + lineWidth * 0.5f
+        val yTop = max(y1, y2) + lineWidth * 0.5f
+
+        val claimedSpace = this.claimSpace(numVertices = 6, numOperationValues = 6)
+
+        this.pushRect(
+                xLeft, yBottom, xRight, yTop, vertexIndex = claimedSpace.vertexIndex,
+                operationIndex1 = claimedSpace.operationIndex, operationIndex2 = claimedSpace.operationIndex + 4,
+                operationIndex3 = claimedSpace.operationIndex + 5, operationIndex4 = claimedSpace.operationIndex + 6
+        )
+
+        val lineWidthX = lineWidth / (xRight - xLeft)
+        val lineWidthY = lineWidth / (yTop - yBottom)
+
+        this.buffers.operationCpuBuffer.run {
+            this.put(claimedSpace.operationIndex, OP_CODE_DRAW_RECT_BOTTOM_LEFT)
+            this.put(claimedSpace.operationIndex + 1, encodeFloat(lineWidthX))
+            this.put(claimedSpace.operationIndex + 2, encodeFloat(lineWidthY))
+            this.put(claimedSpace.operationIndex + 3, color.rawValue)
+            this.put(claimedSpace.operationIndex + 4, OP_CODE_DRAW_RECT_BOTTOM_RIGHT)
+            this.put(claimedSpace.operationIndex + 5, OP_CODE_DRAW_RECT_TOP_RIGHT)
+            this.put(claimedSpace.operationIndex + 6, OP_CODE_DRAW_RECT_TOP_LEFT)
+        }
+    }
+
     override fun drawRoundedRect(
         x1: Float, y1: Float, x2: Float, y2: Float, radiusX: Float, lineWidth: Float, color: Color
     ) {
@@ -341,10 +370,10 @@ class GraviksContext(
         this.buffers.operationCpuBuffer.run {
             this.put(claimedSpace.operationIndex, OP_CODE_DRAW_ROUNDED_RECT)
             this.put(claimedSpace.operationIndex + 1, color.rawValue)
-            this.put(claimedSpace.operationIndex + 2, encodeFloat(kotlin.math.min(x1, x2)))
-            this.put(claimedSpace.operationIndex + 3, encodeFloat(kotlin.math.min(y1, y2)))
-            this.put(claimedSpace.operationIndex + 4, encodeFloat(kotlin.math.max(x1, x2)))
-            this.put(claimedSpace.operationIndex + 5, encodeFloat(kotlin.math.max(y1, y2)))
+            this.put(claimedSpace.operationIndex + 2, encodeFloat(min(x1, x2)))
+            this.put(claimedSpace.operationIndex + 3, encodeFloat(min(y1, y2)))
+            this.put(claimedSpace.operationIndex + 4, encodeFloat(max(x1, x2)))
+            this.put(claimedSpace.operationIndex + 5, encodeFloat(max(y1, y2)))
             this.put(claimedSpace.operationIndex + 6, encodeFloat(radiusX))
             this.put(claimedSpace.operationIndex + 7, encodeFloat(lineWidth))
         }

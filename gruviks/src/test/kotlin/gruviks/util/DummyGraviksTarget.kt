@@ -14,6 +14,7 @@ class DummyGraviksTarget(
 
     var fillTriangleCounter = 0
     var fillRectCounter = 0
+    var drawRectCounter = 0
     var drawRoundedRectCounter = 0
     var drawImageCounter = 0
     var drawStringCounter = 0
@@ -28,6 +29,10 @@ class DummyGraviksTarget(
 
     override fun fillRect(x1: Float, y1: Float, x2: Float, y2: Float, color: Color) {
         fillRectCounter += 1
+    }
+
+    override fun drawRect(x1: Float, y1: Float, x2: Float, y2: Float, lineWidth: Float, color: Color) {
+        drawRectCounter += 1
     }
 
     override fun drawRoundedRect(

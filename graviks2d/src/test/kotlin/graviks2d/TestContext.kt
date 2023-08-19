@@ -203,6 +203,51 @@ class TestContext {
     }
 
     @Test
+    fun testDrawRect() {
+        val backgroundColor = Color.BLUE
+        val lineColor = Color.RED
+        val graviks = GraviksContext(
+                this.graviksInstance, 200, 200, initialBackgroundColor = backgroundColor
+        )
+
+        withTestImage(graviks, true) { update, hostImage ->
+            graviks.drawRect(0.1f, 0.2f, 0.7f, 0.9f, 0.05f, lineColor)
+            update()
+
+            // Test that the area outside the domain is still filled with the background color
+            for (x in 0 until 13) {
+                for (y in 0 until graviks.height) assertColorEquals(backgroundColor, hostImage.getPixel(x, y))
+            }
+            for (x in 157 until 200) {
+                for (y in 0 until graviks.height) assertColorEquals(backgroundColor, hostImage.getPixel(x, y))
+            }
+            for (y in 0 until 33) {
+                for (x in 0 until graviks.width) assertColorEquals(backgroundColor, hostImage.getPixel(x, y))
+            }
+            for (y in 187 until 200) {
+                for (x in 0 until graviks.width) assertColorEquals(backgroundColor, hostImage.getPixel(x, y))
+            }
+
+            // Test that the area inside the domain is still filled with the background color
+            for (x in 27 until 133) {
+                for (y in 47 until 173) assertColorEquals(backgroundColor, hostImage.getPixel(x, y))
+            }
+
+            // Test that the lines between the corners are exactly equal to the line color
+            for (x in 20 .. 140) {
+                assertColorEquals(lineColor, hostImage.getPixel(x, 40))
+                assertColorEquals(lineColor, hostImage.getPixel(x, 180))
+            }
+            for (y in 40 .. 180) {
+                assertColorEquals(lineColor, hostImage.getPixel(20, y))
+                assertColorEquals(lineColor, hostImage.getPixel(140, y))
+            }
+        }
+
+        graviks.destroy()
+    }
+
+    @Test
     fun testFillRoundedRect() {
         val backgroundColor = Color.rgbInt(100, 0, 0)
         val graviks = GraviksContext(

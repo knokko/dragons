@@ -176,6 +176,13 @@ private class LoggedTarget : GraviksTarget {
         this.y2 = y2
     }
 
+    override fun drawRect(x1: Float, y1: Float, x2: Float, y2: Float, lineWidth: Float, color: Color) {
+        this.x1 = x1
+        this.y1 = y1
+        this.x2 = x2
+        this.y2 = y2
+    }
+
     override fun drawRoundedRect(
         x1: Float,
         y1: Float,

@@ -40,6 +40,7 @@ const int OP_CODE_FILL = 1;
 const int OP_CODE_DRAW_IMAGE = 2;
 const int OP_CODE_DRAW_TEXT = 6;
 const int OP_CODE_DRAW_ROUNDED_RECT = 7;
+const int OP_CODE_DRAW_RECT = 8;
 
 void main() {
     float scissorMinX = decodeFloat(shaderStorage.operations[scissorIndex]);
@@ -127,6 +128,29 @@ void main() {
             }
         }
         outColor = fillColor * min(1.0, intensity);
+    } else if (operationCode == OP_CODE_DRAW_RECT) {
+        float lineWidthX = decodeFloat(shaderStorage.operations[operationIndex + 1]);
+        float lineWidthY = decodeFloat(shaderStorage.operations[operationIndex + 2]);
+        vec4 color = decodeColor(shaderStorage.operations[operationIndex + 3]);
+
+        float edgeDistanceLeft = quadCoordinates.x - lineWidthX * 0.5;
+        float edgeDistanceRight = 1.0 - lineWidthX * 0.5 - quadCoordinates.x;
+        float edgeDistanceX = min(abs(edgeDistanceLeft), abs(edgeDistanceRight)) / lineWidthX;
+
+        float edgeDistanceBottom = quadCoordinates.y - lineWidthY * 0.5;
+        float edgeDistanceTop = 1.0 - lineWidthY * 0.5 - quadCoordinates.y;
+        float edgeDistanceY = min(abs(edgeDistanceBottom), abs(edgeDistanceTop)) / lineWidthY;
+
+        float edgeDistance = min(edgeDistanceX, edgeDistanceY);
+        float signedEdgeDistance = min(
+            min(edgeDistanceLeft, edgeDistanceRight) / lineWidthX,
+            min(edgeDistanceBottom, edgeDistanceTop) / lineWidthY
+        );
+        if (signedEdgeDistance < 0.0) edgeDistance = max(edgeDistance, -signedEdgeDistance);
+
+        float intensity = (0.5 - edgeDistance) / 0.3;
+
+        outColor = color * min(1.0, intensity);
     } else {
         // This is the 'unknown operation code' color, for the sake of debugging
         outColor = vec4(1.0, 0.2, 0.6, 1.0);

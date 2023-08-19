@@ -55,6 +55,12 @@ class ChildTarget(
         }
     }
 
+    override fun drawRect(x1: Float, y1: Float, x2: Float, y2: Float, lineWidth: Float, color: Color) {
+        this.transform(x1, y1, x2, y2) { tx1, ty1, tx2, ty2 ->
+            this.parent.drawRect(tx1, ty1, tx2, ty2, lineWidth, color)
+        }
+    }
+
     override fun drawRoundedRect(
         x1: Float,
         y1: Float,

@@ -22,6 +22,10 @@ const int OP_CODE_DRAW_IMAGE_TOP_RIGHT = 4;
 const int OP_CODE_DRAW_IMAGE_TOP_LEFT = 5;
 const int OP_CODE_DRAW_TEXT = 6;
 const int OP_CODE_DRAW_ROUNDED_RECT = 7;
+const int OP_CODE_DRAW_RECT_BOTTOM_LEFT = 8;
+const int OP_CODE_DRAW_RECT_BOTTOM_RIGHT = 9;
+const int OP_CODE_DRAW_RECT_TOP_RIGHT = 10;
+const int OP_CODE_DRAW_RECT_TOP_LEFT = 11;
 
 float decodeColorComponent(int rawValue) {
     return float(rawValue & 255) / 255.0;
@@ -51,13 +55,13 @@ void main() {
     int operationCode = shaderStorage.operations[inOperationIndex];
 
     // Some operation codes exist only in the vertex shader and/or need special treatment
-    if (operationCode == OP_CODE_DRAW_IMAGE_BOTTOM_RIGHT) {
+    if (operationCode == OP_CODE_DRAW_IMAGE_BOTTOM_RIGHT || operationCode == OP_CODE_DRAW_RECT_BOTTOM_RIGHT) {
         outOperationIndex = inOperationIndex - 2;
         outQuadCoordinates = vec2(1.0, 0.0);
-    } else if (operationCode == OP_CODE_DRAW_IMAGE_TOP_RIGHT) {
+    } else if (operationCode == OP_CODE_DRAW_IMAGE_TOP_RIGHT || operationCode == OP_CODE_DRAW_RECT_TOP_RIGHT) {
         outOperationIndex = inOperationIndex - 3;
         outQuadCoordinates = vec2(1.0, 1.0);
-    } else if (operationCode == OP_CODE_DRAW_IMAGE_TOP_LEFT) {
+    } else if (operationCode == OP_CODE_DRAW_IMAGE_TOP_LEFT || operationCode == OP_CODE_DRAW_RECT_TOP_LEFT) {
         outOperationIndex = inOperationIndex - 4;
         outQuadCoordinates = vec2(0.0, 1.0);
     } else if (operationCode == OP_CODE_DRAW_TEXT) {
@@ -72,6 +76,11 @@ void main() {
     } else {
         outOperationIndex = inOperationIndex;
         outQuadCoordinates = vec2(0.0, 0.0);
+    }
+
+    if (operationCode == OP_CODE_DRAW_RECT_BOTTOM_RIGHT || operationCode == OP_CODE_DRAW_RECT_TOP_LEFT
+            || operationCode == OP_CODE_DRAW_RECT_TOP_RIGHT) {
+        outOperationIndex -= 2;
     }
 
     if (operationCode == OP_CODE_DRAW_TEXT) {
