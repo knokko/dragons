@@ -7,17 +7,6 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '7.0.0'
 }
 
-compileKotlin {
-    kotlinOptions.jvmTarget = "16"
-}
-
-compileTestKotlin {
-    kotlinOptions.jvmTarget = "16"
-}
-
-sourceCompatibility = "16"
-targetCompatibility = "16"
-
 allprojects {
     apply plugin: 'java'
     apply plugin: 'org.jetbrains.kotlin.jvm'
@@ -28,7 +17,16 @@ allprojects {
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
     }
 
+    compileKotlin {
+        kotlinOptions.jvmTarget = "16"
+    }
 
+    compileTestKotlin {
+        kotlinOptions.jvmTarget = "16"
+    }
+
+    sourceCompatibility = "16"
+    targetCompatibility = "16"
 
     project.ext.jomlVersion = "1.10.1"
     project.ext.lwjglVersion = "3.3.2"
