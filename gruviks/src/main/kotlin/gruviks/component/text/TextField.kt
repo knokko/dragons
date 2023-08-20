@@ -2,7 +2,6 @@ package gruviks.component.text
 
 import graviks2d.resource.text.CharacterPosition
 import graviks2d.target.GraviksTarget
-import graviks2d.util.Color
 import gruviks.component.Component
 import gruviks.component.RectangularDrawnRegion
 import gruviks.component.RenderResult
@@ -10,7 +9,10 @@ import gruviks.event.*
 import gruviks.feedback.ReleaseKeyboardFocusFeedback
 import gruviks.feedback.RenderFeedback
 import gruviks.feedback.RequestKeyboardFocusFeedback
+import java.lang.Double.parseDouble
+import java.lang.Long.parseLong
 import java.lang.System.currentTimeMillis
+import java.text.DecimalFormat
 import kotlin.math.min
 import kotlin.math.max
 
@@ -18,10 +20,24 @@ class TextField(
         private val placeholder: String,
         initialText: String,
         private var currentStyle: TextFieldStyle,
+        /**
+         * This is called after the text in this field is changed. The `newValue` parameter is the new text. The
+         * **error** of this text field is set to the result of `onChange`.
+         */
+        private val onChange: (newValue: String) -> String = { "" },
+        /**
+         * This is called whenever the user attempts to type a character (codepoint). If this filter returns false,
+         * the character will be ignored.
+         */
+        private val charFilter: (codepoint: Int) -> Boolean = { true }
 ) : Component() {
 
-    private val textInput = TextInput(initialText) { agent.giveFeedback(RenderFeedback()) }
+    private val textInput = TextInput(initialText) {
+        error = onChange(getText())
+        agent.giveFeedback(RenderFeedback())
+    }
 
+    private var error = ""
     private var lastCaretTime = currentTimeMillis()
     private var showCaret = true
 
@@ -41,8 +57,10 @@ class TextField(
 
     override fun processEvent(event: Event) {
         if (event is KeyTypeEvent) {
-            textInput.type(event.codePoint)
-            resetCaretFlipper()
+            if (charFilter(event.codePoint)) {
+                textInput.type(event.codePoint)
+                resetCaretFlipper()
+            }
         } else if (event is KeyPressEvent) {
             var shouldResetCaretFlipper = true
             when (event.key.type) {
@@ -75,7 +93,7 @@ class TextField(
         }
     }
 
-    fun getText() = textInput.getText()
+    fun getText(): String = textInput.getText()
 
     fun getStyle() = currentStyle
 
@@ -90,8 +108,8 @@ class TextField(
 
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {
         val hasFocus = agent.hasKeyboardFocus()
-        val (textStyle, textRegion, drawPlaceholder) = if (hasFocus) currentStyle.drawFocusBackground(target, placeholder)
-        else currentStyle.drawDefaultBackground(target, placeholder)
+        val (textStyle, textRegion, drawPlaceholder) = if (hasFocus) currentStyle.drawFocusBackground(target, placeholder, error)
+        else currentStyle.drawDefaultBackground(target, placeholder, error)
 
         textInput.drawnCharacterPositions = target.drawString(
             textRegion.minX, textRegion.minY, textRegion.maxX, textRegion.maxY, textInput.getText(), textStyle
@@ -146,5 +164,75 @@ class TextField(
             )
             currentStyle.computeDefaultResult(renderedTextPosition)
         }
+    }
+
+    companion object {
+        fun longField(
+            placeholder: String, initialValue: Long, initialStyle: TextFieldStyle,
+            onChange: (newValue: Long) -> String = { "" }, minValue: Long = Long.MIN_VALUE, maxValue: Long = Long.MAX_VALUE
+        ) = TextField(
+            placeholder = placeholder,
+            initialText = initialValue.toString(),
+            currentStyle = initialStyle,
+            onChange = { stringValue ->
+                try {
+                    val longValue = parseLong(stringValue)
+                    if (longValue < minValue) "Must be at least $minValue"
+                    else if (longValue > maxValue) "Can be at most $maxValue"
+                    else onChange(longValue)
+                } catch (invalid: NumberFormatException) {
+                    "Not a valid integer"
+                }
+            },
+            charFilter = { codepoint ->
+                if (minValue < 0 && codepoint == '-'.code) true
+                else Character.isDigit(codepoint)
+            }
+        )
+
+        fun intField(
+            placeholder: String, initialValue: Int, initialStyle: TextFieldStyle,
+            onChange: (newValue: Int) -> String = { "" }, minValue: Int = Int.MIN_VALUE, maxValue: Int = Int.MAX_VALUE
+        ) = longField(
+            placeholder = placeholder, initialValue = initialValue.toLong(), initialStyle = initialStyle,
+            onChange = { newValue -> onChange(newValue.toInt()) }, minValue = minValue.toLong(), maxValue = maxValue.toLong()
+        )
+
+        fun doubleField(
+            placeholder: String, initialValue: Double, initialStyle: TextFieldStyle,
+            onChange: (newValue: Double) -> String = { "" }, allowNaN: Boolean = false,
+            minValue: Double = -Double.MAX_VALUE, maxValue: Double = Double.MAX_VALUE
+        ) = TextField(
+            placeholder = placeholder,
+            initialText = DecimalFormat("#.####").format(initialValue),
+            currentStyle = initialStyle,
+            onChange = { stringValue ->
+                try {
+                    val doubleValue = parseDouble(stringValue)
+                    if (doubleValue < minValue) "Must be at least $minValue"
+                    else if (doubleValue > maxValue) "Can be at most $maxValue"
+                    else if (!allowNaN && doubleValue.isNaN()) "Must not be NaN"
+                    else onChange(doubleValue)
+                } catch (invalid: NumberFormatException) {
+                    "Not a valid number"
+                }
+            },
+            charFilter = { codepoint ->
+                if (minValue < 0 && codepoint == '-'.code) true
+                else if (allowNaN && "NaN".contains(codepoint.toChar().toString())) true
+                else if ((minValue.isInfinite() || maxValue.isInfinite()) && "Infinity".contains(codepoint.toChar().toString())) true
+                else Character.isDigit(codepoint) || codepoint == '.'.code
+            }
+        )
+
+        fun floatField(
+            placeholder: String, initialValue: Float, initialStyle: TextFieldStyle,
+            onChange: (newValue: Float) -> String = { "" }, allowNaN: Boolean = false,
+            minValue: Float = -Float.MAX_VALUE, maxValue: Float = Float.MAX_VALUE
+        ) = doubleField(
+            placeholder = placeholder, initialValue = initialValue.toDouble(), initialStyle = initialStyle,
+            onChange = { newValue -> onChange(newValue.toFloat()) }, allowNaN = allowNaN,
+            minValue = minValue.toDouble(), maxValue = maxValue.toDouble()
+        )
     }
 }
