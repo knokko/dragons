@@ -1,5 +1,6 @@
 package playground
 
+import com.github.knokko.memory.MemorySnapshot
 import graviks.glfw.GraviksWindow
 import graviks2d.context.GraviksContext
 import graviks2d.resource.image.ImageReference
@@ -20,7 +21,6 @@ import gruviks.space.Coordinate
 import gruviks.space.RectRegion
 import gruviks.space.SpaceLayout
 import org.lwjgl.vulkan.VK10.VK_MAKE_VERSION
-import profiler.memory.MemorySnapshot
 import profiler.performance.PerformanceProfiler
 import profiler.performance.PerformanceStorage
 import java.io.File
