@@ -188,7 +188,7 @@ fun ensurePluginsAreBuilt(logger: Logger): Boolean {
         val buildPluginsProcess = buildPluginsBuilder.start()
         debugBuildProcess(buildPluginsProcess)
     } else {
-        val buildPluginsProcess = Runtime.getRuntime().exec("./gradlew build -x test")
+        val buildPluginsProcess = Runtime.getRuntime().exec(arrayOf("./gradlew", "build", "-x", "test"))
         debugBuildProcess(buildPluginsProcess)
     }
 

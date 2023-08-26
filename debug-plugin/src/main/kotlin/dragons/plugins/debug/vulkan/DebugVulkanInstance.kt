@@ -35,8 +35,6 @@ class DebugVulkanInstance: VulkanInstanceActor, VulkanInstanceCreationListener, 
         val validationFeatures = VkValidationFeaturesEXT.calloc(agent.stack)
         validationFeatures.`sType$Default`()
         validationFeatures.pEnabledValidationFeatures(agent.stack.ints(
-                VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
-                VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
                 VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
                 VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
         ))

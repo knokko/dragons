@@ -24,7 +24,7 @@ class PerformanceProfiler(
 
     private fun update() {
         val threadsToDump = threads.dumpAllThreads(false, false, 0).filter {
-            it.threadState == Thread.State.RUNNABLE && it.threadId != Thread.currentThread().id
+            it.threadState == Thread.State.RUNNABLE && it.threadId != Thread.currentThread().threadId()
         }.map { it.threadId }.toLongArray()
 
         val dumps = threads.getThreadInfo(threadsToDump, false, false).filter { thread ->

@@ -1,4 +1,4 @@
-package dragons.plugin
+package dragons.plugin.loading
 
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -16,6 +16,6 @@ private class CustomURLConnection(url: URL, private val content: ByteArray): URL
 
 internal class PluginURLHandler(private val resourceMap: Map<String, ByteArray>): URLStreamHandler() {
     override fun openConnection(url: URL): URLConnection {
-        return CustomURLConnection(url, resourceMap[url.file]!!)
+        return CustomURLConnection(url, resourceMap[url.file.substring(1)]!!)
     }
 }

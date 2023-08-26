@@ -1,9 +1,9 @@
 package dragons.plugin.loading
 
 import dragons.plugin.PluginInstance
-import dragons.plugin.PluginURLHandler
 import dragons.plugin.interfaces.PluginInterface
 import java.lang.reflect.Modifier
+import java.net.URI
 import java.net.URL
 
 private fun extractClasses(jars: Collection<Pair<JarContent, PluginInstance>>): Map<String, Pair<ByteArray, PluginInstance>> {
@@ -115,7 +115,7 @@ class PluginClassLoader(
     override fun findResource(name: String?): URL {
         val resourceBytes = resourceMap[name]
         return if (resourceBytes != null) {
-            URL("dragonsplugin", "pluginname", 0, name, urlHandler)
+            URL.of(URI("dragonsplugin", "pluginname", "/$name", null), urlHandler)
         } else {
             println("resourceMap is $resourceMap and resource name is $name")
             super.findResource(name)

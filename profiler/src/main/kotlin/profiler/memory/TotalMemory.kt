@@ -52,7 +52,8 @@ fun getProcessMemoryUsage(): Long {
             } else throw UnsupportedOperationException("Unexpected memory query format (1): $scannedInput")
         } else throw UnsupportedOperationException("Memory query failed with exit code $exitCode")
     } else {
-        val memoryUsageProcess = Runtime.getRuntime().exec("ps -q $pid -eo size")
+        // TODO Test on Linux
+        val memoryUsageProcess = Runtime.getRuntime().exec(arrayOf("ps", "-q", pid.toString(), "-eo", "size"))
         val exitCode = memoryUsageProcess.waitFor()
         if (exitCode == 0) {
             val scannedInput = mutableListOf<String>()
