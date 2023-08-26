@@ -77,7 +77,7 @@ fun createPm2Editor(troll: TrollInstance): Component {
                     content.removeComponent(element.getPrimaryComponent())
                     if (element.preview.isInitialized()) {
                         val preview = element.preview.value
-                        if (preview != null) content.removeComponent(preview)
+                        if (preview != null) content.removeComponent(preview.first)
                     }
                     openFiles.remove(element)
                     refreshController()
@@ -85,7 +85,7 @@ fun createPm2Editor(troll: TrollInstance): Component {
             } else if (event.button == 2) {
                 val preview = element.preview.value
                 if (preview != null) {
-                    content.setComponent(preview)
+                    content.setComponent(preview.first)
                     element.updatePreview(errorComponent, openFiles)
                 }
             }

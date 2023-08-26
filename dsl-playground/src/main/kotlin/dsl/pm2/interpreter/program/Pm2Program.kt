@@ -14,10 +14,12 @@ import kotlin.jvm.Throws
 class Pm2Program(
     val instructions: List<Pm2Instruction>,
     val dynamicBlocks: List<List<Pm2Instruction>>,
-    val staticParameters: Map<String, Pm2Type>
+    val dynamicChildParameterBlocks: List<List<Pm2Instruction>>,
+    val staticParameters: Map<String, Pm2Type>,
+    val dynamicParameters: Map<String, Pm2Type>
 ) {
 
-    lateinit var childProgramTable: Map<String, Pair<Int, Map<String, Pm2Type>>>
+    lateinit var childProgramTable: Map<String, Triple<Int, Map<String, Pm2Type>, Map<String, Pm2Type>>>
 
     @Throws(Pm2RuntimeError::class)
     fun run(rawStaticParameters: Pm2Value): Pm2Model {
@@ -26,6 +28,7 @@ class Pm2Program(
 
     @Throws(Pm2RuntimeError::class)
     fun getResultValue(): Pm2Value {
+        if (dynamicParameters.isNotEmpty()) throw Pm2RuntimeError("Dynamic parameters are only allowed on models")
         val processor = Pm2ValueProcessor(instructions)
         processor.execute()
         return processor.result ?: throw Pm2RuntimeError("No result was produced")

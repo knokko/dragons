@@ -6,6 +6,9 @@ static parameter color legColor;
 
 static parameter color nailColor;
 
+dynamic parameter float kneeAngle;
+dynamic parameter float footAngle;
+
 Vertex topLeft;
 topLeft.position = (-1.0 * legRadius, 0.0);
 topLeft.color = legColor;
@@ -25,7 +28,7 @@ midRight.color = legColor;
 matrix midMatrix = dynamic Matrix<float legPartLength> {
 	Matrix midMatrix;
 	translate(midMatrix, 0.0, -1.0 * legPartLength);
-	rotate(midMatrix, 35.0);
+	rotate(midMatrix, kneeAngle);
 	midMatrix
 };
 
@@ -42,9 +45,9 @@ bottomRight.matrix = midMatrix;
 matrix footMatrix = dynamic Matrix<float legPartLength, float legRadius> {
 	Matrix footMatrix;
 	translate(footMatrix, 0.0, -1.0 * legPartLength);
-	rotate(footMatrix, 35.0);
+	rotate(footMatrix, kneeAngle);
 	translate(footMatrix, 0.0, -1.06 * legPartLength);
-	rotate(footMatrix, -60.0);
+	rotate(footMatrix, footAngle);
 	scale(footMatrix, 10.0 * legRadius, 10.0 * legRadius);
 	footMatrix
 };

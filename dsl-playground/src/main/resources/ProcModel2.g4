@@ -32,11 +32,17 @@ importAlias: 'as' IDENTIFIER;
 
 importValue: 'import' IDENTIFIER 'value' importPath importAlias? ';';
 
-childModel: 'child' 'model' IDENTIFIER '(' expression ',' expression ')' ';';
+dynamicBlock: '{' innerStatement* expression '}';
+
+childModelBlock : dynamicBlock;
+
+dynamicDeclarationBlock : dynamicBlock;
+
+childModel: 'child' 'model' IDENTIFIER '(' expression ',' expression ')' childModelBlock ';';
 
 parameterDeclaration : PARAMETER_TYPE 'parameter' IDENTIFIER IDENTIFIER ';';
 
-dynamicDeclaration: 'dynamic' IDENTIFIER ('<' (IDENTIFIER IDENTIFIER ',')* IDENTIFIER IDENTIFIER '>')? '{' innerStatement* expression '}';
+dynamicDeclaration: PARAMETER_TYPE IDENTIFIER ('<' (IDENTIFIER IDENTIFIER ',')* IDENTIFIER IDENTIFIER '>')? dynamicDeclarationBlock;
 
 variableDeclaration : IDENTIFIER IDENTIFIER ('=' expression)? ';';
 

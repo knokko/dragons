@@ -6,16 +6,21 @@ static parameter Map scytheParameters;
 static parameter Map bellyParameters;
 static parameter Map legParameters;
 
+dynamic parameter float legAngle;
+dynamic parameter float armAngle;
+dynamic parameter float kneeAngle;
+dynamic parameter float footAngle;
+
 matrix rightScytheMatrix = dynamic Matrix {
 	Matrix scytheMatrix;
 	translate(scytheMatrix, 0.1, 0.3);
-	rotate(scytheMatrix, -10.0);
+	rotate(scytheMatrix, armAngle);
 	scytheMatrix
 };
 matrix leftScytheMatrix = dynamic Matrix {
 	Matrix scytheMatrix;
 	translate(scytheMatrix, 0.1, 0.3);
-	rotate(scytheMatrix, -15.0);
+	rotate(scytheMatrix, armAngle * 1.5);
 	scale(scytheMatrix, 0.9, 0.9);
 	scytheMatrix
 };
@@ -24,7 +29,7 @@ matrix leftBackLegMatrix = dynamic Matrix {
 	Matrix legMatrix;
 	translate(legMatrix, -0.3, 0.0);
 	scale(legMatrix, -0.8, 0.8);
-	rotate(legMatrix, 10.0);
+	rotate(legMatrix, legAngle * 0.7);
 	legMatrix
 };
 
@@ -32,7 +37,7 @@ matrix leftFrontLegMatrix = dynamic Matrix {
 	Matrix legMatrix;
 	translate(legMatrix, -0.2, 0.0);
 	scale(legMatrix, 0.95, 0.95);
-	rotate(legMatrix, 35.0);
+	rotate(legMatrix, legAngle * 1.5);
 	legMatrix
 };
 
@@ -40,22 +45,42 @@ matrix rightBackLegMatrix = dynamic Matrix {
 	Matrix legMatrix;
 	translate(legMatrix, -0.3, 0.0);
 	scale(legMatrix, -1.0, 1.0);
-	rotate(legMatrix, 25.0);
+	rotate(legMatrix, legAngle);
 	legMatrix
 };
 
 matrix rightFrontLegMatrix = dynamic Matrix {
 	Matrix legMatrix;
 	translate(legMatrix, -0.2, 0.0);
-	rotate(legMatrix, 25.0);
+	rotate(legMatrix, legAngle);
 	legMatrix
 };
 
 matrix defaultMatrix;
-child model scythe(leftScytheMatrix, scytheParameters);
-child model belly(defaultMatrix, bellyParameters);
-child model scythe(rightScytheMatrix, scytheParameters);
-child model leg(leftBackLegMatrix, legParameters);
-child model leg(leftFrontLegMatrix, legParameters);
-child model leg(rightBackLegMatrix, legParameters);
-child model leg(rightFrontLegMatrix, legParameters);
+child model scythe(leftScytheMatrix, scytheParameters) { Map params; params };
+child model belly(defaultMatrix, bellyParameters) { Map params; params };
+child model scythe(rightScytheMatrix, scytheParameters) { Map params; params };
+child model leg(leftBackLegMatrix, legParameters) {
+	Map params;
+	params["kneeAngle"] = kneeAngle;
+	params["footAngle"] = footAngle;
+	params
+};
+child model leg(leftFrontLegMatrix, legParameters) {
+	Map params;
+	params["kneeAngle"] = kneeAngle;
+	params["footAngle"] = footAngle;
+	params
+};
+child model leg(rightBackLegMatrix, legParameters) {
+	Map params;
+	params["kneeAngle"] = kneeAngle;
+	params["footAngle"] = kneeAngle;
+	params
+};
+child model leg(rightFrontLegMatrix, legParameters) {
+	Map params;
+	params["kneeAngle"] = kneeAngle;
+	params["footAngle"] = footAngle * 2.0;
+	params
+};

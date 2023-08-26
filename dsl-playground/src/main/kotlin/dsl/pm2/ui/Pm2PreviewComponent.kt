@@ -3,6 +3,7 @@ package dsl.pm2.ui
 import dsl.pm2.interpreter.Pm2Model
 import dsl.pm2.interpreter.Pm2RuntimeError
 import dsl.pm2.interpreter.Pm2Vertex
+import dsl.pm2.interpreter.value.Pm2Value
 import dsl.pm2.renderer.Pm2Instance
 import dsl.pm2.renderer.Pm2Scene
 import graviks2d.target.GraviksTarget
@@ -25,13 +26,16 @@ private fun createDummyModel() = Pm2Model(listOf(
         Pm2Vertex(-0.8f, -0.7f, Color.RED, 0),
         Pm2Vertex(0.8f, -0.2f, Color.GREEN, 0),
         Pm2Vertex(-0.9f, 0.8f, Color.BLUE, 0)
-    ), listOf(null))
+    ), listOf(null), emptyMap())
 
 class Pm2PreviewComponent(
     private val pm2Instance: Pm2Instance,
     initialModel: Pm2Model?, width: Int, height: Int,
     private val reportError: (String) -> Unit
 ): Component() {
+
+    private var lastDynamicParameterValues: MutableMap<String, Pm2Value>? = null
+    val dynamicParameterValues = mutableMapOf<String, Pm2Value>()
 
     private val cameraMatrix = Matrix3x2f().scale(1f, -1f)
 
@@ -61,6 +65,8 @@ class Pm2PreviewComponent(
         }
     }
 
+    fun getDynamicParameterTypes() = currentMesh.dynamicParameterTypes
+
     fun updateModel(newModel: Pm2Model) {
         val newMesh = pm2Instance.allocations.allocateMesh(newModel)
         scene.awaitLastDraw()
@@ -74,10 +80,17 @@ class Pm2PreviewComponent(
         agent.subscribe(KeyPressEvent::class)
         agent.subscribe(CursorClickEvent::class)
         agent.subscribe(CursorScrollEvent::class)
+        agent.subscribe(UpdateEvent::class)
     }
 
     override fun processEvent(event: Event) {
         if (event is CursorClickEvent) agent.giveFeedback(RequestKeyboardFocusFeedback())
+        if (event is UpdateEvent) {
+            if (dynamicParameterValues != lastDynamicParameterValues) {
+                lastDynamicParameterValues = HashMap(dynamicParameterValues)
+                agent.giveFeedback(RenderFeedback())
+            }
+        }
         if (event is KeyPressEvent) {
             if (event.key.type == KeyType.Left) cameraMatrix.translate(0.1f, 0f)
             if (event.key.type == KeyType.Right) cameraMatrix.translate(-0.1f, 0f)
@@ -121,7 +134,7 @@ class Pm2PreviewComponent(
 
         try {
             scene.drawAndCopy(
-                pm2Instance, listOf(currentMesh), cameraMatrix, sceneSemaphore,
+                pm2Instance, listOf(Pair(currentMesh, dynamicParameterValues)), cameraMatrix, sceneSemaphore,
                 destImage = sceneImage.vkImage, oldLayout = oldSceneLayout,
                 srcAccessMask = sceneAccessMask, srcStageMask = sceneStageMask,
                 newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dstAccessMask = VK_ACCESS_SHADER_READ_BIT,

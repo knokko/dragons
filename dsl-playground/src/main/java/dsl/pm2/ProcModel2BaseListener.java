@@ -1,4 +1,4 @@
-// Generated from java-escape by ANTLR 4.11.1
+// Generated from /home/knokko/programming/kotlin/dragons/dsl-playground/src/main/resources/ProcModel2.g4 by ANTLR 4.12.0
 package dsl.pm2;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -132,6 +132,42 @@ public class ProcModel2BaseListener implements ProcModel2Listener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitImportValue(ProcModel2Parser.ImportValueContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterDynamicBlock(ProcModel2Parser.DynamicBlockContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitDynamicBlock(ProcModel2Parser.DynamicBlockContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterChildModelBlock(ProcModel2Parser.ChildModelBlockContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitChildModelBlock(ProcModel2Parser.ChildModelBlockContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterDynamicDeclarationBlock(ProcModel2Parser.DynamicDeclarationBlockContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitDynamicDeclarationBlock(ProcModel2Parser.DynamicDeclarationBlockContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

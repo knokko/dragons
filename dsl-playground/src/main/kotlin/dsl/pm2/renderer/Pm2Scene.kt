@@ -1,7 +1,10 @@
 package dsl.pm2.renderer
 
 import dsl.pm2.interpreter.Pm2RuntimeError
+import dsl.pm2.interpreter.Pm2Type
+import dsl.pm2.interpreter.program.Pm2DynamicParameterProcessor
 import dsl.pm2.interpreter.program.Pm2MatrixProcessor
+import dsl.pm2.interpreter.value.Pm2Value
 import org.joml.Matrix3x2f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.util.vma.Vma.*
@@ -175,22 +178,37 @@ class Pm2Scene internal constructor(
 
     @Throws(Pm2RuntimeError::class)
     fun drawAndCopy(
-        instance: Pm2Instance, meshes: List<Pm2Mesh>, cameraMatrix: Matrix3x2f, signalSemaphore: Long?,
-        destImage: Long, oldLayout: Int, srcAccessMask: Int, srcStageMask: Int,
-        newLayout: Int, dstAccessMask: Int, dstStageMask: Int,
-        offsetX: Int, offsetY: Int, blitSizeX: Int, blitSizeY: Int
+            instance: Pm2Instance, meshes: List<Pair<Pm2Mesh, Map<String, Pm2Value>>>, cameraMatrix: Matrix3x2f, signalSemaphore: Long?,
+            destImage: Long, oldLayout: Int, srcAccessMask: Int, srcStageMask: Int,
+            newLayout: Int, dstAccessMask: Int, dstStageMask: Int,
+            offsetX: Int, offsetY: Int, blitSizeX: Int, blitSizeY: Int
     ) {
-        val requiredNumMatrices = meshes.sumOf { it.matrices.size }
+        val requiredNumMatrices = meshes.sumOf { it.first.matrices.size }
         ensureMatrixBuffer(requiredNumMatrices)
 
-        val meshesWithMatrices = meshes.map { mesh ->
-            val matrices = ArrayList<Matrix3x2f>(mesh.matrices.size)
+        val meshesWithMatrices = meshes.map { (mesh, dynamicParameterValues) ->
+            val matrices = ArrayList<Triple<Matrix3x2f, Map<String, Pm2Value>, Map<String, Pm2Type>>>(mesh.matrices.size)
             for (matrix in mesh.matrices) {
                 if (matrix != null) {
-                    val relativeMatrix = Pm2MatrixProcessor(matrix).execute()
-                    val parentMatrix = matrices[matrix.parentIndex]
-                    matrices.add(parentMatrix.mul(relativeMatrix, relativeMatrix))
-                } else matrices.add(Matrix3x2f())
+                    val (parentMatrix, dynamicParentParameterValues, dynamicParentParameterTypes) = matrices[matrix.parentIndex]
+
+                    val childParameterValues = if (matrix.dynamicMatrixPropagationInstructions != null) {
+                        val parameterProcessor = Pm2DynamicParameterProcessor(
+                                matrix.dynamicMatrixPropagationInstructions,
+                                dynamicParentParameterValues,
+                                dynamicParentParameterTypes
+                        )
+                        parameterProcessor.execute()
+                        parameterProcessor.result
+                    } else {
+                        if (matrix.parentIndex != 0) throw Pm2RuntimeError("Parent index must be 0 when propagation instructions are null")
+                        dynamicParentParameterValues
+                    }
+                    val relativeMatrix = Pm2MatrixProcessor(
+                            matrix, matrix.dynamicParameterTypes, childParameterValues
+                    ).execute()
+                    matrices.add(Triple(parentMatrix.mul(relativeMatrix, relativeMatrix), childParameterValues, matrix.dynamicParameterTypes))
+                } else matrices.add(Triple(Matrix3x2f(), dynamicParameterValues, mesh.dynamicParameterTypes))
             }
             Pair(mesh, matrices)
         }
@@ -223,7 +241,7 @@ class Pm2Scene internal constructor(
             val hostMatrixBuffer = stack.calloc(MATRIX_SIZE * requiredNumMatrices).asFloatBuffer()
             for ((mesh, matrices) in meshesWithMatrices) {
                 meshesWithMatrixIndices.add(Pair(mesh, matrixIndex))
-                for (matrix in matrices) {
+                for ((matrix, _, _) in matrices) {
 
                     // Yeah... alignment rules...
                     val bufferIndex = MATRIX_SIZE * matrixIndex / Float.SIZE_BYTES

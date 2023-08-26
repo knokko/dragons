@@ -1,4 +1,4 @@
-// Generated from java-escape by ANTLR 4.11.1
+// Generated from /home/knokko/programming/kotlin/dragons/dsl-playground/src/main/resources/ProcModel2.g4 by ANTLR 4.12.0
 package dsl.pm2;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -70,6 +70,24 @@ public interface ProcModel2Visitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitImportValue(ProcModel2Parser.ImportValueContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#dynamicBlock}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitDynamicBlock(ProcModel2Parser.DynamicBlockContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#childModelBlock}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitChildModelBlock(ProcModel2Parser.ChildModelBlockContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ProcModel2Parser#dynamicDeclarationBlock}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitDynamicDeclarationBlock(ProcModel2Parser.DynamicDeclarationBlockContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ProcModel2Parser#childModel}.
 	 * @param ctx the parse tree

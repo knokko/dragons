@@ -31,7 +31,7 @@ internal class Pm2VertexProcessor(
         if (valueStack.isNotEmpty()) throw IllegalStateException("Value stack should be empty")
         if (variables.hasScope()) throw IllegalStateException("All scopes should have been popped")
 
-        return Pm2Model(vertices.map { it.toVertex() }, dynamicMatrices)
+        return Pm2Model(vertices.map { it.toVertex() }, dynamicMatrices, program.dynamicParameters)
     }
 
     private fun initializeStaticParameters(rawStaticParameters: Pm2Value, staticParameters: Map<String, Pm2Type>) {
@@ -81,12 +81,14 @@ internal class Pm2VertexProcessor(
 
     override fun handleChildModel(instruction: Pm2Instruction, currentInstructionIndex: Int): Int {
         val modelID = instruction.name!!
+        val (targetLineNumber, staticParameterTypes, dynamicParameterTypes) = program.childProgramTable[modelID]!!
 
+        val dynamicChildBlockIndex = valueStack.removeLast().castTo<Pm2IntValue>().intValue()
         val staticParameters = valueStack.removeLast()
         val parentMatrix = valueStack.removeLast().castTo<Pm2MatrixIndexValue>()
 
         programStack.add(ProgramEntry(
-            currentInstructionIndex + 1, parentMatrix,
+            currentInstructionIndex + 1, parentMatrix, dynamicChildBlockIndex, dynamicParameterTypes,
             this.variables, this.vertices, this.dynamicMatrices, this.transferVariables
         ))
 
@@ -95,7 +97,6 @@ internal class Pm2VertexProcessor(
         this.dynamicMatrices = mutableListOf(null)
         this.transferVariables = mutableMapOf()
 
-        val (targetLineNumber, staticParameterTypes) = program.childProgramTable[modelID]!!
         this.initializeStaticParameters(staticParameters, staticParameterTypes)
 
         return targetLineNumber
@@ -136,7 +137,18 @@ internal class Pm2VertexProcessor(
     private fun createDynamicMatrix() {
         val dynamicIndex = valueStack.removeLast().intValue()
         val matrixIndex = dynamicMatrices.size
-        dynamicMatrices.add(Pm2DynamicMatrix(program.dynamicBlocks[dynamicIndex], transferVariables))
+
+        val programEntry = programStack.lastOrNull()
+        val (propagationInstructions, dynamicParameterTypes) = if (programEntry != null) {
+            Pair(program.dynamicChildParameterBlocks[programEntry.dynamicChildBlockIndex], programEntry.dynamicParameters)
+        } else Pair(null, program.dynamicParameters)
+
+        dynamicMatrices.add(Pm2DynamicMatrix(
+                program.dynamicBlocks[dynamicIndex],
+                propagationInstructions,
+                dynamicParameterTypes,
+                transferVariables
+        ))
         transferVariables = mutableMapOf()
         valueStack.add(Pm2MatrixIndexValue(matrixIndex))
     }
@@ -165,6 +177,8 @@ internal class Pm2VertexProcessor(
     private class ProgramEntry(
         val returnInstructionIndex: Int,
         val parentMatrix: Pm2MatrixIndexValue,
+        val dynamicChildBlockIndex: Int,
+        val dynamicParameters: Map<String, Pm2Type>,
         val variables: Pm2VariableScope,
         val vertices: MutableList<Pm2VertexValue>,
         val dynamicMatrices: MutableList<Pm2DynamicMatrix?>,

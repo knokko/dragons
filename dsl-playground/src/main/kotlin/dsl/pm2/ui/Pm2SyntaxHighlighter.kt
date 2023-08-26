@@ -117,6 +117,7 @@ private class Pm2SyntaxHighlighter(
 
     override fun exitDynamicDeclaration(ctx: ProcModel2Parser.DynamicDeclarationContext?) {
         insertChildKeyword(ctx!!.children, 0, "dynamic", colorTheme.keyword)
+        insertChildKeyword(ctx.children, 0, "static", colorTheme.error)
 
         val identifiers = ctx.IDENTIFIER()
         insertTypeName(identifiers[0])

@@ -1,6 +1,7 @@
 package dsl.pm2.ui
 
 import dsl.pm2.interpreter.Pm2CompileError
+import dsl.pm2.interpreter.Pm2Model
 import dsl.pm2.interpreter.Pm2RuntimeError
 import dsl.pm2.interpreter.importer.Pm2FileImportFunctions
 import dsl.pm2.interpreter.importer.Pm2ImportCache
@@ -35,9 +36,9 @@ private fun createImporter(sourceFile: File, openFiles: List<OpenFile>): Pm2Impo
 internal class OpenFile(
     val modelFile: File,
     val parametersFile: File?,
-    val textArea: TextArea?,
-    val shapeEditor: Pm2ShapeEditor?,
-    private val createPreview: () -> Pm2PreviewComponent?
+    private val textArea: TextArea?,
+    private val shapeEditor: Pm2ShapeEditor?,
+    private val createPreview: () -> Pair<Component, (Pm2Model) -> Unit>?
 ) {
     val preview = lazy { createPreview() }
 
@@ -79,7 +80,7 @@ internal class OpenFile(
             val time2 = System.currentTimeMillis()
 
             println("Compilation took ${time1 - startTime} ms and running took ${time2 - time1} ms")
-            preview.value!!.updateModel(newModel)
+            preview.value!!.second(newModel)
             errorComponent.setText("")
         } catch (compileError: Pm2CompileError) {
             errorComponent.setText(compileError.message!!)
@@ -196,8 +197,11 @@ internal class OpenFile(
                     val height = 900 // TODO Maybe stop hardcoding this?
 
                     val textArea = TextArea(parameterContent ?: modelContent, textAreaStyle, null)
-                    val createPreview =
-                        { Pm2PreviewComponent(pm2Instance, initialModel, width, height, errorComponent::setText) }
+                    val createPreview = {
+                        val previewComponent = Pm2PreviewComponent(pm2Instance, initialModel, width, height, errorComponent::setText)
+                        val configurationComponent = createParameterConfigurationMenu(previewComponent)
+                        Pair(configurationComponent, previewComponent::updateModel)
+                    }
                     openFile = OpenFile(modelFile, parametersFile, textArea, null, createPreview)
                 } else if (file.name.endsWith("tri2")) {
                     val shapeEditor = if (file.length() == 0L) {

@@ -14,13 +14,16 @@ import org.antlr.v4.runtime.tree.ErrorNode
 import java.io.File
 import java.io.PrintWriter
 
-internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : ProcModel2BaseListener() {
+internal class Pm2Converter(private val importer: Pm2Importer, private val isChild: Boolean) : ProcModel2BaseListener() {
 
     private val baseInstructions = mutableListOf<Pm2Instruction>()
     private var instructions = baseInstructions
     private val dynamicDeclarations = mutableListOf<MutableList<Pm2Instruction>>()
+    private val dynamicChildInstructions = mutableListOf<MutableList<Pm2Instruction>>()
     private var isInsideDynamicDeclaration = false
+    private var isInsideChildParametersBlock = false
     private val staticParameters = mutableMapOf<String, Pm2Type>()
+    private val dynamicParameters = mutableMapOf<String, Pm2Type>()
     private val types = Pm2Types()
     private val functions = Pm2Functions()
     private val importedModelIDs = mutableMapOf<String, String>()
@@ -51,15 +54,26 @@ internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : P
 
         instructions.add(Pm2Instruction(Pm2InstructionType.ExitProgram, lineNumber = ctx!!.stop.line))
 
-        val childProgramTable = mutableMapOf<String, Pair<Int, Map<String, Pm2Type>>>()
+        val childProgramTable = mutableMapOf<String, Triple<Int, Map<String, Pm2Type>, Map<String, Pm2Type>>>()
         if (!isChild) {
             for (childProgram in importer.cache.models.values) {
-                childProgramTable[childProgram.id] = Pair(this.instructions.size, childProgram.program.staticParameters)
+
+                childProgramTable[childProgram.id] = Triple(
+                        this.instructions.size,
+                        childProgram.program.staticParameters,
+                        childProgram.program.dynamicParameters
+                )
+
                 for (instruction in childProgram.program.instructions) {
-                    if (instruction.type == Pm2InstructionType.CreateDynamicMatrix) {
+                    if (instruction.type == Pm2InstructionType.CreateDynamicMatrix || instruction.type == Pm2InstructionType.CreateChildModel) {
                         val indexInstruction = instructions.removeLast()
                         val oldIndex = indexInstruction.value!!.intValue()
-                        val newIndex = Pm2IntValue(oldIndex + dynamicDeclarations.size)
+
+                        val offset = if (instruction.type == Pm2InstructionType.CreateDynamicMatrix) {
+                            dynamicDeclarations.size
+                        } else dynamicChildInstructions.size
+
+                        val newIndex = Pm2IntValue(oldIndex + offset)
                         instructions.add(Pm2Instruction(
                             Pm2InstructionType.PushValue, value = newIndex, lineNumber = indexInstruction.lineNumber
                         ))
@@ -67,6 +81,7 @@ internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : P
                     instructions.add(instruction)
                 }
                 this.dynamicDeclarations.addAll(childProgram.program.dynamicBlocks.map { it.toMutableList() })
+                this.dynamicChildInstructions.addAll(childProgram.program.dynamicChildParameterBlocks.map { it.toMutableList() })
             }
             val instructionDump = PrintWriter(File("instructions.txt"))
             for ((index, instruction) in instructions.withIndex()) {
@@ -79,11 +94,21 @@ internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : P
                 }
                 instructionDump.println("-----------------------------------------")
             }
+            instructionDump.println("---- DYNAMIC CHILD PARAMETER BLOCKS ----")
+            for ((childIndex, instructions) in this.dynamicChildInstructions.withIndex()) {
+                for ((index, instruction) in instructions.withIndex()) {
+                    instructionDump.println(String.format("%d %d %s", childIndex, index, instruction))
+                }
+                instructionDump.println("-----------------------------------------")
+            }
             instructionDump.flush()
             instructionDump.close()
         }
 
-        program = Pm2Program(instructions.toList(), dynamicDeclarations.map { it.toList() }, staticParameters.toMap())
+        program = Pm2Program(
+                instructions.toList(), dynamicDeclarations.map { it.toList() },
+                dynamicChildInstructions.map { it.toList() }, staticParameters.toMap(), dynamicParameters.toMap()
+        )
         if (!isChild) program.childProgramTable = childProgramTable
     }
 
@@ -92,8 +117,7 @@ internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : P
         val typeName = identifiers[0].text
         if (typeName != "Matrix") throw Pm2CompileError("Matrix is currently the only dynamic type")
 
-        if (isInsideDynamicDeclaration) throw Pm2CompileError("Nested dynamic declarations are forbidden")
-        isInsideDynamicDeclaration = true
+
 
         if (identifiers.size % 2 == 0) throw Pm2CompileError("Missing name or type for transfer variable ${identifiers.last().text}")
 
@@ -106,9 +130,14 @@ internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : P
                     name = transferVariableName, variableType = transferVariableType
             ))
         }
+    }
+
+    override fun enterDynamicDeclarationBlock(ctx: ProcModel2Parser.DynamicDeclarationBlockContext?) {
+        if (isInsideDynamicDeclaration) throw Pm2CompileError("Nested dynamic declarations are forbidden")
+        isInsideDynamicDeclaration = true
 
         val dynamicIndex = dynamicDeclarations.size
-        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx.start.line, value = Pm2IntValue(dynamicIndex)))
+        instructions.add(Pm2Instruction(Pm2InstructionType.PushValue, lineNumber = ctx!!.start.line, value = Pm2IntValue(dynamicIndex)))
         instructions.add(Pm2Instruction(Pm2InstructionType.CreateDynamicMatrix, lineNumber = ctx.start.line))
 
         val dynamicDeclaration = mutableListOf<Pm2Instruction>()
@@ -116,12 +145,16 @@ internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : P
         instructions = dynamicDeclaration
     }
 
-    override fun exitDynamicDeclaration(ctx: ProcModel2Parser.DynamicDeclarationContext?) {
+    override fun exitDynamicDeclarationBlock(ctx: ProcModel2Parser.DynamicDeclarationBlockContext?) {
         if (!isInsideDynamicDeclaration) throw Pm2CompileError("There is no dynamic declaration to exit")
         instructions.add(Pm2Instruction(Pm2InstructionType.ExitProgram, lineNumber = ctx!!.stop.line))
         isInsideDynamicDeclaration = false
 
         instructions = baseInstructions
+    }
+
+    override fun exitDynamicDeclaration(ctx: ProcModel2Parser.DynamicDeclarationContext?) {
+        if (ctx!!.PARAMETER_TYPE().text != "dynamic") throw Pm2CompileError("Dynamic declarations must be dynamic")
     }
 
     override fun enterFunctionDeclaration(ctx: ProcModel2Parser.FunctionDeclarationContext?) {
@@ -202,14 +235,18 @@ internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : P
     }
 
     override fun exitParameterDeclaration(ctx: ProcModel2Parser.ParameterDeclarationContext?) {
-        if (ctx!!.PARAMETER_TYPE().text == "static") {
-            val typeName = ctx.IDENTIFIER(0).text
-            val type = types.getType(typeName)
-            val name = ctx.IDENTIFIER(1).text
+        val typeName = ctx!!.IDENTIFIER(0).text
+        val type = types.getType(typeName)
+        if (type == BuiltinTypes.ANY) throw Pm2CompileError("Parameters of type Any are forbidden")
+        if (type == BuiltinTypes.VOID) throw Pm2CompileError("Parameters of type void are forbidden")
+        val name = ctx.IDENTIFIER(1).text
+
+        if (ctx.PARAMETER_TYPE().text == "static") {
             if (staticParameters.containsKey(name)) throw Pm2CompileError("Duplicate static parameter $name")
             staticParameters[name] = type
         } else if (ctx.PARAMETER_TYPE().text == "dynamic") {
-            TODO("Not yet implemented")
+            if (dynamicParameters.containsKey(name)) throw Pm2CompileError("Duplicate dynamic parameter $name")
+            dynamicParameters[name] = type
         } else {
             throw Pm2CompileError("Unknown parameter type " + ctx.PARAMETER_TYPE().text)
         }
@@ -318,10 +355,29 @@ internal class Pm2Converter(val importer: Pm2Importer, val isChild: Boolean) : P
         ))
     }
 
+    override fun enterChildModelBlock(ctx: ProcModel2Parser.ChildModelBlockContext?) {
+        if (isInsideChildParametersBlock) throw Pm2CompileError("Can't nest a child model in the parameters of another child model")
+        isInsideChildParametersBlock = true
+
+        val newBlock = mutableListOf<Pm2Instruction>()
+        this.dynamicChildInstructions.add(newBlock)
+        this.instructions = newBlock
+    }
+
     override fun exitChildModel(ctx: ProcModel2Parser.ChildModelContext?) {
+        instructions.add(Pm2Instruction(Pm2InstructionType.ExitProgram, lineNumber = ctx!!.stop.line))
+        this.instructions = baseInstructions
+
         val modelName = ctx!!.IDENTIFIER().text
         val modelID = importedModelIDs[modelName] ?: throw Pm2CompileError("Unknown child model $modelName")
+
+        instructions.add(Pm2Instruction(
+                Pm2InstructionType.PushValue,
+                value = Pm2IntValue(this.dynamicChildInstructions.size - 1), lineNumber = ctx.start.line)
+        )
         instructions.add(Pm2Instruction(Pm2InstructionType.CreateChildModel, name = modelID, lineNumber = ctx.start.line))
+
+        isInsideChildParametersBlock = false
     }
 
     override fun exitInnerStatement(ctx: ProcModel2Parser.InnerStatementContext?) {

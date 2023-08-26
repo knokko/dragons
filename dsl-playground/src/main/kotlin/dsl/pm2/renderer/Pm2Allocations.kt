@@ -29,7 +29,8 @@ class Pm2Allocations internal constructor(
 
         return Pm2Mesh(
             vertexBuffer = vertexBuffer.buffer, vertexOffset = 0,
-            numVertices = model.vertices.size, matrices = model.matrices
+            numVertices = model.vertices.size, matrices = model.matrices,
+            dynamicParameterTypes = model.dynamicParameters
         )
     }
 

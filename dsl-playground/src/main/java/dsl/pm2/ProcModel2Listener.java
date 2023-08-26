@@ -1,4 +1,4 @@
-// Generated from java-escape by ANTLR 4.11.1
+// Generated from /home/knokko/programming/kotlin/dragons/dsl-playground/src/main/resources/ProcModel2.g4 by ANTLR 4.12.0
 package dsl.pm2;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -107,6 +107,36 @@ public interface ProcModel2Listener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitImportValue(ProcModel2Parser.ImportValueContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#dynamicBlock}.
+	 * @param ctx the parse tree
+	 */
+	void enterDynamicBlock(ProcModel2Parser.DynamicBlockContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#dynamicBlock}.
+	 * @param ctx the parse tree
+	 */
+	void exitDynamicBlock(ProcModel2Parser.DynamicBlockContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#childModelBlock}.
+	 * @param ctx the parse tree
+	 */
+	void enterChildModelBlock(ProcModel2Parser.ChildModelBlockContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#childModelBlock}.
+	 * @param ctx the parse tree
+	 */
+	void exitChildModelBlock(ProcModel2Parser.ChildModelBlockContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ProcModel2Parser#dynamicDeclarationBlock}.
+	 * @param ctx the parse tree
+	 */
+	void enterDynamicDeclarationBlock(ProcModel2Parser.DynamicDeclarationBlockContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ProcModel2Parser#dynamicDeclarationBlock}.
+	 * @param ctx the parse tree
+	 */
+	void exitDynamicDeclarationBlock(ProcModel2Parser.DynamicDeclarationBlockContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ProcModel2Parser#childModel}.
 	 * @param ctx the parse tree
