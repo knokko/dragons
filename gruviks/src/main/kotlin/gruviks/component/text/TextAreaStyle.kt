@@ -11,8 +11,12 @@ class TextAreaStyle(
         val defaultTextStyle: TextInputFunction,
         val focusTextStyle: TextInputFunction,
         val placeholderTextStyle: TextInputFunction?,
-        val drawDefaultBackground: (GraviksTarget) -> Pair<RectangularDrawnRegion, Float>,
-        val drawFocusBackground: (GraviksTarget) -> Pair<RectangularDrawnRegion, Float>
+        val determineTextRegionAndLineHeight: (
+                target: GraviksTarget, hasFocus: Boolean, isPlaceholder: Boolean
+                ) -> Pair<RectangularDrawnRegion, Float>,
+        val drawBackgroundAndDecorations: (
+                target: GraviksTarget, lines: List<LineToDraw>, hasFocus: Boolean, isPlaceholder: Boolean
+                ) -> Unit
 )
 
 fun squareTextAreaStyle(
@@ -26,11 +30,11 @@ fun squareTextAreaStyle(
         defaultTextStyle = { { defaultTextStyle }},
         focusTextStyle = { { focusTextStyle }},
         placeholderTextStyle = if (placeholderStyle == null) null else { _ -> { placeholderStyle }},
-        drawDefaultBackground = { target ->
-            target.fillRect(0f, 0f, 1f, 1f, defaultBackgroundColor)
-            Pair(RectangularDrawnRegion(0f, 0f, 1f, 1f), lineHeight)
-        }, drawFocusBackground = { target ->
-            target.fillRect(0f, 0f, 1f, 1f, focusBackgroundColor)
-            Pair(RectangularDrawnRegion(0f, 0f, 1f, 1f), lineHeight)
-        }
+        determineTextRegionAndLineHeight = { _, _, _ ->
+                Pair(RectangularDrawnRegion(0f, 0f, 1f, 1f), lineHeight)
+        },
+        drawBackgroundAndDecorations = { target, _, hasFocus, _ ->
+                val backgroundColor = if (hasFocus) focusBackgroundColor else defaultBackgroundColor
+                target.fillRect(0f, 0f, 1f, 1f, backgroundColor)
+        },
 )

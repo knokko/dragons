@@ -206,11 +206,15 @@ fun pm2SyntaxTextAreaStyle(
     defaultTextStyle = { allLines -> Pm2SyntaxHighlighter(allLines, colorTheme)::getTextStyle },
     focusTextStyle = { allLines -> Pm2SyntaxHighlighter(allLines, colorTheme)::getTextStyle },
     placeholderTextStyle = { { TextStyle(fillColor = colorTheme.defaultText, font = colorTheme.font) }},
-    drawDefaultBackground = { target ->
+    determineTextRegionAndLineHeight = { _, _, isPlaceholder ->
+        val minX = if (isPlaceholder) 0f else 0.05f
+        Pair(RectangularDrawnRegion(minX, 0f, 1f, 1f), lineHeight)
+    },
+    drawBackgroundAndDecorations = { target, lines, _, _ ->
         target.fillRect(0f, 0f, 1f, 1f, colorTheme.background)
-        Pair(RectangularDrawnRegion(0f, 0f, 1f, 1f), lineHeight)
-    }, drawFocusBackground = { target ->
-        target.fillRect(0f, 0f, 1f, 1f, colorTheme.background)
-        Pair(RectangularDrawnRegion(0f, 0f, 1f, 1f), lineHeight)
-    }
+        val lineNumberStyle = TextStyle(colorTheme.defaultText, font = null)
+        for (line in lines) {
+            target.drawString(0f, line.minY, 0.04f, line.maxY, (line.index + 1).toString(), lineNumberStyle)
+        }
+    },
 )

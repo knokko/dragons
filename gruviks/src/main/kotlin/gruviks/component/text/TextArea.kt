@@ -215,99 +215,105 @@ class TextArea(
             .replace("\r", "\n").split('\n')
 
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {
+        val hasFocus = agent.hasKeyboardFocus()
         if (!::lineInputs.isInitialized) {
             lineInputs = splitLines(initialText).map { TextInput(it, this::giveRenderFeedback) }.toMutableList()
         }
 
-        val drawBackgroundFunction = if (agent.hasKeyboardFocus()) style.drawFocusBackground else style.drawDefaultBackground
-        val (textRegion, lineHeight) = drawBackgroundFunction(target)
         val drawPlaceholder = !agent.hasKeyboardFocus() && placeholder != null && getText().isEmpty()
-
-        lastLineHeight = lineHeight
-
-        var maxY = textRegion.maxY + scrollOffsetY
-
         val textToDraw = if (drawPlaceholder) splitLines(placeholder!!).map {
             TextInput(it, this::giveRenderFeedback)
         }.withIndex() else lineInputs.withIndex()
-
         val allLines = textToDraw.map { it.value.getText() }
 
-        val indirectTextStyleFunction = if (agent.hasKeyboardFocus()) style.focusTextStyle
-        else if (drawPlaceholder) style.placeholderTextStyle!!
-        else style.defaultTextStyle
-
-        val textStyleFunction = indirectTextStyleFunction(allLines)
+        val (textRegion, lineHeight) = style.determineTextRegionAndLineHeight(target, hasFocus, drawPlaceholder)
 
         // The lines that are almost visible should also be 'drawn' to ensure that the character placements are known
         val marginY = 3f * lineHeight
 
+        val linesToDraw = mutableListOf<LineToDraw>()
+        var maxY = textRegion.maxY + scrollOffsetY
         for ((lineIndex, line) in textToDraw) {
             if (maxY < -marginY) break
 
             val minY = maxY - lineHeight
 
             if (minY < 1f + marginY) {
-                val textStyle = textStyleFunction(lineIndex)
-                if (textStyle.overflowPolicy != TextOverflowPolicy.DiscardEnd) {
-                    throw IllegalArgumentException("Overflow policy must be DiscardEnd, ubt is ${textStyle.overflowPolicy}")
-                }
-
-                val suggestLeftToRight = leftToRightTracker[lineIndex]
-                val isRightToLeft = run {
-                    val dryResult = target.drawString(
-                        0f, 0f, 1000f, 1f, line.getText(), textStyle,
-                        dryRun = true, suggestLeftToRight = suggestLeftToRight
-                    )
-                    if (dryResult.isEmpty()) !suggestLeftToRight
-                    else dryResult.minOf { it.minX } > 5f
-                }
-
-                val drawnCharPositions = run {
-                    val minTextX = if (isRightToLeft) textRegion.minX else textRegion.minX - scrollOffsetX
-                    val maxTextX = if (isRightToLeft) textRegion.maxX - scrollOffsetX else textRegion.maxX
-                    target.drawString(
-                        minTextX, minY, maxTextX, maxY, line.getText(), textStyle,
-                        suggestLeftToRight = suggestLeftToRight
-                    )
-                }
-
-                if (drawnCharPositions.size >= 4) {
-                    leftToRightTracker[lineIndex] = !isRightToLeft
-                } else leftToRightTracker.remove(lineIndex)
-
-                line.drawnCharacterPositions = drawnCharPositions.map { originalPosition ->
-                    CharacterPosition(
-                        minX = originalPosition.minX - scrollOffsetX, minY = (originalPosition.minY - minY) / lineHeight,
-                        maxX = originalPosition.maxX - scrollOffsetX, maxY = (originalPosition.maxY - minY) / lineHeight,
-                        croppedMinX = originalPosition.croppedMinX - scrollOffsetX,
-                        croppedMaxX = originalPosition.croppedMaxX - scrollOffsetX,
-                        isLeftToRight = originalPosition.isLeftToRight
-                    )
-                }
-
-                if (showCaret && caretLine == lineIndex && agent.hasKeyboardFocus()) {
-                    val caretCharIndex = min(line.drawnCharacterPositions.size - 1, line.getCaretPosition())
-                    val flip = line.getCaretPosition() >= line.drawnCharacterPositions.size
-
-                    val characterPosition = if (line.drawnCharacterPositions.isEmpty()) CharacterPosition(
-                        0f - scrollOffsetX, 0f, 1f - scrollOffsetX, 0f, isRightToLeft
-                    ) else drawnCharPositions[caretCharIndex]
-
-                    val caretWidth =
-                        lineHeight * target.getStringAspectRatio("|", textStyle.font) / target.getAspectRatio() / 4
-                    var caretX = if (characterPosition.isLeftToRight == flip) {
-                        characterPosition.maxX - caretWidth / 2
-                    } else characterPosition.minX - caretWidth / 2
-
-                    if (caretX < caretWidth) caretX = caretWidth
-                    if (caretX > 1f - 2f * caretWidth) caretX = 1f - 2f * caretWidth
-
-                    target.fillRect(caretX, minY, caretX + caretWidth, maxY, textStyle.fillColor)
-                }
+                linesToDraw.add(LineToDraw(line.getText(), lineIndex, minY, maxY))
             }
 
             maxY = minY
+        }
+
+        style.drawBackgroundAndDecorations(target, linesToDraw, hasFocus, drawPlaceholder)
+
+        lastLineHeight = lineHeight
+
+        val indirectTextStyleFunction = if (hasFocus) style.focusTextStyle
+        else if (drawPlaceholder) style.placeholderTextStyle!!
+        else style.defaultTextStyle
+
+        val textStyleFunction = indirectTextStyleFunction(allLines)
+
+        for (lineToDraw in linesToDraw) {
+            val textStyle = textStyleFunction(lineToDraw.index)
+            if (textStyle.overflowPolicy != TextOverflowPolicy.DiscardEnd) {
+                throw IllegalArgumentException("Overflow policy must be DiscardEnd, ubt is ${textStyle.overflowPolicy}")
+            }
+
+            val suggestLeftToRight = leftToRightTracker[lineToDraw.index]
+            val isRightToLeft = run {
+                val dryResult = target.drawString(
+                    0f, 0f, 1000f, 1f, lineToDraw.text, textStyle,
+                    dryRun = true, suggestLeftToRight = suggestLeftToRight
+                )
+                if (dryResult.isEmpty()) !suggestLeftToRight
+                else dryResult.minOf { it.minX } > 5f
+            }
+
+            val drawnCharPositions = run {
+                val minTextX = if (isRightToLeft) textRegion.minX else textRegion.minX - scrollOffsetX
+                val maxTextX = if (isRightToLeft) textRegion.maxX - scrollOffsetX else textRegion.maxX
+                target.drawString(
+                    minTextX, lineToDraw.minY, maxTextX, lineToDraw.maxY, lineToDraw.text, textStyle,
+                    suggestLeftToRight = suggestLeftToRight
+                )
+            }
+
+            if (drawnCharPositions.size >= 4) {
+                leftToRightTracker[lineToDraw.index] = !isRightToLeft
+            } else leftToRightTracker.remove(lineToDraw.index)
+
+            val lineInput = lineInputs[lineToDraw.index]
+            lineInput.drawnCharacterPositions = drawnCharPositions.map { originalPosition ->
+                CharacterPosition(
+                    minX = originalPosition.minX - scrollOffsetX, minY = (originalPosition.minY - lineToDraw.minY) / lineHeight,
+                    maxX = originalPosition.maxX - scrollOffsetX, maxY = (originalPosition.maxY - lineToDraw.minY) / lineHeight,
+                    croppedMinX = originalPosition.croppedMinX - scrollOffsetX,
+                    croppedMaxX = originalPosition.croppedMaxX - scrollOffsetX,
+                    isLeftToRight = originalPosition.isLeftToRight
+                )
+            }
+
+            if (showCaret && caretLine == lineToDraw.index && agent.hasKeyboardFocus()) {
+                val caretCharIndex = min(lineInput.drawnCharacterPositions.size - 1, lineInput.getCaretPosition())
+                val flip = lineInput.getCaretPosition() >= lineInput.drawnCharacterPositions.size
+
+                val characterPosition = if (lineInput.drawnCharacterPositions.isEmpty()) CharacterPosition(
+                    0f - scrollOffsetX, 0f, 1f - scrollOffsetX, 0f, isRightToLeft
+                ) else drawnCharPositions[caretCharIndex]
+
+                val caretWidth =
+                    lineHeight * target.getStringAspectRatio("|", textStyle.font) / target.getAspectRatio() / 4
+                var caretX = if (characterPosition.isLeftToRight == flip) {
+                    characterPosition.maxX - caretWidth / 2
+                } else characterPosition.minX - caretWidth / 2
+
+                if (caretX < caretWidth) caretX = caretWidth
+                if (caretX > 1f - 2f * caretWidth) caretX = 1f - 2f * caretWidth
+
+                target.fillRect(caretX, lineToDraw.minY, caretX + caretWidth, lineToDraw.maxY, textStyle.fillColor)
+            }
         }
 
         if (checkHorizontalScrollAfterRender) {
@@ -320,6 +326,8 @@ class TextArea(
         return RenderResult(drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f), propagateMissedCursorEvents = false)
     }
 }
+
+class LineToDraw(val text: String, val index: Int, val minY: Float, val maxY: Float)
 
 private class LeftToRightTracker {
 
