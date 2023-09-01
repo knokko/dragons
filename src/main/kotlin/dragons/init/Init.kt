@@ -3,6 +3,8 @@ package dragons.init
 import com.github.knokko.boiler.instance.BoilerInstance
 import com.github.knokko.boiler.queue.QueueFamilies
 import com.github.knokko.boiler.queue.QueueFamily
+import com.github.knokko.profiler.SampleProfiler
+import com.github.knokko.profiler.storage.SampleStorage
 import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
 import dragons.init.trouble.gui.showStartupTroubleWindow
@@ -15,8 +17,6 @@ import dragons.plugin.loading.PluginClassLoader
 import dragons.plugin.loading.scanDefaultPluginLocations
 import dragons.state.StaticGameState
 import dragons.state.StaticGraphicsState
-import profiler.performance.PerformanceProfiler
-import profiler.performance.PerformanceStorage
 import dragons.util.PerformanceStatistics
 import dragons.vr.initVr
 import dragons.vulkan.destroy.destroyVulkanDevice
@@ -35,13 +35,17 @@ import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory.getLogger
 import java.io.File
 import java.io.InputStream
+import java.io.PrintWriter
 import java.lang.Thread.sleep
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.util.function.Predicate
 import kotlin.io.path.absolutePathString
 
 fun main(args: Array<String>) {
-    val profiler = PerformanceProfiler(PerformanceStorage(), 1L)
+    val profilerStorage = SampleStorage.frequency()
+    val profiler = SampleProfiler(profilerStorage)
+    profiler.classNameFilter = Predicate { className -> className.contains("dragons") || className.contains("knokko") }
 
     try {
         // Clear the old logs each time the game is started
@@ -141,7 +145,21 @@ fun main(args: Array<String>) {
     }
 
     profiler.stop()
-    profiler.storage.dump(File("performance.log"), 3, 0.1)
+
+    val performanceDirectory = File("dragons-performance")
+    if (performanceDirectory.isDirectory || performanceDirectory.mkdirs()) {
+        for (file in performanceDirectory.listFiles()) {
+            if (file.name != ".gitignore") file.delete()
+        }
+
+        val allThreads = Thread.getAllStackTraces().keys
+        for (thread in allThreads) {
+            val threadStorage = profilerStorage.getThreadStorage(thread.threadId())
+            if (threadStorage != null && threadStorage.rootNode.counter.get() > 100) {
+                threadStorage.print(PrintWriter("$performanceDirectory/thread-${thread.threadId()}.txt"), 20, 5.0)
+            }
+        }
+    } else getLogger(ROOT_LOGGER_NAME).error("Failed to create dragons-performance directory")
 }
 
 fun debugBuildProcess(process: Process): Int {

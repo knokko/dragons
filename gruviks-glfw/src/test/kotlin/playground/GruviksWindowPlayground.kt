@@ -1,6 +1,8 @@
 package playground
 
 import com.github.knokko.memory.MemorySnapshot
+import com.github.knokko.profiler.SampleProfiler
+import com.github.knokko.profiler.storage.SampleStorage
 import graviks.glfw.GraviksWindow
 import graviks2d.context.GraviksContext
 import graviks2d.resource.image.ImageReference
@@ -21,9 +23,9 @@ import gruviks.space.Coordinate
 import gruviks.space.RectRegion
 import gruviks.space.SpaceLayout
 import org.lwjgl.vulkan.VK10.VK_MAKE_VERSION
-import profiler.performance.PerformanceProfiler
-import profiler.performance.PerformanceStorage
 import java.io.File
+import java.io.PrintWriter
+import java.util.function.Predicate
 
 private val baseButtonStyle = TextButtonStyle(
     baseTextStyle = TextStyle(
@@ -145,10 +147,9 @@ fun main() {
     MemorySnapshot.take().debugDump()
     println()
 
-    val profiler = PerformanceProfiler(
-        storage = PerformanceStorage(), sleepTime = 1,
-        classNameFilter = { className -> className.contains("gruviks") }
-    )
+    val storage = SampleStorage.frequency()
+    val profiler = SampleProfiler(storage)
+    profiler.classNameFilter = Predicate { className: String -> className.contains("gruviks") }
     profiler.start()
 
     val graviksWindow = GraviksWindow(
@@ -165,7 +166,9 @@ fun main() {
     createAndControlGruviksWindow(graviksWindow, createTitleScreen())
 
     profiler.stop()
-    profiler.storage.dump(File("performance-gruviks.log"))
+    storage.getThreadStorage(Thread.currentThread().threadId()).print(
+        PrintWriter(File("performance-gruviks.log")), 10, 1.0
+    )
 
     println("After window close memory usage:")
     MemorySnapshot.take().debugDump()

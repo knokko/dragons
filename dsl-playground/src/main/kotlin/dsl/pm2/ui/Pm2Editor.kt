@@ -1,6 +1,8 @@
 package dsl.pm2.ui
 
 import com.github.knokko.boiler.instance.BoilerInstance
+import com.github.knokko.profiler.SampleProfiler
+import com.github.knokko.profiler.storage.SampleStorage
 import dsl.pm2.renderer.Pm2Instance
 import graviks.glfw.GraviksWindow
 import graviks2d.context.GraviksContext
@@ -23,9 +25,8 @@ import gruviks.space.Point
 import gruviks.space.RectRegion
 import gruviks.space.SpaceLayout
 import org.lwjgl.vulkan.VK10.*
-import profiler.performance.PerformanceProfiler
-import profiler.performance.PerformanceStorage
 import java.io.File
+import java.io.PrintWriter
 
 internal val rootDirectory = File("pm2-models")
 
@@ -160,7 +161,8 @@ fun createPm2Editor(boiler: BoilerInstance): Component {
 }
 
 fun main() {
-    val profiler = PerformanceProfiler(PerformanceStorage(), 1)
+    val storage = SampleStorage.frequency()
+    val profiler = SampleProfiler(storage)
     profiler.start()
     val graviksWindow = GraviksWindow(
         1600, 900, true,
@@ -169,5 +171,7 @@ fun main() {
 
     createAndControlGruviksWindow(graviksWindow, createPm2Editor(graviksWindow.boiler))
     profiler.stop()
-    profiler.storage.dump(File("dsl-profiler.log"))
+    storage.getThreadStorage(Thread.currentThread().threadId()).print(
+        PrintWriter(File("dsl-profiler.log")), 10, 0.1
+    )
 }
