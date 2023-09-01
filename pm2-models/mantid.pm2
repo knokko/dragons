@@ -57,9 +57,9 @@ matrix rightFrontLegMatrix = dynamic Matrix {
 };
 
 matrix defaultMatrix;
-child model scythe(leftScytheMatrix, scytheParameters) { Map params; params };
-child model belly(defaultMatrix, bellyParameters) { Map params; params };
-child model scythe(rightScytheMatrix, scytheParameters) { Map params; params };
+child model scythe(leftScytheMatrix, scytheParameters);
+child model belly(defaultMatrix, bellyParameters);
+child model scythe(rightScytheMatrix, scytheParameters);
 child model leg(leftBackLegMatrix, legParameters) {
 	Map params;
 	params["kneeAngle"] = kneeAngle;

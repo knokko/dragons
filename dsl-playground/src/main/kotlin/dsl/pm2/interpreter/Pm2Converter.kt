@@ -6,10 +6,7 @@ import dsl.pm2.interpreter.importer.Pm2Importer
 import dsl.pm2.interpreter.instruction.Pm2Instruction
 import dsl.pm2.interpreter.instruction.Pm2InstructionType
 import dsl.pm2.interpreter.program.Pm2Program
-import dsl.pm2.interpreter.value.Pm2BooleanValue
-import dsl.pm2.interpreter.value.Pm2IntValue
-import dsl.pm2.interpreter.value.Pm2ListValue
-import dsl.pm2.interpreter.value.Pm2NoneValue
+import dsl.pm2.interpreter.value.*
 import org.antlr.v4.runtime.tree.ErrorNode
 import java.io.File
 import java.io.PrintWriter
@@ -365,10 +362,17 @@ internal class Pm2Converter(private val importer: Pm2Importer, private val isChi
     }
 
     override fun exitChildModel(ctx: ProcModel2Parser.ChildModelContext?) {
-        instructions.add(Pm2Instruction(Pm2InstructionType.ExitProgram, lineNumber = ctx!!.stop.line))
-        this.instructions = baseInstructions
+        if (isInsideChildParametersBlock) {
+            instructions.add(Pm2Instruction(Pm2InstructionType.ExitProgram, lineNumber = ctx!!.stop.line))
+            this.instructions = baseInstructions
+        } else {
+            val newBlock = mutableListOf<Pm2Instruction>()
+            this.dynamicChildInstructions.add(newBlock)
+            newBlock.add(Pm2Instruction(Pm2InstructionType.PushValue, value = Pm2MapValue(), lineNumber = ctx!!.stop.line))
+            newBlock.add(Pm2Instruction(Pm2InstructionType.ExitProgram, lineNumber = ctx.stop.line))
+        }
 
-        val modelName = ctx!!.IDENTIFIER().text
+        val modelName = ctx.IDENTIFIER().text
         val modelID = importedModelIDs[modelName] ?: throw Pm2CompileError("Unknown child model $modelName")
 
         instructions.add(Pm2Instruction(

@@ -38,7 +38,7 @@ childModelBlock : dynamicBlock;
 
 dynamicDeclarationBlock : dynamicBlock;
 
-childModel: 'child' 'model' IDENTIFIER '(' expression ',' expression ')' childModelBlock ';';
+childModel: 'child' 'model' IDENTIFIER '(' expression ',' expression ')' childModelBlock? ';';
 
 parameterDeclaration : PARAMETER_TYPE 'parameter' IDENTIFIER IDENTIFIER ';';
 

@@ -1,4 +1,4 @@
-// Generated from /home/knokko/programming/kotlin/dragons/dsl-playground/src/main/resources/ProcModel2.g4 by ANTLR 4.12.0
+// Generated from java-escape by ANTLR 4.11.1
 package dsl.pm2;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
