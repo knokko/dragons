@@ -1,5 +1,6 @@
 package dragons.vulkan.memory.scope
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import dragons.init.trouble.SimpleStartupException
 import dragons.util.nextMultipleOf
 import dragons.vulkan.memory.MemoryInfo
@@ -16,7 +17,6 @@ import org.lwjgl.vulkan.KHRFragmentShadingRate.VK_IMAGE_USAGE_FRAGMENT_SHADING_R
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 import java.nio.IntBuffer
 import java.nio.LongBuffer
 

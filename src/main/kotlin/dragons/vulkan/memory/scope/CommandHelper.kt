@@ -1,5 +1,6 @@
 package dragons.vulkan.memory.scope
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import dragons.vulkan.memory.VulkanBuffer
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.ImageMemoryClaim
@@ -10,7 +11,6 @@ import dragons.vulkan.util.collectionToBuffer
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 internal class FamilyCommands(
     private val commandPool: Long,

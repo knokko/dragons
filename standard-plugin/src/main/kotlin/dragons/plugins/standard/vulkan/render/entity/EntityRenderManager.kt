@@ -7,7 +7,7 @@ import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.world.entity.EntityProperties
 import dragons.world.realm.Realm
 import org.lwjgl.vulkan.VkDevice
-import troll.sync.WaitSemaphore
+import com.github.knokko.boiler.sync.WaitSemaphore
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.reflect.KClass

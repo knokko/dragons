@@ -1,10 +1,10 @@
 package graviks2d.pipeline.text
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
+import com.github.knokko.boiler.instance.BoilerInstance
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
-import troll.exceptions.VulkanFailureException.assertVkSuccess
-import troll.instance.TrollInstance
 
 internal fun createTextCountPipelineVertexInput(
     stack: MemoryStack
@@ -62,7 +62,7 @@ internal fun createTextOddPipelineVertexInput(
 }
 
 internal fun createTextOddPipelineDescriptors(
-    troll: TrollInstance, stack: MemoryStack, descriptorSetLayout: Long, countImageView: Long
+    boiler: BoilerInstance, stack: MemoryStack, descriptorSetLayout: Long, countImageView: Long
 ): Pair<Long, Long> {
     val poolSizes = VkDescriptorPoolSize.calloc(1, stack)
     val poolSize = poolSizes[0]
@@ -76,12 +76,12 @@ internal fun createTextOddPipelineDescriptors(
 
     val pDescriptorPool = stack.callocLong(1)
     assertVkSuccess(
-        vkCreateDescriptorPool(troll.vkDevice(), ciDescriptorPool, null, pDescriptorPool),
+        vkCreateDescriptorPool(boiler.vkDevice(), ciDescriptorPool, null, pDescriptorPool),
         "vkCreateDescriptorPool", "GraviksTextDescriptorPool"
     )
     val descriptorPool = pDescriptorPool[0]
 
-    val descriptorSet = troll.descriptors.allocate(
+    val descriptorSet = boiler.descriptors.allocate(
         stack, 1, descriptorPool, "GraviksTextOdd", descriptorSetLayout
     )[0]
 
@@ -100,7 +100,7 @@ internal fun createTextOddPipelineDescriptors(
     descriptorWrite.dstBinding(0)
     descriptorWrite.pImageInfo(descriptorImages)
 
-    vkUpdateDescriptorSets(troll.vkDevice(), descriptorWrites, null)
+    vkUpdateDescriptorSets(boiler.vkDevice(), descriptorWrites, null)
 
     return Pair(descriptorPool, descriptorSet)
 }

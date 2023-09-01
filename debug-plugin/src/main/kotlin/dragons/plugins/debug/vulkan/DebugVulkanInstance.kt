@@ -1,5 +1,6 @@
 package dragons.plugins.debug.vulkan
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanInstanceActor
 import dragons.plugin.interfaces.vulkan.VulkanInstanceCreationListener
@@ -12,7 +13,6 @@ import org.lwjgl.vulkan.VkDebugUtilsMessengerCallbackDataEXT
 import org.lwjgl.vulkan.VkDebugUtilsMessengerCreateInfoEXT
 import org.lwjgl.vulkan.VkValidationFeaturesEXT
 import org.slf4j.LoggerFactory.getLogger
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 class DebugVulkanInstance: VulkanInstanceActor, VulkanInstanceCreationListener, VulkanInstanceDestructionListener {
 

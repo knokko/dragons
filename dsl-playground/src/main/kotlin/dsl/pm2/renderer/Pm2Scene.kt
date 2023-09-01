@@ -1,5 +1,10 @@
 package dsl.pm2.renderer
 
+import com.github.knokko.boiler.buffer.VmaBuffer
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
+import com.github.knokko.boiler.images.VmaImage
+import com.github.knokko.boiler.instance.BoilerInstance
+import com.github.knokko.boiler.sync.ResourceUsage
 import dsl.pm2.interpreter.Pm2RuntimeError
 import dsl.pm2.interpreter.Pm2Type
 import dsl.pm2.interpreter.program.Pm2DynamicParameterProcessor
@@ -10,11 +15,6 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
-import troll.buffer.VmaBuffer
-import troll.exceptions.VulkanFailureException.assertVkSuccess
-import troll.images.VmaImage
-import troll.instance.TrollInstance
-import troll.sync.ResourceUsage
 import kotlin.jvm.Throws
 
 /**
@@ -24,7 +24,7 @@ import kotlin.jvm.Throws
 internal const val MATRIX_SIZE = 48
 
 class Pm2Scene internal constructor(
-    private val troll: TrollInstance,
+    private val boiler: BoilerInstance,
     vkDescriptorSetLayout: Long,
     private val backgroundRed: Int,
     private val backgroundGreen: Int,
@@ -49,7 +49,7 @@ class Pm2Scene internal constructor(
 
         val imageFormat = VK_FORMAT_R8G8B8A8_SRGB
         stackPush().use { stack ->
-            this.colorImage = troll.images.createSimple(
+            this.colorImage = boiler.images.createSimple(
                 stack, width, height, imageFormat,
                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT or VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT, "Pm2SceneColorImage"
@@ -101,19 +101,19 @@ class Pm2Scene internal constructor(
 
             val pRenderPass = stack.callocLong(1)
             assertVkSuccess(vkCreateRenderPass(
-                troll.vkDevice(), ciRenderPass, null, pRenderPass
+                boiler.vkDevice(), ciRenderPass, null, pRenderPass
             ), "CreateRenderPass", "Pm2RenderPass")
             renderPass = pRenderPass[0]
-            troll.debug.name(stack, renderPass, VK_OBJECT_TYPE_RENDER_PASS, "Pm2RenderPass")
+            boiler.debug.name(stack, renderPass, VK_OBJECT_TYPE_RENDER_PASS, "Pm2RenderPass")
 
-            framebuffer = troll.images.createFramebuffer(
+            framebuffer = boiler.images.createFramebuffer(
                 stack, renderPass, width, height, "Pm2Framebuffer", colorImage.vkImageView
             )
-            commandPool = troll.commands.createPool(
-                0, troll.queueFamilies().graphics.index, "Pm2DrawSceneCommandPool"
+            commandPool = boiler.commands.createPool(
+                0, boiler.queueFamilies().graphics.index, "Pm2DrawSceneCommandPool"
             )
-            commandBuffer = troll.commands.createPrimaryBuffers(commandPool, 1, "Pm2DrawSceneCommandBuffer")[0]
-            fence = troll.sync.createFences(true, 1, "Pm2DrawSceneFence")[0]
+            commandBuffer = boiler.commands.createPrimaryBuffers(commandPool, 1, "Pm2DrawSceneCommandBuffer")[0]
+            fence = boiler.sync.createFences(true, 1, "Pm2DrawSceneFence")[0]
 
             val descriptorPoolSizes = VkDescriptorPoolSize.calloc(1, stack)
             descriptorPoolSizes.type(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
@@ -127,10 +127,10 @@ class Pm2Scene internal constructor(
 
             val pDescriptorPool = stack.callocLong(1)
             assertVkSuccess(vkCreateDescriptorPool(
-                    troll.vkDevice(), ciDescriptorPool, null, pDescriptorPool
+                    boiler.vkDevice(), ciDescriptorPool, null, pDescriptorPool
             ), "CreateDescriptorPool", "Pm2DrawSceneDescriptorPool")
             descriptorPool = pDescriptorPool[0]
-            descriptorSet = troll.descriptors.allocate(
+            descriptorSet = boiler.descriptors.allocate(
                 stack, 1, descriptorPool, "Pm2DrawSceneDescriptorSet", vkDescriptorSetLayout
             )[0]
         }
@@ -139,7 +139,7 @@ class Pm2Scene internal constructor(
     private fun ensureMatrixBuffer(numMatrices: Int) {
         if (numMatrices > matrixBufferCount) {
             if (matrixBuffer != null) {
-                vmaDestroyBuffer(troll.vmaAllocator(), matrixBuffer!!.vkBuffer, matrixBuffer!!.vmaAllocation)
+                vmaDestroyBuffer(boiler.vmaAllocator(), matrixBuffer!!.vkBuffer, matrixBuffer!!.vmaAllocation)
             }
 
             val matrixBufferSize = MATRIX_SIZE.toLong() * numMatrices
@@ -147,7 +147,7 @@ class Pm2Scene internal constructor(
             if (matrixBufferSize > 16_000L) throw Pm2RuntimeError("Too many dynamic matrices: $numMatrices")
             // TODO Optionally use storage buffers instead
 
-            matrixBuffer = troll.buffers.create(
+            matrixBuffer = boiler.buffers.create(
                 matrixBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT or VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                 "Pm2MatrixDeviceBuffer"
             )
@@ -161,9 +161,9 @@ class Pm2Scene internal constructor(
                 descriptorWrites.dstArrayElement(0)
                 descriptorWrites.descriptorCount(1)
                 descriptorWrites.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-                descriptorWrites.pBufferInfo(troll.descriptors.bufferInfo(stack, matrixBuffer))
+                descriptorWrites.pBufferInfo(boiler.descriptors.bufferInfo(stack, matrixBuffer))
 
-                vkUpdateDescriptorSets(troll.vkDevice(), descriptorWrites, null)
+                vkUpdateDescriptorSets(boiler.vkDevice(), descriptorWrites, null)
             }
         }
     }
@@ -171,7 +171,7 @@ class Pm2Scene internal constructor(
     fun awaitLastDraw() {
         stackPush().use { stack ->
             assertVkSuccess(vkWaitForFences(
-                troll.vkDevice(), stack.longs(fence), true, 10_000_000_000L
+                boiler.vkDevice(), stack.longs(fence), true, 10_000_000_000L
             ), "WaitForFences", "Pm2Scene.awaitLastDraw")
         }
     }
@@ -229,12 +229,12 @@ class Pm2Scene internal constructor(
         }
 
         stackPush().use { stack ->
-            troll.sync.waitAndReset(stack, fence, 10_000_000_000L)
+            boiler.sync.waitAndReset(stack, fence, 10_000_000_000L)
             assertVkSuccess(vkResetCommandPool(
-                troll.vkDevice(), commandPool, 0
+                boiler.vkDevice(), commandPool, 0
             ), "ResetCommandPool", "Pm2SceneDrawCommandPool")
 
-            troll.commands.begin(commandBuffer, stack, "Pm2SceneDrawCommands")
+            boiler.commands.begin(commandBuffer, stack, "Pm2SceneDrawCommands")
 
             var matrixIndex = 0
             val meshesWithMatrixIndices = mutableListOf<Pair<Pm2Mesh, Int>>()
@@ -256,7 +256,7 @@ class Pm2Scene internal constructor(
             }
             vkCmdUpdateBuffer(commandBuffer, matrixBuffer!!.vkBuffer, 0, hostMatrixBuffer)
 
-            troll.commands.bufferBarrier(
+            boiler.commands.bufferBarrier(
                 stack, commandBuffer, matrixBuffer!!.vkBuffer, 0, matrixBuffer!!.size,
                 ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
                 ResourceUsage(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT)
@@ -278,14 +278,14 @@ class Pm2Scene internal constructor(
             biRenderPass.pClearValues(clearValues)
 
             vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
-            troll.commands.dynamicViewportAndScissor(stack, commandBuffer, width, height)
+            boiler.commands.dynamicViewportAndScissor(stack, commandBuffer, width, height)
 
             instance.recordDraw(commandBuffer, pipelineInfo, descriptorSet, meshesWithMatrixIndices, cameraMatrix)
 
             vkCmdEndRenderPass(commandBuffer)
 
             if (oldLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-                troll.commands.transitionColorLayout(
+                boiler.commands.transitionColorLayout(
                     stack, commandBuffer, destImage, oldLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     ResourceUsage(srcAccessMask, srcStageMask),
                     ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
@@ -293,10 +293,10 @@ class Pm2Scene internal constructor(
             }
 
             val blitRegion = VkImageBlit.calloc(1, stack)
-            troll.images.subresourceLayers(stack, blitRegion.srcSubresource(), VK_IMAGE_ASPECT_COLOR_BIT)
+            boiler.images.subresourceLayers(stack, blitRegion.srcSubresource(), VK_IMAGE_ASPECT_COLOR_BIT)
             blitRegion.srcOffsets(0).set(0, 0, 0)
             blitRegion.srcOffsets(1).set(width, height, 1)
-            troll.images.subresourceLayers(stack, blitRegion.dstSubresource(), VK_IMAGE_ASPECT_COLOR_BIT)
+            boiler.images.subresourceLayers(stack, blitRegion.dstSubresource(), VK_IMAGE_ASPECT_COLOR_BIT)
             blitRegion.dstOffsets(0).set(offsetX, offsetY, 0)
             blitRegion.dstOffsets(1).set(blitSizeX, blitSizeY, 1)
 
@@ -306,7 +306,7 @@ class Pm2Scene internal constructor(
             )
 
             if (newLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-                troll.commands.transitionColorLayout(
+                boiler.commands.transitionColorLayout(
                     stack, commandBuffer, destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, newLayout,
                     ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
                     ResourceUsage(dstAccessMask, dstStageMask)
@@ -316,7 +316,7 @@ class Pm2Scene internal constructor(
             assertVkSuccess(vkEndCommandBuffer(commandBuffer), "EndCommandBuffer", "Pm2SceneDrawAndCopy")
 
             val signalSemaphores = if (signalSemaphore != null) longArrayOf(signalSemaphore) else LongArray(0)
-            instance.troll.queueFamilies().graphics.queues.random().submit(
+            instance.boiler.queueFamilies().graphics.queues.random().submit(
                 commandBuffer, "Pm2Scene", emptyArray(), fence, *signalSemaphores
             )
         }
@@ -325,18 +325,18 @@ class Pm2Scene internal constructor(
     fun destroy() {
         stackPush().use { stack ->
             assertVkSuccess(vkWaitForFences(
-                troll.vkDevice(), stack.longs(fence), true, 10_000_000_000L
+                boiler.vkDevice(), stack.longs(fence), true, 10_000_000_000L
             ), "WaitForFences", "Pm2SceneDestroy")
         }
-        vkDestroyFence(troll.vkDevice(), fence, null)
-        vkDestroyCommandPool(troll.vkDevice(), commandPool, null)
-        vkDestroyRenderPass(troll.vkDevice(), renderPass, null)
-        vkDestroyFramebuffer(troll.vkDevice(), framebuffer, null)
-        vkDestroyImageView(troll.vkDevice(), colorImage.vkImageView, null)
-        vmaDestroyImage(troll.vmaAllocator(), colorImage.vkImage, colorImage.vmaAllocation)
+        vkDestroyFence(boiler.vkDevice(), fence, null)
+        vkDestroyCommandPool(boiler.vkDevice(), commandPool, null)
+        vkDestroyRenderPass(boiler.vkDevice(), renderPass, null)
+        vkDestroyFramebuffer(boiler.vkDevice(), framebuffer, null)
+        vkDestroyImageView(boiler.vkDevice(), colorImage.vkImageView, null)
+        vmaDestroyImage(boiler.vmaAllocator(), colorImage.vkImage, colorImage.vmaAllocation)
         if (matrixBufferCount > 0) {
-            vmaDestroyBuffer(troll.vmaAllocator(), matrixBuffer!!.vkBuffer, matrixBuffer!!.vmaAllocation)
+            vmaDestroyBuffer(boiler.vmaAllocator(), matrixBuffer!!.vkBuffer, matrixBuffer!!.vmaAllocation)
         }
-        vkDestroyDescriptorPool(troll.vkDevice(), descriptorPool, null)
+        vkDestroyDescriptorPool(boiler.vkDevice(), descriptorPool, null)
     }
 }

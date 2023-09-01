@@ -1,5 +1,7 @@
 package dragons.plugins.standard.world.tile
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
+import com.github.knokko.boiler.sync.WaitSemaphore
 import dragons.plugins.standard.vulkan.model.generator.PANEL_MODEL_GENERATOR
 import dragons.plugins.standard.vulkan.panel.Panel
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
@@ -31,8 +33,6 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
-import troll.exceptions.VulkanFailureException.assertVkSuccess
-import troll.sync.WaitSemaphore
 
 private const val PANEL_WIDTH = 4000
 private const val PANEL_HEIGHT = 5000
@@ -184,7 +184,7 @@ class DebugPanelTile(
 
                     val pSemaphore = stack.callocLong(1)
                     assertVkSuccess(
-                        vkCreateSemaphore(agent.gameState.graphics.troll.vkDevice(), ciSemaphore, null, pSemaphore),
+                        vkCreateSemaphore(agent.gameState.graphics.boiler.vkDevice(), ciSemaphore, null, pSemaphore),
                         "CreateSemaphore", "standard-plugin debug panel"
                     )
                     pSemaphore[0]

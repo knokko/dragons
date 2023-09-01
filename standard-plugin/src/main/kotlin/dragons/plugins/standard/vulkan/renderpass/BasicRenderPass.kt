@@ -1,11 +1,11 @@
 package dragons.plugins.standard.vulkan.renderpass
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import dragons.vulkan.RenderImageInfo
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.LoggerFactory.getLogger
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 fun createBasicRenderPass(vkDevice: VkDevice, renderImageInfo: RenderImageInfo): Long {
     stackPush().use { stack ->

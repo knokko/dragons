@@ -1,13 +1,13 @@
 package graviks2d.pipeline
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
+import com.github.knokko.boiler.pipelines.ShaderInfo
 import graviks2d.context.TARGET_COLOR_FORMAT
 import graviks2d.core.GraviksInstance
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK10.*
 import org.lwjgl.vulkan.VkDescriptorSetLayoutBinding
 import org.lwjgl.vulkan.VkGraphicsPipelineCreateInfo
-import troll.exceptions.VulkanFailureException.assertVkSuccess
-import troll.pipelines.ShaderInfo
 
 
 internal class GraviksPipeline(
@@ -43,62 +43,62 @@ internal class GraviksPipeline(
             textTextureBinding.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
             textTextureBinding.descriptorCount(1)
             textTextureBinding.stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT)
-            this.vkDescriptorSetLayout = instance.troll.descriptors.createLayout(
+            this.vkDescriptorSetLayout = instance.boiler.descriptors.createLayout(
                 stack, setLayoutBindings, "GraviksBase"
             )
-            this.vkPipelineLayout = instance.troll.pipelines.createLayout(
+            this.vkPipelineLayout = instance.boiler.pipelines.createLayout(
                 stack, null, "GraviksBase", vkDescriptorSetLayout
             )
 
             val renderPass = createGraviksRenderPass(
-                instance.troll.vkDevice(), TARGET_COLOR_FORMAT, stack
+                instance.boiler.vkDevice(), TARGET_COLOR_FORMAT, stack
             )
             this.vkRenderPass = renderPass
 
-            val vertexShader = instance.troll.pipelines.createShaderModule(
+            val vertexShader = instance.boiler.pipelines.createShaderModule(
                 stack, "graviks2d/shaders/basic.vert.spv", "GraviksBasicVertexShader"
             )
-            val fragmentShader = instance.troll.pipelines.createShaderModule(
+            val fragmentShader = instance.boiler.pipelines.createShaderModule(
                 stack, "graviks2d/shaders/basic.frag.spv", "GraviksBasicFragmentShader"
             )
 
             val ciPipelines = VkGraphicsPipelineCreateInfo.calloc(1, stack)
             val ciPipeline = ciPipelines[0]
             ciPipeline.`sType$Default`()
-            instance.troll.pipelines.shaderStages(
+            instance.boiler.pipelines.shaderStages(
                 stack, ciPipeline,
                 ShaderInfo(VK_SHADER_STAGE_VERTEX_BIT, vertexShader, null),
                 ShaderInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader, null)
             )
             ciPipeline.pVertexInputState(createGraviksPipelineVertexInput(stack))
-            instance.troll.pipelines.simpleInputAssembly(stack, ciPipeline)
-            instance.troll.pipelines.dynamicViewports(stack, ciPipeline, 1)
-            instance.troll.pipelines.dynamicStates(
+            instance.boiler.pipelines.simpleInputAssembly(stack, ciPipeline)
+            instance.boiler.pipelines.dynamicViewports(stack, ciPipeline, 1)
+            instance.boiler.pipelines.dynamicStates(
                 stack, ciPipeline, VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR
             )
-            instance.troll.pipelines.simpleRasterization(stack, ciPipeline, VK_CULL_MODE_NONE)
-            instance.troll.pipelines.noMultisampling(stack, ciPipeline)
-            instance.troll.pipelines.simpleColorBlending(stack, ciPipeline, 1)
+            instance.boiler.pipelines.simpleRasterization(stack, ciPipeline, VK_CULL_MODE_NONE)
+            instance.boiler.pipelines.noMultisampling(stack, ciPipeline)
+            instance.boiler.pipelines.simpleColorBlending(stack, ciPipeline, 1)
             ciPipeline.layout(vkPipelineLayout)
             ciPipeline.renderPass(vkRenderPass)
             ciPipeline.subpass(0)
 
             val pPipeline = stack.callocLong(1)
             assertVkSuccess(
-                vkCreateGraphicsPipelines(instance.troll.vkDevice(), VK_NULL_HANDLE, ciPipelines, null, pPipeline),
+                vkCreateGraphicsPipelines(instance.boiler.vkDevice(), VK_NULL_HANDLE, ciPipelines, null, pPipeline),
                 "vkCreateGraphicsPipeline", "GraviksCore"
             )
             this.vkPipeline = pPipeline[0]
 
-            vkDestroyShaderModule(instance.troll.vkDevice(), vertexShader, null)
-            vkDestroyShaderModule(instance.troll.vkDevice(), fragmentShader, null)
+            vkDestroyShaderModule(instance.boiler.vkDevice(), vertexShader, null)
+            vkDestroyShaderModule(instance.boiler.vkDevice(), fragmentShader, null)
         }
     }
 
     fun destroy() {
-        vkDestroyPipeline(this.instance.troll.vkDevice(), this.vkPipeline, null)
-        vkDestroyPipelineLayout(this.instance.troll.vkDevice(), this.vkPipelineLayout, null)
-        vkDestroyDescriptorSetLayout(this.instance.troll.vkDevice(), this.vkDescriptorSetLayout, null)
-        vkDestroyRenderPass(this.instance.troll.vkDevice(), this.vkRenderPass, null)
+        vkDestroyPipeline(this.instance.boiler.vkDevice(), this.vkPipeline, null)
+        vkDestroyPipelineLayout(this.instance.boiler.vkDevice(), this.vkPipelineLayout, null)
+        vkDestroyDescriptorSetLayout(this.instance.boiler.vkDevice(), this.vkDescriptorSetLayout, null)
+        vkDestroyRenderPass(this.instance.boiler.vkDevice(), this.vkRenderPass, null)
     }
 }

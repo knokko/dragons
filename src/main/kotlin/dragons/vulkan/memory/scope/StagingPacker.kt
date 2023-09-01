@@ -1,5 +1,6 @@
 package dragons.vulkan.memory.scope
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import dragons.util.nextMultipleOf
 import dragons.vulkan.memory.claim.Placed
 import dragons.vulkan.memory.claim.PlacedQueueFamilyClaims
@@ -14,7 +15,6 @@ import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkMappedMemoryRange
 import org.slf4j.LoggerFactory.getLogger
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 /**
  * The placements into the shared staging buffer for *a single* queue family.

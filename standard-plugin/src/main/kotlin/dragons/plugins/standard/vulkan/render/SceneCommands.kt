@@ -9,8 +9,8 @@ import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
-import troll.exceptions.VulkanFailureException.assertVkSuccess
-import troll.sync.WaitSemaphore
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
+import com.github.knokko.boiler.sync.WaitSemaphore
 
 internal class SceneCommands(
     private val vkDevice: VkDevice, private val queueFamily: QueueFamily,

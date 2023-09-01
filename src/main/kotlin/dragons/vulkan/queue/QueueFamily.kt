@@ -1,17 +1,17 @@
 package dragons.vulkan.queue
 
-import troll.queue.TrollQueue
+import com.github.knokko.boiler.queue.BoilerQueue
 
 class QueueFamily(
     val index: Int,
-    val priorityQueues: List<TrollQueue>,
-    val backgroundQueues: List<TrollQueue>
+    val priorityQueues: List<BoilerQueue>,
+    val backgroundQueues: List<BoilerQueue>
 ) {
     fun getFirstPriorityQueue() = priorityQueues[0]
 
     fun getFirstPriorityQueueIndex() = 0
 
-    fun getRandomBackgroundQueue(): TrollQueue {
+    fun getRandomBackgroundQueue(): BoilerQueue {
         return if (backgroundQueues.isEmpty()) {
             getRandomPriorityQueue()
         } else {
@@ -19,7 +19,7 @@ class QueueFamily(
         }
     }
 
-    fun getRandomPriorityQueue(): TrollQueue {
+    fun getRandomPriorityQueue(): BoilerQueue {
         return priorityQueues.random()
     }
 

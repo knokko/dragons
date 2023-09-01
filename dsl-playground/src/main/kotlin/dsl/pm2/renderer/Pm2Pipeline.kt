@@ -4,9 +4,9 @@ import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
-import troll.exceptions.VulkanFailureException.assertVkSuccess
-import troll.instance.TrollInstance
-import troll.pipelines.ShaderInfo
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
+import com.github.knokko.boiler.instance.BoilerInstance
+import com.github.knokko.boiler.pipelines.ShaderInfo
 
 class Pm2PipelineInfo(
     internal val renderPass: Long,
@@ -19,61 +19,61 @@ class Pm2PipelineInfo(
             && this.subpass == other.subpass && this.setBlendState == other.setBlendState
 }
 
-internal fun createGraphicsPipeline(troll: TrollInstance, info: Pm2PipelineInfo, pipelineLayout: Long): Long {
+internal fun createGraphicsPipeline(boiler: BoilerInstance, info: Pm2PipelineInfo, pipelineLayout: Long): Long {
     return stackPush().use { stack ->
         val ciPipelines = VkGraphicsPipelineCreateInfo.calloc(1, stack)
         val ciPipeline = ciPipelines[0]
         ciPipeline.`sType$Default`()
         ciPipeline.flags(0)
 
-        val vertexShader = troll.pipelines.createShaderModule(
+        val vertexShader = boiler.pipelines.createShaderModule(
             stack, "dsl/pm2/shaders/simple.vert.spv", "Pm2VertexShader"
         )
-        val fragmentShader = troll.pipelines.createShaderModule(
+        val fragmentShader = boiler.pipelines.createShaderModule(
             stack, "dsl/pm2/shaders/simple.frag.spv", "Pm2FragmentShader"
         )
-        troll.pipelines.shaderStages(
+        boiler.pipelines.shaderStages(
             stack, ciPipeline,
             ShaderInfo(VK_SHADER_STAGE_VERTEX_BIT, vertexShader, null),
             ShaderInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader, null)
         )
         ciPipeline.pVertexInputState(createVertexInputState(stack))
-        troll.pipelines.simpleInputAssembly(stack, ciPipeline)
-        troll.pipelines.dynamicViewports(stack, ciPipeline, 1)
-        troll.pipelines.simpleRasterization(stack, ciPipeline, VK_CULL_MODE_NONE) // TODO Cull back when switching to 3D
-        troll.pipelines.noDepthStencil(stack, ciPipeline) // TODO Use depthStencil after switching to 3D
+        boiler.pipelines.simpleInputAssembly(stack, ciPipeline)
+        boiler.pipelines.dynamicViewports(stack, ciPipeline, 1)
+        boiler.pipelines.simpleRasterization(stack, ciPipeline, VK_CULL_MODE_NONE) // TODO Cull back when switching to 3D
+        boiler.pipelines.noDepthStencil(stack, ciPipeline) // TODO Use depthStencil after switching to 3D
 
         val blendState = VkPipelineColorBlendStateCreateInfo.calloc(stack)
         info.setBlendState(stack, blendState)
         ciPipeline.pColorBlendState(blendState)
-        troll.pipelines.dynamicStates(stack, ciPipeline, VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR)
-        troll.pipelines.noMultisampling(stack, ciPipeline)
+        boiler.pipelines.dynamicStates(stack, ciPipeline, VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR)
+        boiler.pipelines.noMultisampling(stack, ciPipeline)
         ciPipeline.layout(pipelineLayout)
         ciPipeline.renderPass(info.renderPass)
         ciPipeline.subpass(info.subpass)
 
         val pPipeline = stack.callocLong(1)
         assertVkSuccess(vkCreateGraphicsPipelines(
-            troll.vkDevice(), VK_NULL_HANDLE, ciPipelines, null, pPipeline
+            boiler.vkDevice(), VK_NULL_HANDLE, ciPipelines, null, pPipeline
         ), "CreateGraphicsPipelines", "Pm2Pipeline")
         val pipeline = pPipeline[0]
-        troll.debug.name(stack, pipeline, VK_OBJECT_TYPE_PIPELINE, "Pm2Pipeline")
+        boiler.debug.name(stack, pipeline, VK_OBJECT_TYPE_PIPELINE, "Pm2Pipeline")
 
-        vkDestroyShaderModule(troll.vkDevice(), vertexShader, null)
-        vkDestroyShaderModule(troll.vkDevice(), fragmentShader, null)
+        vkDestroyShaderModule(boiler.vkDevice(), vertexShader, null)
+        vkDestroyShaderModule(boiler.vkDevice(), fragmentShader, null)
 
         pipeline
     }
 }
 
-internal fun createPipelineLayout(troll: TrollInstance, stack: MemoryStack): Pair<Long, Long> {
+internal fun createPipelineLayout(boiler: BoilerInstance, stack: MemoryStack): Pair<Long, Long> {
     val descriptorBindings = VkDescriptorSetLayoutBinding.calloc(1, stack)
     descriptorBindings.binding(0)
     descriptorBindings.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
     descriptorBindings.descriptorCount(1)
     descriptorBindings.stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
 
-    val descriptorSetLayout = troll.descriptors.createLayout(stack, descriptorBindings, "Pm2DescriptorSetLayout")
+    val descriptorSetLayout = boiler.descriptors.createLayout(stack, descriptorBindings, "Pm2DescriptorSetLayout")
 
     val pushConstants = VkPushConstantRange.calloc(1, stack)
     val pushCameraMatrix = pushConstants[0]
@@ -81,7 +81,7 @@ internal fun createPipelineLayout(troll: TrollInstance, stack: MemoryStack): Pai
     pushCameraMatrix.offset(0)
     pushCameraMatrix.size(4 + 3 * 2 * 4) // 1 int and 1 3x2 matrix
 
-    val pipelineLayout = troll.pipelines.createLayout(stack, pushConstants, "Pm2PipelineLayout", descriptorSetLayout)
+    val pipelineLayout = boiler.pipelines.createLayout(stack, pushConstants, "Pm2PipelineLayout", descriptorSetLayout)
 
     return Pair(pipelineLayout, descriptorSetLayout)
 }

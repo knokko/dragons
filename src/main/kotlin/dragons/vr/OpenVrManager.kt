@@ -314,9 +314,9 @@ class OpenVrManager: VrManager {
 
             val vulkanTexture = VRVulkanTextureData.calloc(stack)
             // Fill image in later
-            vulkanTexture.m_pDevice(graphicsState.troll.vkDevice().address())
-            vulkanTexture.m_pPhysicalDevice(graphicsState.troll.vkPhysicalDevice().address())
-            vulkanTexture.m_pInstance(graphicsState.troll.vkInstance().address())
+            vulkanTexture.m_pDevice(graphicsState.boiler.vkDevice().address())
+            vulkanTexture.m_pPhysicalDevice(graphicsState.boiler.vkPhysicalDevice().address())
+            vulkanTexture.m_pInstance(graphicsState.boiler.vkInstance().address())
             vulkanTexture.m_pQueue(queue.vkQueue.address())
             vulkanTexture.m_nQueueFamilyIndex(graphicsState.queueManager.generalQueueFamily.index)
             vulkanTexture.m_nWidth(getWidth())
@@ -334,7 +334,7 @@ class OpenVrManager: VrManager {
 
             if (waitSemaphore != null) {
                 this.resolveHelper.resolve(
-                    graphicsState.troll.vkDevice(), 0, 0,
+                    graphicsState.boiler.vkDevice(), 0, 0,
                     graphicsState.queueManager, waitSemaphore, takeScreenshot
                 )
             }
@@ -357,8 +357,8 @@ class OpenVrManager: VrManager {
 
     override fun destroy() {
         getLogger("VR").info("Shutting down OpenVR")
-        vkDeviceWaitIdle(graphicsState.troll.vkDevice())
-        this.resolveHelper.destroy(graphicsState.troll.vkDevice())
+        vkDeviceWaitIdle(graphicsState.boiler.vkDevice())
+        this.resolveHelper.destroy(graphicsState.boiler.vkDevice())
         VR_ShutdownInternal()
     }
 

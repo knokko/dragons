@@ -1,12 +1,12 @@
 package dragons.plugins.standard.vulkan.render.tile
 
+import com.github.knokko.boiler.sync.WaitSemaphore
 import dragons.plugin.interfaces.PluginInterface
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.geometry.Position
 import dragons.world.tile.SmallTile
 import dragons.world.tile.TileProperties
 import org.lwjgl.vulkan.VkDevice
-import troll.sync.WaitSemaphore
 import java.util.*
 import kotlin.reflect.KClass
 

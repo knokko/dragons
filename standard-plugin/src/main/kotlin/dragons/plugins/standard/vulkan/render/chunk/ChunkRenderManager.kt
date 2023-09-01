@@ -10,7 +10,7 @@ import dragons.vulkan.memory.scope.MemoryScope
 import dragons.world.chunk.ChunkLocation
 import dragons.world.realm.Realm
 import org.lwjgl.vulkan.VkDevice
-import troll.sync.WaitSemaphore
+import com.github.knokko.boiler.sync.WaitSemaphore
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashSet

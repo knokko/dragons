@@ -1,5 +1,6 @@
 package dragons.vr
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.state.StaticGraphicsState
 import dragons.geometry.Angle
@@ -13,7 +14,6 @@ import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
 import org.slf4j.Logger
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 interface VrManager {
     fun getVulkanInstanceExtensions(availableExtensions: Set<String>): Set<String>

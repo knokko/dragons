@@ -1,8 +1,8 @@
 package dsl.pm2.renderer
 
+import com.github.knokko.boiler.buffer.VmaBuffer
 import dsl.pm2.interpreter.Pm2DynamicMatrix
 import dsl.pm2.interpreter.Pm2Type
-import troll.buffer.VmaBuffer
 
 class Pm2Mesh(
         internal val vertexBuffer: VmaBuffer,

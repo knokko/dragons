@@ -1,11 +1,11 @@
 package graviks2d.target
 
+import com.github.knokko.boiler.sync.WaitSemaphore
 import graviks2d.resource.image.ImageReference
 import graviks2d.resource.text.CharacterPosition
 import graviks2d.resource.text.FontReference
 import graviks2d.resource.text.TextStyle
 import graviks2d.util.Color
-import troll.sync.WaitSemaphore
 
 interface GraviksTarget {
     fun setScissor(newScissor: GraviksScissor): GraviksScissor

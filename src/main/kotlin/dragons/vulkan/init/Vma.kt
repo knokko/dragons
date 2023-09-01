@@ -1,5 +1,6 @@
 package dragons.vulkan.init
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVmaSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.util.vma.VmaAllocatorCreateInfo
@@ -12,7 +13,6 @@ import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkInstance
 import org.lwjgl.vulkan.VkPhysicalDevice
 import org.slf4j.LoggerFactory.getLogger
-import troll.exceptions.VulkanFailureException.assertVmaSuccess
 
 internal fun initVma(
     vkInstance: VkInstance, vkPhysicalDevice: VkPhysicalDevice, vkDevice: VkDevice,

@@ -1,13 +1,13 @@
 package graviks2d.resource.text
 
+import com.github.knokko.boiler.instance.BoilerInstance
+import com.github.knokko.boiler.sync.ResourceUsage
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
-import troll.instance.TrollInstance
-import troll.sync.ResourceUsage
 
 internal fun rasterizeTextAtlas(
-    troll: TrollInstance, commandBuffer: VkCommandBuffer, textCache: TextShapeCache, isFirstDraw: Boolean
+    boiler: BoilerInstance, commandBuffer: VkCommandBuffer, textCache: TextShapeCache, isFirstDraw: Boolean
 ) {
     stackPush().use { stack ->
 
@@ -29,12 +29,12 @@ internal fun rasterizeTextAtlas(
 
             if (textCache.currentVertexIndex > 0) {
                 vkCmdBeginRenderPass(commandBuffer, biRenderPass, VK_SUBPASS_CONTENTS_INLINE)
-                troll.commands.dynamicViewportAndScissor(stack, commandBuffer, textCache.width, textCache.height)
+                boiler.commands.dynamicViewportAndScissor(stack, commandBuffer, textCache.width, textCache.height)
                 vkCmdBindPipeline(
                         commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                         textCache.context.instance.textPipelines.countPipeline
                 )
-                vkCmdBindVertexBuffers(commandBuffer, 0, stack.longs(textCache.countVertexBuffer.buffer.vkBuffer), stack.longs(0))
+                vkCmdBindVertexBuffers(commandBuffer, 0, stack.longs(textCache.countVertexBuffer.vkBuffer), stack.longs(0))
                 vkCmdDraw(commandBuffer, textCache.currentVertexIndex, 1, 0, 0)
                 vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE)
                 vkCmdBindPipeline(
@@ -59,7 +59,7 @@ internal fun rasterizeTextAtlas(
                 oldUsage = null
             }
 
-            troll.commands.transitionColorLayout(
+            boiler.commands.transitionColorLayout(
                     stack, commandBuffer, textCache.textOddAtlas.vkImage, oldLayout,
                     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                     oldUsage, ResourceUsage(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)

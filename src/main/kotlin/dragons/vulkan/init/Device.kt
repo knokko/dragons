@@ -1,5 +1,7 @@
 package dragons.vulkan.init
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
+import com.github.knokko.boiler.queue.BoilerQueue
 import dragons.init.trouble.ExtensionStartupException
 import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
@@ -22,8 +24,6 @@ import org.lwjgl.system.MemoryUtil.memPutInt
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.LoggerFactory.getLogger
-import troll.exceptions.VulkanFailureException.assertVkSuccess
-import troll.queue.TrollQueue
 import java.lang.reflect.Modifier
 import java.nio.ByteBuffer
 import java.nio.FloatBuffer
@@ -259,12 +259,12 @@ internal fun createLogicalDevice(
             val priorityQueues = (0 until info.numPriorityQueues).map { queueIndex ->
                 val pQueue = stack.callocPointer(1)
                 vkGetDeviceQueue(device, info.index, queueIndex, pQueue)
-                TrollQueue(VkQueue(pQueue[0], device))
+                BoilerQueue(VkQueue(pQueue[0], device))
             }
             val backgroundQueues = (0 until info.numBackgroundQueues).map { partialQueueIndex ->
                 val pQueue = stack.callocPointer(1)
                 vkGetDeviceQueue(device, info.index, partialQueueIndex + info.numPriorityQueues, pQueue)
-                TrollQueue(VkQueue(pQueue[0], device))
+                BoilerQueue(VkQueue(pQueue[0], device))
             }
             return QueueFamily(priorityQueues = priorityQueues, backgroundQueues = backgroundQueues, index = info.index)
         }

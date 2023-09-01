@@ -1,5 +1,6 @@
 package dragons.vulkan.memory.scope
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import dragons.vulkan.memory.MemoryInfo
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
@@ -14,7 +15,6 @@ import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkImageCreateInfo
 import org.slf4j.LoggerFactory.getLogger
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 suspend fun packMemoryClaims(
     vkDevice: VkDevice, queueManager: QueueManager, memoryInfo: MemoryInfo, scope: CoroutineScope,

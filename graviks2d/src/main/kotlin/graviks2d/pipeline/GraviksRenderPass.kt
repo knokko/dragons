@@ -1,9 +1,9 @@
 package graviks2d.pipeline
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 internal fun createGraviksRenderPass(
     vkDevice: VkDevice, colorFormat: Int, stack: MemoryStack

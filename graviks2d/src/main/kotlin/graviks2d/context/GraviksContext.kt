@@ -1,5 +1,7 @@
 package graviks2d.context
 
+import com.github.knokko.boiler.sync.ResourceUsage
+import com.github.knokko.boiler.sync.WaitSemaphore
 import graviks2d.core.GraviksInstance
 import graviks2d.pipeline.*
 import graviks2d.pipeline.OP_CODE_DRAW_IMAGE_BOTTOM_LEFT
@@ -18,8 +20,6 @@ import graviks2d.util.Color
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.lwjgl.system.MemoryStack.stackPush
-import troll.sync.ResourceUsage
-import troll.sync.WaitSemaphore
 import kotlin.IllegalStateException
 import kotlin.math.min
 import kotlin.math.max
@@ -88,7 +88,7 @@ class GraviksContext(
         rectanglePackingNodeBufferSize = textRectanglePackingNodeBufferSize
     )
     internal val descriptors = ContextDescriptors(
-        this.instance, this.buffers.operationBuffer.buffer, this.textShapeCache.textOddAtlas.vkImageView
+        this.instance, this.buffers.operationBuffer.asBuffer(), this.textShapeCache.textOddAtlas.vkImageView
     )
 
     private val queuedDrawCommands: MutableList<DrawCommand> = mutableListOf()

@@ -1,5 +1,8 @@
 package dragons.init
 
+import com.github.knokko.boiler.instance.BoilerInstance
+import com.github.knokko.boiler.queue.QueueFamilies
+import com.github.knokko.boiler.queue.QueueFamily
 import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
 import dragons.init.trouble.gui.showStartupTroubleWindow
@@ -30,9 +33,6 @@ import org.lwjgl.system.Platform
 import org.slf4j.Logger
 import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory.getLogger
-import troll.instance.TrollInstance
-import troll.queue.QueueFamilies
-import troll.queue.QueueFamily
 import java.io.File
 import java.io.InputStream
 import java.lang.Thread.sleep
@@ -116,15 +116,15 @@ fun main(args: Array<String>) {
         logger.info("Start with shutting down the game")
         staticGameState.vrManager.destroy()
         val staticGraphics = staticGameState.graphics
-        staticGraphics.memoryScope.destroy(staticGraphics.troll.vkDevice())
+        staticGraphics.memoryScope.destroy(staticGraphics.boiler.vkDevice())
 
-        // TODO Maybe destroy troll instead?
+        // TODO Maybe destroy boiler instead?
         destroyVulkanDevice(
-            staticGraphics.troll.vkInstance(), staticGraphics.troll.vkPhysicalDevice(), staticGraphics.troll.vkDevice(),
-            staticGraphics.troll.vmaAllocator(), staticGraphics.graviksInstance,
+            staticGraphics.boiler.vkInstance(), staticGraphics.boiler.vkPhysicalDevice(), staticGraphics.boiler.vkDevice(),
+            staticGraphics.boiler.vmaAllocator(), staticGraphics.graviksInstance,
             staticGameState.pluginManager,
         )
-        destroyVulkanInstance(staticGraphics.troll.vkInstance(), staticGameState.pluginManager)
+        destroyVulkanInstance(staticGraphics.boiler.vkInstance(), staticGameState.pluginManager)
         staticGameState.pluginManager.getImplementations(ExitListener::class).forEach {
                 listenerPair -> listenerPair.first.onExit(listenerPair.second)
         }
@@ -295,14 +295,14 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
         )
 
         val vmaAllocator = vmaJob.await()
-        val troll = TrollInstance(
+        val boiler = BoilerInstance(
             0L, null, null,
             initInstanceResult.vkInstance, vulkanPhysicalDevice, vulkanDevice,
             initInstanceResult.enabledExtensions, enabledDeviceExtensions,
             queueFamilies, vmaAllocator
         )
         val graviksJob = async {
-            GraviksInstance(troll)
+            GraviksInstance(boiler)
         }
 
         val (staticMemoryScope, coreStaticMemory) = staticMemoryJob.await()
@@ -310,7 +310,7 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
 
         val staticGameState = StaticGameState(
             graphics = StaticGraphicsState(
-                troll,
+                boiler,
                 queueManager,
                 memoryInfo,
                 renderImageInfo,

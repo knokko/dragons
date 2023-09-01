@@ -1,5 +1,6 @@
 package dragons.plugins.standard.menu
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.menu.MainMenuManager
 import dragons.plugins.standard.state.StandardPluginState
@@ -20,7 +21,6 @@ import org.joml.Vector3f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 import kotlin.math.atan2
 
 @Suppress("unused")
@@ -45,7 +45,7 @@ class StandardMainMenu: MainMenuManager {
 
                 val pSemaphore = stack.callocLong(1)
                 assertVkSuccess(
-                    vkCreateSemaphore(gameState.graphics.troll.vkDevice(), ciSemaphore, null, pSemaphore),
+                    vkCreateSemaphore(gameState.graphics.boiler.vkDevice(), ciSemaphore, null, pSemaphore),
                     "CreateSemaphore", "standard plug-in: $description"
                 )
                 pSemaphore[0]
@@ -169,9 +169,9 @@ class StandardMainMenu: MainMenuManager {
             }
         }
 
-        sceneRenderer.destroy(gameState.graphics.troll.vkDevice())
+        sceneRenderer.destroy(gameState.graphics.boiler.vkDevice())
 
-        vkDestroySemaphore(gameState.graphics.troll.vkDevice(), renderFinishedSemaphore, null)
-        vkDestroySemaphore(gameState.graphics.troll.vkDevice(), debugPanelSemaphore, null)
+        vkDestroySemaphore(gameState.graphics.boiler.vkDevice(), renderFinishedSemaphore, null)
+        vkDestroySemaphore(gameState.graphics.boiler.vkDevice(), debugPanelSemaphore, null)
     }
 }

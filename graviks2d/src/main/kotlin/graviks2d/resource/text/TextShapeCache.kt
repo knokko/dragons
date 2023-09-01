@@ -1,5 +1,8 @@
 package graviks2d.resource.text
 
+import com.github.knokko.boiler.buffer.MappedVmaBuffer
+import com.github.knokko.boiler.buffer.VmaBuffer
+import com.github.knokko.boiler.images.VmaImage
 import graviks2d.context.GraviksContext
 import graviks2d.pipeline.text.*
 import graviks2d.pipeline.text.OPERATION_CORRECT_CONTROL
@@ -20,9 +23,6 @@ import org.lwjgl.system.MemoryUtil.memByteBuffer
 import org.lwjgl.system.MemoryUtil.memFloatBuffer
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.vulkan.VK10.*
-import troll.buffer.MappedVmaBuffer
-import troll.buffer.VmaBuffer
-import troll.images.VmaImage
 
 internal class TextShapeCache(
     val context: GraviksContext,
@@ -71,14 +71,14 @@ internal class TextShapeCache(
         stbrp_init_target(this.rectanglePackingContext, width, height, this.rectanglePackingNodes)
         this.rectanglePackingBuffer = STBRPRect.calloc(rectanglePackingBufferSize)
 
-        val troll = context.instance.troll
+        val boiler = context.instance.boiler
         stackPush().use { stack ->
-            this.textCountAtlas = troll.images.createSimple(
+            this.textCountAtlas = boiler.images.createSimple(
                 stack, this.width, this.height, TEXT_COLOR_FORMAT,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT or VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT or VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT, "GraviksTextCountAtlas"
             )
-            this.textOddAtlas = troll.images.createSimple(
+            this.textOddAtlas = boiler.images.createSimple(
                 stack, this.width, this.height, TEXT_COLOR_FORMAT,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT, "GraviksTextOddAtlas"
@@ -88,14 +88,14 @@ internal class TextShapeCache(
             if (vertexBufferByteSize > Int.MAX_VALUE) {
                 throw IllegalArgumentException("vertexBufferSize ($vertexBufferSize vertices -> $vertexBufferByteSize bytes) is too large")
             }
-            this.countVertexBuffer = troll.buffers.createMapped(
+            this.countVertexBuffer = boiler.buffers.createMapped(
                 vertexBufferByteSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, "GraviksTextCountVertices"
             )
 
-            val oddVertexBuffer = troll.buffers.createMapped(
+            val oddVertexBuffer = boiler.buffers.createMapped(
                 6L * 2 * 4, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, "GraviksTextOddVertices"
             )
-            this.oddVertexBuffer = oddVertexBuffer.buffer
+            this.oddVertexBuffer = oddVertexBuffer.asBuffer()
 
             val hostVertexOddByteBuffer = memFloatBuffer(oddVertexBuffer.hostAddress, 6 * 2)
             hostVertexOddByteBuffer.put(0, -1f)
@@ -111,13 +111,13 @@ internal class TextShapeCache(
             hostVertexOddByteBuffer.put(10, -1f)
             hostVertexOddByteBuffer.put(11, -1f)
 
-            this.textAtlasFramebuffer = troll.images.createFramebuffer(
+            this.textAtlasFramebuffer = boiler.images.createFramebuffer(
                 stack, context.instance.textPipelines.vkRenderPass, width, height, "GraviksTextFramebuffer",
                 textCountAtlas.vkImageView, textOddAtlas.vkImageView
             )
 
             val (descriptorPool, descriptorSet) = createTextOddPipelineDescriptors(
-                troll, stack, this.context.instance.textPipelines.oddDescriptorSetLayout,
+                boiler, stack, this.context.instance.textPipelines.oddDescriptorSetLayout,
                 this.textCountAtlas.vkImageView
             )
             this.descriptorPool = descriptorPool
@@ -202,7 +202,7 @@ internal class TextShapeCache(
 
                 val (currentX, currentY) = transformPoint(x(), y())
                 val hostVertexBuffer = TextVertexBuffer.createAtBuffer(
-                    memByteBuffer(countVertexBuffer.hostAddress, countVertexBuffer.buffer.size.toInt()),
+                    memByteBuffer(countVertexBuffer.hostAddress, countVertexBuffer.size.toInt()),
                     vertexBufferSize
                 )
 
@@ -259,11 +259,11 @@ internal class TextShapeCache(
     }
 
     fun destroy() {
-        val vmaAllocator = this.context.instance.troll.vmaAllocator()
-        val vkDevice = this.context.instance.troll.vkDevice()
+        val vmaAllocator = this.context.instance.boiler.vmaAllocator()
+        val vkDevice = this.context.instance.boiler.vkDevice()
 
         vkDestroyFramebuffer(vkDevice, this.textAtlasFramebuffer, null)
-        vmaDestroyBuffer(vmaAllocator, this.countVertexBuffer.buffer.vkBuffer, this.countVertexBuffer.buffer.vmaAllocation)
+        vmaDestroyBuffer(vmaAllocator, this.countVertexBuffer.vkBuffer, this.countVertexBuffer.vmaAllocation)
         vmaDestroyBuffer(vmaAllocator, this.oddVertexBuffer.vkBuffer, this.oddVertexBuffer.vmaAllocation)
         vkDestroyImageView(vkDevice, this.textOddAtlas.vkImageView, null)
         vmaDestroyImage(vmaAllocator, this.textOddAtlas.vkImage, this.textOddAtlas.vmaAllocation)

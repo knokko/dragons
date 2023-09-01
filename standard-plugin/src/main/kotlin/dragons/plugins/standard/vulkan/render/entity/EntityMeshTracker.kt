@@ -1,5 +1,6 @@
 package dragons.plugins.standard.vulkan.render.entity
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVmaSuccess
 import dragons.plugins.standard.vulkan.vertex.BasicVertex
 import dragons.util.nextPowerOf2
 import org.lwjgl.system.MemoryStack.stackPush
@@ -7,7 +8,6 @@ import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.util.vma.VmaVirtualAllocationCreateInfo
 import org.lwjgl.util.vma.VmaVirtualBlockCreateInfo
 import org.lwjgl.vulkan.VK10.VK_SUCCESS
-import troll.exceptions.VulkanFailureException.assertVmaSuccess
 import java.util.*
 
 internal class EntityMeshTracker(

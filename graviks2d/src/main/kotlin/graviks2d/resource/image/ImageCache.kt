@@ -1,10 +1,10 @@
 package graviks2d.resource.image
 
+import com.github.knokko.boiler.images.VmaImage
 import graviks2d.core.GraviksInstance
 import kotlinx.coroutines.*
 import org.lwjgl.util.vma.Vma.vmaDestroyImage
 import org.lwjgl.vulkan.VK10.vkDestroyImageView
-import troll.images.VmaImage
 import java.nio.file.Files
 
 internal class ImageCache(
@@ -123,7 +123,7 @@ private class CachedImage(
 
     suspend fun destroy(instance: GraviksInstance) {
         val imagePair = this.imagePair.await()
-        vkDestroyImageView(instance.troll.vkDevice(), imagePair.vkImageView, null)
-        vmaDestroyImage(instance.troll.vmaAllocator(), imagePair.vkImage, imagePair.vmaAllocation)
+        vkDestroyImageView(instance.boiler.vkDevice(), imagePair.vkImageView, null)
+        vmaDestroyImage(instance.boiler.vmaAllocator(), imagePair.vkImage, imagePair.vmaAllocation)
     }
 }

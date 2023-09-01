@@ -1,5 +1,6 @@
 package dragons.plugins.standard.vulkan.render
 
+import com.github.knokko.boiler.sync.WaitSemaphore
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.render.chunk.ChunkRenderManager
 import dragons.plugins.standard.vulkan.render.entity.EntityMesh
@@ -16,7 +17,6 @@ import org.joml.Matrix4f
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VkDevice
-import troll.sync.WaitSemaphore
 
 class StandardSceneRenderer internal constructor(
     gameState: StaticGameState,
@@ -43,7 +43,7 @@ class StandardSceneRenderer internal constructor(
 
     init {
         this.sceneCommands = SceneCommands(
-            vkDevice = gameState.graphics.troll.vkDevice(),
+            vkDevice = gameState.graphics.boiler.vkDevice(),
             queueFamily = gameState.graphics.queueManager.generalQueueFamily,
             basicRenderPass = pluginState.graphics.basicRenderPass,
             basicPipeline = pluginState.graphics.basicGraphicsPipeline,

@@ -1,5 +1,6 @@
 package dragons.vr
 
+import com.github.knokko.boiler.queue.BoilerQueue
 import dragons.init.GameInitProperties
 import dragons.state.StaticGraphicsState
 import dragons.geometry.Angle
@@ -18,7 +19,6 @@ import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
-import troll.queue.TrollQueue
 import java.lang.Thread.sleep
 
 internal fun tryInitOpenXR(initProps: GameInitProperties, logger: Logger): VrManager {
@@ -52,7 +52,7 @@ internal class OpenXrManager(
     private val camera = XrCamera()
 
     private lateinit var graphicsState: StaticGraphicsState
-    private lateinit var vkQueue: TrollQueue
+    private lateinit var vkQueue: BoilerQueue
     private lateinit var xrSession: XrSession
     private lateinit var sessionState: SessionState
     private lateinit var renderSpace: XrSpace
@@ -158,9 +158,9 @@ internal class OpenXrManager(
         stackPush().use { stack ->
             val graphicsBinding = XrGraphicsBindingVulkan2KHR.calloc(stack)
             graphicsBinding.`type$Default`()
-            graphicsBinding.instance(graphicsState.troll.vkInstance())
-            graphicsBinding.physicalDevice(graphicsState.troll.vkPhysicalDevice())
-            graphicsBinding.device(graphicsState.troll.vkDevice())
+            graphicsBinding.instance(graphicsState.boiler.vkInstance())
+            graphicsBinding.physicalDevice(graphicsState.boiler.vkPhysicalDevice())
+            graphicsBinding.device(graphicsState.boiler.vkDevice())
             graphicsBinding.queueFamilyIndex(graphicsState.queueManager.generalQueueFamily.index)
             graphicsBinding.queueIndex(graphicsState.queueManager.generalQueueFamily.getFirstPriorityQueueIndex())
 
@@ -263,7 +263,7 @@ internal class OpenXrManager(
                     }
                     if (waitSemaphore != null) {
                         resolveHelper.resolve(
-                            graphicsState.troll.vkDevice(),
+                            graphicsState.boiler.vkDevice(),
                             this.acquiredSwapchainImageIndices[0],
                             this.acquiredSwapchainImageIndices[1],
                             graphicsState.queueManager, waitSemaphore, takeScreenshot
@@ -308,7 +308,7 @@ internal class OpenXrManager(
                     null
                 }
 
-                // DONT change this to malloc because that will fail when layers == null
+                // DON'T change this to malloc because that will fail when layers == null
                 val eiFrame = XrFrameEndInfo.calloc(stack)
                 eiFrame.`type$Default`()
                 eiFrame.displayTime(nextDisplayTime)
@@ -330,12 +330,12 @@ internal class OpenXrManager(
     }
 
     override fun destroy() {
-        this.resolveHelper.destroy(graphicsState.troll.vkDevice())
+        this.resolveHelper.destroy(graphicsState.boiler.vkDevice())
         lastViews.free()
         xrDestroySpace(renderSpace)
         for (swapchain in swapchains) {
             for (swapchainImage in swapchain.images) {
-                vkDestroyImageView(graphicsState.troll.vkDevice(), swapchainImage.fullView!!, null)
+                vkDestroyImageView(graphicsState.boiler.vkDevice(), swapchainImage.fullView!!, null)
             }
             xrDestroySwapchain(swapchain.handle)
         }

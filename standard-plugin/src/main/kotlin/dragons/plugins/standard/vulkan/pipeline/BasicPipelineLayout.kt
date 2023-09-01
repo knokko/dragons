@@ -1,9 +1,9 @@
 package dragons.plugins.standard.vulkan.pipeline
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 const val MAX_NUM_DESCRIPTOR_IMAGES = 1000
 

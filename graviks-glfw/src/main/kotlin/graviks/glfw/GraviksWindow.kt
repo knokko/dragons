@@ -1,5 +1,15 @@
 package graviks.glfw
 
+import com.github.knokko.boiler.builder.BoilerBuilder
+import com.github.knokko.boiler.builder.BoilerBuilder.DEFAULT_VK_DEVICE_CREATOR
+import com.github.knokko.boiler.builder.BoilerSwapchainBuilder
+import com.github.knokko.boiler.builder.device.SimpleDeviceSelector
+import com.github.knokko.boiler.builder.instance.ValidationFeatures
+import com.github.knokko.boiler.builder.swapchain.SimpleSurfaceFormatPicker
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
+import com.github.knokko.boiler.instance.BoilerInstance
+import com.github.knokko.boiler.sync.ResourceUsage
+import com.github.knokko.boiler.sync.WaitSemaphore
 import graviks2d.context.GraviksContext
 import graviks2d.core.GraviksInstance
 import org.lwjgl.system.MemoryStack
@@ -14,16 +24,6 @@ import org.lwjgl.vulkan.KHRPresentWait.vkWaitForPresentKHR
 import org.lwjgl.vulkan.KHRSurface.VK_PRESENT_MODE_FIFO_KHR
 import org.lwjgl.vulkan.KHRSwapchain.*
 import org.lwjgl.vulkan.VK10.*
-import troll.builder.TrollBuilder
-import troll.builder.TrollBuilder.DEFAULT_VK_DEVICE_CREATOR
-import troll.builder.TrollSwapchainBuilder
-import troll.builder.device.SimpleDeviceSelector
-import troll.builder.instance.ValidationFeatures
-import troll.builder.swapchain.SimpleSurfaceFormatPicker
-import troll.exceptions.VulkanFailureException.assertVkSuccess
-import troll.instance.TrollInstance
-import troll.sync.ResourceUsage
-import troll.sync.WaitSemaphore
 import java.lang.System.nanoTime
 
 class GraviksWindow(
@@ -36,7 +36,7 @@ class GraviksWindow(
     private val createContext: (instance: GraviksInstance, width: Int, height: Int) -> GraviksContext
 ) {
 
-    val troll: TrollInstance
+    val boiler: BoilerInstance
     val graviksInstance: GraviksInstance
 
     val canAwaitPresent: Boolean
@@ -56,10 +56,10 @@ class GraviksWindow(
 
         var canAwaitPresent = false
 
-        this.troll = TrollBuilder(
+        this.boiler = BoilerBuilder(
             VK_API_VERSION_1_0, applicationName, applicationVersion
         )
-            .window(0L, initialWidth, initialHeight, TrollSwapchainBuilder(
+            .window(0L, initialWidth, initialHeight, BoilerSwapchainBuilder(
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT
             ).surfaceFormatPicker(SimpleSurfaceFormatPicker(VK_FORMAT_B8G8R8A8_UNORM)))
             .physicalDeviceSelector(deviceSelector)
@@ -99,9 +99,9 @@ class GraviksWindow(
             .build()
 
         this.canAwaitPresent = canAwaitPresent
-        this.hasIncrementalPresent = troll.deviceExtensions.contains(VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME)
+        this.hasIncrementalPresent = boiler.deviceExtensions.contains(VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME)
 
-        graviksInstance = GraviksInstance(troll)
+        graviksInstance = GraviksInstance(boiler)
     }
 
     fun presentFrame(waitUntilVisible: Boolean, fillPresentRegions: ((MemoryStack) -> VkRectLayerKHR.Buffer)?) {
@@ -118,7 +118,7 @@ class GraviksWindow(
         }
 
         // The swapchain image will be null when the window is minified. In this case, we should not do anything
-        val swapchainImage = troll.swapchains.acquireNextImage(VK_PRESENT_MODE_FIFO_KHR) ?: return
+        val swapchainImage = boiler.swapchains.acquireNextImage(VK_PRESENT_MODE_FIFO_KHR) ?: return
 
         if (currentGraviksContext == null || currentGraviksContext!!.width != swapchainImage.width || currentGraviksContext!!.height != swapchainImage.height) {
             if (currentGraviksContext != null) {
@@ -137,7 +137,7 @@ class GraviksWindow(
 
             graviksContext.addWaitSemaphore(WaitSemaphore(swapchainImage.acquireSemaphore, VK_PIPELINE_STAGE_TRANSFER_BIT))
             graviksContext.copyColorImageTo(
-                destImage = swapchainImage.vkImage, destImageFormat = troll.swapchainSettings.surfaceFormat.format,
+                destImage = swapchainImage.vkImage, destImageFormat = boiler.swapchainSettings.surfaceFormat.format,
                 destBuffer = null, signalSemaphore = swapchainImage.presentSemaphore,
                 originalImageLayout = VK_IMAGE_LAYOUT_UNDEFINED, finalImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                 imageSrcUsage = ResourceUsage(0, VK_PIPELINE_STAGE_TRANSFER_BIT),
@@ -172,7 +172,7 @@ class GraviksWindow(
                 presentIdInfo.address()
             } else 0L
 
-            troll.swapchains.presentImage(swapchainImage) { presentInfo ->
+            boiler.swapchains.presentImage(swapchainImage) { presentInfo ->
                 if (waitUntilVisible) presentInfo.pNext(presentIdAddress)
                 else presentInfo.pNext(incrementalPresentAddress)
             }
@@ -180,7 +180,7 @@ class GraviksWindow(
             if (waitUntilVisible) {
                 val startTime = nanoTime()
                 assertVkSuccess(vkWaitForPresentKHR(
-                    troll.vkDevice(), swapchainImage.vkSwapchain, pPresentId[0], 1_000_000_000L
+                    boiler.vkDevice(), swapchainImage.vkSwapchain, pPresentId[0], 1_000_000_000L
                 ), "WaitForPresentKHR", "GraviksWindow")
                 println("presentation took ${(nanoTime() - startTime) / 1000} microseconds")
                 lastPresentId += 1
@@ -191,6 +191,6 @@ class GraviksWindow(
     fun destroy() {
         if (currentGraviksContext != null) currentGraviksContext!!.destroy()
         graviksInstance.destroy()
-        troll.destroy()
+        boiler.destroy()
     }
 }

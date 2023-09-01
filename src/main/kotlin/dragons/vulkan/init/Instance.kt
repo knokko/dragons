@@ -1,5 +1,7 @@
 package dragons.vulkan.init
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import dragons.init.trouble.ExtensionStartupException
 import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
@@ -13,8 +15,6 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.LoggerFactory.getLogger
-import troll.exceptions.VulkanFailureException
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 import kotlin.jvm.Throws
 
 @Throws(StartupException::class)

@@ -16,7 +16,6 @@ import gruviks.component.text.*
 import gruviks.glfw.createAndControlGruviksWindow
 import gruviks.space.RectRegion
 import gruviks.space.SpaceLayout
-import org.joml.Matrix3x2f
 import org.lwjgl.vulkan.VK10.*
 import java.io.File
 import java.io.IOException
@@ -46,7 +45,7 @@ fun main() {
     val width = 500
     val height = 500
 
-    val pm2Instance = Pm2Instance(graviksWindow.troll)
+    val pm2Instance = Pm2Instance(graviksWindow.boiler)
     val errorComponent = TextComponent("", TextStyle(fillColor = Color.RED, font = null))
     val previewComponent = Pm2PreviewComponent(pm2Instance, initialModel, width, height, errorComponent::setText)
 

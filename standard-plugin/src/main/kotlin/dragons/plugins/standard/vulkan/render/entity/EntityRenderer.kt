@@ -1,12 +1,12 @@
 package dragons.plugins.standard.vulkan.render.entity
 
+import com.github.knokko.boiler.sync.WaitSemaphore
 import dragons.plugin.interfaces.PluginInterface
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.geometry.Position
 import dragons.world.entity.Entity
 import dragons.world.entity.EntityProperties
 import org.lwjgl.vulkan.VkDevice
-import troll.sync.WaitSemaphore
 import java.util.*
 import kotlin.reflect.KClass
 

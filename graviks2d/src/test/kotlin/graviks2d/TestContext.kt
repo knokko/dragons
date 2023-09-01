@@ -1,5 +1,10 @@
 package graviks2d
 
+import com.github.knokko.boiler.builder.BoilerBuilder
+import com.github.knokko.boiler.builder.instance.ValidationFeatures
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
+import com.github.knokko.boiler.images.VmaImage
+import com.github.knokko.boiler.sync.ResourceUsage
 import graviks2d.context.GraviksContext
 import graviks2d.core.GraviksInstance
 import graviks2d.resource.image.ImageCache
@@ -22,11 +27,6 @@ import org.lwjgl.system.MemoryUtil.*
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.vulkan.VK10.*
 import org.opentest4j.AssertionFailedError
-import troll.builder.TrollBuilder
-import troll.builder.instance.ValidationFeatures
-import troll.exceptions.VulkanFailureException.assertVkSuccess
-import troll.images.VmaImage
-import troll.sync.ResourceUsage
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_INT_ARGB
 import java.io.File
@@ -37,25 +37,25 @@ import kotlin.math.absoluteValue
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestContext {
 
-    private val troll = TrollBuilder(
+    private val boiler = BoilerBuilder(
         VK_API_VERSION_1_0, "TestGraviksContext", VK_MAKE_VERSION(0, 5, 0)
     )
         .validation(ValidationFeatures(false, false, false, true, true))
         .build()
-    private val graviksInstance = GraviksInstance(troll)
+    private val graviksInstance = GraviksInstance(boiler)
 
     private fun withTestImage(context: GraviksContext, flipY: Boolean, test: (() -> Unit, HostImage) -> Unit) {
-        val testBuffer = troll.buffers.createMapped(
+        val testBuffer = boiler.buffers.createMapped(
             context.width * context.height * 4L, VK_BUFFER_USAGE_TRANSFER_DST_BIT, "TestReadback"
         )
 
         val testHostBuffer = memByteBuffer(testBuffer.hostAddress, context.width * context.height * 4)
 
         test({ context.copyColorImageTo(
-            destImage = null, destBuffer = testBuffer.buffer.vkBuffer, destImageFormat = null, shouldAwaitCompletion = true
+            destImage = null, destBuffer = testBuffer.vkBuffer, destImageFormat = null, shouldAwaitCompletion = true
         )}, HostImage(context.width, context.height, testHostBuffer, flipY))
 
-        vmaDestroyBuffer(troll.vmaAllocator(), testBuffer.buffer.vkBuffer, testBuffer.buffer.vmaAllocation)
+        vmaDestroyBuffer(boiler.vmaAllocator(), testBuffer.vkBuffer, testBuffer.vmaAllocation)
     }
 
     private fun assertImageEquals(expectedFileName: String, actual: HostImage) {
@@ -361,10 +361,10 @@ class TestContext {
             assertImageEquals("drawImage.png", hostImage)
         }
 
-        vkDestroyImageView(troll.vkDevice(), image1.vkImageView, null)
-        vkDestroyImageView(troll.vkDevice(), image2.vkImageView, null)
-        vmaDestroyImage(troll.vmaAllocator(), image1.vkImage, image1.vmaAllocation)
-        vmaDestroyImage(troll.vmaAllocator(), image2.vkImage, image2.vmaAllocation)
+        vkDestroyImageView(boiler.vkDevice(), image1.vkImageView, null)
+        vkDestroyImageView(boiler.vkDevice(), image2.vkImageView, null)
+        vmaDestroyImage(boiler.vmaAllocator(), image1.vkImage, image1.vmaAllocation)
+        vmaDestroyImage(boiler.vmaAllocator(), image2.vkImage, image2.vmaAllocation)
 
         graviks.destroy()
     }
@@ -398,8 +398,8 @@ class TestContext {
             assertImageEquals("drawImage.png", hostImage)
         }
 
-        vkDestroyImageView(troll.vkDevice(), image1.vkImageView, null)
-        vmaDestroyImage(troll.vmaAllocator(), image1.vkImage, image1.vmaAllocation)
+        vkDestroyImageView(boiler.vkDevice(), image1.vkImageView, null)
+        vmaDestroyImage(boiler.vmaAllocator(), image1.vkImage, image1.vmaAllocation)
 
         graviks.destroy()
     }
@@ -600,7 +600,7 @@ class TestContext {
         val backgroundColor = Color.WHITE
 
         val graviksInstance = GraviksInstance(
-            troll, maxNumDescriptorImages = 2
+            boiler, maxNumDescriptorImages = 2
         )
 
         val graviks = GraviksContext(graviksInstance, 20, 20, initialBackgroundColor = backgroundColor)
@@ -702,7 +702,7 @@ class TestContext {
         )
 
         stackPush().use { stack ->
-            val destImage = troll.images.create(
+            val destImage = boiler.images.create(
                 stack, graviks.width, graviks.height, VK_FORMAT_B8G8R8A8_UNORM,
                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT or VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT, 1, 1,
@@ -716,34 +716,34 @@ class TestContext {
                 shouldAwaitCompletion = true
             )
 
-            val destBuffer = troll.buffers.createMapped(
+            val destBuffer = boiler.buffers.createMapped(
                 graviks.width * graviks.height * 4L, VK_BUFFER_USAGE_TRANSFER_DST_BIT, "TestDestBuffer"
             )
 
             val destHostBuffer = memByteBuffer(destBuffer.hostAddress, graviks.width * graviks.height * 4)
 
-            val commandPool = troll.commands.createPool(
-                VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, troll.queueFamilies().graphics.index, "TestCopy"
+            val commandPool = boiler.commands.createPool(
+                VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, boiler.queueFamilies().graphics.index, "TestCopy"
             )
-            val commandBuffer = troll.commands.createPrimaryBuffers(commandPool, 1, "TestCopy")[0]
-            troll.commands.begin(commandBuffer, stack, "TestGraviksContextCopy")
-            troll.commands.copyImageToBuffer(
+            val commandBuffer = boiler.commands.createPrimaryBuffers(commandPool, 1, "TestCopy")[0]
+            boiler.commands.begin(commandBuffer, stack, "TestGraviksContextCopy")
+            boiler.commands.copyImageToBuffer(
                 commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, destImage.vkImage,
-                graviks.width, graviks.height, destBuffer.buffer.vkBuffer
+                graviks.width, graviks.height, destBuffer.vkBuffer
             )
 
             assertVkSuccess(vkEndCommandBuffer(commandBuffer), "vkEndCommandBuffer", "TestGraviksContextCopy")
-            val copyFence = troll.sync.createFences(false, 1, "TestGraviksContextCopyFence")[0]
-            troll.queueFamilies().graphics.queues.random().submit(
+            val copyFence = boiler.sync.createFences(false, 1, "TestGraviksContextCopyFence")[0]
+            boiler.queueFamilies().graphics.queues.random().submit(
                 commandBuffer, "TestContext.testBlitColorImage", emptyArray(), copyFence
             )
             assertVkSuccess(
-                vkWaitForFences(troll.vkDevice(), stack.longs(copyFence), true, 1_000_000_000),
+                vkWaitForFences(boiler.vkDevice(), stack.longs(copyFence), true, 1_000_000_000),
                 "vkWaitForFences", "TestGraviksContextCopy"
             )
 
-            vkDestroyFence(troll.vkDevice(), copyFence, null)
-            vkDestroyCommandPool(troll.vkDevice(), commandPool, null)
+            vkDestroyFence(boiler.vkDevice(), copyFence, null)
+            vkDestroyCommandPool(boiler.vkDevice(), commandPool, null)
 
             for (x in 0 until graviks.width) {
                 for (y in 0 until graviks.height) {
@@ -755,8 +755,8 @@ class TestContext {
                 }
             }
 
-            vmaDestroyImage(troll.vmaAllocator(), destImage.vkImage, destImage.vmaAllocation)
-            vmaDestroyBuffer(troll.vmaAllocator(), destBuffer.buffer.vkBuffer, destBuffer.buffer.vmaAllocation)
+            vmaDestroyImage(boiler.vmaAllocator(), destImage.vkImage, destImage.vmaAllocation)
+            vmaDestroyBuffer(boiler.vmaAllocator(), destBuffer.vkBuffer, destBuffer.vmaAllocation)
         }
 
         graviks.destroy()
@@ -765,6 +765,6 @@ class TestContext {
     @AfterAll
     fun destroyGraviksInstance() {
         this.graviksInstance.destroy()
-        this.troll.destroy()
+        this.boiler.destroy()
     }
 }

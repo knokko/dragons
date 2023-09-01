@@ -44,12 +44,12 @@ fun main() {
 
     drawFunction()
 
-    glfwSetCursorPosCallback(window.troll.glfwWindow()) { _, rawX, rawY ->
+    glfwSetCursorPosCallback(window.boiler.glfwWindow()) { _, rawX, rawY ->
         val (x, y) = stackPush().use { stack ->
 
             val pWidth = stack.callocInt(1)
             val pHeight = stack.callocInt(1)
-            glfwGetFramebufferSize(window.troll.glfwWindow(), pWidth, pHeight)
+            glfwGetFramebufferSize(window.boiler.glfwWindow(), pWidth, pHeight)
 
             Pair(rawX.toFloat() / pWidth[0].toFloat(), 1f - rawY.toFloat() / pHeight[0].toFloat())
         }
@@ -86,12 +86,12 @@ fun main() {
         }
     }
 
-    glfwSetCharCallback(window.troll.glfwWindow()) { _, charCode ->
+    glfwSetCharCallback(window.boiler.glfwWindow()) { _, charCode ->
         typedString += String(Character.toChars(charCode))
         drawTypedString()
     }
 
-    glfwSetKeyCallback(window.troll.glfwWindow()) { _, keyCode, _, action, _ ->
+    glfwSetKeyCallback(window.boiler.glfwWindow()) { _, keyCode, _, action, _ ->
         if (keyCode == GLFW_KEY_ENTER && action == GLFW_PRESS) {
             typedString += '`'
         }
@@ -102,7 +102,7 @@ fun main() {
     }
 
     var oldContext = window.currentGraviksContext
-    while (!glfwWindowShouldClose(window.troll.glfwWindow())) {
+    while (!glfwWindowShouldClose(window.boiler.glfwWindow())) {
         glfwPollEvents()
 
         val currentContext = window.currentGraviksContext

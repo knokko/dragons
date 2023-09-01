@@ -1,11 +1,11 @@
 package dragons.plugins.standard.vulkan.panel
 
+import com.github.knokko.boiler.sync.ResourceUsage
 import dragons.vulkan.memory.VulkanImage
 import graviks2d.context.GraviksContext
 import graviks2d.core.GraviksInstance
 import kotlinx.coroutines.CompletableDeferred
 import org.lwjgl.vulkan.VK10.*
-import troll.sync.ResourceUsage
 import java.util.concurrent.ArrayBlockingQueue
 
 class Panel(

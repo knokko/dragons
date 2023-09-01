@@ -1,14 +1,14 @@
 package graviks2d.context
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
+import com.github.knokko.boiler.sync.ResourceUsage
+import com.github.knokko.boiler.sync.WaitSemaphore
 import graviks2d.resource.text.rasterizeTextAtlas
 import kotlinx.coroutines.CompletableDeferred
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
-import troll.exceptions.VulkanFailureException.assertVkSuccess
-import troll.sync.ResourceUsage
-import troll.sync.WaitSemaphore
 
 internal class ContextCommands(
     private val context: GraviksContext
@@ -26,14 +26,14 @@ internal class ContextCommands(
     private var hasPendingSubmission = false
 
     init {
-        val troll = context.instance.troll
-        this.commandPool = troll.commands.createPool(
+        val boiler = context.instance.boiler
+        this.commandPool = boiler.commands.createPool(
             VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-            troll.queueFamilies().graphics.index,
+            boiler.queueFamilies().graphics.index,
             "GraviksContextCommandPool"
         )
-        this.commandBuffer = troll.commands.createPrimaryBuffers(this.commandPool, 1, "GraviksContextCommandBuffer")[0]
-        this.fence = troll.sync.createFences(false, 1, "GraviksContextCommandFence")[0]
+        this.commandBuffer = boiler.commands.createPrimaryBuffers(this.commandPool, 1, "GraviksContextCommandBuffer")[0]
+        this.fence = boiler.sync.createFences(false, 1, "GraviksContextCommandFence")[0]
         this.initImageLayouts()
     }
 
@@ -44,11 +44,11 @@ internal class ContextCommands(
         if (hasPendingSubmission) throw IllegalStateException("Can't reset command buffer with pending submission")
 
         assertVkSuccess(
-            vkResetCommandPool(this.context.instance.troll.vkDevice(), this.commandPool, 0),
+            vkResetCommandPool(this.context.instance.boiler.vkDevice(), this.commandPool, 0),
             "vkResetCommandPool", "ContextCommands"
         )
 
-        context.instance.troll.commands.begin(commandBuffer, stack, "GraviksContextCommands")
+        context.instance.boiler.commands.begin(commandBuffer, stack, "GraviksContextCommands")
         isStillRecording = true
     }
 
@@ -64,7 +64,7 @@ internal class ContextCommands(
 
         val signalSemaphores = if (signalSemaphore != null) longArrayOf(signalSemaphore) else LongArray(0)
 
-        this.context.instance.troll.queueFamilies().graphics.queues.random().submit(
+        this.context.instance.boiler.queueFamilies().graphics.queues.random().submit(
             commandBuffer, "ContextCommands.endSubmitCommandBuffer",
             waitSemaphores.toTypedArray(), fence, *signalSemaphores
         )
@@ -81,7 +81,7 @@ internal class ContextCommands(
 
         // If this simple command can't complete within this timeout, something is wrong
         val timeout = 10_000_000_000L
-        context.instance.troll.sync.waitAndReset(stack, fence, timeout)
+        context.instance.boiler.sync.waitAndReset(stack, fence, timeout)
 
         hasPendingSubmission = false
     }
@@ -99,7 +99,7 @@ internal class ContextCommands(
 
             resetBeginCommandBuffer(stack)
 
-            context.instance.troll.commands.transitionColorLayout(
+            context.instance.boiler.commands.transitionColorLayout(
                 stack, commandBuffer, context.targetImages.colorImage.vkImage,
                 VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, null,
                 ResourceUsage(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
@@ -124,8 +124,8 @@ internal class ContextCommands(
                 resetBeginCommandBuffer(stack)
             }
 
-            val troll = context.instance.troll
-            troll.commands.transitionColorLayout(
+            val boiler = context.instance.boiler
+            boiler.commands.transitionColorLayout(
                 stack, commandBuffer, context.targetImages.colorImage.vkImage,
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 ResourceUsage(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
@@ -143,19 +143,19 @@ internal class ContextCommands(
                 checkPresent(finalImageLayout, "finalImageLayout")
 
                 if (originalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-                    troll.commands.transitionColorLayout(
+                    boiler.commands.transitionColorLayout(
                         stack, commandBuffer, destImage, originalImageLayout!!, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                             imageSrcUsage, ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
                     )
                 }
 
                 if (destImageFormat == TARGET_COLOR_FORMAT) {
-                    troll.commands.copyImage(
+                    boiler.commands.copyImage(
                         commandBuffer, stack, context.width, context.height, VK_IMAGE_ASPECT_COLOR_BIT,
                         context.targetImages.colorImage.vkImage, destImage
                     )
                 } else {
-                    troll.commands.blitImage(
+                    boiler.commands.blitImage(
                         commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, VK_FILTER_NEAREST,
                         context.targetImages.colorImage.vkImage, context.width, context.height,
                         destImage, context.width, context.height
@@ -163,7 +163,7 @@ internal class ContextCommands(
                 }
 
                 if (finalImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-                    troll.commands.transitionColorLayout(
+                    boiler.commands.transitionColorLayout(
                         stack, commandBuffer, destImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, finalImageLayout!!,
                         ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT), imageDstUsage
                     )
@@ -171,13 +171,13 @@ internal class ContextCommands(
             }
 
             if (destBuffer != null) {
-                troll.commands.copyImageToBuffer(
+                boiler.commands.copyImageToBuffer(
                     commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, context.targetImages.colorImage.vkImage,
                     context.width, context.height, destBuffer
                 )
             }
 
-            troll.commands.transitionColorLayout(
+            boiler.commands.transitionColorLayout(
                 stack, commandBuffer, context.targetImages.colorImage.vkImage,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                 ResourceUsage(VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
@@ -199,7 +199,7 @@ internal class ContextCommands(
                 resetBeginCommandBuffer(stack)
             }
 
-            rasterizeTextAtlas(context.instance.troll, commandBuffer, this.context.textShapeCache, !hasDrawnBefore)
+            rasterizeTextAtlas(context.instance.boiler, commandBuffer, this.context.textShapeCache, !hasDrawnBefore)
 
             hasDrawnBefore = true
 
@@ -243,7 +243,7 @@ internal class ContextCommands(
                         vkCmdBindVertexBuffers(
                             this.commandBuffer,
                             0,
-                            stack.longs(this.context.buffers.vertexBuffer.buffer.vkBuffer),
+                            stack.longs(this.context.buffers.vertexBuffer.vkBuffer),
                             stack.longs(0L)
                         )
                         vkCmdBindDescriptorSets(
@@ -277,7 +277,7 @@ internal class ContextCommands(
         if (isStillRecording && hasDrawnBefore) throw IllegalStateException("Can't destroy ContextCommands while commands are being recorded")
         if (hasPendingSubmission) stackPush().use { stack -> awaitPendingSubmission(stack) }
 
-        vkDestroyCommandPool(context.instance.troll.vkDevice(), this.commandPool, null)
-        vkDestroyFence(context.instance.troll.vkDevice(), this.fence, null)
+        vkDestroyCommandPool(context.instance.boiler.vkDevice(), this.commandPool, null)
+        vkDestroyFence(context.instance.boiler.vkDevice(), this.fence, null)
     }
 }

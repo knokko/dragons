@@ -1,5 +1,6 @@
 package dsl.pm2.ui
 
+import com.github.knokko.boiler.instance.BoilerInstance
 import dsl.pm2.renderer.Pm2Instance
 import graviks.glfw.GraviksWindow
 import graviks2d.context.GraviksContext
@@ -24,7 +25,6 @@ import gruviks.space.SpaceLayout
 import org.lwjgl.vulkan.VK10.*
 import profiler.performance.PerformanceProfiler
 import profiler.performance.PerformanceStorage
-import troll.instance.TrollInstance
 import java.io.File
 
 internal val rootDirectory = File("pm2-models")
@@ -35,7 +35,7 @@ private class SaveOnQuitController(
     override fun processEvent(event: Event) {
         if (event is RemoveEvent) {
             for (openFile in openFiles) openFile.save(true)
-            vkDeviceWaitIdle(pm2Instance.troll.vkDevice())
+            vkDeviceWaitIdle(pm2Instance.boiler.vkDevice())
             pm2Instance.destroy()
         }
     }
@@ -46,8 +46,8 @@ private val fileIcon = ImageReference.classLoaderPath("dsl/pm2/ui/file.png", fal
 private val parametersIcon = ImageReference.classLoaderPath("dsl/pm2/ui/parameters.png", false)
 private val trianglesIcon = ImageReference.classLoaderPath("dsl/pm2/ui/triangles.png", false)
 
-fun createPm2Editor(troll: TrollInstance): Component {
-    val pm2Instance = Pm2Instance(troll)
+fun createPm2Editor(boiler: BoilerInstance): Component {
+    val pm2Instance = Pm2Instance(boiler)
     val rootMenu = SimpleFlatMenu(SpaceLayout.Simple, backgroundColor.scale(1.2f))
 
     val openFiles = mutableListOf<OpenFile>()
@@ -167,7 +167,7 @@ fun main() {
         "Pm2Editor", VK_MAKE_VERSION(0, 1, 0), true
     ) { instance, width, height -> GraviksContext(instance, width, height) }
 
-    createAndControlGruviksWindow(graviksWindow, createPm2Editor(graviksWindow.troll))
+    createAndControlGruviksWindow(graviksWindow, createPm2Editor(graviksWindow.boiler))
     profiler.stop()
     profiler.storage.dump(File("dsl-profiler.log"))
 }

@@ -1,5 +1,7 @@
 package graviks2d.playground
 
+import com.github.knokko.boiler.builder.BoilerBuilder
+import com.github.knokko.boiler.builder.instance.ValidationFeatures
 import graviks2d.context.GraviksContext
 import graviks2d.core.GraviksInstance
 import graviks2d.resource.text.TextAlignment
@@ -10,12 +12,10 @@ import graviks2d.util.HostImage
 import org.lwjgl.system.MemoryUtil.memByteBuffer
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.vulkan.VK10.*
-import troll.builder.TrollBuilder
-import troll.builder.instance.ValidationFeatures
 import java.io.File
 
 fun main() {
-    val troll = TrollBuilder(
+    val boiler = BoilerBuilder(
         VK_API_VERSION_1_0, "DrawPlayground", VK_MAKE_VERSION(0, 1, 0)
     )
         .validation(ValidationFeatures(false, false, false, true, true))
@@ -24,14 +24,14 @@ fun main() {
     val width = 1000
     val height = 4700
 
-    val testBuffer = troll.buffers.createMapped(
+    val testBuffer = boiler.buffers.createMapped(
         width * height * 4L, VK_BUFFER_USAGE_TRANSFER_DST_BIT, "TestReadback"
     )
 
     val testHostBuffer = memByteBuffer(testBuffer.hostAddress, width * height * 4)
     val testHostImage = HostImage(width, height, testHostBuffer, false)
 
-    val graviksInstance = GraviksInstance(troll)
+    val graviksInstance = GraviksInstance(boiler)
 
     val graviks = GraviksContext(
         graviksInstance, width, height, initialBackgroundColor = Color.rgbInt(200, 100, 150),
@@ -83,7 +83,7 @@ fun main() {
     )
     val time2 = System.currentTimeMillis()
     graviks.copyColorImageTo(
-        destImage = null, destBuffer = testBuffer.buffer.vkBuffer,
+        destImage = null, destBuffer = testBuffer.vkBuffer,
         destImageFormat = null, shouldAwaitCompletion = true
     )
     val time3 = System.currentTimeMillis()
@@ -93,6 +93,6 @@ fun main() {
     graviks.destroy()
     graviksInstance.destroy()
 
-    vmaDestroyBuffer(troll.vmaAllocator(), testBuffer.buffer.vkBuffer, testBuffer.buffer.vmaAllocation)
-    troll.destroy()
+    vmaDestroyBuffer(boiler.vmaAllocator(), testBuffer.vkBuffer, testBuffer.vmaAllocation)
+    boiler.destroy()
 }

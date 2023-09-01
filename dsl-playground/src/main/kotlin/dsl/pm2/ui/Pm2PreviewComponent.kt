@@ -1,5 +1,7 @@
 package dsl.pm2.ui
 
+import com.github.knokko.boiler.images.VmaImage
+import com.github.knokko.boiler.sync.WaitSemaphore
 import dsl.pm2.interpreter.Pm2Model
 import dsl.pm2.interpreter.Pm2RuntimeError
 import dsl.pm2.interpreter.Pm2Vertex
@@ -18,8 +20,6 @@ import org.joml.Matrix3x2f
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.util.vma.Vma.vmaDestroyImage
 import org.lwjgl.vulkan.VK10.*
-import troll.images.VmaImage
-import troll.sync.WaitSemaphore
 import kotlin.math.absoluteValue
 
 private fun createDummyModel() = Pm2Model(listOf(
@@ -50,18 +50,18 @@ class Pm2PreviewComponent(
 
     init {
         scene = Pm2Scene(
-            pm2Instance.troll,
+            pm2Instance.boiler,
             pm2Instance.descriptorSetLayout,
             20, 200, 250,
             width, height
         )
         stackPush().use { stack ->
-            sceneImage = pm2Instance.troll.images.createSimple(
+            sceneImage = pm2Instance.boiler.images.createSimple(
                 stack, width, height, VK_FORMAT_R8G8B8A8_SRGB,
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_ASPECT_COLOR_BIT, "Pm2PreviewImage"
             )
-            sceneSemaphore = pm2Instance.troll.sync.createSemaphores("Pm2PreviewSemaphore", 1)[0]
+            sceneSemaphore = pm2Instance.boiler.sync.createSemaphores("Pm2PreviewSemaphore", 1)[0]
         }
     }
 
@@ -118,9 +118,9 @@ class Pm2PreviewComponent(
         if (event is RemoveEvent) {
             scene.destroy()
             pm2Instance.allocations.destroyMesh(currentMesh)
-            vkDestroyImageView(pm2Instance.troll.vkDevice(), sceneImage.vkImageView, null)
-            vmaDestroyImage(pm2Instance.troll.vmaAllocator(), sceneImage.vkImage, sceneImage.vmaAllocation)
-            vkDestroySemaphore(pm2Instance.troll.vkDevice(), sceneSemaphore, null)
+            vkDestroyImageView(pm2Instance.boiler.vkDevice(), sceneImage.vkImageView, null)
+            vmaDestroyImage(pm2Instance.boiler.vmaAllocator(), sceneImage.vkImage, sceneImage.vmaAllocation)
+            vkDestroySemaphore(pm2Instance.boiler.vkDevice(), sceneSemaphore, null)
         }
     }
 

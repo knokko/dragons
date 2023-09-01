@@ -77,7 +77,7 @@ dependencies {
     implementation project(':graviks2d')
     implementation project(':profiler')
     implementation 'com.github.knokko:memory-query:v1.0'
-    implementation project(':troll-engine')
+    implementation 'com.github.knokko:vk-boiler:v1.0.0'
     runtimeOnly 'ch.qos.logback:logback-classic:1.4.11'
     runtimeOnly 'ch.qos.logback:logback-core:1.4.11'
 
@@ -104,7 +104,7 @@ project(':standard-plugin') {
         compileOnly project(':fixie')
         compileOnly project(':graviks2d')
         compileOnly project(':profiler')
-        compileOnly project(':troll-engine')
+        compileOnly 'com.github.knokko:vk-boiler:v1.0.0'
         implementation project(':gruviks')
 
         testImplementation project(':')
@@ -119,54 +119,9 @@ project(':fixie') {
     // No dependencies yet I guess
 }
 
-project(':troll-engine') {
-    dependencies {
-        compileOnly "org.lwjgl:lwjgl"
-        compileOnly "org.lwjgl:lwjgl-vma"
-        compileOnly "org.lwjgl:lwjgl-vulkan"
-        compileOnly "org.lwjgl:lwjgl-glfw"
-        compileOnly "org.joml:joml:${jomlVersion}"
-
-        testImplementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
-        testImplementation "org.lwjgl:lwjgl"
-        testImplementation "org.lwjgl:lwjgl-vma"
-        testImplementation "org.lwjgl:lwjgl-vulkan"
-        testImplementation "org.lwjgl:lwjgl-glfw"
-        testImplementation "org.joml:joml:${jomlVersion}"
-
-        testRuntimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
-        testRuntimeOnly "org.lwjgl:lwjgl-glfw::$lwjglNatives"
-        testRuntimeOnly "org.lwjgl:lwjgl-vma::$lwjglNatives"
-        // TODO Maybe MacOS?
-    }
-}
-
-project(':troll-demos') {
-    dependencies {
-        implementation project(':troll-engine')
-        implementation project(':profiler')
-        implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
-        implementation "org.lwjgl:lwjgl"
-        implementation "org.lwjgl:lwjgl-vma"
-        implementation "org.lwjgl:lwjgl-vulkan"
-        implementation "org.lwjgl:lwjgl-glfw"
-        implementation "org.joml:joml:${jomlVersion}"
-
-        runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
-        runtimeOnly "org.lwjgl:lwjgl-glfw::$lwjglNatives"
-        runtimeOnly "org.lwjgl:lwjgl-vma::$lwjglNatives"
-        // TODO Maybe MacOS?
-    }
-    shadowJar {
-        manifest {
-            attributes ('Main-Class': 'troll.demos.TerrainPlayground')
-        }
-    }
-}
-
 project(':graviks2d') {
     dependencies {
-        compileOnly project(':troll-engine')
+        compileOnly 'com.github.knokko:vk-boiler:v1.0.0'
         implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
         implementation "org.lwjgl:lwjgl-stb"
 
@@ -182,14 +137,14 @@ project(':graviks2d') {
         runtimeOnly "org.lwjgl:lwjgl-stb::$lwjglNatives"
 
         testImplementation project(':graviks-glfw')
-        testImplementation project(':troll-engine')
+        testImplementation 'com.github.knokko:vk-boiler:v1.0.0'
     }
 }
 
 project(':graviks-glfw') {
     dependencies {
         implementation project(':graviks2d')
-        implementation project(':troll-engine')
+        implementation 'com.github.knokko:vk-boiler:v1.0.0'
 
         implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
 
@@ -209,7 +164,7 @@ project(':graviks-glfw') {
 project(':gruviks') {
     dependencies {
         implementation project(':graviks2d')
-        implementation project(':troll-engine')
+        implementation 'com.github.knokko:vk-boiler:v1.0.0'
     }
 }
 
@@ -218,7 +173,7 @@ project(':gruviks-glfw') {
         implementation project(':graviks2d')
         implementation project(':gruviks')
         implementation project(':graviks-glfw')
-        implementation project(':troll-engine')
+        implementation 'com.github.knokko:vk-boiler:v1.0.0'
 
         implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
         implementation "org.lwjgl:lwjgl"
@@ -234,7 +189,7 @@ project(':gruviks-glfw') {
 project(':debug-plugin') {
     dependencies {
         compileOnly project(':')
-        compileOnly project(':troll-engine')
+        compileOnly 'com.github.knokko:vk-boiler:v1.0.0'
     }
 }
 
@@ -244,7 +199,7 @@ project(':dsl-playground') {
         implementation project(':graviks-glfw')
         implementation project(':gruviks')
         implementation project(':gruviks-glfw')
-        implementation project(':troll-engine')
+        implementation 'com.github.knokko:vk-boiler:v1.0.0'
         implementation project(':profiler')
         implementation 'org.antlr:antlr4:4.13.0'
         implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"

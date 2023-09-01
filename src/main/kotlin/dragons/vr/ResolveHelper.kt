@@ -1,5 +1,7 @@
 package dragons.vr
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
+import com.github.knokko.boiler.sync.WaitSemaphore
 import dragons.state.StaticGraphicsState
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.memory.VulkanBufferRange
@@ -8,8 +10,6 @@ import dragons.vulkan.queue.QueueManager
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*
-import troll.exceptions.VulkanFailureException.assertVkSuccess
-import troll.sync.WaitSemaphore
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_INT_ARGB
@@ -45,7 +45,7 @@ class ResolveHelper(
         leftScreenshotHostBuffer = graphicsState.coreMemory.leftScreenshotBuffer.first,
         rightScreenshotStagingBuffer = graphicsState.coreMemory.rightScreenshotBuffer.second,
         rightScreenshotHostBuffer = graphicsState.coreMemory.rightScreenshotBuffer.first,
-        vkDevice = graphicsState.troll.vkDevice(), queueManager = graphicsState.queueManager, renderImageInfo = graphicsState.renderImageInfo
+        vkDevice = graphicsState.boiler.vkDevice(), queueManager = graphicsState.queueManager, renderImageInfo = graphicsState.renderImageInfo
     )
 
     private val resolveCommandPool: Long

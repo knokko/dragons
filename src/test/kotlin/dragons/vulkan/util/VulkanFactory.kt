@@ -1,11 +1,11 @@
 package dragons.vulkan.util
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkInstance
 import org.lwjgl.vulkan.VkInstanceCreateInfo
 import org.lwjgl.vulkan.VkPhysicalDevice
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 /**
  * Creates a minimal, but valid VkInstance

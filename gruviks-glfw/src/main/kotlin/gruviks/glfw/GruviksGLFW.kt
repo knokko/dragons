@@ -34,7 +34,7 @@ fun createAndControlGruviksWindow(
     var shiftDown = false
     var controlDown = false
 
-    val windowHandle = graviksWindow.graviksInstance.troll.glfwWindow()
+    val windowHandle = graviksWindow.graviksInstance.boiler.glfwWindow()
 
     glfwSetCursorPosCallback(windowHandle) { _, newRawX, newRawY ->
         graviksWindow.currentGraviksContext?.run {
@@ -107,13 +107,13 @@ fun createAndControlGruviksWindow(
         }
     }
 
-    glfwSetWindowRefreshCallback(graviksWindow.troll.glfwWindow()) {
+    glfwSetWindowRefreshCallback(graviksWindow.boiler.glfwWindow()) {
         graviksWindow.drawAndPresent(false, { graviksContext ->
             gruviksWindow.render(graviksContext, true, mutableListOf())
         }, null)
     }
 
-    glfwSetWindowPosCallback(graviksWindow.troll.glfwWindow()) { _, _, _ ->
+    glfwSetWindowPosCallback(graviksWindow.boiler.glfwWindow()) { _, _, _ ->
         graviksWindow.drawAndPresent(false, { graviksContext ->
             gruviksWindow.render(graviksContext, false, mutableListOf())
         }, null)
@@ -165,7 +165,7 @@ fun createAndControlGruviksWindow(
     }
     gruviksWindow.fireEvent(RawRemoveEvent())
 
-    vkDeviceWaitIdle(graviksWindow.troll.vkDevice())
+    vkDeviceWaitIdle(graviksWindow.boiler.vkDevice())
     destroyFunction()
     graviksWindow.destroy()
 }

@@ -1,5 +1,8 @@
 package graviks2d.resource.image
 
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
+import com.github.knokko.boiler.images.VmaImage
+import com.github.knokko.boiler.sync.ResourceUsage
 import graviks2d.core.GraviksInstance
 import org.lwjgl.stb.STBImage.stbi_info_from_memory
 import org.lwjgl.stb.STBImage.stbi_load_from_memory
@@ -8,9 +11,6 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil.*
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.vulkan.VK10.*
-import troll.exceptions.VulkanFailureException.assertVkSuccess
-import troll.images.VmaImage
-import troll.sync.ResourceUsage
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 
@@ -43,13 +43,13 @@ internal fun createImagePair(
         val imagePixelByteBuffer = stbi_load_from_memory(imageRawByteBuffer, pWidth, pHeight, pComponents, 4)
             ?: throw IllegalArgumentException("Can't decode image at path $pathDescription")
 
-        val image = instance.troll.images.createSimple(
+        val image = instance.boiler.images.createSimple(
             stack, width, height, VK_FORMAT_R8G8B8A8_UNORM,
             VK_IMAGE_USAGE_TRANSFER_DST_BIT or VK_IMAGE_USAGE_SAMPLED_BIT,
             VK_IMAGE_ASPECT_COLOR_BIT, name
         )
 
-        val stagingBuffer = instance.troll.buffers.createMapped(
+        val stagingBuffer = instance.boiler.buffers.createMapped(
             imagePixelByteBuffer.capacity().toLong(),
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "$name-staging"
         )
@@ -57,19 +57,19 @@ internal fun createImagePair(
         val stagingByteBuffer = memByteBuffer(stagingBuffer.hostAddress, imagePixelByteBuffer.capacity())
         memCopy(imagePixelByteBuffer, stagingByteBuffer)
 
-        val commandPool = instance.troll.commands.createPool(
-            VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, instance.troll.queueFamilies().graphics.index, "$name-transfer"
+        val commandPool = instance.boiler.commands.createPool(
+            VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, instance.boiler.queueFamilies().graphics.index, "$name-transfer"
         )
-        val commandBuffer = instance.troll.commands.createPrimaryBuffers(commandPool, 1, "$name-transfer")[0]
-        instance.troll.commands.begin(commandBuffer, stack, "$name-transfer")
-        instance.troll.commands.transitionColorLayout(
+        val commandBuffer = instance.boiler.commands.createPrimaryBuffers(commandPool, 1, "$name-transfer")[0]
+        instance.boiler.commands.begin(commandBuffer, stack, "$name-transfer")
+        instance.boiler.commands.transitionColorLayout(
             stack, commandBuffer, image.vkImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             null, ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT)
         )
-        instance.troll.commands.copyBufferToImage(
-            commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, image.vkImage, width, height, stagingBuffer.buffer.vkBuffer
+        instance.boiler.commands.copyBufferToImage(
+            commandBuffer, stack, VK_IMAGE_ASPECT_COLOR_BIT, image.vkImage, width, height, stagingBuffer.vkBuffer
         )
-        instance.troll.commands.transitionColorLayout(
+        instance.boiler.commands.transitionColorLayout(
             stack, commandBuffer, image.vkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             ResourceUsage(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT),
@@ -78,21 +78,21 @@ internal fun createImagePair(
 
         assertVkSuccess(vkEndCommandBuffer(commandBuffer), "vkEndCommandBuffer", "GraviksImageFactory-$name")
 
-        val fence = instance.troll.sync.createFences(false, 1, "fence-transfer-$name")[0]
+        val fence = instance.boiler.sync.createFences(false, 1, "fence-transfer-$name")[0]
 
-        instance.troll.queueFamilies().graphics.queues.random().submit(
+        instance.boiler.queueFamilies().graphics.queues.random().submit(
             commandBuffer, "ImageFactory.createImagePair-$name", emptyArray(), fence
         )
 
         assertVkSuccess(
-            vkWaitForFences(instance.troll.vkDevice(), stack.longs(fence), true, 10_000_000_000L),
+            vkWaitForFences(instance.boiler.vkDevice(), stack.longs(fence), true, 10_000_000_000L),
             "vkWaitForFences", "ImageFactory.createImagePair-$name"
         )
-        vkDestroyFence(instance.troll.vkDevice(), fence, null)
-        vkDestroyCommandPool(instance.troll.vkDevice(), commandPool, null)
+        vkDestroyFence(instance.boiler.vkDevice(), fence, null)
+        vkDestroyCommandPool(instance.boiler.vkDevice(), commandPool, null)
 
         memFree(imagePixelByteBuffer)
-        vmaDestroyBuffer(instance.troll.vmaAllocator(), stagingBuffer.buffer.vkBuffer, stagingBuffer.buffer.vmaAllocation)
+        vmaDestroyBuffer(instance.boiler.vmaAllocator(), stagingBuffer.vkBuffer, stagingBuffer.vmaAllocation)
         memFree(imageRawByteBuffer)
 
         image

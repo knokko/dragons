@@ -1,11 +1,11 @@
 package graviks2d.context
 
+import com.github.knokko.boiler.buffer.VmaBuffer
+import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
 import graviks2d.core.GraviksInstance
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK10.*
-import troll.buffer.VmaBuffer
-import troll.exceptions.VulkanFailureException.assertVkSuccess
 
 internal class ContextDescriptors(
     private val instance: GraviksInstance,
@@ -40,11 +40,11 @@ internal class ContextDescriptors(
 
             val pPool = stack.callocLong(1)
             assertVkSuccess(
-                vkCreateDescriptorPool(this.instance.troll.vkDevice(), ciPool, null, pPool),
+                vkCreateDescriptorPool(this.instance.boiler.vkDevice(), ciPool, null, pPool),
                 "vkCreateDescriptorPool", "GraviksContextDescriptors"
             )
             this.descriptorPool = pPool[0]
-            this.descriptorSet = instance.troll.descriptors.allocate(
+            this.descriptorSet = instance.boiler.descriptors.allocate(
                 stack, 1, descriptorPool, "GraviksDescriptors", instance.pipeline.vkDescriptorSetLayout
             )[0]
         }
@@ -53,7 +53,7 @@ internal class ContextDescriptors(
 
     fun updateDescriptors(imageViews: Array<Long>) {
         stackPush().use { stack ->
-            val operationBufferDescriptors = instance.troll.descriptors.bufferInfo(stack, operationBuffer)
+            val operationBufferDescriptors = instance.boiler.descriptors.bufferInfo(stack, operationBuffer)
 
             val textureSamplerDescriptors = VkDescriptorImageInfo.calloc(2, stack)
             textureSamplerDescriptors[0].sampler(instance.textureSampler)
@@ -108,11 +108,11 @@ internal class ContextDescriptors(
             textTextureWrite.descriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
             textTextureWrite.pImageInfo(textTextureDescriptors)
 
-            vkUpdateDescriptorSets(this.instance.troll.vkDevice(), writes, null)
+            vkUpdateDescriptorSets(this.instance.boiler.vkDevice(), writes, null)
         }
     }
 
     fun destroy() {
-        vkDestroyDescriptorPool(this.instance.troll.vkDevice(), this.descriptorPool, null)
+        vkDestroyDescriptorPool(this.instance.boiler.vkDevice(), this.descriptorPool, null)
     }
 }
