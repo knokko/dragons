@@ -26,6 +26,7 @@ fun createAndControlGruviksWindow(
     destroyFunction: () -> Unit = { }
 ) {
     val gruviksWindow = GruviksWindow(rootComponent)
+    gruviksWindow.setSystemSelection = ::setSystemSelection
 
     val mouseCursor = Cursor(0)
     val regionsToPresent = mutableListOf<RectangularDrawnRegion>()
@@ -50,6 +51,10 @@ fun createAndControlGruviksWindow(
         }
         if (action == GLFW_RELEASE) {
             gruviksWindow.fireEvent(RawCursorReleaseEvent(mouseCursor, button))
+        }
+        if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS) {
+            val systemSelection = getSystemSelection()
+            if (systemSelection != null) gruviksWindow.fireEvent(RawClipboardPasteEvent(systemSelection))
         }
     }
 
@@ -77,7 +82,7 @@ fun createAndControlGruviksWindow(
         gruviksWindow.fireEvent(RawKeyTypeEvent(codePoint))
     }
 
-    glfwSetKeyCallback(windowHandle) { _, keyCode, _, wasPressed, _ ->
+    glfwSetKeyCallback(windowHandle) { _, keyCode, _, wasPressed, mods ->
         val keyType = when (keyCode) {
             GLFW_KEY_LEFT -> KeyType.Left
             GLFW_KEY_RIGHT -> KeyType.Right
@@ -104,6 +109,19 @@ fun createAndControlGruviksWindow(
         if (keyCode == GLFW_KEY_LEFT_CONTROL || keyCode == GLFW_KEY_RIGHT_CONTROL) {
             if (wasPressed == GLFW_PRESS || wasPressed == GLFW_REPEAT) controlDown = true
             if (wasPressed == GLFW_RELEASE) controlDown = false
+        }
+
+        if (wasPressed == GLFW_PRESS && (mods and GLFW_MOD_CONTROL) != 0) {
+            fun copyToClipboard(content: String) {
+                glfwSetClipboardString(0L, content)
+            }
+
+            if (keyCode == GLFW_KEY_C) gruviksWindow.fireEvent(RawClipboardCopyEvent(false, ::copyToClipboard))
+            if (keyCode == GLFW_KEY_V) {
+                val content = glfwGetClipboardString(0L)
+                if (content != null) gruviksWindow.fireEvent(RawClipboardPasteEvent(content))
+            }
+            if (keyCode == GLFW_KEY_X) gruviksWindow.fireEvent(RawClipboardCopyEvent(true, ::copyToClipboard))
         }
     }
 

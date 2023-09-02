@@ -6,9 +6,7 @@ import gruviks.component.Component
 import gruviks.component.RectangularDrawnRegion
 import gruviks.component.RenderResult
 import gruviks.event.*
-import gruviks.feedback.ReleaseKeyboardFocusFeedback
-import gruviks.feedback.RenderFeedback
-import gruviks.feedback.RequestKeyboardFocusFeedback
+import gruviks.feedback.*
 import java.lang.Double.parseDouble
 import java.lang.Long.parseLong
 import java.lang.System.currentTimeMillis
@@ -41,6 +39,50 @@ class TextField(
     private var lastCaretTime = currentTimeMillis()
     private var showCaret = true
 
+    private var selectionStart: Int? = null
+    private var selectionEnd: Int? = null
+    private var isSelecting = false
+
+    private fun cancelSelection() {
+        if (selectionStart != null || selectionEnd != null) {
+            selectionStart = null
+            selectionEnd = null
+            agent.giveFeedback(RenderFeedback())
+        }
+    }
+
+    private fun getSelectedString(): String {
+        val selectionStart = this.selectionStart
+        val selectionEnd = this.selectionEnd
+        return if (selectionStart != null && selectionEnd != null) {
+            textInput.getText().substring(min(selectionStart, selectionEnd) until max(selectionStart, selectionEnd))
+        } else ""
+    }
+
+    private fun deleteSelectedText() {
+        val selectionStart = this.selectionStart
+        val selectionEnd = this.selectionEnd
+        if (selectionStart != null && selectionEnd != null) {
+            this.selectionStart = null
+            this.selectionEnd = null
+            this.isSelecting = false
+
+            val selectionMin = min(selectionStart, selectionEnd)
+            textInput.setCaretPosition(selectionMin)
+
+            val oldText = textInput.getText()
+            textInput.setText(oldText.substring(0 until selectionMin)
+                    + oldText.substring(max(selectionStart, selectionEnd)))
+        }
+    }
+
+    private fun insertPastedString(content: String) {
+        val oldText = textInput.getText()
+        val firstPart = oldText.substring(0 until textInput.getCaretPosition())
+        val lastPart = oldText.substring(textInput.getCaretPosition())
+        textInput.setText(firstPart + content + lastPart)
+    }
+
     private fun resetCaretFlipper() {
         lastCaretTime = currentTimeMillis()
         showCaret = true
@@ -52,7 +94,12 @@ class TextField(
         agent.subscribe(KeyTypeEvent::class)
         agent.subscribe(KeyPressEvent::class)
         agent.subscribe(CursorClickEvent::class)
+        agent.subscribe(CursorPressEvent::class)
+        agent.subscribe(CursorMoveEvent::class)
+        agent.subscribe(CursorReleaseEvent::class)
         agent.subscribe(UpdateEvent::class)
+        agent.subscribe(ClipboardCopyEvent::class)
+        agent.subscribe(ClipboardPasteEvent::class)
     }
 
     override fun processEvent(event: Event) {
@@ -60,8 +107,15 @@ class TextField(
             if (charFilter(event.codePoint)) {
                 textInput.type(event.codePoint)
                 resetCaretFlipper()
+
+                cancelSelection()
             }
         } else if (event is KeyPressEvent) {
+            if (selectionStart != null && selectionEnd != null) {
+                if (event.key.type == KeyType.Backspace) deleteSelectedText()
+                return
+            }
+
             var shouldResetCaretFlipper = true
             when (event.key.type) {
                 KeyType.Escape -> agent.giveFeedback(ReleaseKeyboardFocusFeedback())
@@ -79,6 +133,7 @@ class TextField(
             textInput.moveTo(event.position.x)
             resetCaretFlipper()
             agent.giveFeedback(RequestKeyboardFocusFeedback())
+            agent.giveFeedback(RenderFeedback())
         } else if (event is KeyboardFocusEvent) {
             agent.giveFeedback(RenderFeedback())
         } else if (event is UpdateEvent) {
@@ -88,6 +143,32 @@ class TextField(
                 showCaret = !showCaret
                 agent.giveFeedback(RenderFeedback())
             }
+        } else if (event is CursorPressEvent) {
+            cancelSelection()
+            agent.giveFeedback(RequestKeyboardFocusFeedback())
+            this.selectionStart = textInput.predictCaretPosition(event.position.x)
+            this.isSelecting = true
+        } else if (event is CursorReleaseEvent) {
+            if (this.isSelecting) {
+                this.isSelecting = false
+                val selection = getSelectedString()
+                if (selection.isNotEmpty()) {
+                    agent.giveFeedback(AddressedFeedback(null, SelectionFeedback(selection)))
+                }
+            }
+        } else if (event is CursorMoveEvent) {
+            if (this.selectionStart != null && this.isSelecting) {
+                this.selectionEnd = textInput.predictCaretPosition(event.newPosition.x)
+                agent.giveFeedback(RenderFeedback())
+            }
+        } else if (event is ClipboardCopyEvent) {
+            val selectedString = getSelectedString()
+            if (selectedString.isNotEmpty()) event.setText(selectedString)
+            if (event.cut) deleteSelectedText()
+        } else if (event is ClipboardPasteEvent) {
+            deleteSelectedText()
+            cancelSelection()
+            insertPastedString(event.content)
         } else {
             throw UnsupportedOperationException("Unexpected event $event")
         }
@@ -108,14 +189,26 @@ class TextField(
 
     override fun render(target: GraviksTarget, force: Boolean): RenderResult {
         val hasFocus = agent.hasKeyboardFocus()
-        val (textStyle, textRegion, drawPlaceholder) = if (hasFocus) currentStyle.drawFocusBackground(target, placeholder, error)
-        else currentStyle.drawDefaultBackground(target, placeholder, error)
+
+        val selectionStart = this.selectionStart
+        val selectionEnd = this.selectionEnd
+        val (minSelectionX, maxSelectionX) = if (selectionStart != null && selectionEnd != null) {
+            val startX = textInput.estimateCaretX(selectionStart, true, 0f)
+            val endX = textInput.estimateCaretX(selectionEnd, true, 0f)
+            Pair(min(startX, endX), max(startX, endX))
+        } else Pair(null, null)
+
+        val backgroundResult = currentStyle.drawBackground(
+            target, hasFocus, placeholder, error, minSelectionX, maxSelectionX
+        )
+        val textStyle = backgroundResult.style
+        val textRegion = backgroundResult.textRegion
 
         textInput.drawnCharacterPositions = target.drawString(
             textRegion.minX, textRegion.minY, textRegion.maxX, textRegion.maxY, textInput.getText(), textStyle
         )
 
-        val finalDrawnCharacterPositions = if (textInput.drawnCharacterPositions.isEmpty() && drawPlaceholder) {
+        val finalDrawnCharacterPositions = if (textInput.drawnCharacterPositions.isEmpty() && backgroundResult.drawPlaceholder) {
             target.drawString(textRegion.minX, textRegion.minY, textRegion.maxX, textRegion.maxY, placeholder, textStyle)
         } else textInput.drawnCharacterPositions
 
@@ -154,7 +247,7 @@ class TextField(
                 maxX = max(finalDrawnCharacterPositions.maxOf { it.maxX }, caretX + caretWidth),
                 maxY = finalDrawnCharacterPositions.maxOf { it.maxY }
             )
-            currentStyle.computeFocusResult(renderedTextPosition)
+            currentStyle.computeResult(renderedTextPosition, true)
         } else {
             val renderedTextPosition = if (finalDrawnCharacterPositions.isEmpty()) null else RectangularDrawnRegion(
                 minX = finalDrawnCharacterPositions.minOf { it.minX },
@@ -162,7 +255,7 @@ class TextField(
                 maxX = finalDrawnCharacterPositions.maxOf { it.maxX },
                 maxY = finalDrawnCharacterPositions.maxOf { it.maxY }
             )
-            currentStyle.computeDefaultResult(renderedTextPosition)
+            currentStyle.computeResult(renderedTextPosition, false)
         }
     }
 

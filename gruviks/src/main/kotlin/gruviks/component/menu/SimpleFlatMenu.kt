@@ -262,7 +262,7 @@ class SimpleFlatMenu(
 
                 visitedNodes.addAll(targetComponents.map { it.second })
             }
-        } else if (event is KeyEvent) {
+        } else if (event is KeyEvent || event is ClipboardEvent) {
             val focusNode = keyboardFocusNode
             if (focusNode != null) {
                 if (focusNode.agent.isSubscribed(event::class)) {

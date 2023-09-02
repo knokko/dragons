@@ -54,8 +54,7 @@ fun main() {
         defaultBackgroundColor = Color.rgbInt(20, 20, 20),
         focusTextStyle = TextStyle(fillColor = Color.rgbInt(0, 150, 0), font = null),
         focusBackgroundColor = Color.rgbInt(40, 40, 40),
-        lineHeight = 0.04f,
-        placeholderStyle = null
+        lineHeight = 0.04f, placeholderStyle = null, selectionBackgroundColor = Color.rgbInt(0, 50, 150)
     ))
 
     val playgroundMenu = SimpleFlatMenu(SpaceLayout.Simple, Color.WHITE)

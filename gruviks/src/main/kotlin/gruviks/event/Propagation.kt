@@ -5,7 +5,7 @@ import gruviks.component.agent.ComponentAgent
 
 fun propagateEvent(event: Event, component: Component, agent: ComponentAgent) {
     // Key events require focus
-    if (event is KeyEvent && !agent.hasKeyboardFocus()) return
+    if ((event is KeyEvent || event is ClipboardEvent) && !agent.hasKeyboardFocus()) return
 
     val lastDrawnRegion = agent.lastRenderResult?.drawnRegion
     if (event is CursorMoveEvent) {

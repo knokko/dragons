@@ -6,6 +6,7 @@ import graviks2d.util.Color
 class Pm2ColorTheme(
     val defaultText: Color,
     val background: Color,
+    val selectionBackground: Color,
     val error: Color,
     val keyword: Color,
     val functionDeclaration: Color,
@@ -21,6 +22,7 @@ class Pm2ColorTheme(
         val TEST = Pm2ColorTheme(
             defaultText = Color.WHITE,
             background = Color.rgbInt(30, 0, 90),
+            selectionBackground = Color.rgbInt(0, 50, 150),
             error = Color.RED,
             keyword = Color.rgbInt(250, 0, 200),
             functionDeclaration = Color.rgbInt(250, 100, 0),

@@ -85,8 +85,8 @@ internal class TextInput(
         }
     }
 
-    fun estimateCaretX(expectLeftToRight: Boolean, scrollOffsetX: Float): Float {
-        if (drawnCharacterPositions.isEmpty()) return -scrollOffsetX + if (expectLeftToRight) 0f else 1f
+    fun estimateCaretX(caretPosition: Int, expectLeftToRight: Boolean, scrollOffsetX: Float): Float {
+        if (!::drawnCharacterPositions.isInitialized || drawnCharacterPositions.isEmpty()) return -scrollOffsetX + if (expectLeftToRight) 0f else 1f
 
         return scrollOffsetX + if (caretPosition < drawnCharacterPositions.size) {
             val position = drawnCharacterPositions[caretPosition]
@@ -100,11 +100,17 @@ internal class TextInput(
     }
 
     fun moveTo(x: Float) {
+        this.caretPosition = this.predictCaretPosition(x)
+    }
+
+    private fun countCodepoints() = currentText.codePointCount(0, currentText.length)
+
+    fun predictCaretPosition(x: Float): Int {
         val clickedIndex = this.drawnCharacterPositions.indexOfFirst {
             it.minX <= x && it.maxX >= x
         }
-        val numCodepoints = currentText.codePointCount(0, currentText.length)
-        this.caretPosition = if (clickedIndex != -1 && clickedIndex < numCodepoints) {
+        val numCodepoints = countCodepoints()
+        return if (clickedIndex != -1 && clickedIndex < numCodepoints) {
             val isRightToLeft = !this.drawnCharacterPositions[clickedIndex].isLeftToRight
             val clickedPosition = this.drawnCharacterPositions[clickedIndex]
             val clickedOnLeftSide = x - clickedPosition.minX <= clickedPosition.maxX - x
@@ -117,17 +123,22 @@ internal class TextInput(
     }
 
     fun moveToEnd() {
-        this.caretPosition = this.drawnCharacterPositions.size
+        this.caretPosition = countCodepoints()
         this.giveRenderFeedback()
     }
 
     fun setText(newText: String) {
         this.currentText = newText
-        this.caretPosition = min(this.caretPosition, this.currentText.codePointCount(0, this.currentText.length))
+        this.caretPosition = min(this.caretPosition, countCodepoints())
         giveRenderFeedback()
     }
 
     fun getText() = currentText
 
     fun getCaretPosition() = caretPosition
+
+    fun setCaretPosition(newPosition: Int) {
+        this.caretPosition = min(newPosition, countCodepoints())
+        giveRenderFeedback()
+    }
 }

@@ -91,6 +91,9 @@ class RawEventAdapter {
             result.add(RemoveEvent())
         }
 
+        if (event is RawClipboardPasteEvent) result.add(ClipboardPasteEvent(event.content))
+        if (event is RawClipboardCopyEvent) result.add(ClipboardCopyEvent(event.cut, event.setText))
+
         return result
     }
 

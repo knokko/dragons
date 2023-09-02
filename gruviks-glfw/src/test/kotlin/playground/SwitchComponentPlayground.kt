@@ -24,7 +24,7 @@ private fun createRootMenu(): SimpleFlatMenu {
         defaultBackgroundColor = Color.rgbInt(150, 150, 150),
         focusTextStyle = TextStyle(fillColor = Color.BLACK, font = null),
         focusBackgroundColor = Color.rgbInt(200, 200, 200),
-        lineHeight = 0.05f, placeholderStyle = null
+        lineHeight = 0.05f, placeholderStyle = null, selectionBackgroundColor = Color.rgbInt(0, 150, 200)
     )
     val buttonStyle = TextButtonStyle.textAndBorder(
         baseColor = Color.rgbInt(0, 230, 120),

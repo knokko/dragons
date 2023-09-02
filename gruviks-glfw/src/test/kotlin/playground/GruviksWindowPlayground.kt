@@ -134,7 +134,8 @@ fun createNewItemSetMenu(): SimpleFlatMenu {
             focusTextStyle = TextStyle(fillColor = Color.BLACK, font = null),
             focusBackgroundColor = Color.WHITE,
             lineHeight = 0.04f,
-            placeholderStyle = TextStyle(fillColor = Color.rgbInt(100, 100, 100), font = null)
+            placeholderStyle = TextStyle(fillColor = Color.rgbInt(100, 100, 100), font = null),
+            selectionBackgroundColor = Color.rgbInt(0, 150, 200)
     )
     menu.addComponent(TextArea(
             "test1234\ntest", textAreaStyle, "Just put some text here\n\rCan be whatever you want!"

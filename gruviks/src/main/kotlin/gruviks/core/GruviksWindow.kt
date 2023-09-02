@@ -24,6 +24,8 @@ class GruviksWindow(
     private var isFirstRenderOfRootComponent = true
     private var keyboardFocusState = KeyboardFocusState.NoFocus
 
+    var setSystemSelection: (String) -> Unit = { _ -> }
+
     init {
         this.setRootComponent(rootComponent)
     }
@@ -36,6 +38,8 @@ class GruviksWindow(
         } else if (feedback is AddressedFeedback) {
             if (feedback.targetID != null) throw IllegalArgumentException("Received missed feedback $feedback")
             processFeedback(feedback.targetFeedback)
+        } else if (feedback is SelectionFeedback) {
+            this.setSystemSelection(feedback.selectedText)
         } else if (feedback is RequestKeyboardFocusFeedback) {
             this.keyboardFocusState = KeyboardFocusState.GettingFocus
         } else if (feedback is ReleaseKeyboardFocusFeedback) {

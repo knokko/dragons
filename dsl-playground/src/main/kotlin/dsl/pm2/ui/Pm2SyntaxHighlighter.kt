@@ -16,6 +16,7 @@ import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.ParseTreeWalker
 import org.antlr.v4.runtime.tree.TerminalNode
 import java.util.*
+import kotlin.math.max
 
 private class Pm2SyntaxHighlighter(
     sourceCode: List<String>,
@@ -215,6 +216,12 @@ fun pm2SyntaxTextAreaStyle(
         val lineNumberStyle = TextStyle(colorTheme.defaultText, font = null)
         for (line in lines) {
             target.drawString(0f, line.minY, 0.04f, line.maxY, (line.index + 1).toString(), lineNumberStyle)
+            if (line.minSelectionX != null && line.maxSelectionX != null && line.maxSelectionX!! > 0.05f) {
+                target.fillRect(
+                    max(0.05f, line.minSelectionX!!), line.minY, line.maxSelectionX!!, line.maxY,
+                    colorTheme.selectionBackground
+                )
+            }
         }
     },
 )

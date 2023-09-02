@@ -13,10 +13,10 @@ class TextAreaStyle(
         val placeholderTextStyle: TextInputFunction?,
         val determineTextRegionAndLineHeight: (
                 target: GraviksTarget, hasFocus: Boolean, isPlaceholder: Boolean
-                ) -> Pair<RectangularDrawnRegion, Float>,
+        ) -> Pair<RectangularDrawnRegion, Float>,
         val drawBackgroundAndDecorations: (
                 target: GraviksTarget, lines: List<LineToDraw>, hasFocus: Boolean, isPlaceholder: Boolean
-                ) -> Unit
+        ) -> Unit
 )
 
 fun squareTextAreaStyle(
@@ -25,7 +25,8 @@ fun squareTextAreaStyle(
         focusTextStyle: TextStyle,
         focusBackgroundColor: Color,
         lineHeight: Float,
-        placeholderStyle: TextStyle?
+        placeholderStyle: TextStyle?,
+        selectionBackgroundColor: Color
 ) = TextAreaStyle(
         defaultTextStyle = { { defaultTextStyle }},
         focusTextStyle = { { focusTextStyle }},
@@ -33,8 +34,16 @@ fun squareTextAreaStyle(
         determineTextRegionAndLineHeight = { _, _, _ ->
                 Pair(RectangularDrawnRegion(0f, 0f, 1f, 1f), lineHeight)
         },
-        drawBackgroundAndDecorations = { target, _, hasFocus, _ ->
+        drawBackgroundAndDecorations = { target, lines, hasFocus, _ ->
                 val backgroundColor = if (hasFocus) focusBackgroundColor else defaultBackgroundColor
                 target.fillRect(0f, 0f, 1f, 1f, backgroundColor)
+                for (line in lines) {
+                    if (line.minSelectionX != null && line.maxSelectionX != null) {
+                        target.fillRect(
+                            line.minSelectionX, line.minY, line.maxSelectionX, line.maxY,
+                            selectionBackgroundColor
+                        )
+                    }
+                }
         },
 )

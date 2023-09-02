@@ -7,9 +7,7 @@ import gruviks.component.Component
 import gruviks.component.RectangularDrawnRegion
 import gruviks.component.RenderResult
 import gruviks.event.*
-import gruviks.feedback.ReleaseKeyboardFocusFeedback
-import gruviks.feedback.RenderFeedback
-import gruviks.feedback.RequestKeyboardFocusFeedback
+import gruviks.feedback.*
 import java.lang.StringBuilder
 import java.lang.System.currentTimeMillis
 import kotlin.math.max
@@ -33,14 +31,24 @@ class TextArea(
     private var scrollOffsetX = 0f
     private var scrollOffsetY = 0f
 
+    private var selectionStart: SelectionCorner? = null
+    private var selectionEnd: SelectionCorner? = null
+    private var isSelecting = false
+    private var shouldRecomputeIndent = false
+
     override fun subscribeToEvents() {
         agent.subscribe(KeyboardFocusAcquiredEvent::class)
         agent.subscribe(KeyboardFocusLostEvent::class)
         agent.subscribe(KeyTypeEvent::class)
         agent.subscribe(KeyPressEvent::class)
         agent.subscribe(CursorClickEvent::class)
+        agent.subscribe(CursorPressEvent::class)
+        agent.subscribe(CursorMoveEvent::class)
+        agent.subscribe(CursorReleaseEvent::class)
         agent.subscribe(CursorScrollEvent::class)
         agent.subscribe(UpdateEvent::class)
+        agent.subscribe(ClipboardCopyEvent::class)
+        agent.subscribe(ClipboardPasteEvent::class)
     }
 
     private fun resetCaretFlipper() {
@@ -50,7 +58,7 @@ class TextArea(
 
     private fun getCaretX() = if (caretLine != null) {
         val lineInput = lineInputs[caretLine!!]
-        lineInput.estimateCaretX(leftToRightTracker[caretLine!!], scrollOffsetX)
+        lineInput.estimateCaretX(lineInput.getCaretPosition(), leftToRightTracker[caretLine!!], scrollOffsetX)
     } else -scrollOffsetX
 
     private fun getCaretY() = caretLine!! * lastLineHeight - scrollOffsetY + lastLineHeight / 2f
@@ -70,6 +78,157 @@ class TextArea(
         if (!leftToRightTracker.hasLeftToRight() && scrollOffsetX > 0f) scrollOffsetX = 0f
     }
 
+    private fun cancelSelection() {
+        if (selectionStart != null || selectionEnd != null) {
+            selectionStart = null
+            selectionEnd = null
+            agent.giveFeedback(RenderFeedback())
+        }
+    }
+
+    private fun getSelectedString(): String {
+        val selectionStart = this.selectionStart
+        val selectionEnd = this.selectionEnd
+        if (selectionStart != null && selectionEnd != null && selectionStart != selectionEnd) {
+            val selectionMin = minOf(selectionStart, selectionEnd)
+            val selectionMax = maxOf(selectionStart, selectionEnd)
+            return if (selectionMin.lineIndex == selectionMax.lineIndex) {
+                val line = lineInputs[selectionMin.lineIndex].getText()
+                line.substring(selectionMin.caretIndex, selectionMax.caretIndex)
+            } else {
+                val result = StringBuilder()
+                result.append(lineInputs[selectionMin.lineIndex].getText().substring(selectionMin.caretIndex))
+                result.appendLine()
+                for (lineIndex in selectionMin.lineIndex + 1 until selectionMax.lineIndex) {
+                    result.append(lineInputs[lineIndex].getText())
+                    result.appendLine()
+                }
+                result.append(lineInputs[selectionMax.lineIndex].getText().substring(0 until selectionMax.caretIndex))
+                result.toString()
+            }
+        } else return ""
+    }
+
+    private fun deleteSelectedText() {
+        val selectionStart = this.selectionStart
+        val selectionEnd = this.selectionEnd
+        if (selectionStart != null && selectionEnd != null) {
+            this.selectionStart = null
+            this.selectionEnd = null
+            this.isSelecting = false
+
+            val selectionMin = minOf(selectionStart, selectionEnd)
+            val selectionMax = maxOf(selectionStart, selectionEnd)
+
+            this.caretLine = selectionMin.lineIndex
+            lineInputs[selectionMin.lineIndex].setCaretPosition(selectionMin.caretIndex)
+
+            if (selectionMin.lineIndex == selectionMax.lineIndex) {
+                val line = lineInputs[selectionMin.lineIndex]
+                val oldText = line.getText()
+                val newText = oldText.substring(0 until selectionMin.caretIndex) +
+                        oldText.substring(selectionMax.caretIndex)
+                line.setText(newText)
+            } else {
+                val lastLine = lineInputs[selectionMax.lineIndex]
+                val firstLine = lineInputs[selectionMin.lineIndex]
+
+                for (counter in 0 until selectionMax.lineIndex - selectionMin.lineIndex) {
+                    lineInputs.removeAt(selectionMin.lineIndex + 1)
+                }
+
+                firstLine.setText(
+                    firstLine.getText().substring(0 until selectionMin.caretIndex) +
+                    lastLine.getText().substring(selectionMax.caretIndex)
+                )
+            }
+
+            agent.giveFeedback(RenderFeedback())
+        }
+    }
+
+    private fun determineCaretLine(y: Float): Int {
+        var newCaretLine = ((1f + scrollOffsetY - y) / lastLineHeight).toInt()
+        if (newCaretLine < 0) newCaretLine = 0
+        if (newCaretLine >= lineInputs.size) newCaretLine = lineInputs.size - 1
+        return newCaretLine
+    }
+
+    private fun determineSelectedPosition(position: EventPosition): SelectionCorner {
+        val pressedLineIndex = determineCaretLine(position.y)
+        val pressedLine = lineInputs[pressedLineIndex]
+        val caretPosition = pressedLine.predictCaretPosition(position.x - scrollOffsetX)
+        return SelectionCorner(pressedLineIndex, caretPosition)
+    }
+
+    private fun indentRight() {
+        val selectionStart = this.selectionStart
+        val selectionEnd = this.selectionEnd
+        if (selectionStart != null && selectionEnd != null) {
+            for (lineIndex in min(selectionStart.lineIndex, selectionEnd.lineIndex) .. max(selectionStart.lineIndex, selectionEnd.lineIndex)) {
+                val line = lineInputs[lineIndex]
+                line.setText("\t${line.getText()}")
+            }
+            this.selectionStart = SelectionCorner(selectionStart.lineIndex, selectionStart.caretIndex + 1)
+            this.selectionEnd = SelectionCorner(selectionEnd.lineIndex, selectionEnd.caretIndex + 1)
+            this.shouldRecomputeIndent = true
+        }
+    }
+
+    private fun indentLeft() {
+        val selectionStart = this.selectionStart
+        val selectionEnd = this.selectionEnd
+        if (selectionStart != null && selectionEnd != null) {
+            for (lineIndex in min(selectionStart.lineIndex, selectionEnd.lineIndex) .. max(selectionStart.lineIndex, selectionEnd.lineIndex)) {
+                val line = lineInputs[lineIndex]
+                val oldText = line.getText()
+                if (oldText.startsWith("\t")) {
+                    line.setText(oldText.substring(1))
+                    if (selectionStart.lineIndex == lineIndex) {
+                        this.selectionStart = SelectionCorner(lineIndex, selectionStart.caretIndex - 1)
+                    }
+                    if (selectionEnd.lineIndex == lineIndex) {
+                        this.selectionEnd = SelectionCorner(lineIndex, selectionEnd.caretIndex - 1)
+                    }
+                }
+            }
+
+            this.shouldRecomputeIndent = true
+        }
+    }
+
+    private fun insertPastedString(content: String) {
+        val caretLine = this.caretLine
+        if (caretLine != null && caretLine < lineInputs.size) {
+
+            val contentList = splitLines(content)
+            if (contentList.isEmpty()) return
+
+            val firstLine = lineInputs[caretLine]
+            val firstPart = firstLine.getText().substring(0 until firstLine.getCaretPosition())
+            val lastPart = firstLine.getText().substring(firstLine.getCaretPosition())
+
+            firstLine.setText(firstPart + contentList[0])
+
+            var currentLineIndex = caretLine + 1
+            for (pastedLine in contentList.subList(1, contentList.size)) {
+
+                val newLine = TextInput(pastedLine, this::giveRenderFeedback)
+                lineInputs.add(currentLineIndex, newLine)
+                currentLineIndex += 1
+            }
+
+            val lastLine = lineInputs[currentLineIndex - 1]
+            lastLine.moveToEnd()
+            lastLine.setText(lastLine.getText() + lastPart)
+            this.caretLine = currentLineIndex - 1
+
+            checkHorizontalScroll(true)
+            resetCaretFlipper()
+            agent.giveFeedback(RenderFeedback())
+        }
+    }
+
     override fun processEvent(event: Event) {
         if (event is KeyboardFocusAcquiredEvent || event is KeyboardFocusLostEvent) {
             agent.giveFeedback(RenderFeedback())
@@ -79,10 +238,7 @@ class TextArea(
 
             agent.giveFeedback(RequestKeyboardFocusFeedback())
 
-            var newCaretLine = ((1f + scrollOffsetY - event.position.y) / lastLineHeight).toInt()
-            if (newCaretLine < 0) newCaretLine = 0
-            if (newCaretLine >= lineInputs.size) newCaretLine = lineInputs.size - 1
-
+            val newCaretLine = determineCaretLine(event.position.y)
             lineInputs[newCaretLine].moveTo(event.position.x - scrollOffsetX)
             if (caretLine == null || caretLine != newCaretLine) {
                 caretLine = newCaretLine
@@ -94,6 +250,42 @@ class TextArea(
             agent.giveFeedback(RenderFeedback())
         }
 
+        if (event is CursorPressEvent) {
+            cancelSelection()
+            agent.giveFeedback(RequestKeyboardFocusFeedback())
+            this.selectionStart = determineSelectedPosition(event.position)
+            this.isSelecting = true
+        }
+
+        if (event is CursorReleaseEvent) {
+            if (this.isSelecting) {
+                this.isSelecting = false
+                val selection = getSelectedString()
+                if (selection.isNotEmpty()) {
+                    agent.giveFeedback(AddressedFeedback(null, SelectionFeedback(selection)))
+                }
+            }
+        }
+
+        if (event is CursorMoveEvent) {
+            if (this.selectionStart != null && this.isSelecting) {
+                this.selectionEnd = determineSelectedPosition(event.newPosition)
+                agent.giveFeedback(RenderFeedback())
+            }
+        }
+
+        if (event is ClipboardCopyEvent) {
+            val selectedString = getSelectedString()
+            if (selectedString.isNotEmpty()) event.setText(selectedString)
+            if (event.cut) deleteSelectedText()
+        }
+
+        if (event is ClipboardPasteEvent) {
+            deleteSelectedText()
+            cancelSelection()
+            insertPastedString(event.content)
+        }
+
         if (event is KeyTypeEvent) {
             val caretLine = this.caretLine
             if (caretLine != null && caretLine < lineInputs.size) {
@@ -101,10 +293,23 @@ class TextArea(
                 checkHorizontalScroll(true)
                 resetCaretFlipper()
             }
+
+            cancelSelection()
         }
 
         if (event is KeyPressEvent) {
             if (event.key.type == KeyType.Escape) agent.giveFeedback(ReleaseKeyboardFocusFeedback())
+
+            if (selectionStart != null && selectionEnd != null) {
+                when (event.key.type) {
+                    KeyType.Tab -> indentRight()
+                    KeyType.Right -> indentRight()
+                    KeyType.Left -> indentLeft()
+                    KeyType.Backspace -> deleteSelectedText()
+                    else -> {}
+                }
+                return
+            }
 
             if (caretLine != null) {
                 val textInput = lineInputs[caretLine!!]
@@ -153,7 +358,9 @@ class TextArea(
                         if (caretLine!! > 0) {
                             val expectLeftToRight = leftToRightTracker[caretLine!!]
                             caretLine = caretLine!! - 1
-                            lineInputs[caretLine!!].moveTo(textInput.estimateCaretX(expectLeftToRight, 0f))
+                            lineInputs[caretLine!!].moveTo(textInput.estimateCaretX(
+                                textInput.getCaretPosition(), expectLeftToRight, 0f
+                            ))
 
                             checkHorizontalScroll(true)
                             if (getCaretY() < 0f) scrollOffsetY -= lastLineHeight
@@ -164,7 +371,9 @@ class TextArea(
                         if (caretLine!! < lineInputs.size - 1) {
                             val expectLeftToRight = leftToRightTracker[caretLine!!]
                             caretLine = caretLine!! + 1
-                            lineInputs[caretLine!!].moveTo(textInput.estimateCaretX(expectLeftToRight, 0f))
+                            lineInputs[caretLine!!].moveTo(textInput.estimateCaretX(
+                                textInput.getCaretPosition(), expectLeftToRight, 0f
+                            ))
 
                             checkHorizontalScroll(true)
                             if (getCaretY() > 1f) scrollOffsetY += lastLineHeight
@@ -239,7 +448,30 @@ class TextArea(
             val minY = maxY - lineHeight
 
             if (minY < 1f + marginY) {
-                linesToDraw.add(LineToDraw(line.getText(), lineIndex, minY, maxY))
+                val selectionStart = this.selectionStart
+                val selectionEnd = this.selectionEnd
+                val (minSelectionX, maxSelectionX) = if (selectionStart != null && selectionEnd != null) {
+                    val selectionMin = minOf(selectionStart, selectionEnd)
+                    val selectionMax = maxOf(selectionStart, selectionEnd)
+
+                    val expectLeftToRight = leftToRightTracker[lineIndex]
+                    if (selectionMin.lineIndex == selectionMax.lineIndex) {
+                        if (lineIndex == selectionMin.lineIndex) {
+                            val minX = line.estimateCaretX(selectionMin.caretIndex, expectLeftToRight, scrollOffsetX)
+                            val maxX = line.estimateCaretX(selectionMax.caretIndex, expectLeftToRight, scrollOffsetX)
+                            Pair(minX, maxX)
+                        } else Pair(null, null)
+                    } else if (lineIndex == selectionMin.lineIndex) {
+                        val selectionX = line.estimateCaretX(selectionMin.caretIndex, expectLeftToRight, scrollOffsetX)
+                        if (expectLeftToRight) Pair(selectionX, 1f) else Pair(0f, selectionX)
+                    } else if (lineIndex == selectionMax.lineIndex) {
+                        val selectionX = line.estimateCaretX(selectionMax.caretIndex, expectLeftToRight, scrollOffsetX)
+                        if (expectLeftToRight) Pair(0f, selectionX) else Pair(selectionX, 1f)
+                    } else if (lineIndex > selectionMin.lineIndex && lineIndex < selectionMax.lineIndex) {
+                        Pair(0f, 1f)
+                    } else Pair(null, null)
+                } else Pair(null, null)
+                linesToDraw.add(LineToDraw(line.getText(), lineIndex, minY, maxY, minSelectionX, maxSelectionX))
             }
 
             maxY = minY
@@ -300,7 +532,7 @@ class TextArea(
                 val flip = lineInput.getCaretPosition() >= lineInput.drawnCharacterPositions.size
 
                 val characterPosition = if (lineInput.drawnCharacterPositions.isEmpty()) CharacterPosition(
-                    0f - scrollOffsetX, 0f, 1f - scrollOffsetX, 0f, isRightToLeft
+                    textRegion.minX - scrollOffsetX, 0f, textRegion.maxX - scrollOffsetX, 0f, isRightToLeft
                 ) else drawnCharPositions[caretCharIndex]
 
                 val caretWidth =
@@ -323,11 +555,22 @@ class TextArea(
             if (oldScrollOffset != scrollOffsetX) agent.giveFeedback(RenderFeedback())
         }
 
+        // An extra render is needed after changing selection indentation because it needs to know the drawn character
+        // positions generated during this render
+        if (shouldRecomputeIndent) {
+            agent.giveFeedback(RenderFeedback())
+            shouldRecomputeIndent = false
+        }
+
         return RenderResult(drawnRegion = RectangularDrawnRegion(0f, 0f, 1f, 1f), propagateMissedCursorEvents = false)
     }
 }
 
-class LineToDraw(val text: String, val index: Int, val minY: Float, val maxY: Float)
+class LineToDraw(
+    val text: String, val index: Int,
+    val minY: Float, val maxY: Float,
+    val minSelectionX: Float?, val maxSelectionX: Float?
+)
 
 private class LeftToRightTracker {
 
@@ -370,4 +613,23 @@ private class LeftToRightTracker {
     fun hasLeftToRight() = leftToRightCounter > 0
 
     fun hasRightToLeft() = rightToLeftCounter > 0
+}
+
+private class SelectionCorner(val lineIndex: Int, val caretIndex: Int): Comparable<SelectionCorner> {
+    override fun compareTo(other: SelectionCorner): Int {
+        if (lineIndex < other.lineIndex) return -1
+        if (lineIndex > other.lineIndex) return 1
+        return caretIndex.compareTo(other.caretIndex)
+    }
+
+    override fun equals(other: Any?) = other is SelectionCorner && lineIndex == other.lineIndex
+            && caretIndex == other.caretIndex
+
+    override fun hashCode(): Int {
+        var result = lineIndex
+        result = 31 * result + caretIndex
+        return result
+    }
+
+    override fun toString() = "SelectionCorner(line=$lineIndex, caret=$caretIndex)"
 }
