@@ -1,8 +1,0 @@
-Map parameters;
-parameters["bellyColor"] = rgb(0.4, 0.2, 0.1);
-
-parameters["eyeRadius"] = 0.05;
-parameters["eyeColor"] = rgb(0.0, 0.0, 0.0);
-parameters["numEyeParts"] = 10;
-
-outputValue(parameters);

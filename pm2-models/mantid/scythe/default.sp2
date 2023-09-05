@@ -1,7 +1,0 @@
-static parameter armLength = 0.7;
-static parameter armRadius = 0.05;
-static parameter armColor = rgb(0.4, 0.2, 0.1);
-
-static parameter scytheLength = 0.5;
-static parameter scytheWidth = 0.08;
-static parameter scytheColor = rgb(0.45, 0.4, 0.35);

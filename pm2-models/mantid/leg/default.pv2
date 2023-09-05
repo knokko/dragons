@@ -1,6 +1,0 @@
-Map parameters;
-parameters["legRadius"] = 0.04;
-parameters["legPartLength"] = 0.35;
-parameters["legColor"] = rgb(0.4, 0.2, 0.1);
-parameters["nailColor"] = rgb(0.1, 0.1, 0.1);
-outputValue(parameters);
