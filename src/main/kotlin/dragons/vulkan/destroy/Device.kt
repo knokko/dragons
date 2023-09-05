@@ -1,8 +1,8 @@
 package dragons.vulkan.destroy
 
-import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.vulkan.VulkanDeviceDestructionListener
 import graviks2d.core.GraviksInstance
+import knokko.plugin.PluginManager
 import org.lwjgl.util.vma.Vma
 import org.lwjgl.vulkan.VK12.vkDestroyDevice
 import org.lwjgl.vulkan.VK12.vkDeviceWaitIdle

@@ -1,7 +1,6 @@
 package dragons.vulkan.memory
 
 import dragons.init.trouble.SimpleStartupException
-import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.vr.VrManager
 import dragons.vulkan.RenderImageInfo
@@ -9,6 +8,7 @@ import dragons.vulkan.memory.scope.MemoryScope
 import dragons.vulkan.memory.scope.MemoryScopeClaims
 import dragons.vulkan.memory.scope.packMemoryClaims
 import dragons.vulkan.queue.QueueManager
+import knokko.plugin.PluginManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import org.lwjgl.system.MemoryStack.stackPush
@@ -18,10 +18,10 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
 
 private suspend fun getFinishedStaticMemoryAgents(
-    logger: Logger, pluginManager: PluginManager, pluginClassLoader: ClassLoader, vrManager: VrManager,
-    queueManager: QueueManager, renderImageInfo: RenderImageInfo,
-    vkPhysicalDevice: VkPhysicalDevice, vkPhysicalDeviceLimits: VkPhysicalDeviceLimits, vkDevice: VkDevice,
-    scope: CoroutineScope
+        logger: Logger, pluginManager: PluginManager, pluginClassLoader: ClassLoader, vrManager: VrManager,
+        queueManager: QueueManager, renderImageInfo: RenderImageInfo,
+        vkPhysicalDevice: VkPhysicalDevice, vkPhysicalDeviceLimits: VkPhysicalDeviceLimits, vkDevice: VkDevice,
+        scope: CoroutineScope
 ): Pair<Collection<MemoryScopeClaims>, CoreStaticMemoryPending> {
 
     logger.info("Calling all VulkanStaticMemoryUsers...")

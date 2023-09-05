@@ -1,11 +1,11 @@
 package dragons.plugin.interfaces.vulkan
 
-import dragons.plugin.PluginInstance
-import dragons.plugin.interfaces.PluginInterface
+import knokko.plugin.MagicPluginInterface
+import knokko.plugin.PluginInstance
 import org.lwjgl.vulkan.*
 import kotlin.jvm.Throws
 
-interface VulkanDeviceRater: PluginInterface {
+interface VulkanDeviceRater: MagicPluginInterface {
     /**
      * Plug-ins can implement this method to give a rating to *agent.vulkanDevice*, or even forbid the game for
      * choosing this device. To do so, assign a *Rating* to *agent.rating*.

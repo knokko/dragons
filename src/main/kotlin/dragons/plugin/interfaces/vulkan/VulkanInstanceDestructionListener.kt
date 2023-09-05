@@ -1,10 +1,10 @@
 package dragons.plugin.interfaces.vulkan
 
-import dragons.plugin.PluginInstance
-import dragons.plugin.interfaces.PluginInterface
+import knokko.plugin.MagicPluginInterface
+import knokko.plugin.PluginInstance
 import org.lwjgl.vulkan.VkInstance
 
-interface VulkanInstanceDestructionListener: PluginInterface {
+interface VulkanInstanceDestructionListener: MagicPluginInterface {
     /**
      * This method will be called right before the game will destroy its Vulkan instance. Plug-ins can use this method
      * to clean up Vulkan resources that are related to the Vulkan instance.

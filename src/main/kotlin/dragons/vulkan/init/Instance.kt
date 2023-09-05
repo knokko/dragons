@@ -6,11 +6,11 @@ import dragons.init.trouble.ExtensionStartupException
 import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
 import dragons.init.trouble.VulkanStartupException
-import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.vulkan.VulkanInstanceActor
 import dragons.plugin.interfaces.vulkan.VulkanInstanceCreationListener
 import dragons.vr.VrManager
 import dragons.vulkan.util.*
+import knokko.plugin.PluginManager
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.VK12.*

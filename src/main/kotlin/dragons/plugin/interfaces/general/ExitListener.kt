@@ -1,9 +1,9 @@
 package dragons.plugin.interfaces.general
 
-import dragons.plugin.PluginInstance
-import dragons.plugin.interfaces.PluginInterface
+import knokko.plugin.MagicPluginInterface
+import knokko.plugin.PluginInstance
 
-interface ExitListener: PluginInterface {
+interface ExitListener: MagicPluginInterface {
 
     fun onExit(instance: PluginInstance)
 }

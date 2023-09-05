@@ -1,21 +1,24 @@
 package dragons.plugins.debug.vulkan
 
-import dragons.plugin.PluginInstance
+import dragons.init.MainParameters
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.vulkan.memory.VulkanBufferRange
 import dragons.vulkan.memory.VulkanImage
 import dragons.vulkan.memory.claim.BufferMemoryClaim
 import dragons.vulkan.memory.claim.ImageMemoryClaim
 import dragons.vulkan.memory.claim.StagingBufferMemoryClaim
+import knokko.plugin.PluginInstance
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import org.lwjgl.system.MemoryUtil.memAddress
 import org.lwjgl.vulkan.VK12.*
 import java.nio.ByteBuffer
 
+@Suppress("unused")
 class TestStaticMemory: VulkanStaticMemoryUser {
     override fun claimStaticMemory(pluginInstance: PluginInstance, agent: VulkanStaticMemoryUser.Agent) {
-        if (pluginInstance.gameInitProps.mainParameters.testParameters.staticMemory) {
+        val mainParameters = pluginInstance.state as MainParameters
+        if (mainParameters.testParameters.staticMemory) {
             val lock = Object()
             for (queueFamily in agent.queueManager.allQueueFamilies + listOf(null)) {
                 val prefilledIndirectResult = CompletableDeferred<VulkanBufferRange>()

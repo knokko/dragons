@@ -1,11 +1,10 @@
 package dragons.plugin.interfaces.menu
 
-import dragons.plugin.PluginInstance
-import dragons.plugin.interfaces.PluginInterface
 import dragons.state.StaticGameState
-import kotlinx.coroutines.job
+import knokko.plugin.MagicPluginInterface
+import knokko.plugin.PluginInstance
 
-interface MainMenuManager: PluginInterface {
+interface MainMenuManager: MagicPluginInterface {
 
     fun requestMainMenuControl(pluginInstance: PluginInstance, agent: Agent)
 

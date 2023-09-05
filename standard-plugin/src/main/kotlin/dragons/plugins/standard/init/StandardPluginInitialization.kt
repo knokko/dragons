@@ -1,8 +1,8 @@
 package dragons.plugins.standard.init
 
-import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.general.PluginsLoadedListener
 import dragons.plugins.standard.state.StandardPluginState
+import knokko.plugin.PluginInstance
 
 @Suppress("unused")
 class StandardPluginInitialization: PluginsLoadedListener {

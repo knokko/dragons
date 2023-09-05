@@ -1,14 +1,14 @@
 package dragons.plugin.interfaces.vulkan
 
-import dragons.plugin.PluginInstance
-import dragons.plugin.interfaces.PluginInterface
 import dragons.vr.VrManager
 import dragons.vulkan.RenderImageInfo
 import dragons.vulkan.queue.QueueManager
+import knokko.plugin.MagicPluginInterface
+import knokko.plugin.PluginInstance
 import kotlinx.coroutines.CoroutineScope
 import org.lwjgl.vulkan.*
 
-interface VulkanDeviceCreationListener: PluginInterface {
+interface VulkanDeviceCreationListener: MagicPluginInterface {
     /**
      * This method will be called soon after the game has created its logical device.
      */

@@ -1,10 +1,10 @@
 package dragons.plugin.interfaces.vulkan
 
-import dragons.plugin.PluginInstance
-import dragons.plugin.interfaces.PluginInterface
+import knokko.plugin.MagicPluginInterface
+import knokko.plugin.PluginInstance
 import org.lwjgl.vulkan.*
 
-interface VulkanDeviceActor: PluginInterface {
+interface VulkanDeviceActor: MagicPluginInterface {
     /**
      * Plug-ins can implement this method to influence the logical device creation process: they can request and require
      * device extensions and device features, as well as add structures to the pNext chain.

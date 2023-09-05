@@ -1,10 +1,10 @@
 package dragons.plugins.standard.vulkan
 
-import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanDeviceCreationListener
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.pipeline.*
 import dragons.plugins.standard.vulkan.renderpass.createBasicRenderPass
+import knokko.plugin.PluginInstance
 import kotlinx.coroutines.launch
 
 @Suppress("unused")

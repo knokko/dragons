@@ -1,11 +1,11 @@
 package dragons.vulkan.init
 
-import dragons.plugin.PluginInstance
-import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.vulkan.VulkanDeviceActor
 import dragons.plugin.util.createDummyPluginInstance
 import dragons.vr.DummyVrManager
 import dragons.vulkan.util.*
+import knokko.plugin.PluginInstance
+import knokko.plugin.PluginManager
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.lwjgl.system.MemoryStack.stackPush

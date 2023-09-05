@@ -1,7 +1,7 @@
 package dragons.plugins.standard.vulkan
 
-import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanDeviceActor
+import knokko.plugin.PluginInstance
 import org.lwjgl.vulkan.EXTMemoryBudget.VK_EXT_MEMORY_BUDGET_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRBindMemory2.VK_KHR_BIND_MEMORY_2_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRDedicatedAllocation.VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME

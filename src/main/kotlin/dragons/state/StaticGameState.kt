@@ -1,8 +1,8 @@
 package dragons.state
 
 import dragons.init.GameInitProperties
-import dragons.plugin.PluginManager
 import dragons.vr.VrManager
+import knokko.plugin.PluginManager
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -10,24 +10,24 @@ import kotlinx.coroutines.CoroutineScope
  * happens when the player quits or the game crashes).
  */
 class StaticGameState(
-    /**
+        /**
      * The graphics resources that will are created during the initialization of the game and remain valid during the
      * entire game session.
      */
     val graphics: StaticGraphicsState,
 
-    val initProperties: GameInitProperties,
+        val initProperties: GameInitProperties,
 
-    val pluginManager: PluginManager,
+        val pluginManager: PluginManager,
 
-    val vrManager: VrManager,
+        val vrManager: VrManager,
 
-    /**
+        /**
      * The `ClassLoader` that loaded all the plug-ins and can be used to find plug-in resources.
      */
     val classLoader: ClassLoader,
 
-    /**
+        /**
      * The `CoroutineScope` that runs throughout the entire game session. This is preferred over the `GlobalScope`
      * because:
      *

@@ -1,11 +1,11 @@
 package dragons.plugins.standard.init
 
 import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
-import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.general.StaticStateListener
 import dragons.plugins.standard.state.StandardGraphicsBuffers
 import dragons.plugins.standard.state.StandardGraphicsState
 import dragons.plugins.standard.state.StandardPluginState
+import knokko.plugin.PluginInstance
 import kotlinx.coroutines.runBlocking
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.VK12.vkCreateFramebuffer

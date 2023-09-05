@@ -1,12 +1,12 @@
 package dragons.plugin.interfaces.vulkan
 
-import dragons.plugin.PluginInstance
-import dragons.plugin.interfaces.PluginInterface
+import knokko.plugin.MagicPluginInterface
+import knokko.plugin.PluginInstance
 import org.lwjgl.vulkan.VkDevice
 import org.lwjgl.vulkan.VkInstance
 import org.lwjgl.vulkan.VkPhysicalDevice
 
-interface VulkanDeviceDestructionListener: PluginInterface {
+interface VulkanDeviceDestructionListener: MagicPluginInterface {
     /**
      * This method will be called soon before the game will destroy its logical device.
      */

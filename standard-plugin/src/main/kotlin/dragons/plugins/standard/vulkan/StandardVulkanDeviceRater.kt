@@ -1,7 +1,7 @@
 package dragons.plugins.standard.vulkan
 
-import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanDeviceRater
+import knokko.plugin.PluginInstance
 import org.lwjgl.vulkan.KHRDrawIndirectCount.VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRShaderDrawParameters.VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME
 import org.lwjgl.vulkan.VK12.*

@@ -1,11 +1,11 @@
 package dragons.plugins.standard.vulkan.render.tile
 
 import com.github.knokko.boiler.sync.WaitSemaphore
-import dragons.plugin.interfaces.PluginInterface
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.geometry.Position
 import dragons.world.tile.SmallTile
 import dragons.world.tile.TileProperties
+import knokko.plugin.MagicPluginInterface
 import org.lwjgl.vulkan.VkDevice
 import java.util.*
 import kotlin.reflect.KClass
@@ -18,7 +18,7 @@ import kotlin.reflect.KClass
  * *not* create any instances of this class because the standard plug-in will do that for you: it will create exactly
  * 1 instance of the class and call its `createClaims` method once per tile.
  */
-interface TileRendererFactory<T: TileProperties>: PluginInterface {
+interface TileRendererFactory<T: TileProperties>: MagicPluginInterface {
     fun getTileType(): KClass<T>
 
     fun createClaims(tile: T): TileRendererClaims

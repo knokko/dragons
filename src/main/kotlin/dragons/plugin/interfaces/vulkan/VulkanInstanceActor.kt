@@ -1,10 +1,10 @@
 package dragons.plugin.interfaces.vulkan
 
-import dragons.plugin.PluginInstance
-import dragons.plugin.interfaces.PluginInterface
+import knokko.plugin.MagicPluginInterface
+import knokko.plugin.PluginInstance
 import org.lwjgl.system.MemoryStack
 
-interface VulkanInstanceActor: PluginInterface {
+interface VulkanInstanceActor: MagicPluginInterface {
 
     /**
      * Plug-ins that implement this method can influence the Vulkan (instance) layers that will be

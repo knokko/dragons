@@ -1,7 +1,6 @@
 package dragons.plugins.standard.menu
 
 import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
-import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.menu.MainMenuManager
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
@@ -13,6 +12,7 @@ import dragons.geometry.Position
 import dragons.geometry.Vector
 import dragons.util.PerformanceStatistics
 import dragons.util.printVector
+import knokko.plugin.PluginInstance
 import org.joml.Math.cos
 import org.joml.Math.sin
 import org.joml.Matrix4f

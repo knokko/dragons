@@ -8,13 +8,11 @@ import com.github.knokko.profiler.storage.SampleStorage
 import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
 import dragons.init.trouble.gui.showStartupTroubleWindow
-import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.general.ExitListener
+import dragons.plugin.interfaces.general.MainParametersListener
 import dragons.plugin.interfaces.general.PluginsLoadedListener
 import dragons.plugin.interfaces.general.StaticStateListener
 import dragons.plugin.interfaces.menu.MainMenuManager
-import dragons.plugin.loading.PluginClassLoader
-import dragons.plugin.loading.scanDefaultPluginLocations
 import dragons.state.StaticGameState
 import dragons.state.StaticGraphicsState
 import dragons.util.PerformanceStatistics
@@ -28,6 +26,10 @@ import dragons.vulkan.init.initVulkanInstance
 import dragons.vulkan.memory.MemoryInfo
 import dragons.vulkan.memory.allocateStaticMemory
 import graviks2d.core.GraviksInstance
+import knokko.plugin.PluginManager
+import knokko.plugin.loading.InvalidPluginsFolderException
+import knokko.plugin.loading.PluginClassLoader
+import knokko.plugin.loading.scanDefaultPluginLocations
 import kotlinx.coroutines.*
 import org.lwjgl.system.Platform
 import org.slf4j.Logger
@@ -239,7 +241,23 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
         val pluginJob = async {
             val logger = getLogger(ROOT_LOGGER_NAME)
             logger.info("Scan plug-in locations...")
-            val combinedPluginContent = scanDefaultPluginLocations(initProps)
+            val pluginsFolder = File("plug-ins/")
+            val combinedPluginContent = try {
+                scanDefaultPluginLocations(
+                    {
+                        if (pluginsFolder.list()!!.isEmpty() && !initProps.isInDevelopment) {
+                            // TODO Copy the standard plug-in jar to the plug-ins folder
+                            // Or perhaps it's better to always enable the standard plug-in unless some config flag is set
+                            // If that flag is not set, copy it to a temp folder
+                        }
+                    }, setOf("standard-plugin", "debug-plugin"), pluginsFolder
+                )
+            } catch (invalidPluginsFolder: InvalidPluginsFolderException) {
+                throw SimpleStartupException("Can't create plug-ins directory", listOf(
+                    "The plug-ins directory for this game ($pluginsFolder) doesn't seem to exist yet, so this game tried to create it.",
+                    "But... this failed for some reason..."
+                ))
+            }
             logger.info("Found ${combinedPluginContent.size} plug-ins:")
             for (pluginPair in combinedPluginContent) {
                 logger.info(pluginPair.second.info.name)
@@ -249,6 +267,9 @@ fun prepareStaticGameState(initProps: GameInitProperties, staticCoroutineScope: 
             val pluginManager = PluginManager(pluginClassLoader.magicInstances)
             pluginManager.getImplementations(PluginsLoadedListener::class.java).forEach {
                     listenerPair -> listenerPair.first.afterPluginsLoaded(listenerPair.second)
+            }
+            pluginManager.getImplementations(MainParametersListener::class.java).forEach {
+                    listenerPair -> listenerPair.first.processMainParameters(listenerPair.second, initProps.mainParameters)
             }
             Pair(pluginManager, pluginClassLoader)
         }

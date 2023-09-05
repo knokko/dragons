@@ -5,7 +5,6 @@ import com.github.knokko.boiler.queue.BoilerQueue
 import dragons.init.trouble.ExtensionStartupException
 import dragons.init.trouble.SimpleStartupException
 import dragons.init.trouble.StartupException
-import dragons.plugin.PluginManager
 import dragons.plugin.interfaces.vulkan.VulkanDeviceActor
 import dragons.plugin.interfaces.vulkan.VulkanDeviceCreationListener
 import dragons.plugin.interfaces.vulkan.VulkanDeviceRater
@@ -16,6 +15,7 @@ import dragons.vulkan.queue.QueueManager
 import dragons.vulkan.util.combineNextChains
 import dragons.vulkan.util.encodeStrings
 import dragons.vulkan.util.extensionBufferToSet
+import knokko.plugin.PluginManager
 import kotlinx.coroutines.CoroutineScope
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush

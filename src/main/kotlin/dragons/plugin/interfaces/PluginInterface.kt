@@ -1,3 +1,0 @@
-package dragons.plugin.interfaces
-
-interface PluginInterface

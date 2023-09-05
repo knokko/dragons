@@ -2,12 +2,12 @@ package dragons.plugins.standard.vulkan.render.entity
 
 import dragons.geometry.*
 import dragons.geometry.Vector
-import dragons.plugin.PluginManager
 import dragons.plugins.standard.vulkan.render.StandardSceneRenderer
 import dragons.world.entity.EntityProperties
 import dragons.world.realm.Realm
 import org.lwjgl.vulkan.VkDevice
 import com.github.knokko.boiler.sync.WaitSemaphore
+import knokko.plugin.PluginManager
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.reflect.KClass

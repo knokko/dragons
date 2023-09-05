@@ -1,10 +1,11 @@
 package dragons.plugins.debug.vulkan
 
 import com.github.knokko.boiler.exceptions.VulkanFailureException.assertVkSuccess
-import dragons.plugin.PluginInstance
+import dragons.init.MainParameters
 import dragons.plugin.interfaces.vulkan.VulkanInstanceActor
 import dragons.plugin.interfaces.vulkan.VulkanInstanceCreationListener
 import dragons.plugin.interfaces.vulkan.VulkanInstanceDestructionListener
+import knokko.plugin.PluginInstance
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.vulkan.EXTDebugUtils.*
 import org.lwjgl.vulkan.EXTValidationFeatures.*
@@ -14,19 +15,22 @@ import org.lwjgl.vulkan.VkDebugUtilsMessengerCreateInfoEXT
 import org.lwjgl.vulkan.VkValidationFeaturesEXT
 import org.slf4j.LoggerFactory.getLogger
 
+@Suppress("unused")
 class DebugVulkanInstance: VulkanInstanceActor, VulkanInstanceCreationListener, VulkanInstanceDestructionListener {
 
     private var debugMessenger: Long? = null
 
+    private fun allowDebug(pluginInstance: PluginInstance) = !(pluginInstance.state as MainParameters).forbidDebug
+
     override fun manipulateVulkanInstanceExtensions(pluginInstance: PluginInstance, agent: VulkanInstanceActor.ExtensionAgent) {
-        if (!pluginInstance.gameInitProps.mainParameters.forbidDebug) {
+        if (allowDebug(pluginInstance)) {
             agent.requiredExtensions.add(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
             agent.requiredExtensions.add(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)
         }
     }
 
     override fun manipulateVulkanInstanceLayers(pluginInstance: PluginInstance, agent: VulkanInstanceActor.LayerAgent) {
-        if (!pluginInstance.gameInitProps.mainParameters.forbidDebug) {
+        if (allowDebug(pluginInstance)) {
             agent.requiredLayers.add("VK_LAYER_KHRONOS_validation")
         }
     }
@@ -47,7 +51,7 @@ class DebugVulkanInstance: VulkanInstanceActor, VulkanInstanceCreationListener, 
         pluginInstance: PluginInstance,
         agent: VulkanInstanceCreationListener.Agent
     ) {
-        if (!pluginInstance.gameInitProps.mainParameters.forbidDebug) {
+        if (allowDebug(pluginInstance)) {
             stackPush().use { stack ->
                 val logger = getLogger("Vulkan")
 
@@ -112,7 +116,7 @@ class DebugVulkanInstance: VulkanInstanceActor, VulkanInstanceCreationListener, 
         pluginInstance: PluginInstance,
         agent: VulkanInstanceDestructionListener.BeforeAgent
     ) {
-        if (!pluginInstance.gameInitProps.mainParameters.forbidDebug) {
+        if (allowDebug(pluginInstance)) {
             val logger = getLogger("Vulkan")
 
             logger.info("Destroying debug utils messenger...")

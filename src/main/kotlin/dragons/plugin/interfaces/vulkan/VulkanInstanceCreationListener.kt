@@ -1,11 +1,11 @@
 package dragons.plugin.interfaces.vulkan
 
-import dragons.plugin.PluginInstance
-import dragons.plugin.interfaces.PluginInterface
+import knokko.plugin.MagicPluginInterface
+import knokko.plugin.PluginInstance
 import org.lwjgl.vulkan.VkInstance
 import org.lwjgl.vulkan.VkInstanceCreateInfo
 
-interface VulkanInstanceCreationListener: PluginInterface {
+interface VulkanInstanceCreationListener: MagicPluginInterface {
     /**
      * This method will be called right after the game created its Vulkan instance. Plug-ins can use this method to
      * create Vulkan resources that need (only) a Vulkan instance.

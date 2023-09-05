@@ -1,10 +1,10 @@
 package dragons.plugin.interfaces.general
 
-import dragons.plugin.PluginInstance
-import dragons.plugin.interfaces.PluginInterface
 import dragons.state.StaticGameState
+import knokko.plugin.MagicPluginInterface
+import knokko.plugin.PluginInstance
 
-interface StaticStateListener: PluginInterface {
+interface StaticStateListener: MagicPluginInterface {
 
     /**
      * This method will be called after the static game state of the game has been constructed, which should happen

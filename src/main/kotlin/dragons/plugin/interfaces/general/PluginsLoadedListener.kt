@@ -1,9 +1,9 @@
 package dragons.plugin.interfaces.general
 
-import dragons.plugin.PluginInstance
-import dragons.plugin.interfaces.PluginInterface
+import knokko.plugin.MagicPluginInterface
+import knokko.plugin.PluginInstance
 
-interface PluginsLoadedListener: PluginInterface {
+interface PluginsLoadedListener: MagicPluginInterface {
 
     /**
      * This method will be called after all plug-ins have been loaded. This is the first event that any plug-in can

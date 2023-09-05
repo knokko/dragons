@@ -1,12 +1,11 @@
 package dragons.plugins.standard.vulkan
 
-import dragons.plugin.PluginInstance
 import dragons.plugin.interfaces.vulkan.VulkanStaticMemoryUser
 import dragons.plugins.standard.state.StandardPluginState
 import dragons.plugins.standard.vulkan.render.entity.EntityMeshTracker
-import dragons.plugins.standard.vulkan.vertex.BasicVertex
 import dragons.vulkan.memory.claim.BufferMemoryClaim
 import dragons.vulkan.memory.claim.StagingBufferMemoryClaim
+import knokko.plugin.PluginInstance
 import org.lwjgl.vulkan.VK12.*
 import org.lwjgl.vulkan.VkDrawIndexedIndirectCommand
 
