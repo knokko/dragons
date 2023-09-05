@@ -333,6 +333,7 @@ internal class OpenXrManager(
         this.resolveHelper.destroy(graphicsState.boiler.vkDevice())
         lastViews.free()
         xrDestroySpace(renderSpace)
+        vkDeviceWaitIdle(graphicsState.boiler.vkDevice())
         for (swapchain in swapchains) {
             for (swapchainImage in swapchain.images) {
                 vkDestroyImageView(graphicsState.boiler.vkDevice(), swapchainImage.fullView!!, null)

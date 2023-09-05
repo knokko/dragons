@@ -244,7 +244,7 @@ class ResolveHelper(
                     for ((index, image) in arrayOf(leftResolveImage, rightResolveImage).withIndex()) {
                         val imageResolveBarrier = pImageResolveBarriers[index]
                         imageResolveBarrier.`sType$Default`()
-                        imageResolveBarrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+                        imageResolveBarrier.srcAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
                         imageResolveBarrier.dstAccessMask(VK_ACCESS_TRANSFER_READ_BIT)
                         imageResolveBarrier.oldLayout(this.defaultResolveImageLayout)
                         imageResolveBarrier.newLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
@@ -254,7 +254,7 @@ class ResolveHelper(
                         imageResolveBarrier.subresourceRange(::fillSrr)
                     }
                     vkCmdPipelineBarrier(
-                        screenshotCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        screenshotCommandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
                         0, null, null, pImageResolveBarriers
                     )
                 }
