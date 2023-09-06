@@ -17,9 +17,7 @@ class MainParameters(args: Array<String>) {
      */
     val requiresHmd: Boolean
     val forbidDebug: Boolean
-    val useOpenVR: Boolean
     val testParameters: TestingParameters
-
 
     init {
         for (arg in args) {
@@ -30,13 +28,12 @@ class MainParameters(args: Array<String>) {
 
         requiresHmd = !args.contains("allowWithoutHmd")
         forbidDebug = args.contains("noDebug")
-        useOpenVR = args.contains("useOpenVR")
 
         testParameters = TestingParameters(args)
     }
 
     companion object {
-        val ALL_PARAMETERS = arrayOf("allowWithoutHmd", "noDebug", "useOpenVR") + TestingParameters.ALL_PARAMETERS
+        val ALL_PARAMETERS = arrayOf("allowWithoutHmd", "noDebug") + TestingParameters.ALL_PARAMETERS
     }
 }
 

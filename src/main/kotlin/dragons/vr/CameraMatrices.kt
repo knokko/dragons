@@ -23,7 +23,7 @@ class CameraMatrices(
      * - The expected position
      *
      * The physical position is simply the real life position of the player, compared to some fixed origin. This is
-     * easy to extract from the OpenVR or OpenXR runtime. This is very useful until the player rotates via the right
+     * easy to extract from the OpenXR runtime. This is very useful until the player rotates via the right
      * joystick. Consider the following scenario:
      * 1) The player walks 1 meter forward in real life
      * 2) The player rotates 90 degrees to the right using the right joystick

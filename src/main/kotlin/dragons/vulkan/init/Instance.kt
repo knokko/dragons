@@ -107,10 +107,10 @@ internal fun initVulkanInstance(pluginManager: PluginManager, vrManager: VrManag
             val vrExtensions = vrManager.getVulkanInstanceExtensions(availableExtensions)
             for (extension in vrExtensions) {
                 if (!availableExtensions.contains(extension)) {
-                    logger.error("The OpenVR runtime requires the $extension instance extension, which is not available")
+                    logger.error("The OpenXR runtime requires the $extension instance extension, which is not available")
                     throw ExtensionStartupException(
                         "Missing required Vulkan instance extensions",
-                        "The OpenVR runtime requires the following Vulkan instance extensions to work, but not all of them are available.",
+                        "The OpenXR runtime requires the following Vulkan instance extensions to work, but not all of them are available.",
                         availableExtensions, vrExtensions
                     )
                 }

@@ -70,6 +70,7 @@ internal fun createOpenXrInstance(
         val xrCreateInstanceResult = xrCreateInstance(ciInstance, pInstance)
         if (xrCreateInstanceResult == XR_ERROR_INITIALIZATION_FAILED || xrCreateInstanceResult == XR_ERROR_RUNTIME_FAILURE) {
             // Some OpenXR runtimes will return this when no HMD is connected
+            logger.info("xrCreateInstance returned $xrCreateInstanceResult")
             return Pair(null, null)
         }
         assertXrSuccess(xrCreateInstanceResult, "CreateInstance")

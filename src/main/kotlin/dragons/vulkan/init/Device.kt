@@ -317,7 +317,7 @@ internal fun populateDeviceCreateInfo(
     if (!availableExtensions.containsAll(vrExtensions)) {
         throw ExtensionStartupException(
             "Missing required Vulkan device extensions",
-            "The OpenVR runtime requires the following Vulkan device extensions to work, but not all of them are available.",
+            "The OpenXR runtime requires the following Vulkan device extensions to work, but not all of them are available.",
             availableExtensions, vrExtensions
         )
     }
