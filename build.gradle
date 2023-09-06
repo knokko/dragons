@@ -74,7 +74,7 @@ allprojects {
 dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
     implementation 'org.slf4j:slf4j-api:2.0.7'
-    implementation project(':fixie')
+    implementation "com.github.knokko:fixie:v0.1.0"
     implementation "com.github.knokko.gui-stuff:graviks2d:$guiStuffVersion"
     implementation 'com.github.knokko:sample-profiler:v1.0.0'
     implementation 'com.github.knokko:memory-query:v1.0'
@@ -103,7 +103,7 @@ test {
 project(':standard-plugin') {
     dependencies {
         compileOnly project(':')
-        compileOnly project(':fixie')
+        compileOnly "com.github.knokko:fixie:v0.1.0"
         compileOnly "com.github.knokko.gui-stuff:graviks2d:$guiStuffVersion"
         compileOnly 'com.github.knokko:sample-profiler:v1.0.0'
         compileOnly 'com.github.knokko:vk-boiler:v1.0.0'
@@ -111,15 +111,11 @@ project(':standard-plugin') {
         implementation "com.github.knokko.gui-stuff:gruviks:$guiStuffVersion"
 
         testImplementation project(':')
-        testImplementation project(':fixie')
+        testImplementation "com.github.knokko:fixie:v0.1.0"
         testImplementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
         testImplementation "org.lwjgl:lwjgl"
         testRuntimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
     }
-}
-
-project(':fixie') {
-    // No dependencies yet I guess
 }
 
 project(':debug-plugin') {
